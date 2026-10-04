@@ -19,6 +19,7 @@ detail. A warning is logged whenever truncation kicks in.
 from __future__ import annotations
 
 import logging
+import os
 from datetime import date, timedelta
 from functools import lru_cache
 from typing import Any, Dict, List, Optional
@@ -701,12 +702,23 @@ def _equipment_section(state: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def coach_athlete_context_enabled() -> bool:
+    """A294 review: the athlete-context blocks of the coach prompt sit behind
+    ``COACH_ATHLETE_CONTEXT`` (default ON; only the literal ``0`` turns them
+    off, like ``RATE_LIMIT_ENABLED``) — the flag DECISIONS #13 assigns to A297,
+    which will route every such block through one integration point. Read at
+    call time, so a Railway variable change is enough (no code deploy)."""
+    return os.getenv("COACH_ATHLETE_CONTEXT", "1").strip() != "0"
+
+
 def _key_section(state: Dict[str, Any], user_id: Optional[str], today_iso: str) -> Optional[str]:
     """A294: the key sessions of the week (dynamic block — never in the cached
     static instructions). Not truncatable by the budget guard: it is a handful
     of lines and it is what stops the coach from proposing to drop the one
-    max-finger session of the week. None when the phase has no key stimulus
-    or anything fails."""
+    max-finger session of the week. None when the phase has no key stimulus,
+    ``COACH_ATHLETE_CONTEXT=0``, or anything fails."""
+    if not coach_athlete_context_enabled():
+        return None
     try:
         from backend.engine import storage
         from backend.engine.key_sessions_v1 import compute_key_status, key_status_text

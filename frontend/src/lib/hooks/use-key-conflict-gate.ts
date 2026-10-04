@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { blockingConflicts } from "@/lib/key-sessions";
 import type { KeyConflict } from "@/lib/types";
 
@@ -13,10 +13,21 @@ import type { KeyConflict } from "@/lib/types";
  * `<KeyConflictDialog {...dialogProps} />` once in the page.
  */
 export function useKeyConflictGate() {
-  const [pending, setPending] = useState<{ conflicts: KeyConflict[]; proceed: () => void } | null>(null);
+  const [pending, setPending] = useState<{
+    conflicts: KeyConflict[];
+    proceed: () => void;
+    cancel?: () => void;
+  } | null>(null);
+
+  const settled = useRef<unknown>(null);
 
   const gate = useCallback(
-    async (check: () => Promise<KeyConflict[]>, proceed: () => Promise<void> | void) => {
+    async (
+      check: () => Promise<KeyConflict[]>,
+      proceed: () => Promise<void> | void,
+      /** A294 review: called when the user backs out of the warning (e.g. to reset a spinner). */
+      onCancel?: () => void,
+    ) => {
       let conflicts: KeyConflict[] = [];
       try {
         conflicts = blockingConflicts(await check());
@@ -27,20 +38,29 @@ export function useKeyConflictGate() {
         await proceed();
         return;
       }
-      setPending({
+      const entry = {
         conflicts,
         proceed: () => {
+          // The dialog's action also closes it (onOpenChange → onCancel):
+          // once confirmed, that close must not run the cancel callback.
+          settled.current = entry;
           setPending(null);
           void proceed();
         },
-      });
+        cancel: onCancel,
+      };
+      settled.current = null;
+      setPending(entry);
     },
     [],
   );
 
   const dialogProps = {
     conflicts: pending?.conflicts ?? null,
-    onCancel: () => setPending(null),
+    onCancel: () => {
+      if (pending && settled.current !== pending) pending.cancel?.();
+      setPending(null);
+    },
     onConfirm: () => pending?.proceed(),
   };
   return { gate, dialogProps };

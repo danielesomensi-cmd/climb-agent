@@ -154,8 +154,14 @@ class TestCatalog:
         assert keys("power_endurance") == ["power_endurance", "finger_maintenance", "limit_power",
                                            "technique", "try_hard"]
         assert keys("performance") == ["project", "technique", "try_hard"]
-        assert keys("base") == ["technique", "try_hard"]
+        # A294 review: no limit key in base → no try-hard row; in performance
+        # the try-hard rides on the project key.
+        assert keys("base") == ["technique"]
         assert keys("deload") == ["technique"]
+        perf_th = next(r for r in ks.phase_requirements("performance") if r["key"] == "try_hard")
+        assert perf_th["attached_to"] == "project"
+        deload_tech = next(r for r in ks.phase_requirements("deload") if r["key"] == "technique")
+        assert deload_tech["max_severity"] == "info"
         pe_limit = next(r for r in ks.phase_requirements("power_endurance") if r["key"] == "limit_power")
         assert pe_limit["max_gap_days"] == 12
         pull = next(r for r in ks.phase_requirements("strength_power") if r["key"] == "pulling_max")
@@ -207,7 +213,10 @@ class TestStatus:
         assert roles[("2026-10-07", "power_contact_gym")]["role"] == "optional"
         sl = roles[("2026-10-09", "strength_long")]
         assert sl["role"] == "key" and set(sl["keys"]) == {"finger_max", "pulling_max"}
-        assert s["summary"]["debt"] == 0
+        # A294 review: the limit session alone is not the try-hard — it is
+        # owed until a fall-practice block is in, and the hint says where.
+        assert s["summary"]["missing"] == ["try_hard"]
+        assert "2026-10-05" in _req(s, "try_hard")["hint"]
 
     def test_supporting_outside_reentry(self):
         st = _state()
@@ -251,18 +260,21 @@ class TestStatus:
         st["week_plans"]["2026-09-28"]["weeks"][0]["days"][6]["sessions"] = []
         assert _req(ks.compute_key_status(st, TODAY), "pulling_max")["status"] == "missing"
 
-    def test_outdoor_counts_for_technique_and_try_hard_and_blocks_proposals(self):
+    def test_outdoor_counts_for_try_hard_not_technique_and_blocks_proposals(self):
         st = _state()
         st["week_plans"]["2026-09-28"]["weeks"][0]["days"][0]["sessions"] = []
         rows = [{"entry": {"date": "2026-10-03", "spot_name": "Berdorf", "discipline": "lead",
                            "routes": [{"name": "P", "grade": "8a", "attempts": [{"result": "fell"}]}]}}]
         s = ks.compute_key_status(st, "2026-10-02", outdoor_rows=rows)
-        assert _req(s, "technique")["status"] == "done"
+        # A294 review: an outdoor day says nothing verifiable about feet /
+        # positioning work — the technique key stays owed.
+        assert _req(s, "technique")["status"] != "done"
         assert _req(s, "try_hard")["status"] == "done"
         fm = _req(s, "finger_max")
         # 02/10 sits next to the 03/10 outdoor-hard day; 04/10 between it and Monday's limit.
         assert fm["resolution"] != "proposal"
-        assert all(p["date"] not in ("2026-10-02", "2026-10-04") for p in s["proposals"])
+        assert all(p["date"] not in ("2026-10-02", "2026-10-04") for p in s["proposals"]
+                   if _SESSION_META[p["session_id"]].get("finger"))
 
     def test_free_boulder_counts_as_limit(self):
         st = _state(free_sessions=[{"id": "f1", "date": "2026-10-01", "surface": "gym_boulder",
@@ -623,3 +635,204 @@ class TestCoachExposure:
         guarded = {e["id"] for e in build_pool({"equipment_set": "home",
                                                 "key_guard_exclude_ids": [victim]}, st, cat)}
         assert victim not in guarded and guarded == free - {victim}
+
+
+# ---------------------------------------------------------------------------
+# A294 review fixes
+# ---------------------------------------------------------------------------
+
+class TestReviewFixes:
+    def test_events_never_rewrite_a_past_unmarked_session(self):
+        """Finding 1: the Sunday→Monday seed must not downshift a past Monday
+        the athlete did but has not ticked yet."""
+        st = _state()
+        plan = _week("2026-09-28", {
+            "2026-09-28": [_sess("evening", "finger_strength_home")],  # done in real life, unmarked
+            "2026-09-30": [_sess("evening", "technique_focus_gym")],
+        })
+        prev = copy.deepcopy(st["week_plans"]["2026-09-21"]["weeks"][0]["days"])
+        prev[6]["sessions"] = [_sess("evening", "strength_long", "done")]
+        ev = [{"event_type": "mark_done", "date": "2026-09-30", "slot": "evening"}]
+        out = apply_events(plan, ev, prev_days=prev, today="2026-09-30")
+        mon = out["weeks"][0]["days"][0]["sessions"][0]
+        assert mon["session_id"] == "finger_strength_home" and "downshifted_from" not in mon
+        # Without a today the pre-A294 behaviour is unchanged (the guard runs).
+        legacy = apply_events(plan, ev, prev_days=prev)
+        assert legacy["weeks"][0]["days"][0]["sessions"][0]["session_id"] == "regeneration_easy"
+
+    def test_frozen_past_day_still_constrains(self):
+        st = _state()
+        plan = _week("2026-09-28", {
+            "2026-09-28": [_sess("evening", "finger_strength_home")],
+            "2026-09-29": [_sess("evening", "strength_long")],
+        })
+        out = apply_events(plan, [], today="2026-09-29")
+        days = out["weeks"][0]["days"]
+        assert days[0]["sessions"][0]["session_id"] == "finger_strength_home"
+        assert days[1]["sessions"][0]["session_id"] == "regeneration_easy"  # today, after a past finger day
+
+    def test_untested_catalog_session_with_logged_load_is_full(self):
+        """Finding 2: untested athletes who did the catalog session owe nothing."""
+        st = _state(tests={})
+        days = st["week_plans"]["2026-09-28"]["weeks"][0]["days"]
+        days[1]["sessions"] = [_sess("evening", "finger_strength_home", "done", actual_exercises=[
+            {"exercise_id": "max_hang_7s", "completed_sets": 5, "used_external_load_kg": 10}])]
+        fm = _req(ks.compute_key_status(st, "2026-10-01"), "finger_max")
+        assert fm["status"] == "done" and fm["debt"] == 0
+        # A custom without a tested max stays partial (no floor to check).
+        cust = _sess("evening", "custom_cs_h", "done", is_custom=True, actual_exercises=[
+            {"exercise_id": "max_hang_7s", "completed_sets": 5, "used_external_load_kg": 10}])
+        assert ks.session_dose(st, cust, "2026-10-01", ks.phase_requirements("strength_power")[0])["dose"] == "partial"
+
+    def test_downshift_of_a_covered_stimulus_is_not_lost(self):
+        """Finding 3: finger_max done Monday, strength_long downshifted Sunday →
+        no 'lost' for finger_max; pulling_max (still owed) keeps it."""
+        st = _state()
+        st["week_plans"]["2026-09-28"] = _week("2026-09-28", {
+            "2026-09-28": [_sess("evening", "finger_strength_home", "done")],
+            "2026-10-04": [_sess("evening", "regeneration_easy", tags={"hard": False, "finger": False},
+                                 downshifted_from="strength_long", constraints_applied=["hard_cap_downshift"])],
+        })
+        s = ks.compute_key_status(st, "2026-10-01")
+        assert _req(s, "finger_max")["status"] == "done" and _req(s, "finger_max")["lost"] == []
+        kd = [c for c in s["conflicts"] if c["code"] == "key_downgraded"]
+        assert kd and "finger_max" not in kd[0]["keys"] and "pulling_max" in kd[0]["keys"]
+
+    def _pull_week(self):
+        st = _state()
+        plan = _week("2026-10-05", {
+            "2026-10-05": [_sess("evening", "finger_strength_home", "done")],
+            "2026-10-06": [_sess("evening", "technique_focus_gym", "done")],
+            "2026-10-08": [_sess("evening", "limit_boulder_gym")],
+        })
+        plan["profile_snapshot"]["session_pool"].append("pulling_strength_gym")
+        st["week_plans"]["2026-10-05"] = plan
+        return st
+
+    def test_no_heavy_pull_proposed_the_evening_before_limit(self):
+        """Finding 5: no ≥85 % pull within 24 h before a limit key."""
+        s = ks.compute_key_status(self._pull_week(), "2026-10-07")
+        pulls = [p for p in s["proposals"] if "pulling_max" in p["keys"]]
+        for p in pulls:
+            assert p["date"] not in ("2026-10-07",) and not (p["date"] == "2026-10-08" and p["slot"] != "evening")
+        assert pulls and pulls[0]["date"] == "2026-10-09"  # after the limit key, not the evening before
+        clash = ks._heavy_pull_clash(self._pull_week(), ks._plan_days(self._pull_week(), None),
+                                     date(2026, 10, 7), "evening", "pulling_strength_gym")
+        assert clash["reason"] == "heavy_pull_before_limit" and clash["with"] == ["2026-10-08 limit_boulder_gym"]
+
+    def test_heavy_pull_cap_two_per_seven_days(self):
+        st = _state()
+        st["week_plans"]["2026-10-05"] = _week("2026-10-05", {
+            "2026-10-05": [_custom_pull(load=45.0)],
+            "2026-10-07": [_sess("evening", "pulling_strength_gym", "done")],
+        })
+        clash = ks._heavy_pull_clash(st, ks._plan_days(st, None), date(2026, 10, 9), "evening",
+                                     "pulling_strength_gym")
+        assert clash and clash["reason"] == "heavy_pull_cap"
+        assert ks._heavy_pull_clash(st, ks._plan_days(st, None), date(2026, 10, 13), "evening",
+                                    "pulling_strength_gym") is None
+
+    def test_guard_covers_done_key_and_same_day_key(self):
+        """Finding 6: a done finger key protects the next day; a pending one
+        protects its own day."""
+        st = _state()
+        st["week_plans"]["2026-10-05"] = _week("2026-10-05", {
+            "2026-10-05": [_sess("evening", "strength_long", "done")],
+            "2026-10-07": [_sess("evening", "limit_boulder_gym")],
+        })
+        assert "max_hang_7s" in ks.composer_guard(st, "2026-10-06")["exclude_ids"]
+        st["week_plans"]["2026-10-05"] = _week("2026-10-05", {
+            "2026-10-07": [_sess("evening", "limit_boulder_gym")],
+        })
+        g = ks.composer_guard(st, "2026-10-07")
+        assert "max_hang_7s" in g["exclude_ids"]
+
+    def test_insertion_next_to_done_finger_key_asks_for_confirm(self):
+        st = _state()
+        st["week_plans"]["2026-10-05"] = _week("2026-10-05", {
+            "2026-10-05": [_sess("evening", "strength_long", "done")],
+        })
+        res = ks.check_insertion(st, "2026-10-06", plan=st["week_plans"]["2026-10-05"],
+                                 events=[{"event_type": "add_custom_session", "custom_session_id": "cs_hang",
+                                          "target_date": "2026-10-06", "slot": "evening", "location": "home"}],
+                                 custom_sessions=[{"id": "cs_hang", "name": "Hangs", "exercises": [
+                                     {"exercise_id": "max_hang_7s", "sets": 5, "work_seconds": 7}]}])
+        fg = [c for c in res["key_conflicts"] if c["code"] == "finger_gap"]
+        assert fg and fg[0]["severity"] == "high" and any("2026-10-05" in w for w in fg[0]["with"])
+
+    def test_proposals_never_share_a_slot(self):
+        """Finding 7: proposals are validated cumulatively."""
+        st = _state()
+        st["week_plans"]["2026-10-05"] = _week("2026-10-05", {})
+        s = ks.compute_key_status(st, "2026-10-06")
+        slots = [(p["date"], p["slot"]) for p in s["proposals"]]
+        assert len(slots) == len(set(slots)) and len(slots) >= 2
+        assert all(p.get("assumes") for p in s["proposals"][1:])
+        # Applying them all in order still works (each one was validated on top of the previous).
+        plan = st["week_plans"]["2026-10-05"]
+        for p in s["proposals"]:
+            plan = apply_events(plan, [p["apply"]["event"]])
+            assert any(x.get("session_id") == p["session_id"] for d in plan["weeks"][0]["days"]
+                       if d["date"] == p["date"] for x in d["sessions"])
+
+    def test_technique_needs_feet_or_positioning_drills(self):
+        """Finding 8: pacing / relaxation drills are not the technique key."""
+        cat = ks.load_exercise_catalog()
+        easy = {"session_id": "custom_x", "exercises": [{"exercise_id": "slow_climbing"},
+                                                         {"exercise_id": "breathing_awareness"}]}
+        real = {"session_id": "custom_y", "exercises": [{"exercise_id": "no_readjust_drill"},
+                                                         {"exercise_id": "flag_practice"}]}
+        assert not ks.technique_hit(easy, cat) and ks.technique_hit(real, cat)
+
+    def test_technique_can_turn_critical(self):
+        st = _state()
+        st["week_plans"]["2026-09-28"]["weeks"][0]["days"][0]["sessions"] = []
+        st["week_plans"]["2026-10-05"]["weeks"][0]["days"][5]["sessions"] = []
+        tech = _req(ks.compute_key_status(st, "2026-10-06", with_proposals=False), "technique")
+        assert tech["debt"] == 1 and tech["severity"] == "critical"
+
+    def test_try_hard_needs_fall_practice_not_just_limit(self):
+        """Finding 9: a limit session alone is not the try-hard."""
+        st = _state()
+        days = st["week_plans"]["2026-10-05"]["weeks"][0]["days"]
+        assert _req(ks.compute_key_status(st, "2026-10-05"), "try_hard")["status"] == "missing"
+        days[0]["sessions"][0]["exercises"] = [{"exercise_id": "limit_bouldering", "sets": 5},
+                                               {"exercise_id": "fall_practice", "sets": 1}]
+        th = _req(ks.compute_key_status(st, "2026-10-05"), "try_hard")
+        assert th["status"] == "planned" and th["debt"] == 0
+
+    def test_pe_limit_can_be_proposed_outside_the_pool(self):
+        """Finding 10: PE asks for limit every 12 days; its pool has no limit
+        session — the proposal may still use one, never a false 'let it go'."""
+        st = _state()
+        st["week_plans"]["2026-10-12"] = _week("2026-10-12", {
+            "2026-10-13": [_sess("evening", "limit_boulder_gym", "done")],
+        })
+        pe_pool = ["power_endurance_gym", "prehab_maintenance", "core_training", "endurance_aerobic_gym",
+                   "finger_strength_home", "flexibility_full", "route_endurance_gym", "technique_focus_gym"]
+        plan = _week("2026-11-02", {"2026-11-03": [_sess("evening", "power_endurance_gym")],
+                                    "2026-11-07": [_sess("evening", "finger_strength_home")]},
+                     phase="power_endurance")
+        plan["profile_snapshot"]["session_pool"] = pe_pool
+        st["week_plans"]["2026-11-02"] = plan
+        lp = _req(ks.compute_key_status(st, "2026-11-02"), "limit_power")
+        assert lp["status"] == "missing" and lp["resolution"] != "let_go"
+        s = ks.compute_key_status(st, "2026-11-02")
+        assert any("limit_power" in p["keys"] for p in s["proposals"])
+
+    def test_no_candidate_is_not_let_go(self):
+        st = _state(equipment={"gyms": [], "home": []})
+        st["week_plans"]["2026-10-05"] = _week("2026-10-05", {})
+        s = ks.compute_key_status(st, "2026-10-06")
+        tech = _req(s, "technique")
+        assert tech["resolution"] != "let_go"
+
+
+class TestCoachFlag:
+    def test_key_section_off_with_flag(self, monkeypatch):
+        from backend.coach.prompt_builder import _key_section
+
+        monkeypatch.setenv("COACH_ATHLETE_CONTEXT", "0")
+        assert _key_section(_state(), None, "2026-10-05") is None
+        monkeypatch.setenv("COACH_ATHLETE_CONTEXT", "false")  # only the literal 0 turns it off
+        assert _key_section(_state(), None, "2026-10-05") is not None

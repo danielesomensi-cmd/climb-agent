@@ -145,6 +145,9 @@ class OverrideRequest(BaseModel):
     # vecchio che non li invia ottiene il placeholder, non un 422.
     spot_id: Optional[str] = None
     spot_name: Optional[str] = None
+    # A294 review: client-local date (YYYY-MM-DD) for the key-session status
+    # returned with the override; the server's UTC clock otherwise.
+    today: Optional[str] = None
 
 
 class EventsRequest(BaseModel):
@@ -177,6 +180,8 @@ class QuickAddRequest(BaseModel):
     # A254: user explicitly keeps the hard session they picked, at their own risk
     # (skips the 48h finger gap / weekly hard-cap downshift for THIS session only).
     force: bool = False
+    # A294 review: client-local date (YYYY-MM-DD) for the key-session status.
+    today: Optional[str] = None
 
 
 # --------------------------------------------------------------------------- #

@@ -1202,7 +1202,17 @@ def _override_ripple(
     return adjustments
 
 
-def _enforce_caps(plan: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _frozen(day: Dict[str, Any], frozen_before: Optional[str]) -> bool:
+    """A294 review: a day before *frozen_before* (the athlete's today) is past.
+
+    Its sessions are immutable even when nobody ticked them (status still
+    ``planned``): the guards may count them, never rewrite them. ``None`` keeps
+    the pre-A294 behaviour for every caller that does not pass a today.
+    """
+    return bool(frozen_before) and str(day.get("date") or "") < str(frozen_before)
+
+
+def _enforce_caps(plan: Dict[str, Any], frozen_before: Optional[str] = None) -> List[Dict[str, Any]]:
     """Downshift hard sessions beyond the weekly cap. Returns what it changed."""
     adjustments: List[Dict[str, Any]] = []
     hard_cap = _safe_hard_cap(plan.get("profile_snapshot"))
@@ -1210,6 +1220,8 @@ def _enforce_caps(plan: Dict[str, Any]) -> List[Dict[str, Any]]:
     hard_days = [d for d in days if any((s.get("tags") or {}).get("hard") and s.get("status") != "done" for s in d.get("sessions") or [])]
     if len(hard_days) > hard_cap:
         for day in reversed(hard_days[hard_cap:]):
+            if _frozen(day, frozen_before):
+                continue
             for session in day.get("sessions") or []:
                 tags = session.get("tags") or {}
                 # B345: the exemptions (done/skipped per B287/R-8, forced per
@@ -1261,6 +1273,7 @@ def _seed_finger_date(prev_days: Optional[Sequence[Dict[str, Any]]]) -> Optional
 def _enforce_no_consecutive_finger(
     plan: Dict[str, Any],
     prev_days: Optional[Sequence[Dict[str, Any]]] = None,
+    frozen_before: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """Enforce the finger recovery gap. Returns what it changed.
 
@@ -1289,7 +1302,10 @@ def _enforce_no_consecutive_finger(
         # the user's own risk) — but it still constrains the following days below.
         # B345: same exemption list as the hard cap, via _is_rewritable —
         # which now also spares user-authored (custom / coach ad-hoc) sessions.
-        downshiftable = [s for s in finger_sessions if _is_rewritable(s)]
+        # A294 review: a past day (before *frozen_before*) is immutable even when
+        # unmarked — it still constrains, it is never rewritten.
+        frozen = _frozen(day, frozen_before)
+        downshiftable = [] if frozen else [s for s in finger_sessions if _is_rewritable(s)]
 
         violates = bool(constrains) and last_finger_date is not None \
             and (cur - last_finger_date).days <= _recovery_gap(plan)
@@ -1316,7 +1332,7 @@ def _enforce_no_consecutive_finger(
             # immutable done session, an A254-forced one, or (B345) a
             # user-authored custom one — still constrains what follows. The
             # tendons don't care why the guard kept its hands off.
-            if all(_is_rewritable(s) for s in constrains):
+            if not frozen and all(_is_rewritable(s) for s in constrains):
                 continue
 
         if constrains:
@@ -1327,13 +1343,16 @@ def _enforce_no_consecutive_finger(
 def _reconcile(
     plan: Dict[str, Any],
     prev_days: Optional[Sequence[Dict[str, Any]]] = None,
+    frozen_before: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """Run both enforcers. Returns the aggregated list of downshifts.
 
     Existing callers ignore the return value — behaviour is unchanged for them.
+    A294 review: *frozen_before* (ISO today) makes every day before it
+    immutable for both enforcers — it counts, it is never rewritten.
     """
-    adjustments = _enforce_no_consecutive_finger(plan, prev_days=prev_days)
-    adjustments.extend(_enforce_caps(plan))
+    adjustments = _enforce_no_consecutive_finger(plan, prev_days=prev_days, frozen_before=frozen_before)
+    adjustments.extend(_enforce_caps(plan, frozen_before=frozen_before))
     return adjustments
 
 
@@ -1346,6 +1365,7 @@ def apply_events(
     gyms: Optional[List[Dict[str, Any]]] = None,
     custom_sessions: Optional[List[Dict[str, Any]]] = None,
     prev_days: Optional[Sequence[Dict[str, Any]]] = None,
+    today: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Apply *events* to a copy of *plan*.
 
@@ -1354,6 +1374,12 @@ def apply_events(
     downshift that reconcile makes is recorded as a ``{"type": "reconcile",
     "adjustments": [...]}`` adaptation (only when non-empty) — it used to be
     computed and thrown away.
+
+    A294 review: *today* (ISO, the athlete's local day) freezes every day before
+    it for that final reconcile — a past session the athlete did but has not
+    ticked yet (status ``planned``) must never be downshifted by an event
+    elsewhere in the week, nor by the Sunday→Monday seed. ``None`` = old
+    behaviour.
     """
     updated = deepcopy(plan)
     updated.setdefault("adaptations", [])
@@ -1988,7 +2014,7 @@ def apply_events(
 
         updated["adaptations"].append({"type": "event", "event": event})
 
-    _adj = _reconcile(updated, prev_days=prev_days)
+    _adj = _reconcile(updated, prev_days=prev_days, frozen_before=today)
     if _adj:
         updated["adaptations"].append({"type": "reconcile", "adjustments": _adj})
     updated["plan_revision"] = int(updated.get("plan_revision") or 1) + 1

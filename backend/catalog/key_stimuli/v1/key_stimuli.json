@@ -1,6 +1,6 @@
 {
   "version": "key_stimuli.v1",
-  "_doc": "A294 (R5) — the key stimuli of each phase. Data only: backend/engine/key_sessions_v1.py derives the weekly key status from it at read time (never persisted). A stimulus is satisfied by a session that delivers it (families from backend/engine/stimulus.py, session_ids, technique drills, try-hard exercises, outdoor-hard days) — by DOSE, not by presence, for the anchored families. Decisions 2026-10-04 + GOAL REFRAME (technique in every phase, try-hard attached to the limit key).",
+  "_doc": "A294 (R5) — the key stimuli of each phase. Data only: backend/engine/key_sessions_v1.py derives the weekly key status from it at read time (never persisted). A stimulus is satisfied by a session that delivers it (families from backend/engine/stimulus.py, session_ids, technique drills, try-hard exercises, outdoor-hard days) — by DOSE, not by presence, for the anchored families. Decisions 2026-10-04 + GOAL REFRAME (technique in every phase, try-hard attached to the limit key — to the project key in performance, absent in base where there is no limit key). A294 review: outdoor days no longer count as technique (not verifiable), a limit session alone no longer counts as try-hard (a fall-practice block, outdoor near RP or a free limit session do), deload technique is info only.",
   "stimuli": {
     "finger_max": {
       "label": "Finger max",
@@ -67,15 +67,13 @@
       "session_ids": ["technique_focus_gym"],
       "propose": ["technique_focus_gym"],
       "technique_drills": true,
-      "outdoor_counts": true,
       "dose": "presence",
       "finger_hard": false
     },
     "try_hard": {
       "label": "Try-hard",
-      "why": "Falls practice and full commitment on attempts: you often stop before 100%. It rides on the limit session — add a fall-practice block or give every limit attempt your all.",
+      "why": "Falls practice and full commitment on attempts: you often stop before 100%. It rides on the limit session — it counts when that session (or another one) holds a fall-practice block, or when you climb outdoors near your redpoint.",
       "exercise_ids": ["fall_practice"],
-      "families": ["limit_power"],
       "outdoor_hard_counts": true,
       "free_limit_counts": true,
       "attached_to": "limit_power",
@@ -86,8 +84,7 @@
   },
   "phases": {
     "base": [
-      {"stimulus": "technique", "target_per_week": 1, "priority": 2, "max_severity": "critical"},
-      {"stimulus": "try_hard", "target_per_week": 1, "priority": 3, "max_severity": "warning"}
+      {"stimulus": "technique", "target_per_week": 1, "priority": 2, "max_severity": "critical"}
     ],
     "strength_power": [
       {"stimulus": "finger_max", "target_per_week": 1, "priority": 1, "max_severity": "critical"},
@@ -106,10 +103,10 @@
     "performance": [
       {"stimulus": "project", "target_per_week": 1, "priority": 1, "max_severity": "critical"},
       {"stimulus": "technique", "target_per_week": 1, "priority": 2, "max_severity": "critical"},
-      {"stimulus": "try_hard", "target_per_week": 1, "priority": 3, "max_severity": "warning"}
+      {"stimulus": "try_hard", "target_per_week": 1, "priority": 3, "max_severity": "warning", "attached_to": "project"}
     ],
     "deload": [
-      {"stimulus": "technique", "target_per_week": 1, "priority": 3, "max_severity": "warning"}
+      {"stimulus": "technique", "target_per_week": 1, "priority": 3, "max_severity": "info"}
     ]
   }
 }

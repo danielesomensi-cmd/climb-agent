@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from backend.api.deps import REPO_ROOT, assert_plan_not_paused, current_phase_and_week, get_user_id, is_past_week, load_state, require_active_subscription, save_state, week_num_to_phase_context
 from backend.api.models import EventsRequest, OverrideRequest, QuickAddRequest
-from backend.api.key_status import build_key_conflicts, build_key_status
+from backend.api.key_status import build_key_conflicts, build_key_status, resolve_today
 from backend.engine.outdoor_log import compute_outdoor_load_score, load_outdoor_sessions, remove_outdoor_session
 from backend.engine.planner_v2 import _SESSION_META
 from backend.engine.replanner_v1 import (
@@ -312,7 +312,8 @@ def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)
 
     return {"week_plan": updated, "adjustments": adjustments, "warnings": warnings,
             # A294: sibling, never inside week_plan (nothing can persist it).
-            "key_status": build_key_status(state, user_id, week_start=updated.get("start_date"))}
+            "key_status": build_key_status(state, user_id, week_start=updated.get("start_date"),
+                                           today=req.today)}
 
 
 @router.get("/suggest-sessions")
@@ -405,7 +406,8 @@ def quick_add(req: QuickAddRequest, user_id: Optional[str] = Depends(get_user_id
     # B287/R-5: `adjustments` tells the client exactly what reconciliation changed
     # about the session it just added (empty list = nothing was touched).
     return {"week_plan": updated, "warnings": warnings, "adjustments": adjustments,
-            "key_status": build_key_status(state, user_id, week_start=updated.get("start_date"))}
+            "key_status": build_key_status(state, user_id, week_start=updated.get("start_date"),
+                                           today=req.today)}
 
 
 @router.post("/events", dependencies=[Depends(require_active_subscription)])
@@ -502,6 +504,9 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
             # A294: the Sunday→Monday finger gap is checked on /events too
             # (quick-add has done it since B287/R-5).
             prev_days=_prev_week_days(state, week_plan.get("start_date")),
+            # A294 review: days before the athlete's today are immutable for
+            # that reconcile — a past session not ticked yet is never rewritten.
+            today=resolve_today(req.today),
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))

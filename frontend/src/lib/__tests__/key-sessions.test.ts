@@ -77,6 +77,11 @@ describe("key-sessions helpers", () => {
     expect(out.map((c) => c.code)).toEqual(["key_removed", "key_replaced"]);
   });
 
+  it("a high finger gap asks for a confirm too (A294 review)", () => {
+    const out = blockingConflicts([{ code: "finger_gap", severity: "high", message: "x" }]);
+    expect(out.map((c) => c.code)).toEqual(["finger_gap"]);
+  });
+
   it("formats dates without timezone drift", () => {
     expect(shortDay("2026-10-05")).toBe("Mon 05/10");
     expect(localToday(new Date(2026, 9, 4, 23, 30))).toBe("2026-10-04");

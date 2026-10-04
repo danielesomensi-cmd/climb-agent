@@ -490,7 +490,8 @@ export const applyOverride = (data: {
   // (its own reconcile downshift + the day+1/day+2 recovery ripple).
   request<{ week_plan: WeekPlan; adjustments?: QuickAddAdjustment[]; warnings?: string[]; key_status?: KeyStatus | null }>("/api/replanner/override", {
     method: "POST",
-    body: JSON.stringify(data),
+    // A294 review: client-local today for the key status (the server is UTC).
+    body: JSON.stringify({ ...data, today: localToday() }),
   });
 
 export type EventsResponse = {
@@ -678,7 +679,7 @@ export const quickAddSession = (data: {
     "/api/replanner/quick-add",
     {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify({ ...data, today: localToday() }),
     },
   );
 

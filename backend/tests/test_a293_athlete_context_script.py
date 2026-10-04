@@ -195,7 +195,8 @@ class TestSimulate:
         st = _state(availability={"mon": {"evening": {"available": True}}},
                     equipment={"gyms": [{"gym_id": "g1", "equipment": ["gym_boulder"]}]})
         cli.simulate(st, DRAFT, "2026-10-06", "evening")
-        assert set(seen) == {"availability", "planning_prefs", "gyms", "custom_sessions", "prev_days"}  # A294
+        # A294 (+ review: `today` freezes the past, as POST /events does)
+        assert set(seen) == {"availability", "planning_prefs", "gyms", "custom_sessions", "prev_days", "today"}
         assert seen["gyms"] == [{"gym_id": "g1", "equipment": ["gym_boulder"]}]
         assert any(c["id"] == cli.SIM_SESSION_ID for c in seen["custom_sessions"])
 

@@ -94,10 +94,14 @@ export function hasKeyIssues(status: KeyStatus | null | undefined): boolean {
   return (status.summary?.debt ?? 0) > 0 || (status.conflicts?.length ?? 0) > 0;
 }
 
-/** Conflicts of an insertion that deserve a confirm (dry run of a custom session). */
+/** Conflicts of an insertion that deserve a confirm (dry run of a custom session).
+ *  A294 review: a high `finger_gap` too — finger-hard work inside the recovery
+ *  gap of a finger-hard day nobody can move (a done key session included). */
 export function blockingConflicts(conflicts: KeyConflict[] | undefined): KeyConflict[] {
-  return (conflicts ?? []).filter((c) =>
-    ["key_removed", "key_replaced", "test_downgraded", "pre_test_fatigue"].includes(c.code),
+  return (conflicts ?? []).filter(
+    (c) =>
+      ["key_removed", "key_replaced", "test_downgraded", "pre_test_fatigue"].includes(c.code) ||
+      (c.code === "finger_gap" && c.severity === "high"),
   );
 }
 

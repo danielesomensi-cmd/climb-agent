@@ -309,9 +309,10 @@ class TestKeySessions:
         assert not any(w.get("key") == "technique" for w in ctx["warnings"])
         assert "## Sessioni chiave, settimana prossima" in ac.render_text(ctx)
 
-    def test_base_has_only_technique_and_try_hard(self):
+    def test_base_has_only_technique(self):
+        # A294 review: no limit key in base → no try-hard row.
         ctx = ac.build_athlete_context(_state(), "2026-09-10")
-        assert [r["key"] for r in ctx["key_sessions"]["requirements"]] == ["technique", "try_hard"]
+        assert [r["key"] for r in ctx["key_sessions"]["requirements"]] == ["technique"]
 
     def test_deload_has_technique_without_try_hard(self):
         assert [r["key"] for r in ac.key_requirements_for("deload")] == ["technique"]
