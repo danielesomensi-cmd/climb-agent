@@ -460,7 +460,9 @@ export const applyOverride = (data: {
   spot_id?: string;
   spot_name?: string;
 }) =>
-  request<{ week_plan: WeekPlan }>("/api/replanner/override", {
+  // B366: adjustments/warnings are additive — what the override rewrote
+  // (its own reconcile downshift + the day+1/day+2 recovery ripple).
+  request<{ week_plan: WeekPlan; adjustments?: QuickAddAdjustment[]; warnings?: string[] }>("/api/replanner/override", {
     method: "POST",
     body: JSON.stringify(data),
   });
@@ -519,15 +521,20 @@ export const getSuggestedSessions = (targetDate: string, location: string) =>
 
 // B287/R-5: quick-add runs _reconcile, so an added session can be eased
 // (downgraded) to respect the 48h finger gap or the weekly hard-session cap.
+// B366: the day+1 recovery ripple is reported here too (reason
+// "quick_add_ripple"): it eases the NEXT day's engine session, never a custom
+// or forced one, and only when the session the user added survived.
 // The backend describes each change here so the UI can explain it.
 export type QuickAddAdjustment = {
   date: string;
   slot?: string;
   action: string; // "downgraded"
-  reason: string; // "finger_spacing_downshift" | "hard_cap_downshift"
+  reason: string; // "finger_spacing_downshift" | "hard_cap_downshift" | "quick_add_ripple"
   previous_session_id?: string;
   session_id?: string;
 };
+
+const QUICK_ADD_RIPPLE = "quick_add_ripple";
 
 // B-QUICKADD-ADJUSTMENTS: turn the machine-readable downshift reasons into one
 // plain-language line, so the user understands why the session they added came
@@ -535,16 +542,25 @@ export type QuickAddAdjustment = {
 // different card). Returns null when nothing was adjusted.
 export function describeQuickAddAdjustments(adjustments: QuickAddAdjustment[] | undefined): string | null {
   if (!adjustments || adjustments.length === 0) return null;
-  const reasons = new Set(adjustments.map((a) => a.reason));
-  const parts: string[] = [];
-  if (reasons.has("finger_spacing_downshift")) {
-    parts.push("to protect finger recovery (a hard finger session was within 48h)");
+  const enforced = adjustments.filter((a) => a.reason !== QUICK_ADD_RIPPLE);
+  const rippled = adjustments.length - enforced.length;
+  const sentences: string[] = [];
+  if (enforced.length > 0) {
+    const reasons = new Set(enforced.map((a) => a.reason));
+    const parts: string[] = [];
+    if (reasons.has("finger_spacing_downshift")) {
+      parts.push("to protect finger recovery (a hard finger session was within 48h)");
+    }
+    if (reasons.has("hard_cap_downshift")) {
+      parts.push("to stay within your weekly hard-session limit");
+    }
+    if (parts.length === 0) parts.push("to keep your week balanced"); // unknown reason fallback
+    sentences.push(`Eased to a lighter session ${parts.join(" and ")}.`);
   }
-  if (reasons.has("hard_cap_downshift")) {
-    parts.push("to stay within your weekly hard-session limit");
+  if (rippled > 0) {
+    sentences.push("The next day was eased so you can recover from the session you added.");
   }
-  if (parts.length === 0) parts.push("to keep your week balanced"); // unknown reason fallback
-  return `Eased to a lighter session ${parts.join(" and ")}.`;
+  return sentences.join(" ");
 }
 
 // A254: a finger downshift is injury protection (48h tendon/pulley recovery) —
@@ -552,6 +568,42 @@ export function describeQuickAddAdjustments(adjustments: QuickAddAdjustment[] | 
 // volume, so a one-tap toast action is enough.
 export function quickAddHasFingerRisk(adjustments: QuickAddAdjustment[] | undefined): boolean {
   return !!adjustments?.some((a) => a.reason === "finger_spacing_downshift");
+}
+
+// B366: the hard day override eases day+1 (proportional) and day+2 (forced
+// recovery) — never a custom or forced session — and reconcile may ease the
+// override itself. Same shape as quick-add; returns null when nothing changed.
+const OVERRIDE_RIPPLES = new Set(["recovery_ripple_proportional", "recovery_ripple"]);
+export function describeOverrideAdjustments(adjustments: QuickAddAdjustment[] | undefined): string | null {
+  if (!adjustments || adjustments.length === 0) return null;
+  const enforced = adjustments.filter((a) => !OVERRIDE_RIPPLES.has(a.reason));
+  const rippled = adjustments.filter((a) => OVERRIDE_RIPPLES.has(a.reason));
+  const sentences: string[] = [];
+  if (enforced.length > 0) {
+    const reasons = new Set(enforced.map((a) => a.reason));
+    const parts: string[] = [];
+    if (reasons.has("finger_spacing_downshift")) {
+      parts.push("to protect finger recovery (a hard finger session was within 48h)");
+    }
+    if (reasons.has("hard_cap_downshift")) {
+      parts.push("to stay within your weekly hard-session limit");
+    }
+    if (parts.length === 0) parts.push("to keep your week balanced");
+    sentences.push(`A session was eased ${parts.join(" and ")}.`);
+  }
+  if (rippled.length > 0) {
+    const days = new Set(rippled.map((a) => a.date)).size;
+    sentences.push(days > 1
+      ? "The next two days were eased so you can recover from this session."
+      : "The following day was eased so you can recover from this session.");
+  }
+  return sentences.join(" ");
+}
+
+// B366: "Add hard anyway" pins the ADDED session. A ripple-only result means
+// the added session went in as picked — there is nothing to force.
+export function quickAddCanForce(adjustments: QuickAddAdjustment[] | undefined): boolean {
+  return !!adjustments?.some((a) => a.reason !== QUICK_ADD_RIPPLE);
 }
 
 export const quickAddSession = (data: {

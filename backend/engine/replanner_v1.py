@@ -440,67 +440,59 @@ def apply_day_add(
         key=lambda s: (SLOTS.index(s.get("slot") if s.get("slot") in SLOTS else "evening"), s.get("priority", 99), s.get("session_id", ""))
     )
 
-    # Ripple day+1 only (spacing enforcement handled by _reconcile)
-    if meta["hard"] or meta["finger"]:
-        target_d = _parse_date(target_date)
-        ripple_key = (target_d + timedelta(days=1)).isoformat()
-        try:
-            ripple_day = _find_day(updated, ripple_key)
-        except ValueError:
-            ripple_day = None
+    def _hard_cap_warnings(p: Dict[str, Any]) -> List[str]:
+        # Warnings (don't block) — computed BEFORE reconciliation so the cap
+        # warning still reflects what the user asked for, not the corrected plan.
+        out: List[str] = []
+        hard_cap = _safe_hard_cap(p.get("profile_snapshot"))
+        hard_count = sum(
+            1 for d in p["weeks"][0]["days"]
+            if any((s.get("tags") or {}).get("hard") and s.get("status") != "done" for s in d.get("sessions", []))
+        )
+        if hard_count > hard_cap:
+            out.append(f"Hard session count ({hard_count}) exceeds weekly cap ({hard_cap})")
+        return out
 
-        if ripple_day and ripple_day.get("sessions"):
-            recovery_meta = _meta_for("regeneration_easy")
-            comp_meta = _meta_for("complementary_conditioning")
-            next_sessions = []
-            for session in ripple_day["sessions"]:
-                # B120: never replace completed/skipped sessions via ripple
-                if session.get("status") in ("done", "skipped"):
-                    next_sessions.append(session)
-                    continue
-                is_hard = (session.get("tags") or {}).get("hard")
-                is_low = session.get("intensity") == "low"
-                if is_hard:
-                    next_sessions.append({
-                        "slot": session.get("slot", "evening"),
-                        "session_id": "complementary_conditioning",
-                        "location": session.get("location", location),
-                        "gym_id": session.get("gym_id", effective_gym_id),
-                        "phase_id": effective_phase,
-                        "intensity": comp_meta["intensity"],
-                        "constraints_applied": ["quick_add_ripple"],
-                        "tags": {"hard": False, "finger": False},
-                        "explain": ["hard→medium after quick-add", f"source_day={target_date}"],
-                    })
-                elif not is_low:
-                    next_sessions.append({
-                        "slot": session.get("slot", "evening"),
-                        "session_id": "regeneration_easy",
-                        "location": session.get("location", location),
-                        "gym_id": session.get("gym_id", effective_gym_id),
-                        "phase_id": effective_phase,
-                        "intensity": recovery_meta["intensity"],
-                        "constraints_applied": ["quick_add_ripple"],
-                        "tags": {"hard": False, "finger": False},
-                        "explain": ["medium→low after quick-add", f"source_day={target_date}"],
-                    })
-                else:
-                    next_sessions.append(session)
-            ripple_day["sessions"] = next_sessions
-
-    # Warnings (don't block) — computed BEFORE reconciliation so the cap warning
-    # still reflects what the user asked for, not the already-corrected plan.
-    warnings: List[str] = []
-    hard_cap = _safe_hard_cap(updated.get("profile_snapshot"))
-    hard_count = sum(
-        1 for d in updated["weeks"][0]["days"]
-        if any((s.get("tags") or {}).get("hard") and s.get("status") != "done" for s in d.get("sessions", []))
-    )
-    if hard_count > hard_cap:
-        warnings.append(f"Hard session count ({hard_count}) exceeds weekly cap ({hard_cap})")
-
+    # B366: the day+1 ripple is decided on the OUTCOME of reconciliation. It
+    # used to run unconditionally before _reconcile, so a session that
+    # reconcile then downshifted (finger gap / hard cap) still eased the next
+    # day for a load the athlete was never going to do. Now the ripple is tried
+    # on a copy, in the same order as before (ripple → reconcile, so a hard
+    # day+1 it eases still relieves the weekly cap instead of costing a second
+    # downshift elsewhere), and the copy is kept only if the added session
+    # survived. Otherwise the plan is reconciled without any ripple.
     # B287/R-5: enforce spacing + caps (with cross-week seeding), never silently.
-    adjustments = _reconcile(updated, prev_days=prev_days)
+    def _settle(p: Dict[str, Any]) -> tuple:
+        # Reconcile, then check the added session against a protected session
+        # that FOLLOWS it (the forward scan cannot downshift backwards).
+        adj = _reconcile(p, prev_days=prev_days)
+        guard_adj, guard_warn = _protected_neighbor_guard(p, target_date, slot, session_id, "quick_add")
+        return adj + guard_adj, guard_warn
+
+    ripple_adjustments: List[Dict[str, Any]] = []
+    if meta["hard"] or meta["finger"]:
+        trial = deepcopy(updated)
+        trial_ripple = _quick_add_ripple(
+            trial, target_date=target_date, location=location,
+            gym_id=effective_gym_id, phase_id=effective_phase,
+        )
+        trial_warnings = _hard_cap_warnings(trial)
+        trial_adjustments, trial_guard_warnings = _settle(trial)
+        if _added_session_survived(trial, target_date, slot, session_id, "quick_add"):
+            updated = trial
+            warnings = trial_warnings + trial_guard_warnings
+            ripple_adjustments = trial_ripple
+            adjustments = trial_adjustments
+        else:
+            warnings = _hard_cap_warnings(updated)
+            adjustments, guard_warnings = _settle(updated)
+            warnings += guard_warnings
+    else:
+        warnings = _hard_cap_warnings(updated)
+        adjustments, guard_warnings = _settle(updated)
+        warnings += guard_warnings
+    # B366: the ripple is reported like every other rewrite — never silent.
+    adjustments = adjustments + ripple_adjustments
 
     updated["adaptations"].append({
         "type": "quick_add",
@@ -878,6 +870,332 @@ def _is_rewritable(session: Dict[str, Any]) -> bool:
     return True
 
 
+def _added_session_survived(
+    plan: Dict[str, Any], day_date: str, slot: str, session_id: str, marker: str,
+) -> bool:
+    """B366: is the session the user just placed still there after reconcile?
+
+    Reconciliation rewrites in place (``session_id`` → ``regeneration_easy``,
+    ``constraints_applied`` → the downshift reason), so the added session is
+    recognised by slot + session_id + the *marker* its path stamped
+    (``quick_add`` / ``manual_override``).
+    """
+    try:
+        day = _find_day(plan, day_date)
+    except ValueError:
+        return False
+    for s in day.get("sessions") or []:
+        if (
+            s.get("slot") == slot
+            and s.get("session_id") == session_id
+            and marker in (s.get("constraints_applied") or [])
+        ):
+            return True
+    return False
+
+
+def _protected_neighbor_guard(
+    plan: Dict[str, Any], day_date: str, slot: str, session_id: str, marker: str,
+) -> tuple:
+    """B366 review: the ripple spares a protected session after the added one —
+    so check the added one against it instead.
+
+    ``_enforce_no_consecutive_finger`` scans forward: when it reaches a finger
+    session the guard may not rewrite (custom / forced / done) sitting right
+    after the session the user just added, it has nothing to downshift there and
+    never goes back. Before B366 the ripple papered over this by flattening
+    day+1 (destroying the custom session); once the ripple spares it, a
+    finger-hard quick-add or override on D followed by a finger custom on D+1
+    stayed finger-hard on both days with no word to anyone. The protection must
+    not depend on which of the two sessions comes first in the scan.
+
+    So, after reconcile, for the session just placed on *day_date* (found by
+    slot + session_id + *marker*, as in ``_added_session_survived``):
+
+    * finger, and a non-skipped finger session ``_is_rewritable`` protects lies
+      within ``_recovery_gap`` days AFTER it → the added session is downshifted
+      with ``finger_spacing_downshift`` (same rewrite and same reason as the
+      forward scan, so the A254 "Add hard anyway" confirm still applies);
+    * hard, and day+1 holds a protected non-skipped hard session → no rule
+      forbids back-to-back hard days, so nothing is rewritten, but a warning is
+      returned: before B366 the ripple eased that day, now it cannot.
+
+    A session the user forced (A254) is left alone — they already accepted the
+    risk. Returns ``(adjustments, warnings)``.
+    """
+    try:
+        day = _find_day(plan, day_date)
+    except ValueError:
+        return [], []
+    added = next(
+        (
+            s for s in day.get("sessions") or []
+            if s.get("slot") == slot
+            and s.get("session_id") == session_id
+            and marker in (s.get("constraints_applied") or [])
+        ),
+        None,
+    )
+    if added is None or not _is_rewritable(added):
+        return [], []
+    tags = added.get("tags") or {}
+    base = _parse_date(day_date)
+
+    def _protected(offset: int, tag: str) -> Optional[Dict[str, Any]]:
+        try:
+            d = _find_day(plan, (base + timedelta(days=offset)).isoformat())
+        except ValueError:
+            return None
+        for s in d.get("sessions") or []:
+            if (
+                (s.get("tags") or {}).get(tag)
+                and s.get("status") != "skipped"
+                and not _is_rewritable(s)
+            ):
+                return s
+        return None
+
+    if tags.get("finger"):
+        for offset in range(1, _recovery_gap(plan) + 1):
+            if _protected(offset, "finger") is None:
+                continue
+            recovery_meta = _meta_for("regeneration_easy")
+            previous_id = added.get("session_id")
+            added.update(
+                {
+                    "session_id": "regeneration_easy",
+                    "intensity": recovery_meta["intensity"],
+                    "tags": {"hard": False, "finger": False},
+                    "constraints_applied": ["finger_spacing_downshift"],
+                    "explain": [
+                        "no consecutive finger days",
+                        "a finger session you set follows within the recovery gap",
+                    ],
+                }
+            )
+            return [_adjustment(day_date, added, previous_id, "finger_spacing_downshift")], []
+
+    if tags.get("hard"):
+        nxt = _protected(1, "hard")
+        if nxt is not None:
+            next_date = (base + timedelta(days=1)).isoformat()
+            return [], [
+                f"Back-to-back hard days: {next_date} keeps a session you set "
+                f"({nxt.get('session_id')}), which the plan does not change"
+            ]
+    return [], []
+
+
+def _protected_hard_after(plan: Dict[str, Any], day_date: str) -> List[Dict[str, Any]]:
+    """B366 review: hard/finger sessions on day+1 that no ripple may rewrite.
+
+    Used by the outdoor ripple to record what it had to leave in place.
+    """
+    try:
+        nxt_date = (_parse_date(day_date) + timedelta(days=1)).isoformat()
+        nxt = _find_day(plan, nxt_date)
+    except ValueError:
+        return []
+    out = []
+    for s in nxt.get("sessions") or []:
+        tags = s.get("tags") or {}
+        if (tags.get("hard") or tags.get("finger")) and s.get("status") not in ("done", "skipped") and not _is_rewritable(s):
+            out.append({"date": nxt_date, "slot": s.get("slot"), "session_id": s.get("session_id")})
+    return out
+
+
+def _apply_ripple_to_day(
+    plan: Dict[str, Any],
+    day_date: str,
+    rewrite: Any,
+) -> List[Dict[str, Any]]:
+    """B366: shared skeleton of the three recovery ripples.
+
+    *rewrite(session)* returns ``(replacement, reason)`` to rewrite a session or
+    ``None`` to keep it. Whatever *rewrite* says, a session that
+    ``_is_rewritable`` protects — done/skipped (B120, immutability), forced
+    (A254) or user-authored custom (B345) — is kept byte-identical. The ripples
+    used to check only done/skipped, so a quick-add or a hard override next to
+    a custom session silently replaced the user's own work with
+    complementary_conditioning / regeneration_easy, ``is_custom`` and all.
+
+    Returns one ``_adjustment`` per rewritten session: a ripple is a rewrite
+    like any reconcile downshift and must be just as visible.
+    """
+    try:
+        day = _find_day(plan, day_date)
+    except ValueError:
+        logger.debug("Ripple target day %s not found in plan — skipping", day_date)
+        return []
+    if not day.get("sessions"):
+        return []
+    adjustments: List[Dict[str, Any]] = []
+    next_sessions = []
+    for session in day["sessions"]:
+        result = rewrite(session) if _is_rewritable(session) else None
+        if result is None:
+            next_sessions.append(session)
+            continue
+        replacement, reason = result
+        next_sessions.append(replacement)
+        adjustments.append(_adjustment(day_date, replacement, session.get("session_id"), reason))
+    day["sessions"] = next_sessions
+    return adjustments
+
+
+def _quick_add_ripple(
+    plan: Dict[str, Any],
+    *,
+    target_date: str,
+    location: str,
+    gym_id: Optional[str],
+    phase_id: str,
+) -> List[Dict[str, Any]]:
+    """Ease day+1 after a hard/finger quick-add (hard→medium, medium→low)."""
+    recovery_meta = _meta_for("regeneration_easy")
+    comp_meta = _meta_for("complementary_conditioning")
+    ripple_key = (_parse_date(target_date) + timedelta(days=1)).isoformat()
+
+    def rewrite(session: Dict[str, Any]):
+        is_hard = (session.get("tags") or {}).get("hard")
+        is_low = session.get("intensity") == "low"
+        if is_hard:
+            return ({
+                "slot": session.get("slot", "evening"),
+                "session_id": "complementary_conditioning",
+                "location": session.get("location", location),
+                "gym_id": session.get("gym_id", gym_id),
+                "phase_id": phase_id,
+                "intensity": comp_meta["intensity"],
+                "constraints_applied": ["quick_add_ripple"],
+                "tags": {"hard": False, "finger": False},
+                "explain": ["hard→medium after quick-add", f"source_day={target_date}"],
+            }, "quick_add_ripple")
+        if not is_low:
+            return ({
+                "slot": session.get("slot", "evening"),
+                "session_id": "regeneration_easy",
+                "location": session.get("location", location),
+                "gym_id": session.get("gym_id", gym_id),
+                "phase_id": phase_id,
+                "intensity": recovery_meta["intensity"],
+                "constraints_applied": ["quick_add_ripple"],
+                "tags": {"hard": False, "finger": False},
+                "explain": ["medium→low after quick-add", f"source_day={target_date}"],
+            }, "quick_add_ripple")
+        return None
+
+    return _apply_ripple_to_day(plan, ripple_key, rewrite)
+
+
+def _outdoor_ripple(plan: Dict[str, Any], *, date: str, outdoor_load: Any) -> List[Dict[str, Any]]:
+    """Ease day+1 after a high-load outdoor day (hard/finger→medium, medium→low)."""
+    recovery_meta = _meta_for("regeneration_easy")
+    comp_meta = _meta_for("complementary_conditioning")
+    ripple_key = (_parse_date(date) + timedelta(days=1)).isoformat()
+
+    def rewrite(session: Dict[str, Any]):
+        sid = session.get("session_id", "")
+        smeta = _SESSION_META.get(sid, {})
+        is_hard = smeta.get("hard") or (session.get("tags") or {}).get("hard")
+        is_finger = smeta.get("finger") or (session.get("tags") or {}).get("finger")
+        intensity = smeta.get("intensity") or session.get("intensity")
+        if is_hard or is_finger:
+            return ({
+                "session_id": "complementary_conditioning",
+                "slot": session.get("slot", "evening"),
+                "location": session.get("location", "gym"),
+                "status": "planned",
+                "estimated_load_score": _INTENSITY_TO_LOAD.get(comp_meta["intensity"], 40),
+                "gym_id": session.get("gym_id"),
+                "intensity": comp_meta["intensity"],
+                "constraints_applied": ["outdoor_ripple"],
+                "tags": {"hard": False, "finger": False},
+                "explain": [f"hard→medium after outdoor load={outdoor_load}"],
+            }, "outdoor_ripple")
+        if intensity == "medium":
+            return ({
+                "session_id": "deload_recovery",
+                "slot": session.get("slot", "evening"),
+                "location": session.get("location", "gym"),
+                "status": "planned",
+                "estimated_load_score": _INTENSITY_TO_LOAD.get(recovery_meta["intensity"], 20),
+                "gym_id": session.get("gym_id"),
+                "intensity": recovery_meta["intensity"],
+                "constraints_applied": ["outdoor_ripple"],
+                "tags": {"hard": False, "finger": False},
+                "explain": [f"medium→low after outdoor load={outdoor_load}"],
+            }, "outdoor_ripple")
+        return None
+
+    return _apply_ripple_to_day(plan, ripple_key, rewrite)
+
+
+def _override_ripple(
+    plan: Dict[str, Any],
+    *,
+    target: Any,
+    location: str,
+    gym_id: Optional[str],
+    phase_id: str,
+) -> List[Dict[str, Any]]:
+    """Ease the two days after a hard/finger override.
+
+    Day+1 is proportional (hard→medium, medium→low, low kept); day+2 forces
+    recovery on anything non-low.
+    """
+    recovery_meta = _meta_for("regeneration_easy")
+    comp_meta = _meta_for("complementary_conditioning")
+    target_key = target.isoformat()
+    adjustments: List[Dict[str, Any]] = []
+
+    def _recovery(session: Dict[str, Any], reason: str, explain: str) -> Dict[str, Any]:
+        return {
+            "slot": session.get("slot", "evening"),
+            "session_id": "regeneration_easy",
+            "location": session.get("location", location),
+            "gym_id": session.get("gym_id", gym_id),
+            "phase_id": phase_id,
+            "intensity": recovery_meta["intensity"],
+            "estimated_load_score": _INTENSITY_TO_LOAD.get(recovery_meta["intensity"], 20),
+            "constraints_applied": [reason],
+            "tags": {"hard": False, "finger": False},
+            "explain": [explain, f"source_day={target_key}"],
+        }
+
+    def rewrite_day1(session: Dict[str, Any]):
+        is_hard = session.get("tags", {}).get("hard")
+        is_low = session.get("intensity") == "low"
+        reason = "recovery_ripple_proportional"
+        if is_hard:
+            return ({
+                "slot": session.get("slot", "evening"),
+                "session_id": "complementary_conditioning",
+                "location": session.get("location", location),
+                "gym_id": session.get("gym_id", gym_id),
+                "phase_id": phase_id,
+                "intensity": comp_meta["intensity"],
+                "estimated_load_score": _INTENSITY_TO_LOAD.get(comp_meta["intensity"], 40),
+                "constraints_applied": [reason],
+                "tags": {"hard": False, "finger": False},
+                "explain": ["hard→medium after hard override", f"source_day={target_key}"],
+            }, reason)
+        if not is_low:
+            return (_recovery(session, reason, "medium→low after hard override"), reason)
+        return None
+
+    def rewrite_day2(session: Dict[str, Any]):
+        is_hard = session.get("tags", {}).get("hard")
+        is_low = session.get("intensity") == "low"
+        if is_hard or not is_low:
+            return (_recovery(session, "recovery_ripple", "forced recovery after hard override"), "recovery_ripple")
+        return None
+
+    adjustments.extend(_apply_ripple_to_day(plan, (target + timedelta(days=1)).isoformat(), rewrite_day1))
+    adjustments.extend(_apply_ripple_to_day(plan, (target + timedelta(days=2)).isoformat(), rewrite_day2))
+    return adjustments
+
+
 def _enforce_caps(plan: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Downshift hard sessions beyond the weekly cap. Returns what it changed."""
     adjustments: List[Dict[str, Any]] = []
@@ -1249,57 +1567,19 @@ def apply_events(
             # False — the ripple exists to protect a plan still being built
             # day by day, not to retroactively alter a week that already closed.
             if outdoor_load >= OUTDOOR_RIPPLE_THRESHOLD and event.get("allow_ripple", True):
-                target_d = _parse_date(event["date"])
-                ripple_key = (target_d + timedelta(days=1)).isoformat()
-                try:
-                    ripple_day = _find_day(updated, ripple_key)
-                except ValueError:
-                    ripple_day = None
-
-                if ripple_day and ripple_day.get("sessions"):
-                    recovery_meta = _meta_for("regeneration_easy")
-                    comp_meta = _meta_for("complementary_conditioning")
-                    next_sessions = []
-                    for session in ripple_day["sessions"]:
-                        # B120: never replace completed/skipped sessions via ripple
-                        if session.get("status") in ("done", "skipped"):
-                            next_sessions.append(session)
-                            continue
-                        sid = session.get("session_id", "")
-                        smeta = _SESSION_META.get(sid, {})
-                        is_hard = smeta.get("hard") or (session.get("tags") or {}).get("hard")
-                        is_finger = smeta.get("finger") or (session.get("tags") or {}).get("finger")
-                        is_low = (smeta.get("intensity") or session.get("intensity")) == "low"
-
-                        if is_hard or is_finger:
-                            next_sessions.append({
-                                "session_id": "complementary_conditioning",
-                                "slot": session.get("slot", "evening"),
-                                "location": session.get("location", "gym"),
-                                "status": "planned",
-                                "estimated_load_score": _INTENSITY_TO_LOAD.get(comp_meta["intensity"], 40),
-                                "gym_id": session.get("gym_id"),
-                                "intensity": comp_meta["intensity"],
-                                "constraints_applied": ["outdoor_ripple"],
-                                "tags": {"hard": False, "finger": False},
-                                "explain": [f"hard→medium after outdoor load={outdoor_load}"],
-                            })
-                        elif not is_low and (smeta.get("intensity") or session.get("intensity")) == "medium":
-                            next_sessions.append({
-                                "session_id": "deload_recovery",
-                                "slot": session.get("slot", "evening"),
-                                "location": session.get("location", "gym"),
-                                "status": "planned",
-                                "estimated_load_score": _INTENSITY_TO_LOAD.get(recovery_meta["intensity"], 20),
-                                "gym_id": session.get("gym_id"),
-                                "intensity": recovery_meta["intensity"],
-                                "constraints_applied": ["outdoor_ripple"],
-                                "tags": {"hard": False, "finger": False},
-                                "explain": [f"medium→low after outdoor load={outdoor_load}"],
-                            })
-                        else:
-                            next_sessions.append(session)
-                    ripple_day["sessions"] = next_sessions
+                # B366: _is_rewritable guard + reported (custom/forced kept).
+                ripple_adj = _outdoor_ripple(updated, date=event["date"], outdoor_load=outdoor_load)
+                # B366 review: a hard/finger session the ripple had to spare
+                # (custom / forced) is named, so the load right after a big
+                # outdoor day is on record instead of silently kept.
+                kept = _protected_hard_after(updated, event["date"])
+                if ripple_adj or kept:
+                    updated["adaptations"].append({
+                        "type": "outdoor_ripple",
+                        "date": event["date"],
+                        "adjustments": ripple_adj,
+                        **({"kept_protected": kept} if kept else {}),
+                    })
 
             _recompute_day_status(day)
 
@@ -1969,82 +2249,6 @@ def apply_day_override(
     else:
         target_day["sessions"] = [new_session]
 
-    if meta["hard"] or meta["finger"]:
-        recovery_meta = _meta_for("regeneration_easy")
-        comp_meta = _meta_for("complementary_conditioning")
-        for delta in (1, 2):
-            ripple_key = (target + timedelta(days=delta)).isoformat()
-            try:
-                ripple_day = _find_day(updated, ripple_key)
-            except ValueError:
-                logger.debug("Ripple target day %s not found in plan — skipping", ripple_key)
-                continue
-            if not ripple_day.get("sessions"):
-                continue
-            next_sessions = []
-            for session in ripple_day.get("sessions", []):
-                # B120: never replace completed/skipped sessions via ripple
-                if session.get("status") in ("done", "skipped"):
-                    next_sessions.append(session)
-                    continue
-                is_hard = session.get("tags", {}).get("hard")
-                is_low = session.get("intensity") == "low"
-
-                if delta == 1:
-                    # Proportional: hard→medium, medium→low, low→keep
-                    if is_hard:
-                        next_sessions.append(
-                            {
-                                "slot": session.get("slot", "evening"),
-                                "session_id": "complementary_conditioning",
-                                "location": session.get("location", location),
-                                "gym_id": session.get("gym_id", effective_gym_id),
-                                "phase_id": effective_phase,
-                                "intensity": comp_meta["intensity"],
-                                "estimated_load_score": _INTENSITY_TO_LOAD.get(comp_meta["intensity"], 40),
-                                "constraints_applied": ["recovery_ripple_proportional"],
-                                "tags": {"hard": False, "finger": False},
-                                "explain": ["hard→medium after hard override", f"source_day={target_key}"],
-                            }
-                        )
-                    elif not is_low:
-                        next_sessions.append(
-                            {
-                                "slot": session.get("slot", "evening"),
-                                "session_id": "regeneration_easy",
-                                "location": session.get("location", location),
-                                "gym_id": session.get("gym_id", effective_gym_id),
-                                "phase_id": effective_phase,
-                                "intensity": recovery_meta["intensity"],
-                                "estimated_load_score": _INTENSITY_TO_LOAD.get(recovery_meta["intensity"], 20),
-                                "constraints_applied": ["recovery_ripple_proportional"],
-                                "tags": {"hard": False, "finger": False},
-                                "explain": ["medium→low after hard override", f"source_day={target_key}"],
-                            }
-                        )
-                    else:
-                        next_sessions.append(session)
-                else:
-                    # Day+2: force recovery for anything non-low
-                    if is_hard or not is_low:
-                        next_sessions.append(
-                            {
-                                "slot": session.get("slot", "evening"),
-                                "session_id": "regeneration_easy",
-                                "location": session.get("location", location),
-                                "gym_id": session.get("gym_id", effective_gym_id),
-                                "phase_id": effective_phase,
-                                "intensity": recovery_meta["intensity"],
-                                "estimated_load_score": _INTENSITY_TO_LOAD.get(recovery_meta["intensity"], 20),
-                                "constraints_applied": ["recovery_ripple"],
-                                "tags": {"hard": False, "finger": False},
-                                "explain": ["forced recovery after hard override", f"source_day={target_key}"],
-                            }
-                        )
-                    else:
-                        next_sessions.append(session)
-            ripple_day["sessions"] = next_sessions
-
     # NEW-F7: finger compensation — if override removed a finger session, try to place it elsewhere
     if session_index is not None and len(original_sessions) > 1:
         # B48: only check the replaced session, not all originals
@@ -2054,11 +2258,42 @@ def apply_day_override(
         original_had_finger = any(
             (s.get("tags") or {}).get("finger") for s in original_sessions
         )
-    new_has_finger = meta["finger"]
-    if original_had_finger and not new_has_finger:
-        _compensate_finger(updated, target_key, effective_phase, location, effective_gym_id)
+    needs_compensation = original_had_finger and not meta["finger"]
 
-    _reconcile(updated)
+    def _finish(p: Dict[str, Any], with_ripple: bool) -> tuple:
+        # Order unchanged from before B366: ripple → finger compensation →
+        # reconcile (compensation may use a day the ripple just eased).
+        # Returns (ripple_adjustments, reconcile+guard adjustments, warnings).
+        ripple_adj = (
+            _override_ripple(p, target=target, location=location,
+                             gym_id=effective_gym_id, phase_id=effective_phase)
+            if with_ripple else []
+        )
+        if needs_compensation:
+            _compensate_finger(p, target_key, effective_phase, location, effective_gym_id)
+        reconcile_adj = _reconcile(p)
+        # B366 review: a protected finger session AFTER the override is not
+        # caught by the forward scan — check the override against it.
+        guard_adj, guard_warn = _protected_neighbor_guard(
+            p, target_key, slot, session_id, "manual_override",
+        )
+        return ripple_adj, reconcile_adj + guard_adj, guard_warn
+
+    # B366: the ripple guards custom/forced sessions (_is_rewritable) and is
+    # kept only if the overriding session itself survived reconciliation —
+    # otherwise the two following days would be eased for a load that is no
+    # longer on the plan. Tried on a copy so the order of operations is the
+    # same as before when it does survive.
+    if meta["hard"] or meta["finger"]:
+        trial = deepcopy(updated)
+        trial_result = _finish(trial, with_ripple=True)
+        if _added_session_survived(trial, target_key, slot, session_id, "manual_override"):
+            updated = trial
+            ripple_adjustments, reconcile_adjustments, override_warnings = trial_result
+        else:
+            ripple_adjustments, reconcile_adjustments, override_warnings = _finish(updated, with_ripple=False)
+    else:
+        ripple_adjustments, reconcile_adjustments, override_warnings = _finish(updated, with_ripple=False)
 
     updated.setdefault("adaptations", []).append(
         {
@@ -2069,6 +2304,11 @@ def apply_day_override(
                 (target + timedelta(days=1)).isoformat(),
                 (target + timedelta(days=2)).isoformat(),
             ],
+            # B366: everything this override rewrote — reconcile downshifts
+            # (including the override itself) first, then the ripple — plus
+            # the warnings, so /api/replanner/override can surface them.
+            "adjustments": reconcile_adjustments + ripple_adjustments,
+            "warnings": override_warnings,
         }
     )
 

@@ -263,6 +263,9 @@ def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)
     equipment = state.get("equipment", {})
     gyms = equipment.get("gyms", [])
 
+    # B366: only the adaptations THIS call appends are reported back.
+    _n_adapt_before = len(week_plan.get("adaptations") or [])
+
     try:
         updated = apply_day_override(
             week_plan,
@@ -290,7 +293,17 @@ def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)
     # Auto-resolve all sessions so the frontend gets exercises inline
     _auto_resolve(updated, state, user_id)
 
-    return {"week_plan": updated}
+    # B366: what the override rewrote (its own reconcile downshift, the
+    # day+1/day+2 recovery ripple) and its warnings, so the UI can say so —
+    # the same contract quick-add has had since B287. Additive fields.
+    adjustments: list = []
+    warnings: list = []
+    for a in (updated.get("adaptations") or [])[_n_adapt_before:]:
+        if a.get("type") == "day_override":
+            adjustments.extend(a.get("adjustments") or [])
+            warnings.extend(a.get("warnings") or [])
+
+    return {"week_plan": updated, "adjustments": adjustments, "warnings": warnings}
 
 
 @router.get("/suggest-sessions")

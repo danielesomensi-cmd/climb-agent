@@ -23,7 +23,8 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, ChevronDown, BarChart3, Check } from "lucide-react";
 const FeedbackDialog = dynamic(() => import("@/components/training/feedback-dialog").then((m) => m.FeedbackDialog), { ssr: false });
 import { useRouter } from "next/navigation";
-import { applyOverride, quickAddSession, describeQuickAddAdjustments, quickAddHasFingerRisk, applyEvents, postFeedback, getOutdoorSpots, getOutdoorLogByDate, deleteFreeSession, getPitchLadder, setOutdoorPlan } from "@/lib/api";
+import { applyOverride, quickAddSession, describeQuickAddAdjustments, describeOverrideAdjustments, quickAddHasFingerRisk,
+  quickAddCanForce, applyEvents, postFeedback, getOutdoorSpots, getOutdoorLogByDate, deleteFreeSession, getPitchLadder, setOutdoorPlan } from "@/lib/api";
 import { ForceHardDialog } from "@/components/training/force-hard-dialog";
 import { useUserState } from "@/lib/hooks/queries/use-user-state";
 import { useWeekPlan } from "@/lib/hooks/queries/use-week-plan";
@@ -251,6 +252,14 @@ export default function WeekPage() {
         spot_name: rdata.spot_name,
       });
       updateWeekCache(result.week_plan);
+      // B366: an override's rewrites (ripple, downshift) are never silent.
+      if (result.warnings && result.warnings.length > 0) {
+        setError(result.warnings.join("; "));
+      }
+      const overrideNote = describeOverrideAdjustments(result.adjustments);
+      if (overrideNote) {
+        toast("Plan adjusted", { description: overrideNote, duration: 8000 });
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to update plan");
     } finally {
@@ -301,7 +310,13 @@ export default function WeekPage() {
         const onForce = quickAddHasFingerRisk(result.adjustments)
           ? () => setForceRetry(() => doForce)
           : doForce;
-        toast("Session adjusted", { description: note, duration: 10000, action: { label: "Add hard anyway", onClick: onForce } });
+        // B366: a ripple-only result needs no force action — the added
+        // session went in as picked; only the next day was eased.
+        if (quickAddCanForce(result.adjustments)) {
+          toast("Session adjusted", { description: note, duration: 10000, action: { label: "Add hard anyway", onClick: onForce } });
+        } else {
+          toast("Next day eased", { description: note, duration: 8000 });
+        }
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to add session";

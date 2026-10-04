@@ -288,11 +288,35 @@ def test_day_override_recovery_ripple():
         reference_date="2026-01-05",
         phase_id="strength_power",
     )
-    # Check ripple days (day+2, day+3) have no hard sessions
+    # B366: in this snapshot 01-05 holds a finger session, so reconcile
+    # downshifts the 01-06 override (48h gap) — and the ripple must then leave
+    # 01-07/01-08 alone instead of easing them for a load that is not there.
+    target = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-06")
+    assert target["sessions"][0]["session_id"] == "regeneration_easy"
+    for ripple_date in ("2026-01-07", "2026-01-08"):
+        before = next(d for d in plan["weeks"][0]["days"] if d["date"] == ripple_date)
+        after = next(d for d in updated["weeks"][0]["days"] if d["date"] == ripple_date)
+        assert after["sessions"] == before["sessions"]
+
+    # Without the conflicting finger day the override survives, and the ripple
+    # eases the two following days.
+    clean = _v2_plan_snapshot("strength_power")
+    next(d for d in clean["weeks"][0]["days"] if d["date"] == "2026-01-05")["sessions"] = []
+    updated = apply_day_override(
+        clean,
+        intent="strength",
+        location="home",
+        reference_date="2026-01-05",
+        phase_id="strength_power",
+    )
+    target = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-06")
+    assert "manual_override" in target["sessions"][0]["constraints_applied"]
     for ripple_date in ("2026-01-07", "2026-01-08"):
         ripple_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == ripple_date)
         for s in ripple_day["sessions"]:
             assert not s["tags"]["hard"], f"Hard session on ripple day {ripple_date}"
+    entry = next(a for a in updated["adaptations"] if a["type"] == "day_override")
+    assert {a["date"] for a in entry["adjustments"]} == {"2026-01-07"}
 
 
 def test_day_override_enforces_finger_spacing():
