@@ -24,6 +24,7 @@ from backend.engine.replanner_v1 import (
 )
 from backend.engine.closed_loop_v1 import apply_day_result_to_user_state
 from backend.engine.resolve_session import resolve_session
+from backend.engine.target_refresh import refresh_edited_session_targets
 
 logger = logging.getLogger(__name__)
 
@@ -180,6 +181,10 @@ def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None) -
                     session_entry.get("_user_edited")
                     and session_entry.get("resolved")
                 ):
+                    # A291: an edited FUTURE pending session keeps its
+                    # exercises but its grade targets follow the current
+                    # ladder (no-op on done/skipped/past sessions).
+                    refresh_edited_session_targets(session_entry, day_entry.get("date"), state)
                     continue
 
                 session_id = session_entry.get("session_id", "")

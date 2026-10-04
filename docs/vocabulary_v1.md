@@ -442,6 +442,14 @@ A reference grade that is not on its ladder (e.g. `V9`, an empty string) emits *
 `step_grade` (whole letters, strips the "+") is kept only as a legacy helper; no
 engine path calls it.
 
+**Pencil-edited sessions (A291, DECISIONS "Grades").** `_auto_resolve` never re-resolves a
+`_user_edited` session (B153b), so `engine/target_refresh.refresh_edited_session_targets`
+re-runs `inject_targets` on its engine-placed instances and copies back **only** the
+grade-target keys (`GRADE_TARGET_KEYS`: `suggested_grade`, `grade_ref`, `grade_offset`,
+`grade_scale`, `grade_source`, `suggested_boulder_target`; a key the fresh run no longer
+emits is removed). Exercises, prescriptions, loads and `user_added` instances do not move.
+Only pending sessions dated today or later: done/skipped/past sessions are never touched.
+
 **Units by module** (they differ on purpose — check before reusing a number):
 
 | where | unit |

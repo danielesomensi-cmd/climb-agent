@@ -325,6 +325,10 @@ October 2026 the `+` was dropped and they came out as 6c). When your endurance
 feedback agrees twice in a row (two *easy* or two *hard*), the remembered grade moves
 by half a grade.
 
+A session you changed with the pencil keeps the exercises you chose, but its grade
+targets still follow these rules: from today on they are worked out again each time
+the week loads. Sessions you already did, skipped, or that are in the past stay exactly as they were.
+
 ---
 
 ## 6. Test Sessions
