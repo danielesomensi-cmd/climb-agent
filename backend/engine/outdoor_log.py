@@ -268,6 +268,64 @@ def validate_outdoor_entry(entry: Dict[str, Any]) -> List[str]:
     return errors
 
 
+# ---------------------------------------------------------------------------
+# B362: one route, one name
+# ---------------------------------------------------------------------------
+
+def _route_key(name: Any) -> str:
+    """Case- and whitespace-insensitive identity of a route name."""
+    return " ".join(str(name or "").split()).casefold()
+
+
+def _spot_key(entry: Dict[str, Any]) -> str:
+    return " ".join(str(entry.get("spot_name") or "").split()).casefold()
+
+
+def canonicalize_route_names(
+    entry: Dict[str, Any], history: List[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """Align each route name with the spelling already logged at the same spot.
+
+    "Cima nikita" and "Cima Nikita", or "Bibi " with a trailing space, used to
+    become two routes in the outdoor report, so the history of one project was
+    split in two. A name that matches an earlier route at the same crag
+    case- and whitespace-insensitively takes the most frequent earlier spelling
+    (ties: the most recent); anything else is only trimmed. Different names
+    ("Jude" vs "Judd") are left alone — that is a judgement, not a typo.
+    Mutates and returns ``entry``.
+    """
+    spot = _spot_key(entry)
+    counts: Dict[str, Dict[str, List[Any]]] = {}
+    for past in sorted(history, key=lambda e: str(e.get("date") or "")):
+        if _spot_key(past) != spot or past.get("date") == entry.get("date"):
+            continue
+        for r in past.get("routes") or []:
+            name = " ".join(str(r.get("name") or "").split())
+            if not name:
+                continue
+            slot = counts.setdefault(_route_key(name), {}).setdefault(name, [0, ""])
+            slot[0] += 1
+            slot[1] = str(past.get("date") or "")
+    for r in entry.get("routes") or []:
+        if not isinstance(r, dict) or not isinstance(r.get("name"), str):
+            continue
+        name = " ".join(r["name"].split())
+        spellings = counts.get(_route_key(name))
+        if spellings:
+            name = max(spellings.items(), key=lambda kv: (kv[1][0], kv[1][1]))[0]
+        r["name"] = name
+    return entry
+
+
+def _history_for_names(user_id: Optional[str]) -> List[Dict[str, Any]]:
+    """Past sessions for name alignment. Best-effort: a read failure must never
+    block saving a session — the worst case is the old behaviour (trim only)."""
+    try:
+        return load_outdoor_sessions(user_id)
+    except Exception:
+        return []
+
+
 def append_outdoor_session(entry: Dict[str, Any], user_id: Optional[str] = None) -> str:
     """Validate and append an outdoor session entry to the yearly JSONL log.
 
@@ -278,6 +336,7 @@ def append_outdoor_session(entry: Dict[str, Any], user_id: Optional[str] = None)
     if errors:
         raise ValueError(f"Invalid outdoor session entry: {'; '.join(errors)}")
 
+    canonicalize_route_names(entry, _history_for_names(user_id))
     return storage.append_outdoor_log_line(user_id, entry)
 
 
@@ -303,6 +362,8 @@ def update_outdoor_session(user_id: Optional[str], date: str, new_entry: Dict[st
     errors = validate_outdoor_entry(new_entry)
     if errors:
         raise ValueError(f"Invalid outdoor session entry: {'; '.join(errors)}")
+
+    canonicalize_route_names(new_entry, _history_for_names(user_id))
 
     # Remove old, append new
     storage.remove_outdoor_log_by_date(user_id, date)
