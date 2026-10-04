@@ -45,6 +45,7 @@ from backend.engine.adaptive_replan import (
     load_exercises_by_id,
 )
 from backend.engine.closed_loop_v1 import apply_day_result_to_user_state
+from backend.engine.limit_log import entries_for_session
 from backend.engine.load_score import compute_actual_load_score, fatigue_map_by_id
 from backend.engine.measured_feedback import (
     derive_session_difficulty,
@@ -154,6 +155,32 @@ def _attach_prescribed_reps(log_entry: dict, state: dict, target_date, target_si
             item["prescribed_sets"] = sets_by_id[eid]
         if eid in work_by_id and item.get("prescribed_work_seconds") is None and item.get("work_seconds") is None:
             item["prescribed_work_seconds"] = work_by_id[eid]
+
+
+def _limit_summary_for(state: dict, target_date, target_sid) -> list:
+    """A296: the limit-log entries this feedback wrote, for the response."""
+    if not target_date or not target_sid:
+        return []
+    out = []
+    for e in entries_for_session(state, target_date, target_sid):
+        if not e.get("problems") and not e.get("rp_proposal"):
+            continue
+        row = {
+            "exercise_id": e.get("exercise_id"),
+            "surface": e.get("surface"),
+            "target_grade": e.get("target_grade"),
+            "next_target_grade": e.get("next_target_grade"),
+            "step": e.get("step"),
+            "step_reason": e.get("step_reason"),
+            "hard_attempts": e.get("hard_attempts"),
+            "qualifies": e.get("qualifies"),
+        }
+        if e.get("warning"):
+            row["warning"] = e["warning"]
+        if e.get("rp_proposal"):
+            row["rp_proposal"] = e["rp_proposal"]
+        out.append(row)
+    return out
 
 
 @router.post("", dependencies=[Depends(require_active_subscription)])
@@ -524,6 +551,11 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
     response: dict = {"status": "ok"}
     if final_plan:
         response["week_plan"] = final_plan
+    # A296: what the limit log made of this session (target step, the
+    # hard-attempts warning, a send above the boulder RP to confirm).
+    _limit_summary = _limit_summary_for(state, target_date, target_sid)
+    if _limit_summary:
+        response["limit_summary"] = _limit_summary
     if limitation_suggestions:
         response["limitation_suggestions"] = limitation_suggestions
     if stale_exercise_warning:

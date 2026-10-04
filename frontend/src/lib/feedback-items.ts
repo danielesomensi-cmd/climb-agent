@@ -202,6 +202,10 @@ export function buildGuidedFeedbackItems(
     if (ex.usedGrade) {
       item.used_grade = ex.usedGrade;
     }
+    // A296: limit problem log — only for an exercise actually done.
+    if (ex.status === "done" && ex.problems && ex.problems.length > 0) {
+      item.problems = ex.problems;
+    }
     if (ex.suggested.surface) {
       item.surface_selected = ex.suggested.surface;
     }

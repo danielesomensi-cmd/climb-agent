@@ -7,20 +7,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertTriangle, Check, SkipForward, Lightbulb, Film, Info, Timer, Play, Square, MessageSquare } from "lucide-react";
-import type { GuidedExercise, HangMargin } from "@/lib/types";
+import type { GuidedExercise, HangMargin, LimitProblem, LimitProblemDraft } from "@/lib/types";
 import { ExerciseTimer } from "@/components/guided/exercise-timer";
 import { MeasureInput } from "@/components/training/measured-feedback-inputs";
 import { OVERHOLD_CAP_S, type MeasureValues } from "@/lib/measured-feedback";
 import { FEEDBACK_OPTIONS } from "@/lib/format";
 import { tapFeedback } from "@/lib/haptics";
 import { displayPrescribedGrade } from "@/lib/gradeUtils";
+import { LimitProblemLogger } from "@/components/training/limit-problem-logger";
+import { limitFeedbackFields } from "@/lib/limit-problems";
 
 interface GuidedExerciseStepProps {
   exercise: GuidedExercise;
   isTestSession?: boolean;
   bodyweightKg?: number;
-  /** A295: `feedbackLabel` null = not rated; `measures` the optional last-set reps / hang margin / timed hold. */
-  onDone: (feedbackLabel: string | null, usedLoad?: number, usedGrade?: string, usedTotalLoad?: number, testMeasurement?: number, perHand?: { right?: number; left?: number; right_reps?: number; left_reps?: number }, measures?: MeasureValues) => void;
+  /** A295: `feedbackLabel` null = not rated; `measures` the optional last-set reps / hang margin / timed hold. A296: `problems` the limit problem log. */
+  onDone: (feedbackLabel: string | null, usedLoad?: number, usedGrade?: string, usedTotalLoad?: number, testMeasurement?: number, perHand?: { right?: number; left?: number; right_reps?: number; left_reps?: number }, measures?: MeasureValues, problems?: LimitProblem[]) => void;
   onSkip: () => void;
   onSetChange?: (completedSets: number) => void;
   onNotesChange?: (notes: string) => void;
@@ -109,6 +111,8 @@ export function GuidedExerciseStep({
   const [loadInputRight, setLoadInputRight] = useState("");
   const [loadInputLeft, setLoadInputLeft] = useState("");
   const [gradeInput, setGradeInput] = useState("");
+  // A296: limit family — problem-by-problem log instead of the free grade field.
+  const [problems, setProblems] = useState<LimitProblemDraft[]>(exercise.problems ?? []);
   const [measurementInput, setMeasurementInput] = useState("");
   const [setsInput, setSetsInput] = useState("");
   const [repsInputRight, setRepsInputRight] = useState("");
@@ -223,6 +227,7 @@ export function GuidedExerciseStep({
       // no suggested load and no engine consumption (D249).
       !!exercise.allowLoadLogging);
   const hasGradeField = !isTestMeasurement && exercise.suggested.grade != null;
+  const hasProblemLog = hasGradeField && exercise.suggested.logProblems === true;
 
   // Pre-populate from suggested values or previous user input.
   //
@@ -276,6 +281,7 @@ export function GuidedExerciseStep({
     setLastSetReps(exercise.lastSetReps);
     setHangMargin(exercise.hangMargin);
     setHangHeldS(exercise.hangHeldS);
+    setProblems(exercise.problems ?? []);
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [exercise]);
 
@@ -417,6 +423,13 @@ export function GuidedExerciseStep({
       return;
     }
     const usedLoad = hasLoadField && loadInput ? parseFloat(loadInput) : undefined;
+    if (hasProblemLog) {
+      // A296: with problems the server reads them (used_grade = hardest send);
+      // without, the pre-filled target travels as before.
+      const limit = limitFeedbackFields(problems, gradeInput || undefined);
+      onDone(feedback, usedLoad, limit.used_grade, undefined, undefined, undefined, measures, limit.problems);
+      return;
+    }
     const usedGrade = hasGradeField && gradeInput ? gradeInput : undefined;
     onDone(feedback, usedLoad, usedGrade, undefined, undefined, undefined, measures);
   }
@@ -1109,8 +1122,19 @@ export function GuidedExerciseStep({
               </div>
             )}
 
+            {/* A296: limit problem log (limit-boulder family) */}
+            {hasProblemLog && (
+              <LimitProblemLogger
+                idPrefix={exercise.exerciseId}
+                target={exercise.suggested.grade}
+                targetLow={exercise.suggested.gradeLow}
+                problems={problems}
+                onChange={setProblems}
+              />
+            )}
+
             {/* Editable grade field */}
-            {hasGradeField && (
+            {hasGradeField && !hasProblemLog && (
               <div className="space-y-1.5">
                 <Label htmlFor="grade-input" className="text-xs text-muted-foreground">
                   Actual grade used

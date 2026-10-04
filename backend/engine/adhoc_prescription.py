@@ -36,6 +36,7 @@ from backend.engine.progression_v1 import (
     _get_pulling_baseline,
     _hangboard_suggested,
     _round_half_step,
+    limit_grade_target,
     NOT_FINGER_MAX_TOTAL_LOAD,
     weighted_pullup_target,
 )
@@ -128,7 +129,12 @@ def propose_exercise_prescription(
         if target is not None:
             load_kg = target["external"]
 
+    # A296: a limit-family exercise carries the plan's limit target for
+    # ``today`` (display only: the custom player re-reads it on the day).
+    grade_target = limit_grade_target(user_state, exercise_id, today)
+
     return {
+        **({"grade_target": grade_target} if grade_target is not None else {}),
         "sets": defaults.get("sets", 1),
         "reps": defaults.get("reps"),
         "work_seconds": defaults.get("work_seconds"),

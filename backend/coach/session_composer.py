@@ -426,6 +426,13 @@ def _decorate_engine_fields(
             remembered = p.get("load_kg")
             if isinstance(remembered, (int, float)):
                 load_val = float(remembered)
+            gt = p.get("grade_target")
+            if gt:
+                # A296: limit-family preview target (display only, re-read
+                # by the custom player on the day it is played).
+                entry["target_grade"] = gt.get("target_grade")
+                entry["target_grade_low"] = gt.get("target_grade_low")
+                entry["surface_selected"] = gt.get("surface_selected")
             if not load_val:
                 load_val = float(anchor_adhoc_load(ex, user_state, phase, today=today) or 0)
             load_val = _scale_load_for_reps(

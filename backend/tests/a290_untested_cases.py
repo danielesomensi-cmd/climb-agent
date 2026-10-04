@@ -203,6 +203,10 @@ def compute(*, pass_week_plan: bool = False) -> Dict[str, Any]:
             for i in insts:
                 for k in _A295_KEYS:
                     (i.get("suggested") or {}).pop(k, None)
+                # A296 adds the additive display flag ``log_problems`` on the
+                # limit boulder target (the players log problem by problem):
+                # never a grade, stripped like the A295 metadata.
+                ((i.get("suggested") or {}).get("suggested_boulder_target") or {}).pop("log_problems", None)
                 if i.get("suggested") == {}:
                     i.pop("suggested")  # it held only A295 metadata
             out[f"{name}|{d}|{sid}"] = {

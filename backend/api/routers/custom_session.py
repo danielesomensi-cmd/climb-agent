@@ -19,6 +19,7 @@ from backend.api.deps import (
 )
 from backend.api.models import CustomSessionCreateRequest, CustomSessionUpdateRequest
 from backend.engine.adhoc_prescription import propose_exercise_prescription
+from backend.engine.progression_v1 import limit_grade_target
 from backend.engine.anchored_load import resolve_custom_exercises
 from backend.engine.measured_feedback import attach_measure_fields, measure_kind
 from backend.engine.custom_session import compute_custom_session_load, estimate_custom_session_duration
@@ -310,6 +311,30 @@ def get_blocks(user_id: Optional[str] = Depends(get_user_id)):
     return result
 
 
+_LIMIT_TARGET_FIELDS = ("target_grade", "target_grade_low", "target_source", "surface_selected", "surface_options", "surface_targets", "log_problems", "reentry")
+
+
+def attach_limit_targets(state: dict, exercises: list, day: str) -> list:
+    """A296: add the limit target of ``day`` to limit-family exercises (read-only).
+
+    A custom session has no gym: ``surface_selected`` is only the first surface
+    by priority across all gyms, so ``surface_targets`` carries the target of
+    every option and the player asks which wall the athlete is on.
+    """
+    out = []
+    for ex in exercises:
+        ex = dict(ex)
+        for k in _LIMIT_TARGET_FIELDS:
+            ex.pop(k, None)
+        target = limit_grade_target(state, str(ex.get("exercise_id") or ""), day)
+        if target is not None:
+            for k in _LIMIT_TARGET_FIELDS:
+                if k in target:
+                    ex[k] = target[k]
+        out.append(ex)
+    return out
+
+
 def enrich_custom_sessions_for_play(sessions: list) -> list:
     """B283: backfill catalog display fields on stored custom sessions that
     predate the enrichment (older saves lack name/cues/video). Read-path only —
@@ -364,6 +389,11 @@ def get_session(
                 out["resolved_for_date"] = day
             # A295: measure kind (+ double-progression target with a date).
             out["exercises"] = attach_measure_fields(state, out.get("exercises") or [], day)
+            if day:
+                # A296: limit-family exercises get the plan's limit target for
+                # that day, computed at read (never stored — the saved entry
+                # model would drop it anyway) and are logged problem by problem.
+                out["exercises"] = attach_limit_targets(state, out.get("exercises") or [], day)
             return out
     raise HTTPException(status_code=404, detail=f"Custom session not found: {session_id}")
 

@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 from backend.engine.assessment_v1 import GRADE_ORDER as _LEAD_GRADE_ORDER
 from backend.engine.assessment_v1 import _FINGER_BENCHMARK
+from backend.engine import limit_log
 
 FONT_GRADES: List[str] = [
     "5A", "5A+", "5B", "5B+", "5C", "5C+",
@@ -1109,6 +1110,77 @@ def limit_next_target(
     return state["target"]
 
 
+def limit_target_on_surface(user_state: Dict[str, Any], surface: str, date_value: str) -> Optional[str]:
+    """A296: the limit target on an explicit ``surface`` (free sessions).
+
+    Catalog-default anchor (boulder_max_rp + 0), same function as the plan.
+    None when the surface is not a limit surface or the date is invalid.
+    """
+    surf = str(surface or "").strip().lower()
+    if surf not in SURFACE_PRIORITY or _parse_day(date_value) is None:
+        return None
+    return _limit_target_state(user_state, {}, surf, date_value, _extract_grade_benchmark(user_state))["target"]
+
+
+def limit_grade_target(
+    user_state: Dict[str, Any],
+    exercise_id: str,
+    date_value: str,
+    *,
+    gym_id: str | None = None,
+    prescription: Optional[Dict[str, Any]] = None,
+) -> Optional[Dict[str, Any]]:
+    """A296: the limit target of a limit-family exercise outside the planner.
+
+    For custom sessions (read with ``?date=``), the custom builder proposal and
+    the coach/adhoc previews — the same `_limit_target_state` the planned
+    session reads, so a limit done in a custom session gets the plan's target
+    and its outcome counts. Read-only. Surface: the gym's surfaces when
+    ``gym_id`` is known, else the union of the athlete's gyms (first by
+    SURFACE_PRIORITY). None when ``exercise_id`` is not in the limit family or
+    the date is not a date.
+    """
+    if not _is_limit_grade_exercise(str(exercise_id or "")) or _parse_day(date_value) is None:
+        return None
+    options = _surface_options(user_state, gym_id) if gym_id else []
+    if not options:
+        equip: set = set()
+        for gym in ((user_state.get("equipment") or {}).get("gyms") or []):
+            equip.update(str(x).strip().lower() for x in ((gym or {}).get("equipment") or []) if str(x).strip())
+        options = [surface for surface in SURFACE_PRIORITY if surface in equip]
+    surface = _select_surface(preferred=None, options=options, gym_id=gym_id, user_state=user_state)
+    presc = prescription
+    if presc is None:
+        presc = (_load_catalog_cache().get(exercise_id, {}) or {}).get("prescription_defaults") or {}
+    state = _limit_target_state(user_state, presc, surface, date_value, _extract_grade_benchmark(user_state))
+    out: Dict[str, Any] = {
+        "schema_version": "boulder_grade_font_v0",
+        "surface_options": options,
+        "surface_selected": surface,
+        "target_grade": state["target"],
+        "target_grade_low": state["target_low"],
+        "target_source": state["source"],
+        "log_problems": True,
+    }
+    if state["reentry"]:
+        out["reentry"] = dict(state["reentry"])
+    # Without a known gym the surface is only a guess (first by priority over
+    # all the gyms): the target of EVERY option travels too, so a player can
+    # let the athlete say which wall he is on (review A296).
+    surface_targets: Dict[str, Dict[str, Any]] = {}
+    for opt in options:
+        opt_state = state if opt == surface else _limit_target_state(
+            user_state, presc, opt, date_value, _extract_grade_benchmark(user_state),
+        )
+        row: Dict[str, Any] = {"target_grade": opt_state["target"], "target_grade_low": opt_state["target_low"]}
+        if opt_state["reentry"]:
+            row["reentry"] = dict(opt_state["reentry"])
+        surface_targets[opt] = row
+    if surface_targets:
+        out["surface_targets"] = surface_targets
+    return out
+
+
 def _intensity_label(session: Dict[str, Any]) -> str:
     intent = str(session.get("intent") or "").strip().lower()
     tags = session.get("tags") or {}
@@ -1717,6 +1789,8 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                 }
                 if limit_state["reentry"]:
                     boulder_target["reentry"] = dict(limit_state["reentry"])
+                # A296: the players log this exercise problem by problem.
+                boulder_target["log_problems"] = True
                 if boulder_info.get("attempt_guidance"):
                     boulder_target["attempt_guidance"] = boulder_info["attempt_guidance"]
                 if boulder_info.get("rest_guidance"):
@@ -2733,6 +2807,11 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
         _r = _it.get("last_set_reps")
         if _eid and isinstance(_r, (int, float)) and not isinstance(_r, bool):
             min_last_set[_eid] = min(int(_r), min_last_set.get(_eid, int(_r)))
+    # A296: the limit target of the day, per surface, fixed by the FIRST
+    # limit-family item of this feedback. A second limit exercise on the same
+    # surface must be judged against the target the athlete was shown, not the
+    # one the first item just moved (never more than one half grade per session).
+    limit_day_targets: Dict[str, str] = {}
 
     for item in feedback_items:
         exercise_id = str(item.get("exercise_id") or "").strip()
@@ -2960,8 +3039,11 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
         elif fb_load_model == "grade_relative" and _is_limit_grade_exercise(exercise_id):
             # B289 group A: whole climbing_limit_boulder family (was
             # limit_bouldering only). Surface-keyed memory, per-feedback steps.
+            # A296: with a problem log the target moves on what was climbed
+            # (limit_log.classify_session); the label path stays the fallback.
             used_grade = normalize_font_grade(item.get("used_grade"))
-            if not used_grade:
+            problems, _problem_warnings = limit_log.sanitize_problems(item.get("problems"))
+            if not used_grade and not problems:
                 continue
             options = list(planned_target.get("surface_options") or _surface_options(updated, session.get("gym_id")))
             surface_selected = _select_surface(
@@ -3005,11 +3087,49 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
                         "reentry_last_at": date_value,
                     }
 
+            # A296: the prescribed target of the day — planned instance first,
+            # then the target this same session already logged (a resubmission
+            # must not re-read a memory it just moved), then the read function
+            # on the state before this write (custom / adhoc sessions).
+            log_session_id = str(log_entry.get("session_id") or "") or None
+            prior_log = limit_log.find_entry(updated, date_value, log_session_id, exercise_id)
+            planned_surface = str(planned_target.get("surface_selected") or "").strip().lower()
+            day_target = (
+                # A planned target is for its own surface: switching from the
+                # Kilter to the wall reads the wall's target instead.
+                (normalize_font_grade(planned_target.get("target_grade"))
+                 if planned_surface in ("", surface_selected) else None)
+                or normalize_font_grade((prior_log or {}).get("target_grade"))
+                or limit_day_targets.get(surface_selected)
+            )
+            if day_target is None:
+                day_target = _limit_target_state(
+                    updated,
+                    planned_prescription or (catalog_info.get("prescription_defaults") or {}),
+                    surface_selected,
+                    date_value,
+                    _extract_grade_benchmark(updated),
+                )["target"]
+            if day_target:
+                limit_day_targets.setdefault(surface_selected, day_target)
+
             delta = _grade_delta_for_feedback(feedback_label)
+            classification: Optional[Dict[str, Any]] = None
+            reference: Optional[str] = None
+            if problems and (reentry_fields is None or reentry_fields["reentry_exposures"] >= LIMIT_REENTRY_EXPOSURES):
+                # Measured: the problems decide (the label is kept for info).
+                # Closing a re-entry, progression is judged against the BASE.
+                reference = reentry_fields["reentry_base_grade"] if reentry_fields is not None else day_target
+                classification = limit_log.classify_session(
+                    problems, reference, limit_log.previous_entry(updated, surface_selected, date_value),
+                )
+                delta = int(classification["delta"])
             if reentry_fields is None:
                 # A291: half grades, the '+' survives ('ok' on 7A+ stays 7A+;
                 # step_grade used to strip it to 7A).
-                next_grade = _step_font_half(used_grade, delta) or used_grade
+                # A296: with problems the step applies to the day's target.
+                base_grade = reference if classification is not None else used_grade
+                next_grade = _step_font_half(base_grade, delta) or base_grade
             elif reentry_fields["reentry_exposures"] < LIMIT_REENTRY_EXPOSURES:
                 # Still re-entering: keep the BASE as the memory (the read
                 # applies the discount), never the discounted grade.
@@ -3019,6 +3139,10 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
                 next_grade = _step_font_half(reentry_fields["reentry_base_grade"], delta) or reentry_fields["reentry_base_grade"]
             setup, setup_key = _progression_setup_and_key(exercise_id, {"surface": surface_selected})
             entry = _find_working_load_entry(updated, exercise_id, setup)
+            # The band reads last_used_grade as "the best grade CLIMBED": with
+            # problems it is the hardest send, else the grade the athlete
+            # typed; with neither the previous value is kept (never the target).
+            climbed = (limit_log.best_sent(problems) if problems else None) or used_grade
             entry.update(
                 {
                     "exercise_id": exercise_id,
@@ -3026,16 +3150,54 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
                     "setup": setup,
                     "surface_selected": surface_selected,
                     "last_feedback_label": rating,
-                    "last_rated": rated,
-                    "last_used_grade": used_grade,
+                    "last_rated": rated or bool(problems),
                     "next_target_grade": next_grade,
                     "updated_at": date_value,
                 }
             )
+            if climbed:
+                entry["last_used_grade"] = climbed
             for field in _LIMIT_REENTRY_FIELDS:
                 entry.pop(field, None)
             if reentry_fields is not None:
                 entry.update(reentry_fields)
+
+            # A296: the limit log entry (one per date+session+exercise).
+            log_row: Dict[str, Any] = {
+                "date": date_value,
+                "session_id": log_session_id,
+                "exercise_id": exercise_id,
+                "surface": surface_selected,
+                "target_grade": day_target,
+                "problems": problems,
+                "source": limit_log.source_for_session(log_session_id),
+                "feedback_label": rating,
+                "used_grade": used_grade,
+                "next_target_grade": next_grade,
+            }
+            if classification is not None:
+                log_row.update({
+                    "reference_grade": reference,
+                    "step": classification["delta"],
+                    "step_reason": classification["reason"],
+                    "hard_attempts": classification["hard_attempts"],
+                })
+                if classification["guard"]:
+                    log_row["warning"] = "hard_attempts_guard"
+            elif problems and reentry_fields is not None:
+                log_row["step_reason"] = "reentry"
+            if problems:
+                log_row["qualifies"] = limit_log.qualifies(problems, day_target)
+            # A sent above the boulder redpoint never writes the max: it is
+            # only proposed. Gym boulder only — a board grade is not an RP.
+            rp = normalize_font_grade(((updated.get("assessment") or {}).get("grades") or {}).get("boulder_max_rp"))
+            top = limit_log.best_sent(problems) if problems else None
+            if (
+                top and rp and surface_selected not in LIMIT_BOARD_SURFACES
+                and FONT_GRADE_TO_INDEX.get(top, -1) > FONT_GRADE_TO_INDEX[rp]
+            ):
+                log_row["rp_proposal"] = {"grade": top, "current": rp}
+            limit_log.upsert_entry(updated, log_row)
 
         elif fb_load_model == "grade_relative" and _grade_relative_group(exercise_id) == "endurance":
             # B289 group B (intervals/continuous): the grade is an intensity

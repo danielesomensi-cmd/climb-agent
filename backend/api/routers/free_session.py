@@ -32,6 +32,9 @@ from backend.engine.free_session import (
     validate_climb,
 )
 
+from backend.engine import limit_log
+from backend.engine.progression_v1 import limit_target_on_surface
+
 router = APIRouter(prefix="/api/free-session", tags=["free-session"])
 
 # ── Catalog loaders ──────────────────────────────────────────────────────
@@ -338,13 +341,59 @@ def finish_session(
         else:
             session["load_score"] = 0.0
 
+        # A296: a boulder free session with ≥ 2 climbs at or above the limit
+        # target (or the explicit toggle) is a limit session — written to the
+        # limit log as source=free. Off-plan: never moves the target, never
+        # touches stimulus_recency (A240/A213).
+        limit_result = _record_free_limit(state, session, climbs, bool(req.is_limit_session))
+
     save_state(state, user_id)
 
-    return {
+    out = {
         "summary": session["summary"],
         "duration_minutes": session["duration_minutes"],
         "load_score": session["load_score"],
     }
+    if session.get("limit_session") is not None:
+        out["limit_session"] = session["limit_session"]
+    return out
+
+
+def _record_free_limit(state: Dict[str, Any], session: Dict[str, Any], climbs: List[Dict[str, Any]], toggled: bool) -> Optional[Dict[str, Any]]:
+    """A296: decide whether a finished free session is a limit session.
+
+    Stamps ``session["limit_session"]`` (the decision, also when it does not
+    count — that is what tells the exposure view this session was decided by
+    the limit log and not by the legacy threshold rule) and upserts the
+    ``limit_log`` entry when it counts. Lead / circuit / mobility: nothing.
+    """
+    surface = str(session.get("surface") or "")
+    if surface not in limit_log.FREE_LIMIT_SURFACES:
+        return None
+    date_value = str(session.get("date") or "")[:10]
+    target = limit_target_on_surface(state, surface, date_value)
+    decision = limit_log.free_session_decision(climbs, surface, target, toggled=toggled)
+    session["limit_session"] = {
+        "counted": decision["counted"],
+        "reason": decision["reason"],
+        "target_grade": decision["target_grade"],
+        "qualifying": decision["qualifying"],
+        "toggled": toggled,
+    }
+    limit_log.remove_free_entry(state, str(session.get("id") or ""))
+    if decision["counted"]:
+        limit_log.upsert_entry(state, {
+            "date": date_value,
+            "session_id": session.get("id"),
+            "exercise_id": None,
+            "surface": surface,
+            "target_grade": target,
+            "problems": decision["problems"],
+            "source": limit_log.SOURCE_FREE,
+            "qualifying": decision["qualifying"],
+            "reason": decision["reason"],
+        })
+    return session["limit_session"]
 
 
 @router.get("/history")
@@ -424,6 +473,8 @@ def delete_session(
         raise HTTPException(status_code=404, detail=f"Free session '{session_id}' not found")
 
     state["free_sessions"] = new_sessions
+    # A296: a deleted free session takes its limit-log entry with it.
+    limit_log.remove_free_entry(state, session_id)
     save_state(state, user_id)
     return {"status": "ok"}
 

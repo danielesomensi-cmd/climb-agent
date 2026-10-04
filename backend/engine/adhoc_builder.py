@@ -390,6 +390,19 @@ def _to_custom_exercise(
         # recomputed by anchored_load on the day the session is played; the kg
         # above is only the preview of today.
         **({"load_mode": "anchored"} if p.get("load_mode") == "anchored" else {}),
+        # A296: limit-family preview target (dropped on persist; the custom
+        # player re-reads it for the day it is played).
+        **(_limit_preview(p.get("grade_target"))),
+    }
+
+
+def _limit_preview(grade_target: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    if not grade_target:
+        return {}
+    return {
+        "target_grade": grade_target.get("target_grade"),
+        "target_grade_low": grade_target.get("target_grade_low"),
+        "surface_selected": grade_target.get("surface_selected"),
     }
 
 

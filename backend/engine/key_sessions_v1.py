@@ -364,6 +364,32 @@ def _entry_sets(entry: Mapping[str, Any], origin: str) -> Optional[int]:
     return int(v) if v is not None and v > 0 else None
 
 
+def _limit_log_dose(state: Mapping[str, Any], session: Mapping[str, Any], d_iso: str) -> Dict[str, Any]:
+    """A296 (dose ``limit_log``): the limit stimulus of a custom / adhoc session.
+
+    A catalog session is full on presence (the engine prescribed it). A custom
+    or generated session whose limit exercise was logged problem by problem is
+    full only with ≥ ``limit_log.QUALIFYING_PROBLEMS`` problems at or above the
+    day's target (sent or high point) — a "limit" spent on easy problems is not
+    the week's limit stimulus. With no problem log it stays full on presence
+    (nothing measured: no new debt for a session that was done)."""
+    from backend.engine import limit_log
+
+    custom = bool(session.get("is_custom")) or str(session.get("session_id") or "").startswith(("custom_", "generated_"))
+    if not custom:
+        return {"dose": "full", "reason": "presence"}
+    logged = [e for e in limit_log.entries_for_session(state, d_iso, session.get("session_id")) if e.get("problems")]
+    if not logged:
+        return {"dose": "full", "reason": "presence"}
+    best = max(logged, key=lambda e: limit_log.qualifying_count(e["problems"], e.get("target_grade")))
+    n = limit_log.qualifying_count(best["problems"], best.get("target_grade"))
+    if n >= limit_log.QUALIFYING_PROBLEMS:
+        return {"dose": "full", "reason": "limit_log_at_target", "qualifying": n,
+                "target_grade": best.get("target_grade")}
+    return {"dose": "partial", "reason": "limit_log_below_target", "qualifying": n,
+            "target_grade": best.get("target_grade")}
+
+
 def session_dose(state: Mapping[str, Any], session: Mapping[str, Any], d_iso: str,
                  req: Mapping[str, Any]) -> Dict[str, Any]:
     """``{"dose": "full"|"partial", "reason": str, ...}`` of a session for ``req``.
@@ -382,6 +408,8 @@ def session_dose(state: Mapping[str, Any], session: Mapping[str, Any], d_iso: st
       no readable load → partial (no ✓, the debt stays); no tested max →
       partial for a custom, full for a catalog session (A294 review).
     """
+    if req.get("dose") == "limit_log":
+        return _limit_log_dose(state, session, d_iso)
     if req.get("dose") != "anchored":
         return {"dose": "full", "reason": "presence"}
     if is_test_session(session):
