@@ -25,6 +25,15 @@ const AXIS_LABEL: Record<string, string> = {
   pulling: "Pulling strength",
 };
 
+/**
+ * Placement failures only. A289 adds `blocked:no_paired_slot`: the retest
+ * policy's hang test found a day but no later day could take the pull-up.
+ * The policy's other `blocked:*` / `slipped:*` reasons (phase, minimum gap,
+ * trip, very hard feedback) are decisions, not failures — the retest-status
+ * card explains them.
+ */
+const PLACEMENT_FAILURES = new Set(["no_placement_slot", "blocked:no_paired_slot"]);
+
 function axisLabel(axis: string | null): string {
   if (!axis) return "A test";
   return AXIS_LABEL[axis] ?? axis;
@@ -38,7 +47,7 @@ export function SkippedTestsCard({
   weekKey: string;
 }) {
   const placement = skipped.filter(
-    (s) => s.reason === "no_placement_slot" && s.required,
+    (s) => s.required && PLACEMENT_FAILURES.has(s.reason),
   );
   const storageKey = `skipped-tests-dismissed:${weekKey}`;
   const [dismissed, setDismissed] = useState(() => {

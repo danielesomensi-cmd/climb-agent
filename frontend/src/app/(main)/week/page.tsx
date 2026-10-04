@@ -11,6 +11,7 @@ import { PausedBanner } from "@/components/training/paused-banner";
 import { WeekSkeleton } from "@/components/training/week-skeleton";
 import { DayCard } from "@/components/training/day-card";
 import { SkippedTestsCard } from "@/components/training/skipped-tests-card";
+import { RetestStatusCard } from "@/components/training/retest-status-card";
 import { UnmetStimulusCard } from "@/components/training/unmet-stimulus-card";
 const QuickAddDialog = dynamic(() => import("@/components/training/quick-add-dialog").then((m) => m.QuickAddDialog), { ssr: false });
 const ReplanDialog = dynamic(() => import("@/components/training/replan-dialog").then((m) => m.ReplanDialog), { ssr: false });
@@ -849,6 +850,11 @@ export default function WeekPage() {
             weekKey={weekPlan.weeks[0]?.days[0]?.date ?? String(weekNum)}
           />
         ) : null}
+
+        {/* A289 — massimali testati, confidenza, trend e prossimo test (dal vivo). */}
+        {!loading && !error && (
+          <RetestStatusCard status={weekQuery.data?.retest_status} />
+        )}
 
         {/* B361 — accanto ai test non collocati, gli stimoli non collocati:
             il planner li segnalava solo nei log di Railway. */}
