@@ -55,9 +55,22 @@ python scripts/sync_status.py
 # GTM funnel snapshot (read-only): trials engaged/dormant, checkout-stuck, paid conversions
 python scripts/gtm_funnel.py
 
+# Athlete context (read-only, live Supabase GET): read it before composing any session for Daniele
+python scripts/athlete_context.py [--date YYYY-MM-DD] [--json] [--simulate draft.json --target-date D --slot S]
+
 # Activate pre-push hook (once per clone)
 git config core.hooksPath .githooks
 ```
+
+## Custom sessions for Daniele (A293)
+
+Whenever Daniele asks for a session ("fammi un allenamento", "sessione custom / su misura", "mettila nell'app"), run **`/custom-session`** (`.claude/commands/custom-session.md`), which holds the rules. Never compose a session from memory.
+- **The data source is `scripts/athlete_context.py`.** It is a read-only live read of position, official maxima with computed confidence, anchored loads, key-session status, retest status and per-day guards. It is built on `backend/engine/athlete_context.py`, which is pure, deterministic and reuses the A288/B364/A289 definitions.
+- **The programme lives in `docs/training/athlete_plan.md`:** goal, limiters (feet → positioning → try-hard), strength progression, technique and try-hard ladders, weekly templates, pocket notes, current project.
+- **Loads come only from `anchored_load`.** Every custom session that is not pure recovery carries a technique or try-hard block with one measurable target.
+- **Before any write, simulate it** (`--simulate`). If a key session would be downgraded, change the day or the content.
+- **Show the preview and wait for Daniele's explicit OK, then write.**
+- The key-session section is an A293 fallback until A294 lands. `key_sessions_v1.compute_key_status` is used only if it returns a `requirements` list; any other signature or shape keeps the fallback and prints `KEY_SESSIONS_A294_MISMATCH`, so A294 must wire itself into `athlete_context._key_sessions`.
 
 ## Execution model
 

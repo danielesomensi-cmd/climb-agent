@@ -1026,6 +1026,35 @@ The 2 catalog sessions without a primary_goal are mapped explicitly: `finger_aer
 
 **Macrocycle position** (`backend/engine/macro_position.position_on`): `{phase_index, phase_id, week_in_phase, phase_weeks, abs_week, total_weeks, phase_start, phase_end, is_last_week_of_phase, next_phase_id, before_start, after_end, paused}` — pause-aware (A223), same rule as `deps.current_phase_and_week`.
 
+### 4.6 Athlete context for Claude Code (A293)
+
+`backend/engine/athlete_context.build_athlete_context(state, today, archived_weeks=, outdoor_rows=, catalog=)` is pure and read-only. It is printed by `scripts/athlete_context.py` and is NOT persisted in `user_state` and not served by the API.
+
+Top-level keys: `version` (`a293.1`), `as_of`, `constants`, `athlete_plan`, `position`, `maxima`, `anchors`, `retest`, `key_sessions`, `key_sessions_next_week`, `upcoming`, `recent`, `guards`, `variety`, `working_loads`, `try_hard`, `limits`, `trips`, `work_checks`, `warnings`.
+
+- **`maxima`**: keyed by protocol (`max_hang_7s_total_load`, `max_hang_5s_total_load`, `weighted_pullup_2rm`).
+  - Each row has `confidence` + `confidence_basis` (`stored` | `computed`) from `retest_policy.axis_confidence`.
+  - `stored_confidence` is informational only.
+- **`anchors.exercises.<id>`**: the `anchored_load` prescription of the day (custom intensity), copied verbatim.
+- **`key_sessions`**: until A294 lands it is computed by a fallback, `source: "fallback"`. When `backend.engine.key_sessions_v1.compute_key_status` exists its output is used (`source: "a294"`) **only** if it returns a `requirements` list; a different signature or shape keeps the fallback and sets `a294_error` (warning `KEY_SESSIONS_A294_MISMATCH`).
+  - Requirement `key`: `finger_max` | `limit_power` | `pulling_max` (SP); `power_endurance` | `finger_maintenance` | `limit_power` (PE, with `max_gap_days` 12 → `last_done`, `due_by`); `project` (performance); `technique` (every phase); `try_hard` (every phase except deload).
+  - Requirement `status`: `done` | `planned` | `missing` | `not_due` (a `max_gap_days` requirement whose `due_by` falls after the week's end; `try_hard` follows the limit into `not_due`).
+  - Technique key: `technique_focus_gym`, or ≥ 2 distinct technique-category drills (planned or done) excluding `fall_practice` and the warm-up drills `WARMUP_TECHNIQUE_DRILLS` (`silent_feet_drill`, `foothold_stare`, `straight_arms`, `hip_rotation_drill`).
+  - Planned refs in the past carry `unmarked: true`.
+  - `skipped[]` is recovered from `session_completion_log` by date.
+  - `unknown_skips[]` holds skips with an empty id; `removed_unknown` counts `remove_session` adaptations with no id.
+  - Debt is never carried over from past weeks.
+- **`guards.days[]`**: `{date, finger_max_ok, finger_reasons[], finger_hard_today, finger_spacing_gap_d, heavy_pull_ok, front_lever_ok, pull_reasons[], hiit_ok, hiit_reasons[]}`. Built from session properties only, never from the load score.
+  - Finger: finger-hard days ±1, hang test within 72 h, and the replanner's spacing — any `finger`-tagged session within `finger_spacing_gap_d` = `ceil(recovery_multiplier)` days.
+  - Heavy pull / front lever (same rule): every rolling 7-day window containing the day, planned days included; 24 h before limit/strength_long; pull test within 48 h.
+  - Both: deload phase, and the week's hard cap reached when the day is not already hard.
+  - `guards.hard_cap`: `{week_start, cap, hard_days, count, at_cap}`. `cap` = snapshot `hard_cap_per_week` (0 is valid) else `planning_prefs.hard_day_cap_per_week`.
+- **`working_loads[].flags`**: `STALE` (> 60 days) | `TEST_COPY` (last external load = a test's external load ± 0.5 kg).
+- **`try_hard`**: counts of `SEND` | `FALL` | `TAKE` | `LET_GO` tokens in the outdoor notes of the last 28 days (format `T1 M7 FALL +1`), plus `fall_pct_of_non_send`. A296 replaces it with the limit log.
+- **`work_checks[]`**: `HIIT_ON_GUARD_DAY` (a planned HIIT on a `hiit_ok: false` day) and `WORK_RECURRENCE_PHASE_CHANGE` (phase change within 14 days with "Work —" sessions already planned in the next phase). Also copied into `warnings`.
+- **`warnings[].code`**: `KEY_SESSIONS_FALLBACK` | `KEY_SESSIONS_A294_MISMATCH` | `SKIP_WITHOUT_ID` | `REMOVED_UNKNOWN` | `KEY_MISSING` | `STALE` | `TEST_COPY` | `LOW_CONFIDENCE_TEST` | `MAX_NOT_TESTED` | `AT_CEILING` | `HIIT_ON_GUARD_DAY` | `WORK_RECURRENCE_PHASE_CHANGE`.
+- **Athlete notes**: the block between `<!-- athlete-context:notes -->` and `<!-- /athlete-context:notes -->` in `docs/training/athlete_plan.md` (ladder levels, pocket notes, current project) is printed by the CLI.
+
 ### 3.1 Template structure
 
 Required fields:
