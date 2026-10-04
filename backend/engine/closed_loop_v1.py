@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import json
 import logging
 from copy import deepcopy
-from typing import Any, Dict, List, Tuple
+from functools import lru_cache
+from pathlib import Path
+from typing import Any, Dict, FrozenSet, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -61,15 +64,100 @@ def ensure_planning_defaults(user_state: Dict[str, Any]) -> Dict[str, Any]:
 
 
 
+# A291 (R6a): stimulus categories from the catalog's intent.primary_goal.
+# The week plan carries intent=None for planned sessions, so the old
+# intent-based branch never fired in prod, and the `'power' in sid` substring
+# counted power_endurance_gym as boulder_power. Report/data correction only:
+# stimulus_recency is read by report_engine and body_part_picker, never by the
+# planner.
+_PRIMARY_GOAL_CATEGORIES: Dict[str, FrozenSet[str]] = {
+    "limit_projecting": frozenset({"boulder_power", "finger_strength"}),
+    "contact_strength": frozenset({"boulder_power", "finger_strength"}),
+    "finger_max_strength": frozenset({"finger_strength"}),
+    # finger_maintenance_*, repeater tests: the substring rule already gave
+    # finger_strength — kept.
+    "finger_strength_endurance": frozenset({"finger_strength"}),
+    "power_endurance": frozenset({"endurance"}),
+    "aerobic_capacity": frozenset({"endurance"}),
+    "aerobic_endurance": frozenset({"endurance"}),
+    # R6a spec ("da confermare"): lead projecting is a long effort at the
+    # redpoint, with technique_lead as secondary goal.
+    "route_projecting": frozenset({"endurance", "complementaries"}),
+}
+
+# The two catalog sessions without intent.primary_goal (R6a: "vanno elencate e
+# mappate"). Mapped here rather than editing the catalog, because the resolver
+# feeds primary_goal into _intensity_label and adding one would change their
+# prescriptions — out of scope for a report fix.
+_SESSION_CATEGORY_OVERRIDES: Dict[str, FrozenSet[str]] = {
+    "finger_aerobic_base": frozenset({"finger_strength", "endurance"}),
+    "finger_endurance_short": frozenset({"finger_strength", "endurance"}),
+}
+
+_SESSIONS_DIR = Path(__file__).resolve().parents[1] / "catalog" / "sessions" / "v1"
+
+
+@lru_cache(maxsize=1)
+def _catalog_primary_goals() -> Dict[str, Optional[str]]:
+    """session_id → intent.primary_goal (None when the session has none)."""
+    out: Dict[str, Optional[str]] = {}
+    if not _SESSIONS_DIR.is_dir():
+        return out
+    for path in sorted(_SESSIONS_DIR.glob("*.json")):
+        try:
+            data = json.loads(path.read_text())
+        except (OSError, ValueError):
+            continue
+        sid = str(data.get("id") or path.stem)
+        intent = data.get("intent")
+        goal = intent.get("primary_goal") if isinstance(intent, dict) else (intent if isinstance(intent, str) else None)
+        out[sid] = str(goal) if goal else None
+    return out
+
+
+def _goal_categories(goal: str) -> List[str]:
+    # Every other goal — technique_*, strength_general, core, regeneration,
+    # flexibility, pulling_strength, volume_climbing, prehab_*, handstand_skill —
+    # is complementaries, which is what the old rule gave those sessions.
+    return sorted(_PRIMARY_GOAL_CATEGORIES.get(goal, frozenset({"complementaries"})))
+
+
 def _session_categories(session: Dict[str, Any]) -> List[str]:
+    """Stimulus categories of one session (A291: catalog first).
+
+    1. a catalog session → its intent.primary_goal (or the explicit override
+       for the 2 catalog sessions without one);
+    2. otherwise an `intent` that is itself a known primary_goal (the
+       resolver's pseudo-day passes it as a string);
+    3. otherwise the legacy substring/intent rule, for custom/outdoor/unknown
+       ids — with 'power' no longer matching 'power_endurance'.
+    The planner tag `finger` adds finger_strength in every case, as before.
+    """
     sid = str(session.get("session_id") or "")
     intent = str(session.get("intent") or "")
     tags = session.get("tags") or {}
+
+    categories: List[str]
+    goals = _catalog_primary_goals()
+    if sid in _SESSION_CATEGORY_OVERRIDES:
+        categories = sorted(_SESSION_CATEGORY_OVERRIDES[sid])
+    elif goals.get(sid):
+        categories = _goal_categories(str(goals[sid]))
+    elif intent in _PRIMARY_GOAL_CATEGORIES:
+        categories = _goal_categories(intent)
+    else:
+        categories = _legacy_session_categories(sid, intent, tags)
+    if tags.get("finger") and "finger_strength" not in categories:
+        categories = [*categories, "finger_strength"]
+    return sorted(set(categories))
+
+
+def _legacy_session_categories(sid: str, intent: str, tags: Dict[str, Any]) -> List[str]:
     categories: List[str] = []
 
     if tags.get("finger") or "finger" in sid or intent == "strength":
         categories.append("finger_strength")
-    if "power" in sid or intent == "power":
+    if "power" in sid.replace("power_endurance", "") or intent == "power":
         categories.append("boulder_power")
     if "endurance" in sid or intent in {"aerobic_endurance", "power_endurance", "endurance"}:
         categories.append("endurance")

@@ -285,16 +285,16 @@ def test_e2e_grade_offset_table():
 # ─── B8: grade_ref with "+" modifier ─────────────────────────────────────────
 
 def test_e2e_grade_ref_with_plus():
-    """step_grade strips '+' before applying offset."""
+    """A291: the '+' of the reference survives the offset (half-grade ladder)."""
     us = _make_user_state(grades={"lead_max_os": "7c+"})
 
     day = _day_with_instance("route_intervals", {"grade_ref": "lead_max_os", "grade_offset": -1})
     day = inject_targets(day, us)
     s = day["sessions"][0]["exercise_instances"][0]["suggested"]
     print(f"Suggested grade: {s.get('suggested_grade')}")
-    # "7c+" → upper "7C+" → step_grade strips "+" → "7C", offset -1 → "7B"
-    assert s["suggested_grade"] == "7B"
-    assert "+" not in s["suggested_grade"]
+    # "7c+" offset −1 (one letter = 2 half grades) → "7B+" (was "7B" before A291)
+    assert s["suggested_grade"] == "7B+"
+    assert s["grade_scale"] == "french"
 
 
 # ─── D93/D94: route_intervals offset correctness ────────────────────────────

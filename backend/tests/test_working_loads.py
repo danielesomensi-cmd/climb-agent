@@ -10,7 +10,6 @@ from backend.engine.progression_v1 import (
     apply_feedback,
     estimate_missing_baselines,
     inject_targets,
-    step_grade,
 )
 from backend.engine.resolve_session import resolve_session
 
@@ -69,7 +68,7 @@ def _day_with_exercises(exercises: list[dict], date: str = "2026-01-05") -> dict
 # ─── Grade resolver (5 tests) ────────────────────────────────────────────────
 
 def test_grade_relative_boulder_os():
-    """grade_ref=boulder_max_os, offset=-2 → step_grade("7A+", -2) = "5C" (strips +, whole-grade)."""
+    """grade_ref=boulder_max_os 7A+, offset=-2 letters → 6B+ (A291: '+' kept, half-grade ladder)."""
     us = _base_user_state()
     day = _day_with_exercises([{
         "exercise_id": "silent_feet_drill",
@@ -77,13 +76,14 @@ def test_grade_relative_boulder_os():
     }])
     out = inject_targets(day, us)
     inst = out["sessions"][0]["exercise_instances"][0]
-    assert inst["suggested"]["suggested_grade"] == step_grade("7A+", -2)
+    assert inst["suggested"]["suggested_grade"] == "6B+"
+    assert inst["suggested"]["grade_scale"] == "font"
     assert inst["suggested"]["grade_ref"] == "boulder_max_os"
     assert inst["suggested"]["grade_offset"] == -2
 
 
 def test_grade_relative_lead_os():
-    """lead_max_os="7a+" (lowercase French) → uppercase → step_grade("7A+", -5) = "5B"."""
+    """lead_max_os="7a+" (lowercase French), offset −5 letters → "5B+" (A291; was "5B")."""
     us = _base_user_state()
     day = _day_with_exercises([{
         "exercise_id": "arc_training",
@@ -91,7 +91,8 @@ def test_grade_relative_lead_os():
     }])
     out = inject_targets(day, us)
     inst = out["sessions"][0]["exercise_instances"][0]
-    assert inst["suggested"]["suggested_grade"] == step_grade("7A+", -5)
+    assert inst["suggested"]["suggested_grade"] == "5B+"
+    assert inst["suggested"]["grade_scale"] == "french"
 
 
 def test_grade_relative_no_grade_ref():

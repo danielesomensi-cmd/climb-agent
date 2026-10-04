@@ -198,7 +198,8 @@ def test_lead_anchored_target_is_marked_french():
                          _state())
     s = day["sessions"][0]["exercise_instances"][0]["suggested"]
     # Engine convention is unchanged: canonical uppercase on the wire.
-    assert s["suggested_grade"] == "6C"
+    # A291: the '+' of the 7a+ onsight survives the −1 offset → 6C+ (was 6C).
+    assert s["suggested_grade"] == "6C+"
     assert s["grade_scale"] == "french"
 
 
