@@ -44,6 +44,12 @@ export const PAIN_SITE_OPTIONS: ReadonlyArray<{ value: PainSite; label: string }
 
 /** Timed overhold: the guided timer runs at most this far past the target. */
 export const OVERHOLD_CAP_S = 6;
+/**
+ * A295 review — ENGINEERING CONSTANT: seconds between letting go of the hold
+ * and the tap on the phone. Subtracted from a tapped overhold so the reaction
+ * time never inflates the measure that can trigger an early retest.
+ */
+export const OVERHOLD_TAP_LATENCY_S = 1;
 
 const MEASURES: ReadonlySet<string> = new Set(["last_set_reps", "hang_margin", "dp_reps"]);
 

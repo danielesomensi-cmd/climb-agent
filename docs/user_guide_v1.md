@@ -286,9 +286,13 @@ Some exercises ask for a number as well — always optional:
   weekly limit), "Failed" lowers it.
 - **Overhold (guided player only, opt-in).** Tick **Overhold last rep** before a
   max hang: on the very last rep of the last set the timer keeps running past the
-  target (at most +6 s) — tap it when you let go. Only a timed hold of more than
+  target (at most +6 s) — tap it when you let go. One second is taken off for the
+  time it takes you to reach the phone, and if the +6 s run out without a tap
+  nothing is recorded (the set still counts). Only a timed hold of more than
   5 s past the target at ≥ 90% of your max counts as evidence for an earlier
   retest; the chip alone never does.
+- **Max hangs outside the four tested exercises** (10 s hangs, Hörst 7-53) never
+  go above the same ceiling as your 7 s max hang once you have a tested max.
 - **Accessories (bench, squats, curls, dips…) — "Reps on your last set (target N)".**
   Double progression: when your last set reaches the target with all sets done,
   the target goes up by one rep; at the top of the range (e.g. 4 → 6 reps) the
@@ -300,12 +304,22 @@ Some exercises ask for a number as well — always optional:
 At the end of a session there is one **"Any pain?"** row: 0 None · 1 Niggle · 2 Pain ·
 3 Had to stop. From 2 you pick where (fingers, elbow, shoulder, other).
 
-- **2** — for 7 days the loads on that zone drop by 10% and max hangs stay at or
-  below 85% of your max; nothing on that zone goes up meanwhile.
-- **3** — the same for 14 days, max hangs capped at 80%, and the app suggests
-  marking the zone as a limitation.
+- **2** — for 7 days the loads on that zone drop by 10% (loading-pin lifts too, per
+  hand) and max hangs stay at or below 85% of your max; nothing on that zone goes
+  up meanwhile.
+- **3** — the same for 14 days, max hangs capped at 80%, and a message right after
+  you save suggests marking the zone as a limitation (**Review** opens Settings →
+  Injuries & Limitations; nothing changes until you decide).
 - **1** is only recorded. Your plan is never rearranged and past sessions are never
   changed; the affected exercises show "Pain reported recently — keep it sub-max".
+- The reduction is applied **once**: lifting the lighter load during the block does
+  not lower your working load, and when the block ends you are back where you were
+  (a "Hard" during the block still brings it down a little).
+- A **test** of that zone is not scheduled while the pain is recent (7 days, or
+  until the block ends); a test already in your plan shows the warning instead.
+- **Tapped the wrong number?** Reopen the session with the pencil and set the
+  right pain (0 clears it): the block that session wrote is recomputed. Saving
+  without touching the pain row leaves it as it was.
 
 ### The load you actually used
 

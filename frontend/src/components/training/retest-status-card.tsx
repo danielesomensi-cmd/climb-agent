@@ -29,6 +29,7 @@ const BLOCKER_TEXT: Record<string, string> = {
   trip: "it falls within 10 days of a trip",
   recent_finger: "a hard finger day less than 72 h before",
   heavy_pull: "heavy pulling less than 48 h before",
+  pain: "pain reported on this zone in the last 7 days",
 };
 
 const NO_TEST_TEXT: Record<string, string> = {
@@ -36,6 +37,7 @@ const NO_TEST_TEXT: Record<string, string> = {
   "blocked:gap": "not before the minimum gap since the last test",
   "blocked:trip": "trip window: the test waits until after",
   "blocked:very_hard": "waiting for 3 easier days",
+  "blocked:pain": "pain reported on this zone: the test waits until it settles",
   not_due_within_horizon: "not due in the coming weeks",
   no_placement_slot: "this week's plan had no day that fit it",
   "blocked:no_paired_slot": "no day after the hang test could take the pull-up",

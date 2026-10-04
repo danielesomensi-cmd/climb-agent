@@ -283,7 +283,7 @@ def test_out_of_order_log_never_rewrites_a_newer_entry():
 def test_pain_blocks_written_by_score():
     st = apply_feedback(_log("2026-10-05", [], pain={"score": 2, "site": "fingers"}), _plain_state())
     assert st["progression_counters"]["pain_blocks"]["fingers"] == {
-        "score": 2, "from": "2026-10-05", "until": "2026-10-11"}
+        "score": 2, "from": "2026-10-05", "until": "2026-10-11", "source": "2026-10-05|custom_cs_x"}
     st3 = apply_feedback(_log("2026-10-05", [], pain={"score": 3, "site": None}), _plain_state())
     assert st3["progression_counters"]["pain_blocks"]["other"]["until"] == "2026-10-18"
     st1 = apply_feedback(_log("2026-10-05", [], pain={"score": 1, "site": "fingers"}), _plain_state())
@@ -448,7 +448,9 @@ def test_endpoint_sanitizes_attaches_prescription_and_suggests_limitation(isolat
     assert bench["next_external_load_kg"] == 30.0 and bench["last_rated"] is False
     assert "last_set_reps" not in bench
     hang = next(e for e in state["working_loads"]["entries"] if e["exercise_id"] == "max_hang_10s")
-    assert hang["last_work_seconds"] == 10.0 and hang["next_total_load_kg"] == 92.0
+    # A295 review: pain 3 on fingers reported by this session freezes the
+    # '3-5' step (+2 kg without pain): the load used is held.
+    assert hang["last_work_seconds"] == 10.0 and hang["next_total_load_kg"] == 90.0
     assert state["progression_counters"]["pain_blocks"]["fingers"]["score"] == 3
     log = next(e for e in state["session_completion_log"] if e["session_id"] == sid)
     assert log["pain"] == {"score": 3, "site": "fingers"}

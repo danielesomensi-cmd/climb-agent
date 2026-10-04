@@ -755,7 +755,7 @@ export function GuidedExerciseStep({
                 <span>
                   Overhold last rep
                   <span className="block text-[11px] text-muted-foreground">
-                    Hold the final hang as long as you can (max +{OVERHOLD_CAP_S} s), tap the timer when you let go.
+                    Hold the final hang as long as you can (max +{OVERHOLD_CAP_S} s), tap the timer when you let go. No tap, nothing recorded.
                   </span>
                 </span>
               </label>

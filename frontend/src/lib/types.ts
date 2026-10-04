@@ -1209,7 +1209,7 @@ export interface TestReminder {
 export type RetestAxis = "finger" | "pulling";
 
 export interface RetestBlocker {
-  code: "very_hard" | "trip" | "recent_finger" | "heavy_pull" | string;
+  code: "very_hard" | "trip" | "recent_finger" | "heavy_pull" | "pain" | string;
   date?: string;
   session_id?: string | null;
   detail?: string | null;

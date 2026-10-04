@@ -7,7 +7,7 @@ import { unlockAudio } from "@/lib/audio-unlock";
 import { confirmFeedback, tapFeedback } from "@/lib/haptics";
 import { countdownTick, transitionBeep } from "@/lib/beep";
 import { speakPhaseTransition } from "@/lib/voice-cues";
-import { OVERHOLD_CAP_S } from "@/lib/measured-feedback";
+import { OVERHOLD_CAP_S, OVERHOLD_TAP_LATENCY_S } from "@/lib/measured-feedback";
 import {
   PHASE_RING,
   PHASE_TEXT,
@@ -292,13 +292,20 @@ function ExerciseTimerImpl({
   }, []);
 
   /**
-   * A295 — close the overhold: report the seconds really held (target +
-   * overhold, capped) and finish the set exactly like a normal last rep.
+   * A295 — close the overhold and finish the set exactly like a normal last
+   * rep. `measured` true (the athlete tapped "I let go"): report the seconds
+   * really held, minus the tap latency, capped at target + OVERHOLD_CAP_S.
+   * `measured` false (the cap ran out with no tap, watched or not): report
+   * NOTHING — no input never produces the maximum result (contract 2:
+   * untouched = not measured). A295 review.
    */
-  const finishOverhold = useCallback((overSeconds?: number) => {
-    const over = overSeconds ?? Math.max(0, (Date.now() - overholdStartRef.current) / 1000);
-    const capped = Math.min(OVERHOLD_CAP_S, Math.max(0, over));
-    onOverholdResultRef.current?.(Math.round((workSeconds + capped) * 10) / 10);
+  const finishOverhold = useCallback((measured: boolean) => {
+    if (measured) {
+      const raw = Math.max(0, (Date.now() - overholdStartRef.current) / 1000);
+      const over = Math.max(0, raw - OVERHOLD_TAP_LATENCY_S);
+      const capped = Math.min(OVERHOLD_CAP_S, over);
+      onOverholdResultRef.current?.(Math.round((workSeconds + capped) * 10) / 10);
+    }
     clearTimer();
     onSetChangeRef.current?.(currentSet);
     setPhase("complete");
@@ -424,9 +431,11 @@ function ExerciseTimerImpl({
           return;
         }
 
-        // A295: the overhold reached its cap — record target + cap.
+        // A295 review: the overhold reached its cap with no tap (the athlete
+        // let go but did not reach the phone, or the phone locked) — nothing
+        // is recorded; the set itself was watched and ends normally.
         if (phase === "overhold") {
-          finishOverhold(OVERHOLD_CAP_S);
+          finishOverhold(false);
           return;
         }
 
@@ -567,7 +576,7 @@ function ExerciseTimerImpl({
   function handleCircleTap() {
     // A295: during the overhold the circle is "I let go".
     if (phase === "overhold") {
-      finishOverhold();
+      finishOverhold(true);
       return;
     }
     // B332: while held, the circle IS the continue button — pausing an already
@@ -589,7 +598,7 @@ function ExerciseTimerImpl({
   function handlePhaseForward() {
     if (phase === "idle" || phase === "complete") return;
     if (phase === "overhold") {
-      finishOverhold();
+      finishOverhold(true);
       return;
     }
     const wasRunning = !paused;
@@ -651,7 +660,7 @@ function ExerciseTimerImpl({
   function handlePhaseBack() {
     if (phase === "idle" || phase === "complete") return;
     if (phase === "overhold") {
-      finishOverhold();
+      finishOverhold(true);
       return;
     }
     const wasRunning = !paused;

@@ -654,6 +654,8 @@ export default function SettingsPage() {
             </Card>
 
             {/* ----- Injuries & Limitations ----- */}
+            {/* A295 review: anchor of the "Review" action of the limitation toast */}
+            <div id="sec-limitations" className="scroll-mt-32">
             {editingLimitations ? (
               <LimitationsEditor
                 initialLimitations={(state?.limitations ?? {}) as { active_flags?: string[]; details?: Array<{ area: string; side: string; severity: string; notes?: string }> }}
@@ -666,6 +668,7 @@ export default function SettingsPage() {
                 onEdit={() => setEditingLimitations(true)}
               />
             )}
+            </div>
 
             {/* ----- Availability ----- */}
             <div id="sec-availability" className="scroll-mt-32">

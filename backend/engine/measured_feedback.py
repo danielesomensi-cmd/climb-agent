@@ -280,37 +280,147 @@ def active_pain_block(state: Mapping[str, Any], sites: Iterable[str], on: Any) -
     return worst
 
 
+def _strip_source(block: Any, source: str) -> Optional[Dict[str, Any]]:
+    """``block`` with every link written by ``source`` removed from its chain."""
+    if not isinstance(block, Mapping):
+        return None
+    prev = _strip_source(block.get("prev"), source)
+    if block.get("source") == source:
+        return prev
+    out = {k: v for k, v in block.items() if k != "prev"}
+    if prev is not None:
+        out["prev"] = prev
+    return out
+
+
+def pain_session_key(log_entry: Mapping[str, Any]) -> str:
+    return f"{str(log_entry.get('date') or '')[:10]}|{str(log_entry.get('session_id') or '')}"
+
+
 def record_pain(updated: Dict[str, Any], log_entry: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
     """Write ``progression_counters.pain_blocks[site]`` from the log's pain.
 
-    A block is never shortened by a later, milder report: the stored block is
-    replaced only when the new one ends later or scores higher. Idempotent
-    (same log → same block). Returns the block written, if any.
+    A block is never shortened by ANOTHER session's milder report: the stored
+    block is replaced only when the new one ends later or scores higher, and
+    the replaced block is kept under ``prev``.
+
+    A295 review: a block remembers the session that wrote it (``source`` =
+    ``date|session_id``). A resubmit of the SAME session that carries a pain
+    (pencil edit, outbox retry) first removes what that session wrote — the
+    applied/base_before pattern of the double progression — and then applies
+    the new score: 3 → 0 by mistake is undone, a retry is idempotent. A
+    resubmit WITHOUT ``pain`` (not answered) leaves the blocks untouched, like
+    the completion log. Returns the block written, if any.
     """
     pain = sanitize_pain(log_entry.get("pain"))
     day = _parse(log_entry.get("date"))
-    if pain is None or day is None or pain["score"] < 2:
+    if pain is None or day is None:
         return None
+    source = pain_session_key(log_entry)
+    counters = updated.setdefault("progression_counters", {})
+    blocks = counters.get("pain_blocks")
+    if not isinstance(blocks, dict):
+        blocks = {}
+    for site in list(blocks):
+        cleaned = _strip_source(blocks.get(site), source)
+        if cleaned is None:
+            blocks.pop(site, None)
+        else:
+            blocks[site] = cleaned
+    if pain["score"] < 2:
+        if blocks or "pain_blocks" in counters:
+            counters["pain_blocks"] = blocks
+        return None
+    counters["pain_blocks"] = blocks
     site = pain["site"] or "other"
     days = PAIN_BLOCK_DAYS[3 if pain["score"] >= 3 else 2]
-    block = {
+    block: Dict[str, Any] = {
         "score": pain["score"],
         "from": day.isoformat(),
         "until": (day + timedelta(days=days - 1)).isoformat(),
+        "source": source,
     }
-    counters = updated.setdefault("progression_counters", {})
-    blocks = counters.setdefault("pain_blocks", {})
-    if not isinstance(blocks, dict):
-        blocks = {}
-        counters["pain_blocks"] = blocks
     cur = blocks.get(site)
     if isinstance(cur, Mapping):
         cur_until = str(cur.get("until") or "")
         cur_score = _int(cur.get("score"), allow_zero=True) or 0
         if cur_until >= block["until"] and cur_score >= block["score"]:
             return dict(cur)
+        block["prev"] = dict(cur)
     blocks[site] = block
     return block
+
+
+#: A295 review: during a pain block the read side prescribes −10 %. Writing
+#: the reduced load back as the new working load made the cut compound every
+#: session (−27 % after three sessions, permanent after the block). Under a
+#: block the stored next_* is held at its pre-block value; only a DOWN step
+#: (hard label, failed measure, structural clamp) moves it, applied to that
+#: value. Same freshness as the read side.
+PAIN_HOLD_FRESH_D = 60
+
+
+def pain_hold_next(
+    existing: Optional[Mapping[str, Any]],
+    *,
+    field: str,
+    used: float,
+    computed_next: float,
+    session_key: str,
+    date_value: str,
+    reference_before: Optional[float] = None,
+    reference_cut: Optional[float] = None,
+) -> Tuple[float, Dict[str, Any]]:
+    """(next value, ``pain_hold`` snapshot) for a write under a pain block.
+
+    ``computed_next`` is what the normal rule produced from ``used``; its
+    upward part is dropped (freeze) and the downward part is applied to the
+    pre-block value instead of to the (pain-reduced) load used. The pre-block
+    value is, in order:
+
+    - the snapshot of this same session (replay → same result);
+    - with the two deterministic reads of that date, ``reference_before``
+      (without the block) and ``reference_cut`` (with it): the load used with
+      exactly that cut undone, never below the load used and never above the
+      unpained read. Following the prescription → the pre-block load; a
+      session prescribed before the pain (cached plan, the session that
+      reported it) → the load used, never inflated; an athlete lifting more
+      than the engine → the load used;
+    - the fresh ``existing[field]``;
+    - else the load used.
+    """
+    snap = (existing or {}).get("pain_hold")
+    before: Optional[float]
+    if isinstance(snap, Mapping) and snap.get("key") == session_key:
+        before = _num(snap.get("next_before"))
+    elif _num(reference_before) is not None and (_num(reference_cut) or 0) > 0:
+        ref, cut = float(_num(reference_before)), float(_num(reference_cut))
+        before = max(float(used), min(ref, float(used) * ref / cut))
+    else:
+        before = _num((existing or {}).get(field))
+        upd, now = _parse((existing or {}).get("updated_at")), _parse(date_value)
+        if before is not None and (upd is None or now is None or (now - upd).days > PAIN_HOLD_FRESH_D):
+            before = None
+    delta = min(float(computed_next) - float(used), 0.0)
+    base = float(used) if before is None else before
+    return _round_half(base + delta), {"key": session_key, "next_before": before}
+
+
+def state_without_pain(state: Mapping[str, Any]) -> Dict[str, Any]:
+    """Shallow copy of ``state`` with no pain blocks (for the unpained read)."""
+    out = dict(state)
+    counters = dict(out.get("progression_counters") or {})
+    counters.pop("pain_blocks", None)
+    out["progression_counters"] = counters
+    return out
+
+
+def _loading_pin_max(state: Mapping[str, Any], hand: str) -> Optional[float]:
+    best = 0.0
+    for bl in ((state.get("baselines") or {}).get("loading_pin") or []):
+        if isinstance(bl, Mapping) and str(bl.get("hand") or "").lower() == hand:
+            best = max(best, _num(bl.get("max_load_kg")) or 0.0)
+    return best or None
 
 
 def pain_adjust_suggested(
@@ -322,12 +432,17 @@ def pain_adjust_suggested(
     load_model: Optional[str],
     bodyweight: float,
     official_hang_total: Optional[float] = None,
+    flag_only: bool = False,
 ) -> Optional[Dict[str, Any]]:
     """Read-side pain block for a NON-anchored exercise (in place).
 
     −10 % on the suggested load of the zone; a finger hang is also capped at
     85 % (score 2) / 80 % (score 3) of the official hang max when one is known.
-    Sets ``pain_flag`` so the UI says "pain reported, keep it sub-max".
+    Loading-pin exercises carry their load per hand (``right_hand`` /
+    ``left_hand``): the same cut applies there, and a finger lift is capped at
+    the same share of that hand's max. Sets ``pain_flag`` so the UI says "pain
+    reported, keep it sub-max". ``flag_only`` (test sessions: a test is a max,
+    never a cut load) sets the flag and the block without touching loads.
     Depends only on the date → deterministic.
     """
     block = active_pain_block(state, exercise_pain_sites(exercise_id), on)
@@ -335,18 +450,33 @@ def pain_adjust_suggested(
         return None
     suggested["pain_flag"] = True
     suggested["pain"] = dict(block)
+    if flag_only:
+        return block
+    cap_share = PAIN_HANG_CAP_SCORE3 if block["score"] >= 3 else PAIN_HANG_CAP_SCORE2
+    patterns = _patterns(_catalog().get(exercise_id) or {})
+    finger_hang = "fingers" == block["site"] and bool(patterns & {"isometric_hang", "isometric_lift"})
     ext = suggested.get("suggested_external_load_kg")
     tot = suggested.get("suggested_total_load_kg")
     if load_model == "total_load" and isinstance(tot, (int, float)):
         new_total = float(tot) * PAIN_LOAD_MULT
-        patterns = _patterns(_catalog().get(exercise_id) or {})
-        if official_hang_total and patterns & {"isometric_hang"} and "fingers" == block["site"]:
-            cap = PAIN_HANG_CAP_SCORE3 if block["score"] >= 3 else PAIN_HANG_CAP_SCORE2
-            new_total = min(new_total, cap * float(official_hang_total))
+        if official_hang_total and finger_hang:
+            new_total = min(new_total, cap_share * float(official_hang_total))
         suggested["suggested_total_load_kg"] = _round_half(new_total)
         suggested["suggested_external_load_kg"] = _round_half(new_total - bodyweight)
     elif isinstance(ext, (int, float)) and ext > 0:
         suggested["suggested_external_load_kg"] = _round_half(float(ext) * PAIN_LOAD_MULT)
+    for hand in ("right", "left"):
+        hd = suggested.get(f"{hand}_hand")
+        if not isinstance(hd, dict):
+            continue
+        h_ext = hd.get("suggested_external_load_kg")
+        if not isinstance(h_ext, (int, float)) or isinstance(h_ext, bool) or h_ext <= 0:
+            continue
+        new_ext = float(h_ext) * PAIN_LOAD_MULT
+        hand_max = _loading_pin_max(state, hand) if finger_hang else None
+        if hand_max:
+            new_ext = min(new_ext, cap_share * hand_max)
+        hd["suggested_external_load_kg"] = _round_half(new_ext)
     return block
 
 
@@ -550,7 +680,7 @@ __all__ = [
     "MEASURE_HANG_MARGIN", "MEASURE_LAST_SET_REPS", "MEASURE_DP_REPS",
     "log_contract", "feedback_rating", "has_measure", "measure_kind",
     "dp_range", "dp_target_for", "prescribed_reps_of", "is_finger_loading",
-    "record_pain", "active_pain_block", "exercise_pain_sites", "pain_adjust_suggested",
+    "record_pain", "pain_session_key", "pain_hold_next", "state_without_pain", "active_pain_block", "exercise_pain_sites", "pain_adjust_suggested",
     "limitation_suggestion_for_pain", "derive_session_difficulty", "rated_exercise_feedback",
     "sanitize_log_entry", "attach_measure_fields",
 ]

@@ -844,6 +844,7 @@ def apply_anchored_feedback(
     planned_session: Optional[Mapping[str, Any]],
     planned_prescription: Mapping[str, Any],
     setup_source: Mapping[str, Any],
+    session_key: Optional[str] = None,
 ) -> bool:
     """Working-load progression of an anchored exercise for a TESTED athlete.
 
@@ -962,10 +963,46 @@ def apply_anchored_feedback(
                     and pain_now is None):
                 _record_retest_signal(counters, exercise_id, date_value, str(om["date"]))
 
+    # A295 review: under a pain block the read side prescribed −10 %; storing
+    # the reduced load as the new working load compounded the cut every
+    # session. Hold the pre-block working load (down steps still apply).
+    from backend.engine import measured_feedback as mf
+
+    if pain_now is not None:
+        # The pre-block reference: this date's prescription without the block
+        # (exact whether it came from the working load or the phase target).
+        read_kw = dict(
+            date=date_value, intensity=intensity,
+            sets=_num(planned_prescription.get("sets")) and int(_num(planned_prescription.get("sets"))),
+            reps=reps if axis == AXIS_PULLING else None,
+            work_seconds=t if axis != AXIS_PULLING else None,
+            session_exercise_ids=[str(i.get("exercise_id") or "") for i in
+                                  ((planned_session or {}).get("exercise_instances") or [])],
+            setup=setup,
+        )
+        unpained = anchored_load(mf.state_without_pain(updated), exercise_id, **read_kw)
+        pained = anchored_load(updated, exercise_id, **read_kw)
+        held_next, hold = mf.pain_hold_next(
+            existing, field="next_total_load_kg", used=used_total, computed_next=next_total,
+            session_key=session_key or f"{date_value}|", date_value=date_value,
+            reference_before=(unpained or {}).get("total"), reference_cut=(pained or {}).get("total"),
+        )
+        if axis == AXIS_PULLING:
+            held_next = min(held_next, floor_half(one_rm / rep_factor(reps + 2)))
+        else:
+            held_next = min(held_next, floor_half(official_t / (1 + rp.HANG_PCT_PER_S * RESERVE_S)))
+            if fields["escalation_anchor"].get("date") == date_value:
+                # A reset anchor must not sit on the pain-reduced load either.
+                fields["escalation_anchor"] = {"date": date_value, "total_kg": round_half(max(held_next, used_total))}
+        next_total = held_next
+        fields["pain_hold"] = hold
+
     if feedback_label in ("hard", "very_hard"):
         _record_hard_label(counters, axis, date_value)
 
     entry = _find_working_load_entry(updated, exercise_id, setup)
+    if pain_now is None:
+        entry.pop("pain_hold", None)
     for stale in ("e2rm_total_kg", "next_external_load_kg_legacy"):
         entry.pop(stale, None)
     entry.update({
@@ -987,6 +1024,27 @@ def apply_anchored_feedback(
         **fields,
     })
     return True
+
+
+def hang_write_cap(state: Mapping[str, Any], work_seconds: float, date_value: Any) -> Optional[float]:
+    """A295 review — write-side cap of a measured or labelled finger hang
+    OUTSIDE the anchored four (max_hang_10s, horst_7_53): the same structural
+    ceiling as the anchored hang (3 s of reserve, phase cap) on the official
+    7 s max converted to ``work_seconds``. ``None`` for an untested athlete
+    (no official max → pre-B364 behaviour, only the 7-day rise limit)."""
+    on = _parse(date_value)
+    if on is None:
+        return None
+    om = rp.official_max(state, rp.PROTOCOL_HANG_7S, on)
+    if not om or not om.get("tested") or _num(om.get("total_kg")) is None:
+        return None
+    official_t = float(om["total_kg"])
+    t = float(work_seconds or _PROTOCOL_SECONDS[rp.PROTOCOL_HANG_7S])
+    if t != _PROTOCOL_SECONDS[rp.PROTOCOL_HANG_7S]:
+        official_t = rp.convert_hang_seconds(official_t, _PROTOCOL_SECONDS[rp.PROTOCOL_HANG_7S], t)
+    phase = phase_on(state, on)
+    return floor_half(min(official_t / (1 + rp.HANG_PCT_PER_S * RESERVE_S),
+                          HANG_PHASE_CAP.get(phase, HANG_PHASE_DEFAULT_CAP) * official_t))
 
 
 def record_exposures(updated: Dict[str, Any], log_entry: Mapping[str, Any]) -> None:
@@ -1060,5 +1118,5 @@ __all__ = [
     "rep_factor", "prilepin_cap", "phase_on", "official_for", "is_anchored_and_tested",
     "ramp_for", "working_entry", "anchored_load", "anchored_suggested_fields", "anchor_summary",
     "effective_load_mode", "resolve_custom_exercises", "apply_anchored_feedback",
-    "record_exposures", "fatigue_for", "pain_for",
+    "record_exposures", "fatigue_for", "pain_for", "hang_write_cap",
 ]

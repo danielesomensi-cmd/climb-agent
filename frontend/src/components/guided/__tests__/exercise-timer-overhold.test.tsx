@@ -67,8 +67,9 @@ describe("A295 — overhold", () => {
     });
     expect(onOverholdResult).toHaveBeenCalledTimes(1);
     const held = onOverholdResult.mock.calls[0][0] as number;
-    expect(held).toBeGreaterThan(9.5);
-    expect(held).toBeLessThan(11);
+    // ~3.4 s past the target minus 1 s of tap latency (A295 review).
+    expect(held).toBeGreaterThan(8.5);
+    expect(held).toBeLessThan(10);
     expect(onSetChange).toHaveBeenCalledWith(1);
   });
 
@@ -77,8 +78,37 @@ describe("A295 — overhold", () => {
     render(<ExerciseTimer {...HANG} overholdLastRep onOverholdResult={onOverholdResult} />);
     await start();
     await advance(5000 + 7000 + 400);
+    await advance(5_000);
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole("button", { name: /i let go/i })[0]);
+    });
+    const held = onOverholdResult.mock.calls[0][0] as number;
+    expect(held).toBeLessThanOrEqual(13);
+  });
+
+  it("records nothing when the cap runs out without a tap (A295 review)", async () => {
+    const onSetChange = vi.fn();
+    const onOverholdResult = vi.fn();
+    render(<ExerciseTimer {...HANG} overholdLastRep onSetChange={onSetChange} onOverholdResult={onOverholdResult} />);
+    await start();
+    await advance(5000 + 7000 + 400);
     await advance(10_000);
-    expect(onOverholdResult).toHaveBeenCalledWith(13);
+    expect(onOverholdResult).not.toHaveBeenCalled();
+    expect(onSetChange).toHaveBeenCalledWith(1); // the watched set still counts
+  });
+
+  it("records nothing when the overhold expires unwatched (phone locked)", async () => {
+    const onOverholdResult = vi.fn();
+    render(<ExerciseTimer {...HANG} overholdLastRep onOverholdResult={onOverholdResult} />);
+    await start();
+    await advance(5000 + 7000 + 400);
+    // Suspended: the clock jumps 30 s with no tick in between.
+    await act(async () => {
+      vi.setSystemTime(Date.now() + 30_000);
+      vi.advanceTimersByTime(200);
+    });
+    await advance(400);
+    expect(onOverholdResult).not.toHaveBeenCalled();
   });
 
   it("is off by default: the hang stops at the target", async () => {
