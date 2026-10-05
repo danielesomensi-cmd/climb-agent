@@ -29,7 +29,7 @@ import { ChevronLeft, ChevronRight, ChevronDown, BarChart3, Check } from "lucide
 const FeedbackDialog = dynamic(() => import("@/components/training/feedback-dialog").then((m) => m.FeedbackDialog), { ssr: false });
 import { useRouter } from "next/navigation";
 import { applyOverride, quickAddSession,
-  applyEvents, checkKeyConflicts, postFeedback, getOutdoorSpots, getOutdoorLogByDate, deleteFreeSession, getPitchLadder, setOutdoorPlan } from "@/lib/api";
+  ApiError, apiErrorDetail, applyEvents, checkKeyConflicts, postFeedback, getOutdoorSpots, getOutdoorLogByDate, deleteFreeSession, getPitchLadder, setOutdoorPlan } from "@/lib/api";
 import { useUserState } from "@/lib/hooks/queries/use-user-state";
 import { useWeekPlan } from "@/lib/hooks/queries/use-week-plan";
 import { useFreeSessionsForDates } from "@/lib/hooks/queries/use-free-session";
@@ -393,7 +393,13 @@ export default function WeekPage() {
       const alert = describeActionAlerts(alertMessagesFor(result.guard_warnings, data.to_date, data.to_slot), "Moved");
       if (alert) toast(alert.title, { description: alert.description, duration: 10000 });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to move session");
+      // A301: a refused move (422 — e.g. onto a done or skipped slot) is a
+      // toast; the page keeps showing the week instead of an error screen.
+      if (e instanceof ApiError && e.status === 422) {
+        toast.error("Session not moved", { description: apiErrorDetail(e, "That slot cannot take this session.") });
+      } else {
+        setError(e instanceof Error ? e.message : "Failed to move session");
+      }
     } finally {
       setMoveSession(null);
     }

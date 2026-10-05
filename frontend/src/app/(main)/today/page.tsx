@@ -32,7 +32,7 @@ import { WeeklyCheckinCard } from "@/components/training/weekly-checkin-card";
 import { TestReminderCard } from "@/components/training/test-reminder-card";
 import { WeekProgressBar } from "@/components/training/week-progress-bar";
 import { TodaySkeleton } from "@/components/training/today-skeleton";
-import { applyEvents, checkKeyConflicts, postFeedback, applyOverride, quickAddSession,
+import { ApiError, apiErrorDetail, applyEvents, checkKeyConflicts, postFeedback, applyOverride, quickAddSession,
   getOutdoorSpots, getOutdoorLogByDate, deleteFreeSession, getPitchLadder, setOutdoorPlan } from "@/lib/api";
 import { useSubscription } from "@/lib/hooks/use-subscription";
 import { useUserState, useWeekPlan, useDailyQuote, useOutdoorDoneDays } from "@/lib/hooks/queries";
@@ -818,7 +818,13 @@ function TodayContent() {
       const alert = describeActionAlerts(alertMessagesFor(result.guard_warnings, data.to_date, data.to_slot), "Moved");
       if (alert) toast(alert.title, { description: alert.description, duration: 10000 });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to move session");
+      // A301: a refused move (422 — e.g. onto a done or skipped slot) is a
+      // toast; the page keeps showing the week instead of an error screen.
+      if (e instanceof ApiError && e.status === 422) {
+        toast.error("Session not moved", { description: apiErrorDetail(e, "That slot cannot take this session.") });
+      } else {
+        setError(e instanceof Error ? e.message : "Failed to move session");
+      }
     } finally {
       setMoveSession(null);
     }

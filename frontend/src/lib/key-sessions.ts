@@ -95,14 +95,13 @@ export function hasKeyIssues(status: KeyStatus | null | undefined): boolean {
 }
 
 /** Conflicts of an insertion that deserve a confirm (dry run of a custom session).
- *  A294 review: a high `finger_gap` too — finger-hard work inside the recovery
- *  gap of a finger-hard day nobody can move (a done key session included). */
+ *  A301-FE: only the ones about the user's key session itself (`key_removed`,
+ *  `key_replaced`). Recovery-guard codes (`finger_gap`, `pre_test_fatigue`,
+ *  `test_downgraded`) never interrupt an insertion — "tu solo segnala alert":
+ *  they surface afterwards as the post-insert alert toast and the
+ *  `guard_warnings` badge on the session. */
 export function blockingConflicts(conflicts: KeyConflict[] | undefined): KeyConflict[] {
-  return (conflicts ?? []).filter(
-    (c) =>
-      ["key_removed", "key_replaced", "test_downgraded", "pre_test_fatigue"].includes(c.code) ||
-      (c.code === "finger_gap" && c.severity === "high"),
-  );
+  return (conflicts ?? []).filter((c) => c.code === "key_removed" || c.code === "key_replaced");
 }
 
 /** localStorage key for "dismissed this week" (per stimulus). */

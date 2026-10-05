@@ -40,7 +40,26 @@ const WEEKDAY_LABELS: Record<string, string> = {
   sunday: "Sunday",
 };
 
-/** Format date as "15 Feb" */
+/**
+ * The slots a session can be moved onto. A slot is free only when it holds no
+ * session at all: a done or skipped session still occupies it — since A301 the
+ * backend refuses a move onto it with a 422 (past sessions are immutable).
+ */
+export function freeMoveSlots(
+  weekPlan: WeekPlan,
+  fromDate: string,
+  fromSlot: string,
+): { date: string; weekday: string; slot: string }[] {
+  return (weekPlan.weeks[0]?.days ?? [])
+    .flatMap((day) =>
+      SLOTS.filter((slot) => !(day.sessions ?? []).some((s) => s.slot === slot)).map((slot) => ({
+        date: day.date,
+        weekday: day.weekday,
+        slot,
+      })),
+    )
+    .filter((s) => !(s.date === fromDate && s.slot === fromSlot));
+}
 
 export function MoveSessionDialog({
   open,
@@ -55,17 +74,7 @@ export function MoveSessionDialog({
 }: MoveSessionDialogProps) {
   const [selected, setSelected] = useState<{ date: string; slot: string } | null>(null);
 
-  // Compute free slots across the week
-  const freeSlots = (weekPlan.weeks[0]?.days ?? []).flatMap((day) =>
-    SLOTS.filter(
-      (slot) =>
-        !day.sessions.some(
-          (s) =>
-            s.slot === slot &&
-            !["done", "skipped"].includes(s.status ?? "")
-        )
-    ).map((slot) => ({ date: day.date, weekday: day.weekday, slot }))
-  ).filter((s) => !(s.date === fromDate && s.slot === fromSlot));
+  const freeSlots = freeMoveSlots(weekPlan, fromDate, fromSlot);
 
   // Group by day
   const grouped = new Map<string, typeof freeSlots>();

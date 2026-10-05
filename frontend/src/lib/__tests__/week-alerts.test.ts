@@ -124,6 +124,34 @@ describe("weekAlerts", () => {
   });
 });
 
+describe("hiit_near_max from both guards and lunch rotation (said once)", () => {
+  const hiitGuard = gw({
+    code: "hiit_near_max", date: "2026-10-06", slot: "lunch", session_id: "treadmill_hiit_4x4",
+    message: "treadmill_hiit_4x4 on 2026-10-06 is HIIT on the day of a max session.",
+  });
+  const p = plan(
+    [{ date: "2026-10-06", sessions: [session({ slot: "lunch", session_id: "treadmill_hiit_4x4" })] }],
+    { secondary_warnings: [sw({ date: "2026-10-06", slot: "lunch", session_id: "treadmill_hiit_4x4" })] },
+  );
+
+  it("alertsForSession shows a single line, the guard one", () => {
+    const out = alertsForSession([hiitGuard], p, "2026-10-06", { slot: "lunch", session_id: "treadmill_hiit_4x4", status: "planned" });
+    expect(out).toHaveLength(1);
+    expect(out[0].source).toBe("guard");
+  });
+
+  it("weekAlerts lists it once", () => {
+    expect(weekAlerts([hiitGuard], p)).toHaveLength(1);
+  });
+
+  it("keeps a structure alert of another code on the same session", () => {
+    const p2 = plan(p.weeks[0].days as never, {
+      secondary_warnings: [sw({ date: "2026-10-06", slot: "lunch", session_id: "treadmill_hiit_4x4", code: "hiit_weekly_cap" })],
+    });
+    expect(weekAlerts([hiitGuard], p2)).toHaveLength(2);
+  });
+});
+
 describe("pruneGuardWarnings", () => {
   it("drops alerts of sessions removed or completed, keeps the open ones", () => {
     const p = plan([

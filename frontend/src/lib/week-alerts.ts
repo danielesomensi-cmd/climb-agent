@@ -176,6 +176,17 @@ export function pruneGuardWarnings(warnings: GuardWarning[], plan: WeekPlan): Gu
   return warnings.filter((w) => sessionStillOpen(plan, w));
 }
 
+/**
+ * The structure alerts not already said by a guard alert. `guards_v1` and the
+ * lunch rotation both emit `hiit_near_max` for the same HIIT lunch: shown once,
+ * as the guard alert (same code, date, slot and session).
+ */
+function dedupeStructure(guards: SessionAlert[], structure: SessionAlert[]): SessionAlert[] {
+  const key = (a: SessionAlert) => `${a.code}|${a.date}|${a.slot ?? ""}|${a.session_id ?? ""}`;
+  const said = new Set(guards.map(key));
+  return structure.filter((a) => !said.has(key(a)));
+}
+
 /** Every alert of one session (guard first, then lunch rules), stable order. */
 export function alertsForSession(
   guardWarnings: GuardWarning[] | null | undefined,
@@ -184,14 +195,13 @@ export function alertsForSession(
   session: Pick<SessionSlot, "slot" | "session_id" | "status">,
 ): SessionAlert[] {
   if (session.status === "done" || session.status === "skipped") return [];
-  const out: SessionAlert[] = [];
-  for (const w of guardWarnings ?? []) {
-    if (matches(w, date, session.slot, session.session_id)) out.push(guardAlert(w));
-  }
-  for (const w of plan?.secondary_warnings ?? []) {
-    if (matches(w, date, session.slot, session.session_id)) out.push(structureAlert(w));
-  }
-  return out;
+  const guards = (guardWarnings ?? [])
+    .filter((w) => matches(w, date, session.slot, session.session_id))
+    .map(guardAlert);
+  const structure = (plan?.secondary_warnings ?? [])
+    .filter((w) => matches(w, date, session.slot, session.session_id))
+    .map(structureAlert);
+  return [...guards, ...dedupeStructure(guards, structure)];
 }
 
 /** All alerts of the week, in date / slot order (guard alerts before lunch rules on ties). */
@@ -201,9 +211,10 @@ export function weekAlerts(
   onlyDate?: string,
 ): SessionAlert[] {
   const slotIdx = (s: string | null) => (s === "morning" ? 0 : s === "lunch" ? 1 : s === "evening" ? 2 : 3);
+  const guards = (guardWarnings ?? []).map(guardAlert);
   const all = [
-    ...(guardWarnings ?? []).map(guardAlert),
-    ...(plan?.secondary_warnings ?? []).map(structureAlert),
+    ...guards,
+    ...dedupeStructure(guards, (plan?.secondary_warnings ?? []).map(structureAlert)),
   ].filter((a) => !onlyDate || a.date === onlyDate);
   return all
     .map((a, i) => ({ a, i }))

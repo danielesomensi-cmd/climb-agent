@@ -77,9 +77,13 @@ describe("key-sessions helpers", () => {
     expect(out.map((c) => c.code)).toEqual(["key_removed", "key_replaced"]);
   });
 
-  it("a high finger gap asks for a confirm too (A294 review)", () => {
-    const out = blockingConflicts([{ code: "finger_gap", severity: "high", message: "x" }]);
-    expect(out.map((c) => c.code)).toEqual(["finger_gap"]);
+  it("recovery-guard codes never interrupt an insertion (A301-FE: alerts only)", () => {
+    const out = blockingConflicts([
+      { code: "finger_gap", severity: "high", message: "x" },
+      { code: "pre_test_fatigue", severity: "high", message: "y" },
+      { code: "test_downgraded", severity: "high", message: "z" },
+    ]);
+    expect(out).toEqual([]);
   });
 
   it("formats dates without timezone drift", () => {

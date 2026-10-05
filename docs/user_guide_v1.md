@@ -224,7 +224,9 @@ When a key session is missed, the card tells you what to do:
 
 At most one finger catch-up is proposed per week. On **Today** the card appears only when something is owed. You can hide a row for the week with ✕.
 
-**Adding a custom session** (from This Week, Today, the Coach or the body-part picker) first checks the key sessions: if it would land within 72 hours of a max test, or put finger-hard work inside the recovery gap of another finger-hard day (a key session you already did included), you get a warning with **Add anyway** / **Pick another day**. It never blocks you, and adding it never changes the key session or any other session of the week: the two stay as they are and the week carries the alert.
+**Adding a custom session** (from This Week, Today, the Coach or the body-part picker) first checks the key sessions: only if it would take a key session's place do you get a warning with **Add anyway** / **Pick another day**. Recovery alerts — landing within 72 hours of a max test, or finger-hard work inside the recovery gap of another finger-hard day (a key session you already did included) — never stop you: the session is added and the alert shows right after, in a short note and on the session card. Adding it never changes the key session or any other session of the week.
+
+**Moving a session** offers only empty slots: a slot that holds a session you already did or skipped is not free (past sessions never change). If a move is refused, a short note says why and the week stays on screen.
 
 **Coach.** When you ask the coach for a session close to a finger key session — one you already did, one still to come, or one later the same day — (or within 72 hours of a max test), it leaves out the finger-hard exercises (and heavy pulls before a pull-up test) and tells you why on the session card. The coach's answers also know which sessions are key this week.
 
