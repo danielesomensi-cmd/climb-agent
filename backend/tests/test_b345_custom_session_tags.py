@@ -98,8 +98,23 @@ def test_unknown_and_empty_input_is_safe(exercises):
     assert intensity == "low"
 
 
+# C274: the one deliberate exception — HIIT is intensity high but does not
+# consume the hard / finger cap (decision 2026-10-05). Adding to this set is a
+# product decision, not a fix.
+_HARD_INVARIANT_EXCEPTIONS = frozenset({"treadmill_hiit_4x4"})
+
+
+def test_session_meta_hard_iff_high_or_max_except_allowlist():
+    from backend.engine.planner_v2 import _SESSION_META
+
+    broken = sorted(sid for sid, m in _SESSION_META.items()
+                    if m["hard"] != (m["intensity"] in ("high", "max")))
+    assert broken == sorted(_HARD_INVARIANT_EXCEPTIONS)
+
+
 def test_invariant_hard_iff_high_or_max():
-    """_SESSION_META holds this for all 34 catalog sessions; derived tags must too."""
+    """_SESSION_META holds this for every catalog session except the C274
+    allowlist (treadmill_hiit_4x4); derived tags must hold it always."""
     cases = [
         [{"exercise_id": "max_hang_7s"}],
         [{"exercise_id": "frenchies"}, {"exercise_id": "uneven_grip_pullup"}],

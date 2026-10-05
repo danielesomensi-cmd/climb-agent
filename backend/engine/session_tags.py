@@ -19,8 +19,13 @@ the tendons from it. Observed in production: a custom session containing
 the first draft of this module got it wrong:
 
 * VERIFIED: inside ``_SESSION_META``, ``hard`` equals ``intensity in {"high",
-  "max"}`` for all 34 catalog sessions, zero exceptions. So whatever rule
-  decides ``hard`` must keep that invariant, and this module does.
+  "max"}`` for every catalog session except ONE deliberate exception:
+  ``treadmill_hiit_4x4`` (C274) is ``intensity: high, hard: False`` — HIIT is
+  systemically hard but does not consume the weekly hard / finger cap
+  (Daniele's decision, 2026-10-05). Do not "restore" the invariant on it.
+  The allowlist is pinned by ``test_b345_custom_session_tags.py``. So whatever
+  rule decides ``hard`` for user-authored sessions must keep the invariant, and
+  this module does.
 * VERIFIED: ``_FINGER_LOAD_PATTERNS`` reproduces the catalog's ``finger`` flag —
   true for hangboard, campus and limit-boulder work; false for circuits, route
   endurance, power endurance and technique.

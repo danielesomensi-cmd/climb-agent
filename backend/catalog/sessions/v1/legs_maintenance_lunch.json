@@ -8,7 +8,7 @@
     "secondary_goals": [
       "joint_health"
     ],
-    "notes": "Lunch-break leg maintenance at a weights gym: goblet squat and Romanian deadlift, plus a short foot-strength block (toe flexors and big-toe calf raises) for edging. About 35 min. Keep heavy legs out of the 48 h before a limit or outdoor day."
+    "notes": "Lunch-break leg maintenance at a weights gym: goblet squat and Romanian deadlift, plus two short foot-strength exercises (toe flexors and big-toe calf raises) for edging. The engine orders them with the generic phase sort, so they are not necessarily contiguous or at the end. About 35 min. Keep heavy legs out of the 48 h before a limit or outdoor day."
   },
   "compatibility": {
     "slot": [
@@ -105,7 +105,7 @@
       "required": true,
       "priority": 80,
       "module_role": "accessory",
-      "notes": "Foot-strength block, part 1: toe flexor isometrics, short dose.",
+      "notes": "Foot strength: toe flexor isometrics, short dose.",
       "selection": {
         "primary": {
           "exercise_id": "toe_flexor_isometric",
@@ -136,7 +136,7 @@
       "required": true,
       "priority": 70,
       "module_role": "accessory",
-      "notes": "Foot-strength block, part 2: single-leg calf raise on an edge, weight over the big toe.",
+      "notes": "Foot strength: single-leg calf raise on an edge, weight over the big toe. Light load: the generic phase sort may place it before the main lifts.",
       "selection": {
         "primary": {
           "exercise_id": "edge_calf_raise_bigtoe",

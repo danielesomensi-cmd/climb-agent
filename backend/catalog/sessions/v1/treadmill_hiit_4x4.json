@@ -62,10 +62,11 @@
       "required": true,
       "priority": 90,
       "module_role": "primary",
-      "notes": "The 4x4 VO2max intervals.",
+      "notes": "The 4x4 VO2max intervals. Strict pin: without a treadmill the block fails instead of falling back to an easy incline walk, so the session is never reported as HIIT when it is not.",
       "selection": {
         "primary": {
           "exercise_id": "treadmill_hiit_4x4",
+          "pin_strict": true,
           "filters": {
             "role": [
               "conditioning"

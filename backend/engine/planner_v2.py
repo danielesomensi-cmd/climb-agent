@@ -77,7 +77,7 @@ _SESSION_META: Dict[str, Dict[str, Any]] = {
     # does not consume the hard / finger cap (decision 2026-10-05).
     "treadmill_hiit_4x4": {"hard": False, "finger": False, "intensity": "high", "climbing": False, "location": ("gym",), "required_equipment": ["treadmill"], "max_per_week": 1},
     "treadmill_zone2_cardio": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("gym",), "required_equipment": ["treadmill"], "max_per_week": 3},
-    "upper_push_arms_lunch": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym",), "required_equipment": ["dumbbell"], "max_per_week": 2},
+    "upper_push_arms_lunch": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym",), "required_equipment": ["dumbbell", "cable_machine"], "max_per_week": 2},
     "legs_maintenance_lunch": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym",), "required_equipment": ["dumbbell"], "max_per_week": 2},
 }
 

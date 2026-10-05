@@ -20,7 +20,8 @@
     ]
   },
   "required_equipment": [
-    "dumbbell"
+    "dumbbell",
+    "cable_machine"
   ],
   "time_budget": {
     "target_duration_min": 30,
@@ -81,7 +82,7 @@
       "required": true,
       "priority": 90,
       "module_role": "secondary",
-      "notes": "Triceps isolation. Prefers the cable pushdown; without a cable machine it falls back to a light push movement (overhead extension, skullcrusher).",
+      "notes": "Triceps isolation on the cable machine (pushdown). The session requires a cable machine, so it is only offered where this block is real triceps work.",
       "selection": {
         "primary": {
           "filters": {

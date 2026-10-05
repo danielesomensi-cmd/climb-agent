@@ -1192,6 +1192,20 @@ def _resolve_inline_block(
             chosen_by = "pin_test_incompatible_skip"
             trace = {"counts": {}, "domain_filter_applied": None, "note": "pinned test exercise incompatible with equipment — block skipped (B261)"}
             run_p0 = False
+        elif primary.get("pin_strict") is True:
+            # C274: the pin IS the block (e.g. the 4x4 treadmill intervals of
+            # treadmill_hiit_4x4). Without its equipment no substitute keeps
+            # the session's meaning — P0 would land on an easy incline walk and
+            # call it a HIIT session. Fail the block loudly instead: the
+            # resolution becomes "failed", never a silent downgrade.
+            logger.warning(
+                "resolve_session: strict pin '%s' incompatible with available equipment for block '%s' — block failed",
+                explicit_ex_id, block_id,
+            )
+            chosen_by = "pin_strict_incompatible_failed"
+            trace = {"counts": {}, "domain_filter_applied": None,
+                     "note": "strict pin incompatible with equipment — block failed (C274)"}
+            run_p0 = False
         else:
             # B261: incompatible non-test pin — delegate to P0 with the block's
             # role/domain so the equipment filter applies.
@@ -1368,6 +1382,10 @@ def _resolve_inline_block(
 
     status = "selected" if selected_list else "skipped"
     message = None if selected_list else "No candidates after hard filters (P0 inline)."
+    if chosen_by == "pin_strict_incompatible_failed":
+        status = "failed"
+        message = (f"Pinned exercise '{explicit_ex_id}' needs equipment that is not available; "
+                   "the block has no equivalent substitute (C274 pin_strict).")
 
     blocks_out.append({
         "block_uid": block_uid,

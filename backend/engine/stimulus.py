@@ -43,7 +43,11 @@ Session exercise rule (one rule, from R3/R7):
 
 from __future__ import annotations
 
+import glob
+import json
+import os
 from datetime import date, datetime
+from functools import lru_cache
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 
 from backend.engine.assessment_v1 import GRADE_ORDER as LEAD_GRADES
@@ -404,6 +408,71 @@ def is_finger_hard_session(session: Mapping[str, Any]) -> bool:
     entries, _origin = counted_entries(session)
     extra = set(FINGER_FATIGUE_EXTRA_IDS) | set(FINGER_HARD_LIBRARY_IDS)
     return any(str(e.get("exercise_id") or "") in extra for e in entries)
+
+
+# ---------------------------------------------------------------------------
+# C274: HIIT — the one entry point
+# ---------------------------------------------------------------------------
+#
+# The HIIT flag lives in the session CATALOG (``tags.hiit`` of the session
+# JSON), not in ``_SESSION_META`` and not in the plan slot tags (the planner
+# and ``apply_day_add`` copy only hard/finger/test). So ``session_flag(s,
+# "hiit")`` is NOT the API: it returns False for ``treadmill_hiit_4x4``.
+# Every consumer (A300 weekly cap, deload → Z2, "never next to a max day"
+# alert) must call :func:`is_hiit_session`.
+
+HIIT_RECENCY_GROUP = "conditioning_hiit"
+
+_CATALOG_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "catalog",
+)
+
+
+@lru_cache(maxsize=1)
+def _hiit_catalog_session_ids() -> frozenset:
+    out = set()
+    for path in sorted(glob.glob(os.path.join(_CATALOG_DIR, "sessions", "v1", "*.json"))):
+        try:
+            with open(path, encoding="utf-8") as fh:
+                data = json.load(fh)
+        except (OSError, ValueError):
+            continue
+        if isinstance(data, dict) and (data.get("tags") or {}).get("hiit") is True:
+            out.add(str(data.get("id") or os.path.splitext(os.path.basename(path))[0]))
+    return frozenset(out)
+
+
+@lru_cache(maxsize=1)
+def _hiit_exercise_ids() -> frozenset:
+    with open(os.path.join(_CATALOG_DIR, "exercises", "v1", "exercises.json"), encoding="utf-8") as fh:
+        data = json.load(fh)
+    items = data.get("exercises") if isinstance(data, dict) else data
+    return frozenset(
+        str(e.get("id")) for e in items or []
+        if isinstance(e, dict) and e.get("recency_group") == HIIT_RECENCY_GROUP
+    )
+
+
+def is_hiit_session(session: Mapping[str, Any]) -> bool:
+    """True when a session is a HIIT session (C274).
+
+    Rules, first match wins:
+    1. an explicit ``tags.hiit`` on the slot/session (not None) — lets a later
+       brief tag a slot, including ``False`` for a deload Z2 swap;
+    2. the catalog session JSON carries ``tags.hiit: true`` (by ``session_id``);
+    3. the session carries (planned or logged) an exercise whose catalog
+       ``recency_group`` is ``conditioning_hiit`` — this is what makes custom,
+       ad-hoc and generated sessions visible.
+    Pure and deterministic; reads only the catalog files.
+    """
+    tags = session.get("tags") or {}
+    if isinstance(tags, Mapping) and tags.get("hiit") is not None:
+        return bool(tags.get("hiit"))
+    if str(session.get("session_id") or "") in _hiit_catalog_session_ids():
+        return True
+    entries, _origin = counted_entries(session)
+    hiit_ids = _hiit_exercise_ids()
+    return any(str(e.get("exercise_id") or "") in hiit_ids for e in entries)
 
 
 def is_pulling_hard_session(session: Mapping[str, Any]) -> bool:

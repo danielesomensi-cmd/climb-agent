@@ -717,10 +717,9 @@
    ]
   },
   "advanced|2026-10-07|treadmill_hiit_4x4": {
-   "digest": "75d9577fe9f548678079851e281a2d32a1e2154bcfff7bc14ebe5bf193e4cff9",
+   "digest": "7bb37412f5f686ed7c83f058ed95a9b522385d7fafcf084af50f75eeb8aef80d",
    "exercise_ids": [
-    "general_pulse_raise",
-    "treadmill_incline_walk"
+    "general_pulse_raise"
    ]
   },
   "advanced|2026-10-07|treadmill_zone2_cardio": {
@@ -1182,10 +1181,9 @@
    ]
   },
   "advanced|2026-10-21|treadmill_hiit_4x4": {
-   "digest": "07d173724eb5f1bcf8e01a25f6eadb98cda61db093f451cae6f59969cc9e0be3",
+   "digest": "1f36f6d2751c59a72914880f1e2635e67aa0a08bfdc826dd11231a2cd3e4a48b",
    "exercise_ids": [
-    "general_pulse_raise",
-    "approach_hike_loaded"
+    "general_pulse_raise"
    ]
   },
   "advanced|2026-10-21|treadmill_zone2_cardio": {
@@ -1652,10 +1650,9 @@
    ]
   },
   "intermediate|2026-10-07|treadmill_hiit_4x4": {
-   "digest": "75d9577fe9f548678079851e281a2d32a1e2154bcfff7bc14ebe5bf193e4cff9",
+   "digest": "7bb37412f5f686ed7c83f058ed95a9b522385d7fafcf084af50f75eeb8aef80d",
    "exercise_ids": [
-    "general_pulse_raise",
-    "treadmill_incline_walk"
+    "general_pulse_raise"
    ]
   },
   "intermediate|2026-10-07|treadmill_zone2_cardio": {
@@ -2117,10 +2114,9 @@
    ]
   },
   "intermediate|2026-10-21|treadmill_hiit_4x4": {
-   "digest": "07d173724eb5f1bcf8e01a25f6eadb98cda61db093f451cae6f59969cc9e0be3",
+   "digest": "1f36f6d2751c59a72914880f1e2635e67aa0a08bfdc826dd11231a2cd3e4a48b",
    "exercise_ids": [
-    "general_pulse_raise",
-    "approach_hike_loaded"
+    "general_pulse_raise"
    ]
   },
   "intermediate|2026-10-21|treadmill_zone2_cardio": {
@@ -2587,10 +2583,9 @@
    ]
   },
   "untested|2026-10-07|treadmill_hiit_4x4": {
-   "digest": "75d9577fe9f548678079851e281a2d32a1e2154bcfff7bc14ebe5bf193e4cff9",
+   "digest": "7bb37412f5f686ed7c83f058ed95a9b522385d7fafcf084af50f75eeb8aef80d",
    "exercise_ids": [
-    "general_pulse_raise",
-    "treadmill_incline_walk"
+    "general_pulse_raise"
    ]
   },
   "untested|2026-10-07|treadmill_zone2_cardio": {
@@ -3052,10 +3047,9 @@
    ]
   },
   "untested|2026-10-21|treadmill_hiit_4x4": {
-   "digest": "07d173724eb5f1bcf8e01a25f6eadb98cda61db093f451cae6f59969cc9e0be3",
+   "digest": "1f36f6d2751c59a72914880f1e2635e67aa0a08bfdc826dd11231a2cd3e4a48b",
    "exercise_ids": [
-    "general_pulse_raise",
-    "approach_hike_loaded"
+    "general_pulse_raise"
    ]
   },
   "untested|2026-10-21|treadmill_zone2_cardio": {

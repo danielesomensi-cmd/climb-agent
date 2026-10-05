@@ -34,6 +34,7 @@ from backend.engine.macrocycle_v1 import _BASE_WEIGHTS, _adjust_domain_weights, 
 from backend.engine.planner_v2 import _SESSION_META, generate_phase_week
 from backend.engine.replanner_v1 import apply_day_add
 from backend.engine.resolve_session import resolve_session
+from backend.engine.stimulus import HIIT_RECENCY_GROUP, is_hiit_session, session_flag
 
 REPO = Path(__file__).resolve().parents[2]
 SESSIONS = REPO / "backend" / "catalog" / "sessions" / "v1"
@@ -48,9 +49,18 @@ EXPECTED = {
     "treadmill_hiit_4x4": ["general_pulse_raise", "treadmill_hiit_4x4"],
     "treadmill_zone2_cardio": ["treadmill_incline_walk", "hip_opener_flow"],
     "upper_push_arms_lunch": ["general_pulse_raise", "bench_press", "bicep_curl", "triceps_cable_pushdown"],
+    # NOTE: this order is the engine's generic phase sort
+    # (exercise_ordering.sort_exercises_by_phase: strength_general ties broken
+    # by exercise_id), not a design choice. The session notes say so; breaking
+    # ties by module priority would be an engine-wide change with its own
+    # golden diff.
     "legs_maintenance_lunch": ["general_pulse_raise", "edge_calf_raise_bigtoe", "goblet_squat",
                                "romanian_deadlift", "toe_flexor_isometric"],
 }
+
+# Gyms without a treadmill / cable machine, as they exist in production.
+DUMBBELL_ONLY = ["dumbbell"]
+BKL_LIKE = ["gym_boulder", "gym_routes", "hangboard", "pullup_bar", "dumbbell", "weight"]
 
 
 def _session(sid: str) -> dict:
@@ -199,6 +209,44 @@ class TestResolution:
     def test_deterministic(self, sid):
         assert _resolve(sid) == _resolve(sid)
 
+    @pytest.mark.parametrize("equipment", [
+        [e for e in WORK_GYM if e != "treadmill"], DUMBBELL_ONLY, BKL_LIKE,
+    ], ids=["work_without_treadmill", "dumbbell_only", "bkl_like"])
+    @pytest.mark.parametrize("phase", PHASES)
+    def test_hiit_without_treadmill_fails_loudly_never_degrades(self, equipment, phase, catalog):
+        """Strict pin: no silent swap to an easy incline walk reported as success."""
+        r = _resolve("treadmill_hiit_4x4", equipment=equipment, phase=phase)
+        assert r["resolution_status"] == "failed"
+        blocks = {b["block_id"]: b for b in r["resolved_session"]["blocks"]}
+        assert blocks["hiit_intervals"]["status"] == "failed"
+        assert blocks["hiit_intervals"]["selected_exercises"] == []
+        for eid in _ids(r):
+            assert catalog[eid].get("pattern") != "locomotion" or eid == "general_pulse_raise", eid
+        assert "treadmill_incline_walk" not in _ids(r)
+
+    def test_strict_pin_is_only_on_the_hiit_block(self):
+        """pin_strict is opt-in per block: no other catalog session uses it, so
+        every other resolution is unchanged (A290/C272 goldens)."""
+        found = []
+        for p in sorted(SESSIONS.glob("*.json")):
+            for m in json.loads(p.read_text(encoding="utf-8")).get("modules") or []:
+                if ((m.get("selection") or {}).get("primary") or {}).get("pin_strict"):
+                    found.append((p.stem, m["block_id"]))
+        assert found == [("treadmill_hiit_4x4", "hiit_intervals")]
+
+    def test_upper_push_needs_a_cable_machine(self):
+        """Without a cable machine the triceps block would fall back to an
+        incline push-up (a second chest press): the session is not offered."""
+        assert "cable_machine" in _session("upper_push_arms_lunch")["required_equipment"]
+        assert "cable_machine" in _SESSION_META["upper_push_arms_lunch"]["required_equipment"]
+
+    @pytest.mark.parametrize("phase", PHASES)
+    def test_triceps_block_is_triceps_work_where_offered(self, phase, catalog):
+        r = _resolve("upper_push_arms_lunch", phase=phase)
+        blocks = {b["block_id"]: b for b in r["resolved_session"]["blocks"]}
+        picked = [x["exercise_id"] for x in blocks["triceps"]["selected_exercises"]]
+        assert picked and all("tricep" in eid for eid in picked), picked
+
     def test_without_a_treadmill_the_hiit_exercise_never_resolves(self):
         no_treadmill = [e for e in WORK_GYM if e != "treadmill"]
         for sid in sorted(p.stem for p in SESSIONS.glob("*.json")):
@@ -284,3 +332,47 @@ class TestOptIn:
         assert added["session_id"] == sid and added["slot"] == "lunch"
         assert added["tags"]["hard"] is False and added["tags"]["finger"] is False
         assert adjustments == []
+
+
+# ---------------------------------------------------------------------------
+# 4. HIIT: one catalog-backed accessor for A300
+# ---------------------------------------------------------------------------
+
+class TestHiitAccessor:
+    def test_catalog_session_is_hiit_even_with_planner_slot_tags(self):
+        # the slot as the planner / apply_day_add build it: only hard/finger
+        slot = {"session_id": "treadmill_hiit_4x4", "tags": {"hard": False, "finger": False}}
+        assert is_hiit_session(slot) is True
+        # session_flag is NOT the API: it cannot see the catalog tag
+        assert session_flag(slot, "hiit") is False
+
+    @pytest.mark.parametrize("sid", [s for s in LUNCH if s != "treadmill_hiit_4x4"])
+    def test_other_lunch_sessions_are_not_hiit(self, sid):
+        assert is_hiit_session({"session_id": sid, "tags": {"hard": False, "finger": False}}) is False
+
+    def test_no_existing_catalog_session_is_hiit(self):
+        hiit = [p.stem for p in sorted(SESSIONS.glob("*.json"))
+                if is_hiit_session({"session_id": p.stem, "tags": {}})]
+        assert hiit == ["treadmill_hiit_4x4"]
+
+    def test_custom_session_with_the_hiit_exercise_is_hiit(self, catalog):
+        assert catalog["treadmill_hiit_4x4"]["recency_group"] == HIIT_RECENCY_GROUP
+        custom = {"session_id": "custom_abc", "is_custom": True,
+                  "exercises": [{"exercise_id": "general_pulse_raise"}, {"exercise_id": "treadmill_hiit_4x4"}]}
+        assert is_hiit_session(custom) is True
+        adhoc = {"session_id": "generated_x", "exercises": [{"exercise_id": "treadmill_incline_walk"}]}
+        assert is_hiit_session(adhoc) is False
+
+    def test_logged_skip_of_the_intervals_is_not_hiit(self):
+        done = {"session_id": "custom_abc", "is_custom": True,
+                "actual_exercises": [{"exercise_id": "treadmill_hiit_4x4", "completed": False}]}
+        assert is_hiit_session(done) is False
+
+    def test_explicit_slot_tag_wins(self):
+        assert is_hiit_session({"session_id": "treadmill_hiit_4x4", "tags": {"hiit": False}}) is False
+        assert is_hiit_session({"session_id": "treadmill_zone2_cardio", "tags": {"hiit": True}}) is True
+
+    def test_resolved_catalog_slot_is_hiit(self):
+        r = _resolve("treadmill_hiit_4x4")
+        slot = {"session_id": "some_other_id", "resolved": r}
+        assert is_hiit_session(slot) is True

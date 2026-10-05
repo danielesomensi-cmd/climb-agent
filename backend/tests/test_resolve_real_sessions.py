@@ -20,11 +20,27 @@ def _load_user_state():
         return json.load(f)
 
 
-def _make_user_state(base, location, gym_id=None):
+# C274: sessions whose primary block is a strict pin (``pin_strict``) fail
+# loudly without their equipment instead of degrading — by design. The planner
+# only places a session where its ``required_equipment`` exists, so they are
+# resolved here where that equipment is declared.
+_STRICT_PIN_EQUIPMENT = {"treadmill_hiit_4x4": ["treadmill"]}
+
+
+def _make_user_state(base, location, gym_id=None, session_id=None):
     us = deepcopy(base)
     us.setdefault("context", {})
     us["context"]["location"] = location
     us["context"]["gym_id"] = gym_id
+    extra = _STRICT_PIN_EQUIPMENT.get(session_id or "")
+    if extra:
+        eq = us.setdefault("equipment", {})
+        if location == "gym":
+            for g in eq.get("gyms") or []:
+                if g.get("gym_id") == gym_id:
+                    g["equipment"] = list(g.get("equipment") or []) + extra
+        else:
+            eq["home"] = list(eq.get("home") or []) + extra
     return us
 
 
@@ -71,7 +87,7 @@ class TestResolveAllRealSessions(unittest.TestCase):
                 session = json.load(f)
             loc = (session.get("context") or {}).get("location", "home")
             gym_id = "blocx" if loc == "gym" else None
-            us = _make_user_state(self.base_us, loc, gym_id)
+            us = _make_user_state(self.base_us, loc, gym_id, sid)
 
             result = _resolve(sid, us)
             if result["resolution_status"] != "success":
@@ -87,7 +103,7 @@ class TestResolveAllRealSessions(unittest.TestCase):
                 session = json.load(f)
             loc = (session.get("context") or {}).get("location", "home")
             gym_id = "blocx" if loc == "gym" else None
-            us = _make_user_state(self.base_us, loc, gym_id)
+            us = _make_user_state(self.base_us, loc, gym_id, sid)
 
             result = _resolve(sid, us)
             n = len(result["resolved_session"]["exercise_instances"])
@@ -105,7 +121,7 @@ class TestResolveAllRealSessions(unittest.TestCase):
                 session = json.load(f)
             loc = (session.get("context") or {}).get("location", "home")
             gym_id = "blocx" if loc == "gym" else None
-            us = _make_user_state(self.base_us, loc, gym_id)
+            us = _make_user_state(self.base_us, loc, gym_id, sid)
 
             result = _resolve(sid, us)
             for b in result["resolved_session"]["blocks"]:
@@ -122,7 +138,7 @@ class TestResolveAllRealSessions(unittest.TestCase):
                 session = json.load(f)
             loc = (session.get("context") or {}).get("location", "home")
             gym_id = "blocx" if loc == "gym" else None
-            us = _make_user_state(self.base_us, loc, gym_id)
+            us = _make_user_state(self.base_us, loc, gym_id, sid)
 
             result = _resolve(sid, us)
             for b in result["resolved_session"]["blocks"]:
@@ -140,8 +156,8 @@ class TestResolveAllRealSessions(unittest.TestCase):
             loc = (session.get("context") or {}).get("location", "home")
             gym_id = "blocx" if loc == "gym" else None
 
-            us_a = _make_user_state(self.base_us, loc, gym_id)
-            us_b = _make_user_state(self.base_us, loc, gym_id)
+            us_a = _make_user_state(self.base_us, loc, gym_id, sid)
+            us_b = _make_user_state(self.base_us, loc, gym_id, sid)
 
             result_a = _resolve(sid, us_a)
             result_b = _resolve(sid, us_b)
