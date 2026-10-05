@@ -410,9 +410,13 @@ gym 7A. It does not matter which limit exercise the session picked: a grade from
   *very easy* +1, *ok* keeps it, *hard* −½, *very hard* −1. The `+` is never lost:
   an *ok* at 7A+ stays 7A+.
 
-**Logging problem by problem (recommended).** In the guided session and in the custom
-session player, a limit exercise shows **Problems climbed** instead of a single grade
-field. Add a row for each problem you tried: grade (pre-filled with your target),
+**Logging problem by problem (recommended).** In the guided session, in the custom
+session player and in the **post-session feedback dialog** (when you mark a session done
+from Today or This Week without running the guided player), a limit exercise shows
+**Problems climbed** instead of a single grade field — the same logger everywhere, so a
+limit closed from the dialog moves your target exactly like one logged in the player.
+Other exercises with a grade target get an **Actual grade used** field in the dialog,
+pre-filled with the target, as in the guided player. Add a row for each problem you tried: grade (pre-filled with your target),
 number of tries (1–10) and the outcome — **Sent**, **High point** (you got further than
 before but did not top it) or **No progress**. A new row has **no outcome** until you pick
 one: a row left without an outcome is not counted (it is never read as a send). On a
@@ -441,8 +445,11 @@ next target instead of the effort chips:
 Not logging any problem keeps the old behaviour: the target grade is sent as the grade
 you climbed and the effort chip moves it.
 
-A limit exercise inside a **custom session** gets the same target as the plan on the day
-you play it, and its outcome counts. A custom session is not tied to a gym, so when you have
+A limit exercise inside a **custom session** — including one the Coach composed — gets the
+same target as the plan on the day you play it, and its outcome counts. The target is
+never saved with the session: it is worked out again every time you open it, for that
+day, whether you start it from Today, This Week, the session builder or the Coach's
+"Add to today & run". A custom session is not tied to a gym, so when you have
 more than one limit surface (Kilter, spray wall, boulder wall…) the player asks **Where are
 you climbing?**: the target shown and the memory updated are the ones of the wall you pick. For the weekly **Limit** key session, a custom
 session counts when you logged at least **two problems at your target** (sent or high
@@ -851,6 +858,7 @@ The **Weekly Report** (Reports tab) gives you a snapshot of your training week:
 - **Difficulty Distribution**: How exercises felt across the week (histogram of feedback)
 - **Progression Table**: Which exercises progressed, regressed, or stayed flat
 - **Free Climbing Summary**: If you had free sessions — number of climbs, max grade, send rate, duration
+- **Hardest sends**: your hardest boulder **sent** this week on each surface (Kilter, MoonBoard, spray wall, boulder wall…), with how many sends and your current limit target there. It counts the problems you logged in limit sessions (planned, custom or from the Coach) and the climbs of your free boulder sessions — each climb once. Grades follow your Font / V-scale preference.
 - **Month at a glance**: A calendar heatmap at the bottom of the page. Trained days are green (darker = bigger load), and **respected rest days get their own soft green** — recovery counts as a win here, not an empty box. Skipped days stay neutral (no red, ever). Tap any day to open it.
 
 **How to read it**:
@@ -896,7 +904,7 @@ Two ways to make it more personal:
 - "What did I do this week?"
 - "I'm climbing outdoors today and it's hot — how should I adapt?"
 - "I'm traveling without equipment — what can I do?"
-- **"I'm at a regular gym today — build me a session."** The Coach composes a structured strength/antagonist session (warm-up → main blocks → optional core/prehab) from real catalog exercises, adapted to your current phase and the rest of your week. Every exercise that takes a weight always shows a kg field you can log into — even the first time (it just starts empty). For finger/hangboard and weighted pull-up work it pre-fills a starting weight derived from your test max; otherwise it shows your last-logged weight, and never an invented number. The composed session appears as a **card in the chat with one button, "Add to today & run"** — tap it and the Coach adds it to today as an off-plan session and opens the guided player so you can run and log it. It never touches your planned training: it drops into the first free slot of the day (evening, then morning, then lunch), and if all three are already taken it tells you the day is full instead of failing silently. (The AI only reads your request and picks the shape; a deterministic engine chooses the exercises and loads.) Ask it for an alternative when you don't feel like the planned session and it'll weigh what you want against what the plan needs. **Name specific muscles** ("chest, abs and triceps" / "just biceps") and the session is built around exactly those — no unrelated squats or rows padded in. You can also name a **movement** rather than a muscle: lock-offs, pull-ups, hangs, or **handstand work** each map to their own focus, so "45 minutes of lock-offs" gets you actual lock-offs and "handstand practice" gets the real progression — frog stand, wall walk-up, kick-ups, heel pulls, shoulder shrugs and pike push-ups — rather than generic pulling. If you ask for **two sessions in one message** (e.g. one at the gym at lunch and another at home tonight), the Coach builds the sooner one and tells you so plainly, inviting you to ask again for the other — it never silently drops the second. Short follow-ups work too: if the Coach offers to build something and you answer **"yes"/"sì"** (or "create it", "redo it shorter"), that goes straight to the builder. The card **stays in your chat history** — reload the app and it's still there, button included. The session honors the time you asked for (a 60-minute request composes ~60 minutes of work), and if some requested focus has no equipment-compatible exercises where you are, the Coach says so instead of quietly composing less.
+- **"I'm at a regular gym today — build me a session."** The Coach composes a structured strength/antagonist session (warm-up → main blocks → optional core/prehab) from real catalog exercises, adapted to your current phase and the rest of your week. Every exercise that takes a weight always shows a kg field you can log into — even the first time (it just starts empty). For finger/hangboard and weighted pull-up work it pre-fills a starting weight derived from your test max; otherwise it shows your last-logged weight, and never an invented number. The composed session appears as a **card in the chat with one button, "Add to today & run"** — tap it and the Coach adds it to today as an off-plan session and opens the guided player so you can run and log it. It never touches your planned training: it drops into the first free slot of the day (evening, then morning, then lunch), and if all three are already taken it tells you the day is full instead of failing silently. (The AI only reads your request and picks the shape; a deterministic engine chooses the exercises and loads.) Ask it for an alternative when you don't feel like the planned session and it'll weigh what you want against what the plan needs. **Name specific muscles** ("chest, abs and triceps" / "just biceps") and the session is built around exactly those — no unrelated squats or rows padded in. You can also name a **movement** rather than a muscle: lock-offs, pull-ups, hangs, or **handstand work** each map to their own focus, so "45 minutes of lock-offs" gets you actual lock-offs and "handstand practice" gets the real progression — frog stand, wall walk-up, kick-ups, heel pulls, shoulder shrugs and pike push-ups — rather than generic pulling. If you ask for **two sessions in one message** (e.g. one at the gym at lunch and another at home tonight), the Coach builds the sooner one and tells you so plainly, inviting you to ask again for the other — it never silently drops the second. Short follow-ups work too: if the Coach offers to build something and you answer **"yes"/"sì"** (or "create it", "redo it shorter"), that goes straight to the builder. The card **stays in your chat history** — reload the app and it's still there, button included. A limit-bouldering line on the card shows **today's limit target** (e.g. "limit 7A+–7B · Kilter") — the same one the player will show when you tap the button. On a card from an earlier day the target is hidden: it is worked out again for the day you actually play. The session honors the time you asked for (a 60-minute request composes ~60 minutes of work), and if some requested focus has no equipment-compatible exercises where you are, the Coach says so instead of quietly composing less.
 - Training-science questions (grounded in the same literature the engine is built on)
 
 **What it will NOT do:**

@@ -44,6 +44,12 @@ export function vScaleToFont(vGrade: string): string {
 
 export type BoulderGradeSystem = "font" | "v_scale";
 
+/** A299: the athlete's boulder display preference read from /api/state (default Font). */
+export function boulderGradeSystemOf(state: unknown): BoulderGradeSystem {
+  const prefs = (state as { preferences?: { grade_system_boulder?: unknown } } | null | undefined)?.preferences;
+  return prefs?.grade_system_boulder === "v_scale" ? "v_scale" : "font";
+}
+
 /**
  * Convert a Fontainebleau boulder grade to the user's preferred display system.
  * Engine always stores Font grades — this is render-only.

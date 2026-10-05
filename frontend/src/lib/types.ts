@@ -666,6 +666,15 @@ export interface WeeklyReportOutdoor {
   sends: number;
 }
 
+/** A299 (R6c §7): hardest boulder sent per surface in the week (grades in Font). */
+export interface WeeklyReportLimitSend {
+  surface: string;
+  max_grade_sent: string;
+  sends: number;
+  sources: Array<"planned" | "custom" | "adhoc" | "free">;
+  target_grade: string | null;
+}
+
 export interface WeeklyReportSession {
   session_id: string;
   status: "planned" | "done" | "skipped";
@@ -733,6 +742,8 @@ export interface WeeklyReport {
   stimulus_balance: Record<string, WeeklyReportStimulusEntry>;
   progression: WeeklyReportProgression[];
   outdoor: WeeklyReportOutdoor;
+  /** A299 — absent on reports from a backend older than A299. */
+  limit_sends?: WeeklyReportLimitSend[];
   days: WeeklyReportDay[];
   highlights: WeeklyReportHighlight[];
 }
@@ -893,6 +904,9 @@ export interface GuidedExercise {
     surface?: string;
     attemptGuidance?: string;  // A-B7: e.g. "1 serious attempt per problem"
     logProblems?: boolean;     // A296: limit family — log problem by problem
+    /** A299: custom/adhoc limit rows — surfaces the athlete may be on, each with its target. */
+    surfaceOptions?: string[];
+    surfaceTargets?: Record<string, { target_grade?: string; target_grade_low?: string }>;
     restGuidance?: string;     // A-B7: e.g. "3-5 min between problems"
     loadSource?: string;   // "estimated" if derived from grade/pullup (no real test)
     loadWarning?: string;  // "counterweight_required..." if external < 0
@@ -940,6 +954,8 @@ export interface GuidedExercise {
   usedTotalLoadKg?: number;
   usedGrade?: string;
   problems?: LimitProblem[];  // A296: limit problem log
+  /** A299: the surface the athlete picked in the logger (custom/adhoc rows). */
+  chosenSurface?: string;
   completedSets?: number;  // sets completed within this exercise (for timer resume)
 
   // Test measurement exercises (category=test_measurement): single value input

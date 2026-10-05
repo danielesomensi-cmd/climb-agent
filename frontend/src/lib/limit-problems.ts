@@ -10,7 +10,7 @@
  * Constants mirror backend/engine/limit_log.py — keep them in sync.
  */
 import { toast } from "sonner";
-import { BOULDER_GRADE_OPTIONS } from "@/lib/gradeUtils";
+import { BOULDER_GRADE_OPTIONS, displayBoulderGrade, type BoulderGradeSystem } from "@/lib/gradeUtils";
 import type { LimitProblem, LimitProblemDraft, LimitProblemOutcome } from "@/lib/types";
 
 export const MAX_PROBLEMS = 8;
@@ -183,4 +183,22 @@ export function notifyLimitSummary(raw: unknown): void {
   const msg = describeLimitSummary(raw);
   if (!msg) return;
   toast(msg.title, { description: msg.description || undefined, duration: 10000 });
+}
+
+// ── Weekly report → limit_sends (A299, R6c frontend §7) ─────────────────
+
+/** One row of the weekly "Hardest sends" card, ready to render (grades on the
+ *  athlete's display scale — the report carries Font, render-only conversion). */
+export function describeLimitSend(
+  row: { surface: string; max_grade_sent: string; sends: number; sources: string[]; target_grade: string | null },
+  gradeSystem: BoulderGradeSystem = "font",
+): { surface: string; grade: string; detail: string } {
+  const bits = [`${row.sends} ${row.sends === 1 ? "send" : "sends"}`];
+  if (row.target_grade) bits.push(`limit target ${displayBoulderGrade(row.target_grade, gradeSystem)}`);
+  if (row.sources.length === 1 && row.sources[0] === "free") bits.push("free climbing");
+  return {
+    surface: surfaceLabel(row.surface),
+    grade: displayBoulderGrade(row.max_grade_sent, gradeSystem),
+    detail: bits.join(" · "),
+  };
 }

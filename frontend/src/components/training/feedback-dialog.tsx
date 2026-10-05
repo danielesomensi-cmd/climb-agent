@@ -13,10 +13,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { hasLoadInput, type FeedbackDialogExercise } from "@/lib/feedback-items";
+import {
+  hasGradeInput,
+  hasLoadInput,
+  hasProblemLog,
+  prefilledGrade,
+  type FeedbackDialogExercise,
+} from "@/lib/feedback-items";
 import type { MeasureValues } from "@/lib/measured-feedback";
-import type { SessionPain } from "@/lib/types";
+import type { BoulderGradeSystem } from "@/lib/gradeUtils";
+import type { LimitProblemDraft, SessionPain } from "@/lib/types";
 import { MeasureInput, PainPicker } from "@/components/training/measured-feedback-inputs";
+import { LimitProblemLogger } from "@/components/training/limit-problem-logger";
 
 interface FeedbackDialogProps {
   open: boolean;
@@ -30,6 +38,9 @@ interface FeedbackDialogProps {
    * A295: `feedback` holds ONLY the exercises the user rated (untouched = not
    * rated, never a silent "ok"); `measures` the optional last-set reps / hang
    * margin; `pain` the session's "Any pain?" answer (null = not answered).
+   * A299: `grades` (grade typed per exercise; untouched = the pre-filled
+   * target) and `problems` (limit problem rows) — the same two inputs the
+   * guided player collects, fed to the same payload builder.
    */
   onSubmit: (
     feedback: Record<string, string>,
@@ -37,10 +48,14 @@ interface FeedbackDialogProps {
     loads: Record<string, number>,
     measures: Record<string, MeasureValues>,
     pain: SessionPain | null,
+    grades: Record<string, string>,
+    problems: Record<string, LimitProblemDraft[]>,
   ) => void;
   exercises: FeedbackDialogExercise[];
   /** Session slot — used to pre-fill duration estimate */
   slot?: string;
+  /** A299: boulder display preference for the problem logger (render-only). */
+  gradeSystem?: BoulderGradeSystem;
 }
 
 /** Difficulty levels with mapping to backend values */
@@ -66,6 +81,7 @@ export function FeedbackDialog({
   onSubmit,
   exercises,
   slot,
+  gradeSystem = "font",
 }: FeedbackDialogProps) {
   const [feedback, setFeedback] = useState<Record<string, string>>({});
   const estimatedMin = slot ? SLOT_ESTIMATES[slot] ?? 60 : 60;
@@ -77,6 +93,10 @@ export function FeedbackDialog({
   // A295: optional measures + session pain — nothing pre-selected.
   const [measures, setMeasures] = useState<Record<string, MeasureValues>>({});
   const [pain, setPain] = useState<SessionPain | null>(null);
+  // A299: grade typed per exercise (absent = the pre-filled target) and the
+  // limit problem rows — no row exists until the athlete adds one.
+  const [grades, setGrades] = useState<Record<string, string>>({});
+  const [problems, setProblems] = useState<Record<string, LimitProblemDraft[]>>({});
 
   function setMeasure(exerciseId: string, patch: MeasureValues) {
     setMeasures((prev) => ({ ...prev, [exerciseId]: { ...(prev[exerciseId] ?? {}), ...patch } }));
@@ -87,6 +107,8 @@ export function FeedbackDialog({
     setLoadStr({});
     setMeasures({});
     setPain(null);
+    setGrades({});
+    setProblems({});
     setDurationStr(String(estimatedMin));
   }
 
@@ -120,7 +142,7 @@ export function FeedbackDialog({
     const dur = userEntered ? parsed : estimatedMin;
     // B217: duration_source dropped — was a Potemkin field (never persisted
     // server-side, read only with hard-coded default).
-    onSubmit(rated, dur, loads, measures, pain);
+    onSubmit(rated, dur, loads, measures, pain, grades, problems);
     resetAll();
   }
 
@@ -184,6 +206,42 @@ export function FeedbackDialog({
                   onLastSetReps={(v) => setMeasure(exercise.exercise_id, { lastSetReps: v })}
                   onHangMargin={(v) => setMeasure(exercise.exercise_id, { hangMargin: v })}
                 />
+              )}
+
+              {/* A299: limit family — the guided player's problem logger */}
+              {hasProblemLog(exercise) && (
+                <LimitProblemLogger
+                  idPrefix={exercise.exercise_id}
+                  target={exercise.grade}
+                  targetLow={exercise.gradeLow}
+                  problems={problems[exercise.exercise_id] ?? []}
+                  onChange={(rows) =>
+                    setProblems((prev) => ({ ...prev, [exercise.exercise_id]: rows }))
+                  }
+                  gradeSystem={gradeSystem}
+                />
+              )}
+
+              {/* A299: grade actually climbed (pre-filled with the target, as in the guided player) */}
+              {hasGradeInput(exercise) && !hasProblemLog(exercise) && (
+                <div className="flex items-center gap-2 pt-1">
+                  <Label
+                    htmlFor={`${exercise.exercise_id}-grade`}
+                    className="text-xs text-muted-foreground"
+                  >
+                    Actual grade used
+                  </Label>
+                  <Input
+                    id={`${exercise.exercise_id}-grade`}
+                    type="text"
+                    value={grades[exercise.exercise_id] ?? prefilledGrade(exercise)}
+                    onChange={(e) =>
+                      setGrades((prev) => ({ ...prev, [exercise.exercise_id]: e.target.value }))
+                    }
+                    className="w-24 h-8"
+                    placeholder="e.g. 7A"
+                  />
+                </div>
               )}
 
               {/* B288: load actually used — the engine's only progression input */}

@@ -19,6 +19,7 @@ import {
   Dumbbell,
   Calendar,
   Activity,
+  Trophy,
 } from "lucide-react";
 import { getWeeklyReport } from "@/lib/api";
 import type {
@@ -29,6 +30,9 @@ import type {
 } from "@/lib/types";
 
 import { getPhaseName } from "@/lib/phase-labels";
+import { boulderGradeSystemOf } from "@/lib/gradeUtils";
+import { describeLimitSend } from "@/lib/limit-problems";
+import { useUserState } from "@/lib/hooks/queries/use-user-state";
 import { parseISODateLocal, shiftISODate } from "@/lib/dates";
 
 // A286 — la barra Difficulty usa i token della scala assi/funzionali invece
@@ -124,6 +128,8 @@ function WeeklyReportContent() {
   const [report, setReport] = useState<WeeklyReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // A299: boulder display preference (the report carries Font).
+  const gradeSystem = boulderGradeSystemOf(useUserState(authReady).data);
 
   // Sync state when searchParams change (e.g. Suspense hydration, SPA navigation)
   useEffect(() => {
@@ -429,6 +435,33 @@ function WeeklyReportContent() {
                       </div>
                     )}
                   </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ── A299 (R6c §7): hardest boulder sent per surface ── */}
+            {report.limit_sends && report.limit_sends.length > 0 && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Trophy className="size-4" /> Hardest sends
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2 text-sm">
+                    {report.limit_sends.map((row) => {
+                      const d = describeLimitSend(row, gradeSystem);
+                      return (
+                        <li key={row.surface} className="flex items-baseline justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-medium">{d.surface}</p>
+                            <p className="text-xs text-muted-foreground">{d.detail}</p>
+                          </div>
+                          <span className="shrink-0 text-base font-semibold tabular-nums">{d.grade}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
                 </CardContent>
               </Card>
             )}

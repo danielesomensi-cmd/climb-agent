@@ -813,6 +813,18 @@ with **no outcome** (`LimitProblemDraft.outcome = null`) and an unrated row is n
 the day target is fixed per surface by the first limit-family item, so a second limit exercise on
 the same surface is judged against the same target.
 
+A299: the read-time target is attached also by `GET /api/week` to not-yet-played custom / generated
+slots (`week._with_custom_anchored_loads` → `custom_session.attach_limit_targets`, same as `GET
+custom ?date=`), so every player recomputes it; it is never stored (a value round-tripped by the
+client is recomputed). The coach adhoc preview carries `resolved_for_date` (the day its read-time
+values were computed for; the client shows a preview target only when it equals its own today).
+Weekly report section `limit_sends[]` = `limit_log.sends_by_surface(state, free_sessions, since,
+until)`: `{surface, max_grade_sent, sends, sources[], target_grade}` per boulder surface, from
+non-free limit-log problems with outcome `sent` + finished free boulder climbs `flash`/`sent` (free
+log entries skipped: they copy the same climbs); `target_grade` = target of the last non-free entry
+of the week on that surface. The post-session dialog sends `used_grade` / `problems` /
+`surface_selected` through the same `limitFeedbackFields` as the guided player.
+
 ### 2.10.3 Test source taxonomy (`assessment.tests_source`)
 
 Every scalar in `assessment.tests.*` has a companion entry in `assessment.tests_source` recording whether the value came from a real measurement or an estimate. The sidecar shape is parallel to `assessment.tests`: same keys, one of two string values.

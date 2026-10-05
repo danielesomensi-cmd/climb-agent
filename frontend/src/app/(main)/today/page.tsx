@@ -61,7 +61,8 @@ import {
 } from "@/components/ui/dialog";
 import { getInProgressSession, clearSavedSession, getKeyPrefix, type InProgressSession } from "@/lib/guided-session-utils";
 import { getBoulderPhaseTip } from "@/lib/boulder-phase-tips";
-import type { WeekPlan, DayPlan, OutdoorSpot, OutdoorSession, GuidedExercise, OutdoorDayType, OutdoorPitchLadder, KeyStatus, KeyProposal, SessionPain } from "@/lib/types";
+import type { WeekPlan, DayPlan, OutdoorSpot, OutdoorSession, GuidedExercise, OutdoorDayType, OutdoorPitchLadder, KeyStatus, KeyProposal, SessionPain, LimitProblemDraft } from "@/lib/types";
+import { boulderGradeSystemOf } from "@/lib/gradeUtils";
 import { withFeedbackContract, type MeasureValues } from "@/lib/measured-feedback";
 import { hasOtherActivity } from "@/lib/other-activity";
 import { completeOtherActivityEvent, removeOtherActivityEvent, removeOutdoorEvent, undoOtherActivityEvent, undoOutdoorEvent } from "@/lib/week-events";
@@ -1054,6 +1055,8 @@ function TodayContent() {
     loads: Record<string, number>,
     measures: Record<string, MeasureValues> = {},
     pain: SessionPain | null = null,
+    grades: Record<string, string> = {},
+    problems: Record<string, LimitProblemDraft[]> = {},
   ) {
     if (!feedbackSessionId) return;
     try {
@@ -1065,6 +1068,8 @@ function TodayContent() {
         feedback,
         loads,
         measures,
+        grades,
+        problems,
       );
       const body = {
         // A295: feedback_contract 2 — an omitted label means "not rated".
@@ -1493,6 +1498,7 @@ function TodayContent() {
         onSubmit={handleFeedbackSubmit}
         exercises={feedbackExercises}
         slot={feedbackSlot}
+        gradeSystem={boulderGradeSystemOf(stateQuery.data)}
       />
 
       {/* Replan dialog */}

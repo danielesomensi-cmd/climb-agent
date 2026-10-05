@@ -224,6 +224,7 @@ def _with_custom_anchored_loads(week_plan: dict, state: dict) -> dict:
     from backend.engine.anchored_load import resolve_custom_exercises
     from backend.engine.bw_progression import attach_technique_measures, resolve_custom_ladder_rows
     from backend.engine.measured_feedback import attach_measure_fields
+    from backend.api.routers.custom_session import attach_limit_targets
 
     out = deepcopy(week_plan)
     for week_block in out.get("weeks") or []:
@@ -252,6 +253,13 @@ def _with_custom_anchored_loads(week_plan: dict, state: dict) -> dict:
                     # A295: which measure the player may ask for, and the
                     # double-progression target of the day.
                     session_entry["exercises"] = attach_measure_fields(
+                        state, session_entry["exercises"], day,
+                    )
+                    # A299: limit-family rows get the limit target of their
+                    # own day — the same read as GET custom ?date= — so the
+                    # guided player shows the problem logger on custom /
+                    # adhoc sessions too. Computed at read, never stored.
+                    session_entry["exercises"] = attach_limit_targets(
                         state, session_entry["exercises"], day,
                     )
     return out

@@ -8,6 +8,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 import { TopBar } from "@/components/layout/top-bar";
 import {
   ApiError,
@@ -19,6 +20,7 @@ import {
   deleteCustomSession,
   getCoachHistory,
   getCoachSuggestions,
+  getCustomSession,
   getWeek,
   type AdhocSessionPreview,
   type CoachMessage,
@@ -28,6 +30,9 @@ import { buildGuidedStateFromExercises, saveGuidedState } from "@/lib/guided-ses
 import { shouldRouteToAdhoc } from "@/lib/adhoc-gate";
 import { findDay, firstFreeSlot } from "@/lib/day-slots";
 import { blockingConflicts } from "@/lib/key-sessions";
+import { boulderGradeSystemOf } from "@/lib/gradeUtils";
+import { previewLimitTarget } from "@/lib/adhoc-preview";
+import { useUserState } from "@/lib/hooks/queries/use-user-state";
 
 const PAGE_SIZE = 50;
 
@@ -66,6 +71,9 @@ function AdhocSessionCard({
   onAddAndRun: (s: AdhocSessionPreview) => void;
   busy: boolean;
 }) {
+  const authReady = useAuth().isLoaded;
+  const gradeSystem = boulderGradeSystemOf(useUserState(authReady).data);
+  const today = localToday();
   return (
     <div className="max-w-[92%] space-y-3 rounded-xl rounded-bl-md border border-primary/30 bg-card px-4 py-3 text-sm shadow-sm">
       <div>
@@ -90,7 +98,11 @@ function AdhocSessionCard({
         {session.exercises.map((ex, i) => (
           <li key={`${ex.exercise_id}-${i}`} className="flex items-baseline justify-between gap-3">
             <span className="min-w-0 truncate">{ex.name}</span>
-            <span className="shrink-0 tabular-nums text-xs text-muted-foreground">{exerciseLine(ex)}</span>
+            <span className="shrink-0 tabular-nums text-xs text-muted-foreground">
+              {[exerciseLine(ex), previewLimitTarget(ex, session.resolved_for_date, today, gradeSystem)]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
           </li>
         ))}
       </ul>
@@ -352,13 +364,18 @@ export default function CoachPage() {
           await deleteCustomSession(created.id).catch(() => {});
           throw e;
         }
+        // A299: play what the read of TODAY says — anchored loads, ladder
+        // doses, measures and the limit target recomputed by the same
+        // functions as /week and the custom player (the create response is
+        // the stored rows, without any read-time value). Fallback: the rows.
+        const played = await getCustomSession(created.id, today).catch(() => created);
         // B283: run through the REAL guided player (progress, navigation,
         // cues, loads) — the minimal A211 playback page is retired.
         const guidedState = buildGuidedStateFromExercises(
           `custom_${created.id}`,
           created.name,
           today,
-          (created.exercises ?? []) as unknown as Array<Record<string, unknown>>,
+          (played.exercises ?? created.exercises ?? []) as unknown as Array<Record<string, unknown>>,
         );
         if (guidedState) saveGuidedState(guidedState);
         router.push(`/guided/${today}/custom_${created.id}`);

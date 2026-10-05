@@ -201,6 +201,12 @@ def handle_adhoc_compose(
 
     if guard.get("warnings"):
         session["key_warnings"] = guard["warnings"]
+    # A299: the day the preview's read-time values (anchored loads, limit
+    # targets) were computed for — the composers read `today` when the athlete
+    # context is on, else the server date. Nothing of it is stored on save:
+    # the player re-reads the same functions for the day it is played, so the
+    # client shows a preview target only when this is its own today.
+    session["resolved_for_date"] = session_day if athlete_ctx is not None else date.today().isoformat()
     storage.append_coach_message(user_id, "user", message)
     summary = build_adhoc_summary(session, intent)
     # B306: persist the composed payload with the turn so the history endpoint

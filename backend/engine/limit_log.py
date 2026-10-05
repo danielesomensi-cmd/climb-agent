@@ -447,7 +447,97 @@ def free_session_decision(
     }
 
 
+# ---------------------------------------------------------------------------
+# Weekly report (A299, R6c frontend §7)
+# ---------------------------------------------------------------------------
+
+#: Display order of the boulder surfaces in the report (boards first, as in
+#: progression_v1.SURFACE_PRIORITY, then the wall). Unknown surfaces go last.
+REPORT_SURFACE_ORDER: Tuple[str, ...] = (
+    "board_kilter", "board_moonboard", "board_other", "spraywall", "gym_boulder",
+)
+
+
+def sends_by_surface(
+    state: Mapping[str, Any],
+    free_sessions: Iterable[Mapping[str, Any]],
+    since: str,
+    until: str,
+) -> List[Dict[str, Any]]:
+    """A299: the hardest boulder SENT per surface between ``since`` and ``until``.
+
+    Read-only. Two sources, never counted twice:
+
+    - the limit log, planned / custom / adhoc entries: every problem with
+      outcome ``sent`` (the problem's own surface, else the entry's);
+    - finished free sessions on a boulder surface: every climb ``flash`` /
+      ``sent``. The ``free`` entries of the limit log are NOT read — they are
+      a copy of these same climbs.
+
+    Rows ``{surface, max_grade_sent, sends, sources, target_grade}`` in
+    ``REPORT_SURFACE_ORDER``. ``target_grade`` is the limit target of the last
+    logged (non-free) session of the week on that surface, None otherwise.
+    A surface with no send in the window has no row.
+    """
+    rows: Dict[str, Dict[str, Any]] = {}
+    targets: Dict[str, str] = {}
+
+    def _row(surface: str) -> Dict[str, Any]:
+        return rows.setdefault(surface, {
+            "surface": surface, "max_grade_sent": None, "sends": 0,
+            "sources": [], "target_grade": None,
+        })
+
+    def _add(surface: str, grade: str, source: str) -> None:
+        row = _row(surface)
+        row["sends"] += 1
+        if row["max_grade_sent"] is None or _INDEX[grade] > _INDEX[row["max_grade_sent"]]:
+            row["max_grade_sent"] = grade
+        if source not in row["sources"]:
+            row["sources"].append(source)
+
+    for e in entries(state):
+        if not (since <= str(e.get("date")) <= until) or e.get("source") == SOURCE_FREE:
+            continue
+        entry_surface = str(e.get("surface") or "").strip().lower()
+        for p in e.get("problems") or []:
+            if not isinstance(p, Mapping) or p.get("outcome") != OUTCOME_SENT:
+                continue
+            grade = norm_grade(p.get("grade"))
+            surface = str(p.get("surface") or entry_surface).strip().lower()
+            if grade is None or not surface:
+                continue
+            _add(surface, grade, str(e.get("source") or SOURCE_PLANNED))
+        target = norm_grade(e.get("target_grade"))
+        if target and entry_surface:
+            targets[entry_surface] = target  # entries are oldest first: the last wins
+
+    for fs in free_sessions:
+        if not isinstance(fs, Mapping) or not fs.get("finished_at"):
+            continue
+        if not (since <= str(fs.get("date") or "") <= until):
+            continue
+        surface = str(fs.get("surface") or "").strip().lower()
+        if surface not in FREE_LIMIT_SURFACES:
+            continue
+        for c in fs.get("climbs") or []:
+            if not isinstance(c, Mapping) or c.get("status") not in ("flash", "sent"):
+                continue
+            grade = norm_grade(c.get("grade"))
+            if grade is not None:
+                _add(surface, grade, SOURCE_FREE)
+
+    order = {s: i for i, s in enumerate(REPORT_SURFACE_ORDER)}
+    out = [r for r in rows.values() if r["max_grade_sent"] is not None]
+    out.sort(key=lambda r: (order.get(r["surface"], len(order)), r["surface"]))
+    for r in out:
+        r["sources"] = sorted(r["sources"])
+        r["target_grade"] = targets.get(r["surface"])
+    return out
+
+
 __all__ = [
+    "REPORT_SURFACE_ORDER", "sends_by_surface",
     "LIMIT_LOG_CAP", "MAX_PROBLEMS", "MAX_ATTEMPTS", "HARD_ATTEMPTS_GUARD", "QUALIFYING_PROBLEMS",
     "OUTCOMES", "SOURCES", "FREE_LIMIT_SURFACES",
     "norm_grade", "grade_index", "step_half", "sanitize_problems",

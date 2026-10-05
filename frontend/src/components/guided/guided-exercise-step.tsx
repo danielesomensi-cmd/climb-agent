@@ -16,14 +16,14 @@ import { FEEDBACK_OPTIONS } from "@/lib/format";
 import { tapFeedback } from "@/lib/haptics";
 import { displayPrescribedGrade } from "@/lib/gradeUtils";
 import { LimitProblemLogger } from "@/components/training/limit-problem-logger";
-import { limitFeedbackFields } from "@/lib/limit-problems";
+import { limitFeedbackFields, limitTargetFor } from "@/lib/limit-problems";
 
 interface GuidedExerciseStepProps {
   exercise: GuidedExercise;
   isTestSession?: boolean;
   bodyweightKg?: number;
   /** A295: `feedbackLabel` null = not rated; `measures` the optional last-set reps / hang margin / timed hold. A296: `problems` the limit problem log. */
-  onDone: (feedbackLabel: string | null, usedLoad?: number, usedGrade?: string, usedTotalLoad?: number, testMeasurement?: number, perHand?: { right?: number; left?: number; right_reps?: number; left_reps?: number }, measures?: MeasureValues, problems?: LimitProblem[]) => void;
+  onDone: (feedbackLabel: string | null, usedLoad?: number, usedGrade?: string, usedTotalLoad?: number, testMeasurement?: number, perHand?: { right?: number; left?: number; right_reps?: number; left_reps?: number }, measures?: MeasureValues, problems?: LimitProblem[], surface?: string) => void;
   onSkip: () => void;
   onSetChange?: (completedSets: number) => void;
   onNotesChange?: (notes: string) => void;
@@ -114,6 +114,11 @@ export function GuidedExerciseStep({
   const [gradeInput, setGradeInput] = useState("");
   // A296: limit family — problem-by-problem log instead of the free grade field.
   const [problems, setProblems] = useState<LimitProblemDraft[]>(exercise.problems ?? []);
+  // A299: custom/adhoc limit rows have no gym — the athlete says which wall
+  // he is on (same choice as the custom player), and the target follows it.
+  const [surface, setSurface] = useState<string | undefined>(
+    exercise.chosenSurface ?? exercise.suggested.surface,
+  );
   const [measurementInput, setMeasurementInput] = useState("");
   const [setsInput, setSetsInput] = useState("");
   const [repsInputRight, setRepsInputRight] = useState("");
@@ -229,6 +234,20 @@ export function GuidedExerciseStep({
       !!exercise.allowLoadLogging);
   const hasGradeField = !isTestMeasurement && exercise.suggested.grade != null;
   const hasProblemLog = hasGradeField && exercise.suggested.logProblems === true;
+  // A299: the target of the surface picked (without a per-surface map this is
+  // exactly suggested.grade / gradeLow / surface — planned sessions unchanged).
+  const limit = limitTargetFor(
+    {
+      target_grade: exercise.suggested.grade,
+      target_grade_low: exercise.suggested.gradeLow,
+      surface_selected: exercise.suggested.surface,
+      surface_targets: exercise.suggested.surfaceTargets,
+    },
+    surface,
+  );
+  const shownGrade = hasProblemLog ? limit.target ?? exercise.suggested.grade : exercise.suggested.grade;
+  const shownGradeLow = hasProblemLog ? limit.targetLow : exercise.suggested.gradeLow;
+  const shownSurface = hasProblemLog ? limit.surface : exercise.suggested.surface;
 
   // Pre-populate from suggested values or previous user input.
   //
@@ -283,6 +302,7 @@ export function GuidedExerciseStep({
     setHangMargin(exercise.hangMargin);
     setHangHeldS(exercise.hangHeldS);
     setProblems(exercise.problems ?? []);
+    setSurface(exercise.chosenSurface ?? exercise.suggested.surface);
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [exercise]);
 
@@ -427,8 +447,11 @@ export function GuidedExerciseStep({
     if (hasProblemLog) {
       // A296: with problems the server reads them (used_grade = hardest send);
       // without, the pre-filled target travels as before.
-      const limit = limitFeedbackFields(problems, gradeInput || undefined);
-      onDone(feedback, usedLoad, limit.used_grade, undefined, undefined, undefined, measures, limit.problems);
+      // A299: on another wall than the server's guess, the unrated fallback
+      // is THAT wall's target, not the pre-filled one.
+      const fallback = limit.surface !== exercise.suggested.surface ? limit.target : gradeInput;
+      const fields = limitFeedbackFields(problems, fallback || undefined);
+      onDone(feedback, usedLoad, fields.used_grade, undefined, undefined, undefined, measures, fields.problems, limit.surface);
       return;
     }
     const usedGrade = hasGradeField && gradeInput ? gradeInput : undefined;
@@ -715,15 +738,15 @@ export function GuidedExerciseStep({
                       )}
                     </p>
                   )}
-                  {exercise.suggested.grade && (
+                  {shownGrade && (
                     <p>
                       Target: <span className="font-semibold">
-                        {exercise.suggested.gradeLow && exercise.suggested.gradeLow !== exercise.suggested.grade
-                          ? `${displayPrescribedGrade(exercise.suggested.gradeLow, exercise.suggested.gradeScale)} – ${displayPrescribedGrade(exercise.suggested.grade, exercise.suggested.gradeScale)}`
-                          : displayPrescribedGrade(exercise.suggested.grade, exercise.suggested.gradeScale)}
+                        {shownGradeLow && shownGradeLow !== shownGrade
+                          ? `${displayPrescribedGrade(shownGradeLow, exercise.suggested.gradeScale)} – ${displayPrescribedGrade(shownGrade, exercise.suggested.gradeScale)}`
+                          : displayPrescribedGrade(shownGrade, exercise.suggested.gradeScale)}
                       </span>
-                      {exercise.suggested.surface && (
-                        <span className="text-muted-foreground"> on {exercise.suggested.surface}</span>
+                      {shownSurface && (
+                        <span className="text-muted-foreground"> on {shownSurface}</span>
                       )}
                     </p>
                   )}
@@ -1132,10 +1155,13 @@ export function GuidedExerciseStep({
             {hasProblemLog && (
               <LimitProblemLogger
                 idPrefix={exercise.exerciseId}
-                target={exercise.suggested.grade}
-                targetLow={exercise.suggested.gradeLow}
+                target={limit.target}
+                targetLow={limit.targetLow}
                 problems={problems}
                 onChange={setProblems}
+                surfaceOptions={exercise.suggested.surfaceOptions}
+                surface={limit.surface}
+                onSurfaceChange={exercise.suggested.surfaceOptions ? setSurface : undefined}
               />
             )}
 

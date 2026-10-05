@@ -205,6 +205,32 @@ export function clearSavedSession(date: string, sessionId: string): void {
 }
 
 /**
+ * A299: the `suggested` limit fields of a flat custom/adhoc row — present only
+ * when the read attached a target (`log_problems` + `target_grade`).
+ */
+export function limitSuggestedFields(
+  ex: Record<string, unknown>,
+): Partial<GuidedExercise["suggested"]> {
+  const target = typeof ex.target_grade === "string" ? ex.target_grade : undefined;
+  if (ex.log_problems !== true || !target) return {};
+  const options = Array.isArray(ex.surface_options)
+    ? (ex.surface_options as unknown[]).filter((o): o is string => typeof o === "string")
+    : undefined;
+  return {
+    grade: target,
+    gradeLow: typeof ex.target_grade_low === "string" ? ex.target_grade_low : undefined,
+    gradeScale: "font",
+    logProblems: true,
+    surface: typeof ex.surface_selected === "string" ? ex.surface_selected : undefined,
+    surfaceOptions: options && options.length > 0 ? options : undefined,
+    surfaceTargets:
+      ex.surface_targets && typeof ex.surface_targets === "object"
+        ? (ex.surface_targets as Record<string, { target_grade?: string; target_grade_low?: string }>)
+        : undefined,
+  };
+}
+
+/**
  * B283: build GuidedSessionState from a flat CustomSessionExercise-shaped
  * list (saved custom sessions, adhoc coach sessions, body-part inline
  * sessions). Custom sessions now run through the REAL guided player — the
@@ -262,6 +288,11 @@ export function buildGuidedStateFromExercises(
         ladder: asLadder(ex.ladder),
         ladderSource: ex.progress_source === "bw_ladder" ? "ladder" : undefined,
         customSessionId: customSessionIdOf(sessionId),
+        // A299: limit-family rows carry the limit target of the day they are
+        // read for (GET /api/week and GET custom ?date= — computed at read,
+        // never stored). With it the guided player shows the problem logger
+        // and the outcome reaches the limit log, exactly as on a planned limit.
+        ...limitSuggestedFields(ex),
       },
       cues: (ex.cues as string[] | undefined) ?? undefined,
       videoUrl: (ex.video_url as string | undefined) ?? undefined,

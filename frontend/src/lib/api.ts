@@ -1353,6 +1353,14 @@ export interface AdhocSessionExercisePreview {
   rest_between_reps_seconds: number | null;
   load_kg: number;
   notes: string;
+  /**
+   * A296/A299: limit-family rows — the limit target of `resolved_for_date`,
+   * computed by the same read the player uses. Never stored: the saved row
+   * drops it and the player recomputes it for the day it is played.
+   */
+  target_grade?: string;
+  target_grade_low?: string;
+  surface_selected?: string;
 }
 
 export interface AdhocSessionPreview {
@@ -1365,6 +1373,8 @@ export interface AdhocSessionPreview {
   explanation: string;
   effort_band: string | null;
   phase: string | null;
+  /** A299 — the day the preview's read-time values (loads, limit targets) were computed for. */
+  resolved_for_date?: string;
   /** A294 — why finger-hard / heavy-pull lines were left out (near a key session or a test). */
   key_warnings?: Array<{ code: string; message: string; date?: string }>;
   intent: {

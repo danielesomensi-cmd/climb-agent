@@ -13,8 +13,10 @@
  * is silently discarded server-side. Dropping a field is never neutral.
  */
 
-import type { FeedbackMeasure, GuidedExercise } from "@/lib/types";
+import type { FeedbackMeasure, GuidedExercise, LimitProblemDraft } from "@/lib/types";
 import { asMeasure, measureFields, type MeasureValues } from "@/lib/measured-feedback";
+import { displayPrescribedGrade } from "@/lib/gradeUtils";
+import { limitFeedbackFields } from "@/lib/limit-problems";
 
 /** An exercise as the post-session FeedbackDialog needs to know it. */
 export interface FeedbackDialogExercise {
@@ -31,6 +33,37 @@ export interface FeedbackDialogExercise {
   prescribedReps?: number;
   /** A298: the dose came from the resolver's ladder stage. */
   ladderSource?: "engine";
+  /**
+   * A299: grade-relative exercises — the prescribed grade (same source as the
+   * guided player: suggested_grade, else the boulder target) and its scale.
+   */
+  grade?: string;
+  gradeLow?: string;
+  gradeScale?: string;
+  /** A299: limit family — logged problem by problem, as in the guided player. */
+  logProblems?: boolean;
+  /** A299: the surface the target is for (sent back as surface_selected). */
+  surface?: string;
+  /** Test exercises carry their own measurement field: no grade input. */
+  testField?: string;
+}
+
+/**
+ * A299: does this exercise take an "Actual grade used" field? Mirrors
+ * `hasGradeField` in guided-exercise-step.tsx (a prescribed grade, not a test).
+ */
+export function hasGradeInput(ex: FeedbackDialogExercise): boolean {
+  return ex.grade != null && ex.grade !== "" && !ex.testField;
+}
+
+/** A299: the limit family shows the problem logger instead of the grade field. */
+export function hasProblemLog(ex: FeedbackDialogExercise): boolean {
+  return hasGradeInput(ex) && ex.logProblems === true;
+}
+
+/** A299: the grade field's pre-fill — the target, on its own scale (as the guided player). */
+export function prefilledGrade(ex: FeedbackDialogExercise): string {
+  return ex.grade ? displayPrescribedGrade(ex.grade, ex.gradeScale) : "";
 }
 
 /**
@@ -72,6 +105,10 @@ export function extractFeedbackExercises(
     const prescription = (ex.prescription ?? {}) as Record<string, unknown>;
     const exerciseId = (ex.exercise_id as string) ?? "";
     const reps = typeof prescription.reps === "number" ? prescription.reps : undefined;
+    const boulderTarget = (suggested.suggested_boulder_target ?? {}) as Record<string, unknown>;
+    // A299: same grade source as session-card's buildGuidedExercise.
+    const grade =
+      (suggested.suggested_grade as string | undefined) ?? (boulderTarget.target_grade as string | undefined);
     return {
       exercise_id: exerciseId,
       name: (ex.name as string) ?? exerciseId.replace(/_/g, " "),
@@ -84,6 +121,12 @@ export function extractFeedbackExercises(
       targetReps: typeof suggested.target_reps === "number" ? suggested.target_reps : undefined,
       prescribedReps: reps,
       ladderSource: prescription.source === "bw_ladder" ? "engine" : undefined,
+      grade: grade ?? undefined,
+      gradeLow: boulderTarget.target_grade_low as string | undefined,
+      gradeScale: suggested.grade_scale as string | undefined,
+      logProblems: boulderTarget.log_problems === true,
+      surface: boulderTarget.surface_selected as string | undefined,
+      testField: attributes.test_field as string | undefined,
     };
   });
 }
@@ -99,12 +142,20 @@ export function extractFeedbackExercises(
  * A295: `feedback_label` is sent ONLY when the user picked one — an untouched
  * exercise is "not rated" (never a silent "ok", never null). `measures` holds
  * the optional last-set reps / hang margin per exercise.
+ *
+ * A299: `grades` holds what the user left in the "Actual grade used" field
+ * (pre-filled with the target, exactly like the guided player — untouched,
+ * the target travels and the server holds it); `problems` the limit problem
+ * rows, turned into the payload by the SAME `limitFeedbackFields` the guided
+ * player uses (rows without an outcome are dropped).
  */
 export function buildDialogFeedbackItems(
   exercises: FeedbackDialogExercise[],
   labels: Record<string, string>,
   loads: Record<string, number>,
   measures: Record<string, MeasureValues> = {},
+  grades: Record<string, string> = {},
+  problems: Record<string, LimitProblemDraft[]> = {},
 ): Array<Record<string, unknown>> {
   return exercises.map((ex) => {
     const item: Record<string, unknown> = {
@@ -127,6 +178,15 @@ export function buildDialogFeedbackItems(
         const bodyweight = ex.suggestedTotalLoadKg - ex.suggestedExternalLoadKg;
         item.used_total_load_kg = bodyweight + load;
       }
+    }
+    if (hasGradeInput(ex)) {
+      const typed = (grades[ex.exercise_id] ?? prefilledGrade(ex)).trim();
+      if (hasProblemLog(ex)) {
+        Object.assign(item, limitFeedbackFields(problems[ex.exercise_id], typed || undefined));
+      } else if (typed) {
+        item.used_grade = typed;
+      }
+      if (ex.surface) item.surface_selected = ex.surface;
     }
     return item;
   });
@@ -212,8 +272,11 @@ export function buildGuidedFeedbackItems(
     if (ex.status === "done" && ex.problems && ex.problems.length > 0) {
       item.problems = ex.problems;
     }
-    if (ex.suggested.surface) {
-      item.surface_selected = ex.suggested.surface;
+    // A299: the wall the athlete said he was on (custom/adhoc limit rows)
+    // wins over the server's guess.
+    const surface = ex.chosenSurface ?? ex.suggested.surface;
+    if (surface) {
+      item.surface_selected = surface;
     }
     if (ex.completedSets != null) {
       item.completed_sets = ex.completedSets;

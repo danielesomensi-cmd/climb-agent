@@ -203,7 +203,7 @@ export default function GuidedSessionPage() {
   );
 
   const handleDone = useCallback(
-    (feedbackLabel: string | null, usedLoad?: number, usedGrade?: string, usedTotalLoad?: number, testMeasurement?: number, perHand?: { right?: number; left?: number; right_reps?: number; left_reps?: number }, measures?: MeasureValues, problems?: LimitProblem[]) => {
+    (feedbackLabel: string | null, usedLoad?: number, usedGrade?: string, usedTotalLoad?: number, testMeasurement?: number, perHand?: { right?: number; left?: number; right_reps?: number; left_reps?: number }, measures?: MeasureValues, problems?: LimitProblem[], surface?: string) => {
       if (!state) return;
       const idx = state.currentIndex;
       const exercise = state.exercises[idx];
@@ -236,6 +236,8 @@ export default function GuidedSessionPage() {
           hangHeldS: measures?.hangHeldS,
           // A296: limit problem log (undefined = not logged)
           problems: problems && problems.length > 0 ? problems : undefined,
+          // A299: the wall picked in the logger (custom/adhoc limit rows).
+          chosenSurface: surface,
         });
       }
 

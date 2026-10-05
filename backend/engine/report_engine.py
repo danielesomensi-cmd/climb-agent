@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 from backend.engine import storage
 from backend.engine.closed_loop_v1 import STIMULUS_CATEGORIES, _session_categories
 from backend.engine.other_activity_v1 import normalize_other_activities
+from backend.engine.limit_log import sends_by_surface
 from backend.engine.load_score import effective_session_load
 from backend.engine.outdoor_log import compute_outdoor_load_score, load_outdoor_sessions
 
@@ -996,8 +997,9 @@ def generate_weekly_report(
         week_start: YYYY-MM-DD Monday of the week.
 
     Returns:
-        Report dict with 9 sections: context, adherence, load, difficulty,
-        stimulus_balance, progression, outdoor, days, highlights.
+        Report dict with its sections: context, adherence, load, difficulty,
+        stimulus_balance, progression, outdoor, limit_sends (A299), days,
+        highlights, plus training_time and active_days.
     """
     start = datetime.strptime(week_start, "%Y-%m-%d").date()
     end = start + timedelta(days=6)
@@ -1032,6 +1034,9 @@ def generate_weekly_report(
         user_state.get("working_loads") or {}, week_start, user_state
     )
     outdoor = _build_outdoor(outdoor_filtered)
+    # A299 (R6c frontend §7): hardest boulder sent per surface this week —
+    # limit log (planned/custom/adhoc problems) + free boulder sessions.
+    limit_sends = sends_by_surface(user_state, free_sessions, since, until)
     days = _build_days(week_plan, outdoor_filtered, free_sessions, week_start)
     training_time = _build_training_time(
         week_plan, completion_log, outdoor_filtered, free_sessions, week_start,
@@ -1055,6 +1060,7 @@ def generate_weekly_report(
         "stimulus_balance": stimulus_balance,
         "progression": progression,
         "outdoor": outdoor,
+        "limit_sends": limit_sends,
         "days": days,
         "highlights": highlights,
     }

@@ -48,7 +48,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { WeekPlan, DayPlan, Macrocycle, OutdoorSpot, OutdoorSession, Phase, OutdoorDayType, OutdoorPitchLadder, KeyStatus, KeyProposal, SessionPain } from "@/lib/types";
+import type { WeekPlan, DayPlan, Macrocycle, OutdoorSpot, OutdoorSession, Phase, OutdoorDayType, OutdoorPitchLadder, KeyStatus, KeyProposal, SessionPain, LimitProblemDraft } from "@/lib/types";
+import { boulderGradeSystemOf } from "@/lib/gradeUtils";
 import { withFeedbackContract, type MeasureValues } from "@/lib/measured-feedback";
 import { normalizeOtherActivities } from "@/lib/other-activity";
 import {
@@ -543,6 +544,8 @@ export default function WeekPage() {
     loads: Record<string, number>,
     measures: Record<string, MeasureValues> = {},
     pain: SessionPain | null = null,
+    grades: Record<string, string> = {},
+    problems: Record<string, LimitProblemDraft[]> = {},
   ) {
     if (!feedbackSessionId || !feedbackDate) return;
     try {
@@ -554,6 +557,8 @@ export default function WeekPage() {
         feedback,
         loads,
         measures,
+        grades,
+        problems,
       );
       const body = {
         // A295: feedback_contract 2 — an omitted label means "not rated".
@@ -1072,6 +1077,7 @@ export default function WeekPage() {
         onSubmit={handleFeedbackSubmit}
         exercises={feedbackExercises}
         slot={feedbackSlot}
+        gradeSystem={boulderGradeSystemOf(stateQuery.data)}
       />
 
       {/* Gym/location picker dialog */}
