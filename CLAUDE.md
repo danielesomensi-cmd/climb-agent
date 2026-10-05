@@ -145,7 +145,7 @@ backend/
                      #  docs/ENGINE_ARCHITECTURE.md §8)
   api/               # FastAPI REST API (27 routers)
     routers/         # state, catalog, onboarding, assessment, public_assessment, macrocycle,
-                     # plan, week, session, replanner, feedback, outdoor, reports, quotes, user, admin, weekly_override, free_session, subscription, custom_session, body_part_picker, mobility, weather, coach, tips, milestones
+                     # plan, week, session, replanner, feedback, outdoor, reports, quotes, user, admin, weekly_override, free_session, subscription, custom_session, body_part_picker, mobility, weather, coach, tips, milestones, bw_progression
   catalog/           # JSON data: exercises, sessions, templates, progressions (C272 ladders) (versioned under v1/)
   data/              # user_state.json + JSON schemas for log validation
   tests/             # pytest test suite with fixtures/
@@ -267,6 +267,9 @@ user_state.assessment + user_state.goal
 | GET | `/api/body-part-picker/estimate` | Lightweight duration estimate for live counter |
 | GET | `/api/mobility/pool` | Mobility/stretching pool by body region (GATE-2 soft warnings) |
 | GET | `/api/mobility/generate` | Deterministic guided stretch flow (regions + minutes + pace + rest) |
+| GET | `/api/bw-progression` | A298: every bodyweight-ladder family with the athlete's level, dose of the day (`?date=`), pending promotion and last outcome; technique ladders (feet / falls). Subscription-gated |
+| PUT | `/api/bw-progression/{family}` | A298: manual level change from Settings (source `user_edit`). More than one level above the current needs `confirm: true` (409 otherwise); lower-back levels are allowed only here (R12) |
+| POST | `/api/bw-progression/{family}/promotion` | A298: the custom-session promotion tap — `accept` moves the level up and rewrites that family's `ladder` rows in the custom and its not-yet-played slots from `date` on; decline clears the proposal. Past / done / skipped sessions never touched |
 | POST | `/api/coach/chat` | LLM Coach chat turn (subscription-gated, 30 msg/day, suggest-only; optional `lat`/`lon` → passed to the on-demand `get_weather` tool, A244). Weather is native tool use, not a pre-fetch: the model calls `get_weather(location, days_ahead≤5)` only when a turn needs conditions (language-agnostic trigger); non-weather turns pay nothing but the cached tool definition. Executor wraps `cached_conditions()`/`geocode_place()`; loop capped at 2 tool calls/message. |
 | POST | `/api/coach/adhoc-session` | Compose an ad-hoc session PREVIEW from a chat turn (A243). LLM extracts a structured intent via forced tool — including `exclude`, the user's refusals (A259: 'niente trazioni' → `pullups`, which spares lock-offs). **A259**: the session is then composed by the LLM *selecting from an engine-built pool* (`coach/session_composer.py`) and validated line by line; `adhoc_builder` is the fallback on kill switch / tiny pool / provider error / failed validation. Loads always come from `working_loads`, never from the model. The payload carries `composed_by` + `dropped` for audit. No persistence/plan mutation — client persists + inserts on the "Add to today & run" CTA. `{adhoc:false}` → fall back to `/chat`. Counts toward the 30/day limit only on adhoc:true. **A297**: with `COACH_ATHLETE_CONTEXT` on, both composers read the athlete context of `target_date` — the recovery guards of that day take finger-hard / front-lever lines (and weighted pulls ≥ 85 % 1RM) out, listed in `dropped`; the payload adds `athlete_guards` + `athlete_context_version`. |
 | GET | `/api/coach/history` | Coach chat history (paginated, `limit` + `before` cursor) |
