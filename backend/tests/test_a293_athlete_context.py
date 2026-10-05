@@ -483,12 +483,25 @@ class TestRender:
 # Docs: athlete plan + command
 # ---------------------------------------------------------------------------
 
-_NEW_IDS = {
+# The drills A293 listed as "proposed, not yet in the catalog". C272 added them
+# all (role "library"), so the plan may no longer declare any id as new.
+_C272_IDS = {
     "glued_feet_board", "position_menu_3way", "variant_ladder_board", "lead_technique_under_pump",
     "rest_and_clip_drill", "vertical_small_feet_limit", "lead_precision_feet_above_bolt",
     "three_attempt_comp", "no_take_lead_onsight", "toe_flexor_isometric", "edge_calf_raise_bigtoe",
     "technique_benchmark_test", "pre_attempt_routine",
 }
+_NEW_IDS: set = set()
+
+
+def _ladder_tokens() -> set:
+    """C272: protocol ids, ladder family and technique-ladder names of
+    backend/catalog/progressions/v1/bw_ladders.json (backticked in the plan)."""
+    doc = json.loads((REPO_ROOT / "backend/catalog/progressions/v1/bw_ladders.json").read_text(encoding="utf-8"))
+    out = set(doc.get("protocols") or {})
+    out |= {f["family"] for f in doc.get("families") or []}
+    out |= {t["ladder"] for t in doc.get("technique_ladders") or []}
+    return out
 _NON_EXERCISE_TOKENS = {
     "anchored_load", "working_loads", "tests.*", "baselines", "notes", "load_kg", "load_mode", "anchored",
     "week_plans[<lunedì>]", "custom_sessions",
@@ -508,11 +521,13 @@ class TestDocs:
         md = (REPO_ROOT / ac.ATHLETE_PLAN_PATH).read_text(encoding="utf-8")
         catalog = ac.load_exercise_catalog()
         tokens = set(re.findall(r"`([a-z][a-z0-9_]+)`", md))
-        unknown = sorted(t for t in tokens if t not in catalog and t not in _NEW_IDS
-                         and t not in _NON_EXERCISE_TOKENS and not t.startswith("test_"))
+        allowed = _NEW_IDS | _NON_EXERCISE_TOKENS | _ladder_tokens() | {"library", "ladder", "technique_tryhard", "protocols", "technique_ladders"}
+        unknown = sorted(t for t in tokens if t not in catalog and t not in allowed and not t.startswith("test_"))
         assert unknown == []
         # Every NEW id is really absent today (else move it to the catalog table).
         assert not (_NEW_IDS & set(catalog))
+        # C272: the drills A293 could only name are in the catalog now.
+        assert _C272_IDS <= set(catalog)
 
     def test_plan_is_not_nikita_centric(self):
         md = (REPO_ROOT / ac.ATHLETE_PLAN_PATH).read_text(encoding="utf-8")

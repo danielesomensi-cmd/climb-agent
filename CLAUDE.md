@@ -146,7 +146,7 @@ backend/
   api/               # FastAPI REST API (26 routers)
     routers/         # state, catalog, onboarding, assessment, public_assessment, macrocycle,
                      # plan, week, session, replanner, feedback, outdoor, reports, quotes, user, admin, weekly_override, free_session, subscription, custom_session, body_part_picker, mobility, weather, coach, tips, milestones
-  catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
+  catalog/           # JSON data: exercises, sessions, templates, progressions (C272 ladders) (versioned under v1/)
   data/              # user_state.json + JSON schemas for log validation
   tests/             # pytest test suite with fixtures/
 frontend/            # Next.js 16 PWA (React, Tailwind, shadcn/ui)

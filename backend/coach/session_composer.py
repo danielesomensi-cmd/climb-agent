@@ -49,6 +49,7 @@ from backend.engine.adhoc_builder import (
     excluded_ids,
     match_gym,
 )
+from backend.engine.catalog_roles import is_library_only
 from backend.engine.body_part_picker import (
     _exercise_fits_equipment,
     resolve_equipment_mode,
@@ -299,6 +300,9 @@ def build_pool(
         and _is_spine_safe(ex)
         and _exercise_fits_equipment(ex, equipment)
         and not ({"test"} & set(_roles_of(ex)))
+        # C272: library-only entries (ladder levels, technique / try-hard
+        # drills) stay out of the model's pool — Claude Code composes them.
+        and not is_library_only(ex)
     ]
     pool.sort(key=lambda e: str(e.get("id")))
     if len(pool) > MAX_POOL:

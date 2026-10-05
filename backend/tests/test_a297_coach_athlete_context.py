@@ -69,7 +69,7 @@ def catalog():
 class TestContextAdditions:
     def test_version_and_new_sections(self):
         ctx = _ctx()
-        assert ctx["version"] == "a297.1"
+        assert ctx["version"] == ac.VERSION  # C272 bumped it (new read-only sections)
         assert "load_flags" in ctx and "limit_log" in ctx
         assert set(ctx["load_flags"]) == {"pain", "fatigue"}
 
@@ -338,7 +338,7 @@ class TestComposer:
         wp = next(l for l in content.splitlines() if l.startswith("weighted_pullup |"))
         assert "intensity=" in wp and "[ANCHOR]" in wp
         assert any("[OVERUSED 4x]" in l for l in content.splitlines() if l.startswith("pullup |"))
-        assert out["athlete_context_version"] == "a297.1"
+        assert out["athlete_context_version"] == ac.VERSION  # C272 bumped it (new read-only sections)
         assert out["athlete_guards"]["finger_max_ok"] is True
 
     def test_guarded_day_pool_and_dropped(self, catalog):
@@ -398,7 +398,7 @@ class TestBuilder:
         ctx = _ctx(st, FREE_DAY)
         a = adhoc_builder.compose_adhoc_session(dict(self.INTENT), st, catalog, today=FREE_DAY, athlete_ctx=ctx)
         b = adhoc_builder.compose_adhoc_session(dict(self.INTENT), st, catalog, today=FREE_DAY, athlete_ctx=ctx)
-        assert a == b and a["athlete_context_version"] == "a297.1"
+        assert a == b and a["athlete_context_version"] == ac.VERSION  # C272 bumped it (new read-only sections)
 
     def test_anchor_held_out_only_inside_48h(self, catalog):
         st = _st()

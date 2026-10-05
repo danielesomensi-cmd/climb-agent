@@ -88,7 +88,9 @@ _EXERCISES_PATH = os.path.join(_REPO_ROOT, "backend", "catalog", "exercises", "v
 TECHNIQUE_MIN_DRILLS = 2
 #: Zero-cost warm-up drills (athlete_plan.md §3): the warm-up is not the
 #: technique stimulus, so these never count towards the technique key.
-WARMUP_TECHNIQUE_DRILLS = ("silent_feet_drill", "foothold_stare", "straight_arms", "hip_rotation_drill")
+WARMUP_TECHNIQUE_DRILLS = ("silent_feet_drill", "foothold_stare", "straight_arms", "hip_rotation_drill",
+                           # C272: the small-foot pressure primer is a warm-up drill too.
+                           "small_feet_press_hold")
 #: A294 review (GOAL REFRAME: the technique key is FEET + POSITIONING, the two
 #: declared limiters). Technique drills of these catalog recency groups do not
 #: count: relaxation (breathing_awareness), pacing (slow_climbing,
@@ -96,7 +98,11 @@ WARMUP_TECHNIQUE_DRILLS = ("silent_feet_drill", "foothold_stare", "straight_arms
 #: (timed_route_preview) and lead-specific (fall_practice, the try-hard drill)
 #: are useful but are not that stimulus. ENGINEERING CONSTANT.
 TECHNIQUE_EXCLUDED_RECENCY = ("technique_pacing_drills", "technique_relaxation_drills",
-                              "technique_route_reading", "technique_lead_specific")
+                              "technique_route_reading", "technique_lead_specific",
+                              # C272: the try-hard library (comp, no-take, fall
+                              # ladder, routine, commit map) is the try-hard
+                              # component, not the feet / positioning stimulus.
+                              "technique_tryhard")
 #: ENGINEERING CONSTANT (R5, Prilepin at 85-90 %: 6-8 total reps in sets of
 #: 2-3): a heavy session needs this many effective sets of the main exercise to
 #: count as a FULL dose. Unknown set count → not penalised.

@@ -31,6 +31,14 @@ A292 (R6-PE) re-anchored four lead PE exercises in the CATALOG (grade_ref
 pre-A292 catalog and the A292 code, the whole golden still matched bit for bit:
 the change is catalog data, not resolver behaviour (exercise_ids unchanged).
 
+C272 added 72 library-only exercises (role ``ladder`` / ``library``) and
+rewrote four catalog notes. All 22 digests were regenerated after diffing the
+raw resolver output against origin/main @ 21aec98: the only differences were
+the candidate counts in ``p0_trace`` / ``filter_trace`` (the catalog grew) and
+the ``bear_crawl`` and ``core_standard`` note texts — exercise_ids, prescriptions and loads
+identical. ``c272_golden_cases`` pins the same claim with traces and free text
+stripped, so the next catalog addition does not need this dance there.
+
 Pure data + one function, importable by the generator without pytest.
 """
 

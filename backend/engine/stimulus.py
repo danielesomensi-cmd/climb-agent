@@ -98,6 +98,9 @@ _LIMIT_POWER_IDS = (
     "board_limit_boulders",
     "spray_wall_limit",
     "system_board_limit",
+    # C272: library drill (role "library", never engine-selected) — limit
+    # bouldering where the feet are the crux; finger-hard like any limit.
+    "vertical_small_feet_limit",
     "campus_bumps",
     "campus_double_dyno",
     "campus_laddering_down",

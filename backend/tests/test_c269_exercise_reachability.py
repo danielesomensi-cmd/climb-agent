@@ -43,6 +43,7 @@ import tempfile
 
 import pytest
 
+from backend.engine.catalog_roles import is_library_only
 from backend.engine.equipment_utils import KNOWN_EQUIPMENT_KEYS
 from backend.engine.resolve_session import resolve_session
 
@@ -116,8 +117,15 @@ def reachable_ids() -> set:
     return seen
 
 
+def _engine_ids() -> set:
+    """C272: the library-only entries (role ``ladder`` / ``library``) are
+    composed by hand and must NOT be reachable — they are pinned the other way
+    round in test_library_only_entries_are_never_selected."""
+    return {str(e["id"]) for e in _load_exercises() if not is_library_only(e)}
+
+
 def test_every_catalog_exercise_can_be_selected_by_some_session(reachable_ids):
-    all_ids = {str(e["id"]) for e in _load_exercises()}
+    all_ids = _engine_ids()
     unreachable = sorted(all_ids - reachable_ids)
     assert not unreachable, (
         f"{len(unreachable)} esercizi non selezionabili da nessuna sessione: "
@@ -134,11 +142,20 @@ def test_the_sweep_actually_ran(reachable_ids):
     farebbe passare il test sopra per il motivo peggiore — cioè non avendo
     misurato niente.
     """
-    total = len({str(e["id"]) for e in _load_exercises()})
+    total = len(_engine_ids())
     assert len(reachable_ids) > total * 0.9, (
         f"solo {len(reachable_ids)}/{total} esercizi raggiunti: l'harness è rotto, "
         "non il catalogo. Controlla context.location e KNOWN_EQUIPMENT_KEYS."
     )
+
+
+def test_library_only_entries_are_never_selected(reachable_ids):
+    """C272: the same sweep that proves every engine exercise is reachable
+    proves the library-only ones are not — whatever the session, phase,
+    location, device or rotation."""
+    library = {str(e["id"]) for e in _load_exercises() if is_library_only(e)}
+    assert library, "C272 library entries missing from the catalog"
+    assert not (library & reachable_ids), sorted(library & reachable_ids)
 
 
 def test_approach_hike_is_reachable_indoors_too(reachable_ids):

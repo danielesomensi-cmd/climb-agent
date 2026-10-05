@@ -1,0 +1,2003 @@
+{
+  "version": "bw_ladders.v1",
+  "_doc": "C272 — progression ladders, data only. The engine does NOT select from this file yet: the exercises it introduces carry role 'ladder' (bodyweight levels) or 'library' (technique / try-hard / pocket drills), which no template block requests. Claude Code reads it through backend/engine/athlete_context.py (current level per family, seeded read-only from history and tests) and the /custom-session command. level_idx starts at 0. A later A brief turns the bodyweight ladders into a closed loop (bw_progression state, R0-R12 of the BW spec).",
+  "c272_date": "2026-10-05",
+  "caps": {
+    "max_reps": 30,
+    "max_seconds": 60,
+    "source": "ENGINEERING CONSTANT"
+  },
+  "seed_rules": {
+    "tested_gate": "an official max (retest_policy.official_max, test log < 90 days) on the finger or pulling protocol",
+    "history_window_days": 120,
+    "skill_family_history_window_days": 60,
+    "history_dose_rule": "last completed dose minus one step, never the bottom of the band",
+    "history_excludes_labels": [
+      "hard",
+      "very_hard"
+    ],
+    "test_target_rule": "about test / 3 on the entry level (ENGINEERING CONSTANT)"
+  },
+  "history_aliases": [
+    {
+      "exercise_id": "hanging_leg_raise",
+      "counts_as": "toes_to_bar",
+      "before": "2026-10-05",
+      "why": "until C272 the catalog note said 'straight legs to bar', which is the toes-to-bar movement"
+    }
+  ],
+  "bands": {
+    "strength_dyn": {
+      "axis": "reps",
+      "lo": 5,
+      "hi": 8,
+      "step": 1,
+      "source": "Recommended Routine (r/bodyweightfitness) strength rep range"
+    },
+    "core_dyn": {
+      "axis": "reps",
+      "lo": 8,
+      "hi": 12,
+      "step": 1,
+      "source": "Recommended Routine core range"
+    },
+    "hold": {
+      "axis": "seconds",
+      "lo": 10,
+      "hi": 30,
+      "step": 5,
+      "source": "GMB / Recommended Routine static holds"
+    },
+    "lever_hold": {
+      "axis": "seconds",
+      "lo": 5,
+      "hi": 15,
+      "step": 2,
+      "source": "ENGINEERING CONSTANT step; 15 s criterion aligned with the front_lever_tuck catalog note (4x15 s)"
+    },
+    "lever_hold_full": {
+      "axis": "seconds",
+      "lo": 5,
+      "hi": 10,
+      "step": 2,
+      "source": "ENGINEERING CONSTANT"
+    },
+    "max_core": {
+      "axis": "reps",
+      "lo": 3,
+      "hi": 6,
+      "step": 1,
+      "source": "dragon flag / front lever dynamic tutorials"
+    },
+    "nordic": {
+      "axis": "reps",
+      "lo": 4,
+      "hi": 8,
+      "step": 1,
+      "source": "Presland 2018: low-volume Nordic training gives the same adaptation"
+    },
+    "one_arm": {
+      "axis": "reps",
+      "lo": 1,
+      "hi": 3,
+      "step": 1,
+      "source": "ENGINEERING CONSTANT"
+    },
+    "hspu": {
+      "axis": "reps",
+      "lo": 3,
+      "hi": 6,
+      "step": 1,
+      "source": "ENGINEERING CONSTANT"
+    }
+  },
+  "families": [
+    {
+      "family": "compression_floor",
+      "label": "Floor compression (L-sit → V-sit)",
+      "axis_default": "seconds",
+      "stimulus_ref": null,
+      "heavy_pull": false,
+      "heavy_pull_from_level": null,
+      "hanging": false,
+      "hanging_from_level": null,
+      "skill_family": false,
+      "lower_back_risk_from_level": null,
+      "floor_level_advanced": 2,
+      "budget_group": "compression",
+      "eligibility": null,
+      "entry_seed": [
+        {
+          "test": "l_sit_hold_seconds",
+          "min": 30,
+          "level": 3,
+          "target_from_test": {
+            "divisor": 3
+          }
+        },
+        {
+          "test": "l_sit_hold_seconds",
+          "min": 20,
+          "max": 30,
+          "level": 2,
+          "target_from_test": {
+            "factor": 0.5
+          }
+        }
+      ],
+      "gates": [
+        {
+          "level": 4,
+          "requires_accessory_id": "compression_pulses",
+          "why": "pike mobility is the real limit"
+        },
+        {
+          "level": 5,
+          "requires_accessory_id": "compression_pulses",
+          "why": "pike mobility is the real limit"
+        }
+      ],
+      "terminal": {
+        "kind": "load",
+        "handoff_exercise_id": "weighted_l_sit",
+        "load_step_kg_distal": 1.0
+      },
+      "variants": [],
+      "extras": [
+        "compression_pulses"
+      ],
+      "sources": [
+        "https://gmb.io/l-sit/",
+        "https://antranik.org/?p=6184"
+      ],
+      "levels": [
+        {
+          "exercise_id": "tuck_l_sit",
+          "axis": "seconds",
+          "sets": 3,
+          "band_ref": "hold",
+          "band": {
+            "lo": 10,
+            "hi": 30,
+            "step": 5
+          },
+          "advance_sessions": 1,
+          "rest_s": 60,
+          "equipment_skip": true,
+          "level_idx": 0
+        },
+        {
+          "exercise_id": "one_leg_l_sit",
+          "axis": "seconds",
+          "sets": 3,
+          "band_ref": "hold",
+          "band": {
+            "lo": 10,
+            "hi": 30,
+            "step": 5
+          },
+          "advance_sessions": 1,
+          "rest_s": 60,
+          "equipment_skip": true,
+          "level_idx": 1
+        },
+        {
+          "exercise_id": "core_l_sit",
+          "axis": "seconds",
+          "sets": 3,
+          "band_ref": "hold",
+          "band": {
+            "lo": 10,
+            "hi": 30,
+            "step": 5
+          },
+          "advance_sessions": 1,
+          "rest_s": 75,
+          "equipment_skip": true,
+          "level_idx": 2
+        },
+        {
+          "exercise_id": "straddle_l_sit",
+          "axis": "seconds",
+          "sets": 3,
+          "band_ref": "hold",
+          "band": {
+            "lo": 10,
+            "hi": 30,
+            "step": 5
+          },
+          "advance_sessions": 1,
+          "rest_s": 90,
+          "equipment_skip": true,
+          "level_idx": 3
+        },
+        {
+          "exercise_id": "v_sit_45",
+          "axis": "seconds",
+          "sets": 4,
+          "band_ref": "lever_hold_full",
+          "band": {
+            "lo": 5,
+            "hi": 10,
+            "step": 2
+          },
+          "advance_sessions": 1,
+          "rest_s": 90,
+          "equipment_skip": true,
+          "level_idx": 4
+        },
+        {
+          "exercise_id": "v_sit",
+          "axis": "seconds",
+          "sets": 3,
+          "band_ref": "lever_hold_full",
+          "band": {
+            "lo": 5,
+            "hi": 10,
+            "step": 2
+          },
+          "advance_sessions": 1,
+          "rest_s": 120,
+          "equipment_skip": true,
+          "note": "criterion 3x8 s",
+          "level_idx": 5
+        }
+      ]
+    },
+    {
+      "family": "compression_hang",
+      "label": "Hanging compression (knee raise → toes to bar)",
+      "axis_default": "reps",
+      "stimulus_ref": null,
+      "heavy_pull": false,
+      "heavy_pull_from_level": null,
+      "hanging": true,
+      "hanging_from_level": 0,
+      "skill_family": false,
+      "lower_back_risk_from_level": null,
+      "floor_level_advanced": 2,
+      "budget_group": "compression",
+      "eligibility": null,
+      "entry_seed": [
+        {
+          "test": "l_sit_hold_seconds",
+          "min": 30,
+          "level": 3,
+          "target": 5
+        },
+        {
+          "test": "l_sit_hold_seconds",
+          "min": 20,
+          "max": 30,
+          "level": 2,
+          "target": 8
+        }
+      ],
+      "gates": [],
+      "terminal": {
+        "kind": "tempo",
+        "tempo_steps": [
+          {
+            "ecc_s": 3
+          },
+          {
+            "ecc_s": 5
+          }
+        ],
+        "max_rep_duration_s": 8,
+        "then": "load",
+        "handoff_exercise_id": "weighted_hanging_leg_raise",
+        "load_step_kg_distal": 1.0
+      },
+      "variants": [],
+      "extras": [],
+      "sources": [
+        "https://www.liftosaur.com/programs/recommended-routine",
+        "https://akuaku.org/Sarco+/progression-hanging-leg-raise-progression.html",
+        "https://trainingforclimbing.com/?p=10070"
+      ],
+      "levels": [
+        {
+          "exercise_id": "hanging_knee_raise",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "core_dyn",
+          "band": {
+            "lo": 8,
+            "hi": 12,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 60,
+          "equipment_skip": true,
+          "level_idx": 0
+        },
+        {
+          "exercise_id": "hanging_leg_raise",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "core_dyn",
+          "band": {
+            "lo": 8,
+            "hi": 12,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 60,
+          "equipment_skip": true,
+          "note": "legs straight to horizontal (90°)",
+          "level_idx": 1
+        },
+        {
+          "exercise_id": "knees_to_elbows",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "core_dyn",
+          "band": {
+            "lo": 6,
+            "hi": 10,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 75,
+          "equipment_skip": true,
+          "level_idx": 2
+        },
+        {
+          "exercise_id": "toes_to_bar",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "strength_dyn",
+          "band": {
+            "lo": 5,
+            "hi": 8,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 90,
+          "equipment_skip": true,
+          "level_idx": 3
+        }
+      ]
+    },
+    {
+      "family": "rollout",
+      "label": "Rollout (knees → standing)",
+      "axis_default": "reps",
+      "stimulus_ref": null,
+      "heavy_pull": false,
+      "heavy_pull_from_level": null,
+      "hanging": false,
+      "hanging_from_level": null,
+      "skill_family": false,
+      "lower_back_risk_from_level": 3,
+      "floor_level_advanced": null,
+      "budget_group": "anti_extension",
+      "eligibility": null,
+      "entry_seed": [
+        {
+          "test": "l_sit_hold_seconds",
+          "min": 35,
+          "level": 1,
+          "target": 6
+        }
+      ],
+      "gates": [],
+      "terminal": {
+        "kind": "cap"
+      },
+      "variants": [],
+      "extras": [],
+      "sources": [
+        "https://legendarystrength.com/?p=6721",
+        "https://trainingforclimbing.com/?p=10070"
+      ],
+      "levels": [
+        {
+          "exercise_id": "ab_wheel_rollout",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "core_dyn",
+          "band": {
+            "lo": 6,
+            "hi": 12,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 90,
+          "equipment_skip": true,
+          "level_idx": 0
+        },
+        {
+          "exercise_id": "ring_fallout",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "core_dyn",
+          "band": {
+            "lo": 6,
+            "hi": 12,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 90,
+          "equipment_skip": true,
+          "note": "ring height is part of the dose: hip, thigh, knee (lower = harder) — ENGINEERING CONSTANT",
+          "level_idx": 1
+        },
+        {
+          "exercise_id": "ab_wheel_rollout_standing_wall",
+          "axis": "reps",
+          "sets": 4,
+          "band_ref": "strength_dyn",
+          "band": {
+            "lo": 3,
+            "hi": 8,
+            "step": 1
+          },
+          "advance_sessions": 2,
+          "rest_s": 90,
+          "equipment_skip": true,
+          "level_idx": 2
+        },
+        {
+          "exercise_id": "ab_wheel_rollout_standing_eccentric",
+          "axis": "reps",
+          "sets": 4,
+          "band_ref": "max_core",
+          "band": {
+            "lo": 3,
+            "hi": 5,
+            "step": 1
+          },
+          "advance_sessions": 2,
+          "rest_s": 120,
+          "equipment_skip": true,
+          "level_idx": 3
+        },
+        {
+          "exercise_id": "ab_wheel_rollout_standing",
+          "axis": "reps",
+          "sets": 4,
+          "band_ref": "strength_dyn",
+          "band": {
+            "lo": 3,
+            "hi": 8,
+            "step": 1
+          },
+          "advance_sessions": 2,
+          "rest_s": 120,
+          "equipment_skip": true,
+          "level_idx": 4
+        }
+      ]
+    },
+    {
+      "family": "dragon_flag",
+      "label": "Dragon flag (needs a bench)",
+      "axis_default": "reps",
+      "stimulus_ref": null,
+      "heavy_pull": false,
+      "heavy_pull_from_level": null,
+      "hanging": false,
+      "hanging_from_level": null,
+      "skill_family": true,
+      "lower_back_risk_from_level": 4,
+      "floor_level_advanced": null,
+      "budget_group": "anti_extension",
+      "eligibility": null,
+      "entry_seed": [
+        {
+          "test": "l_sit_hold_seconds",
+          "min": 35,
+          "level": 2,
+          "target": 4,
+          "requires_equipment": "bench"
+        }
+      ],
+      "gates": [],
+      "terminal": {
+        "kind": "cap"
+      },
+      "variants": [],
+      "extras": [],
+      "sources": [
+        "https://www.12minuteathlete.com/dragon-flag-tutorial/",
+        "https://www.caliverse.app/exercises/negative-straddle-dragon-flag-1580"
+      ],
+      "levels": [
+        {
+          "exercise_id": "bench_hip_lift",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "core_dyn",
+          "band": {
+            "lo": 8,
+            "hi": 12,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 60,
+          "equipment_skip": true,
+          "level_idx": 0
+        },
+        {
+          "exercise_id": "candlestick_hold",
+          "axis": "seconds",
+          "sets": 3,
+          "band_ref": "hold",
+          "band": {
+            "lo": 10,
+            "hi": 30,
+            "step": 5
+          },
+          "advance_sessions": 1,
+          "rest_s": 60,
+          "equipment_skip": true,
+          "level_idx": 1
+        },
+        {
+          "exercise_id": "dragon_flag_tuck_negative",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "max_core",
+          "band": {
+            "lo": 3,
+            "hi": 5,
+            "step": 1
+          },
+          "advance_sessions": 2,
+          "rest_s": 120,
+          "equipment_skip": true,
+          "note": "5 s repetitions",
+          "level_idx": 2
+        },
+        {
+          "exercise_id": "dragon_flag_tuck",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "max_core",
+          "band": {
+            "lo": 3,
+            "hi": 6,
+            "step": 1
+          },
+          "advance_sessions": 2,
+          "rest_s": 120,
+          "equipment_skip": true,
+          "level_idx": 3
+        },
+        {
+          "exercise_id": "dragon_flag_straddle_negative",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "max_core",
+          "band": {
+            "lo": 3,
+            "hi": 5,
+            "step": 1
+          },
+          "advance_sessions": 2,
+          "rest_s": 120,
+          "equipment_skip": true,
+          "level_idx": 4
+        },
+        {
+          "exercise_id": "dragon_flag_straddle",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "max_core",
+          "band": {
+            "lo": 3,
+            "hi": 6,
+            "step": 1
+          },
+          "advance_sessions": 2,
+          "rest_s": 150,
+          "equipment_skip": true,
+          "level_idx": 5
+        },
+        {
+          "exercise_id": "dragon_flag_negative",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "max_core",
+          "band": {
+            "lo": 3,
+            "hi": 5,
+            "step": 1
+          },
+          "advance_sessions": 2,
+          "rest_s": 150,
+          "equipment_skip": true,
+          "level_idx": 6
+        },
+        {
+          "exercise_id": "dragon_flag",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "max_core",
+          "band": {
+            "lo": 3,
+            "hi": 6,
+            "step": 1
+          },
+          "advance_sessions": 2,
+          "rest_s": 180,
+          "equipment_skip": true,
+          "level_idx": 7
+        }
+      ],
+      "notes": "v_up leaves this ladder and stays a fixed compression exercise."
+    },
+    {
+      "family": "hollow_plank",
+      "label": "Hollow / plank (warm-up only for advanced athletes)",
+      "axis_default": "seconds",
+      "stimulus_ref": null,
+      "heavy_pull": false,
+      "heavy_pull_from_level": null,
+      "hanging": false,
+      "hanging_from_level": null,
+      "skill_family": false,
+      "lower_back_risk_from_level": 4,
+      "floor_level_advanced": null,
+      "budget_group": "anti_extension",
+      "eligibility": null,
+      "entry_seed": [],
+      "gates": [],
+      "terminal": {
+        "kind": "cap"
+      },
+      "variants": [],
+      "extras": [],
+      "sources": [
+        "Schoenfeld B, Contreras B (2014), Strength Cond J — RKC plank EMG"
+      ],
+      "levels": [
+        {
+          "exercise_id": "plank",
+          "axis": "seconds",
+          "sets": 3,
+          "band_ref": "hold",
+          "band": {
+            "lo": 10,
+            "hi": 30,
+            "step": 5
+          },
+          "advance_sessions": 1,
+          "rest_s": 60,
+          "equipment_skip": true,
+          "level_idx": 0
+        },
+        {
+          "exercise_id": "rkc_plank",
+          "axis": "seconds",
+          "sets": 3,
+          "band_ref": "hold",
+          "band": {
+            "lo": 10,
+            "hi": 15,
+            "step": 5
+          },
+          "advance_sessions": 1,
+          "rest_s": 60,
+          "equipment_skip": true,
+          "level_idx": 1
+        },
+        {
+          "exercise_id": "core_hollow_hold",
+          "axis": "seconds",
+          "sets": 3,
+          "band_ref": "hold",
+          "band": {
+            "lo": 10,
+            "hi": 45,
+            "step": 5
+          },
+          "advance_sessions": 1,
+          "rest_s": 60,
+          "equipment_skip": true,
+          "level_idx": 2
+        },
+        {
+          "exercise_id": "hollow_rock",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "core_dyn",
+          "band": {
+            "lo": 15,
+            "hi": 30,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 60,
+          "equipment_skip": true,
+          "level_idx": 3
+        },
+        {
+          "exercise_id": "weighted_hollow_hold",
+          "axis": "seconds",
+          "sets": 3,
+          "band_ref": "hold",
+          "band": {
+            "lo": 15,
+            "hi": 30,
+            "step": 5
+          },
+          "advance_sessions": 1,
+          "rest_s": 60,
+          "equipment_skip": true,
+          "level_idx": 4
+        }
+      ],
+      "notes": "Below the core intensity floor for athletes with l_sit ≥ 35 s: warm-up and deload only when alternatives exist."
+    },
+    {
+      "family": "front_lever",
+      "label": "Front lever",
+      "axis_default": "seconds",
+      "stimulus_ref": "pulling_max",
+      "heavy_pull": true,
+      "heavy_pull_from_level": 0,
+      "hanging": true,
+      "hanging_from_level": 0,
+      "skill_family": true,
+      "lower_back_risk_from_level": null,
+      "floor_level_advanced": null,
+      "budget_group": "hanging_or_lever",
+      "eligibility": null,
+      "entry_seed": [],
+      "gates": [],
+      "terminal": {
+        "kind": "cap",
+        "then_exercise_ids": [
+          "front_lever_raise",
+          "front_lever_row"
+        ],
+        "no_added_load": true,
+        "why": "ankle weights load the elbow distally"
+      },
+      "variants": [
+        "front_lever_raise_tuck",
+        "front_lever_negative"
+      ],
+      "extras": [],
+      "sources": [
+        "https://www.climbing.com/skills/how-to-train-for-a-front-lever/"
+      ],
+      "levels": [
+        {
+          "exercise_id": "front_lever_tuck",
+          "axis": "seconds",
+          "sets": 4,
+          "band_ref": "lever_hold",
+          "band": {
+            "lo": 5,
+            "hi": 15,
+            "step": 2
+          },
+          "advance_sessions": 1,
+          "rest_s": 150,
+          "equipment_skip": true,
+          "level_idx": 0
+        },
+        {
+          "exercise_id": "front_lever_advanced_tuck",
+          "axis": "seconds",
+          "sets": 4,
+          "band_ref": "lever_hold",
+          "band": {
+            "lo": 5,
+            "hi": 15,
+            "step": 2
+          },
+          "advance_sessions": 2,
+          "rest_s": 150,
+          "equipment_skip": true,
+          "level_idx": 1
+        },
+        {
+          "exercise_id": "front_lever_one_leg",
+          "axis": "seconds",
+          "sets": 4,
+          "band_ref": "lever_hold",
+          "band": {
+            "lo": 5,
+            "hi": 15,
+            "step": 2
+          },
+          "advance_sessions": 2,
+          "rest_s": 150,
+          "equipment_skip": true,
+          "level_idx": 2
+        },
+        {
+          "exercise_id": "front_lever_straddle",
+          "axis": "seconds",
+          "sets": 4,
+          "band_ref": "lever_hold",
+          "band": {
+            "lo": 5,
+            "hi": 15,
+            "step": 2
+          },
+          "advance_sessions": 2,
+          "rest_s": 180,
+          "equipment_skip": true,
+          "level_idx": 3
+        },
+        {
+          "exercise_id": "front_lever_full",
+          "axis": "seconds",
+          "sets": 4,
+          "band_ref": "lever_hold_full",
+          "band": {
+            "lo": 5,
+            "hi": 10,
+            "step": 2
+          },
+          "advance_sessions": 2,
+          "rest_s": 180,
+          "equipment_skip": true,
+          "level_idx": 4
+        }
+      ],
+      "notes": "Every level counts as a heavy pull: never in the 24 h before limit / strength_long, counts in the 2 heavy pulls per 7 days, at most 1 per week in performance (ENGINEERING CONSTANT). Seed only from history (the pulling ratio is too weak a proxy for an elbow-risk skill)."
+    },
+    {
+      "family": "lateral",
+      "label": "Lateral (side plank → Copenhagen)",
+      "axis_default": "seconds",
+      "stimulus_ref": null,
+      "heavy_pull": false,
+      "heavy_pull_from_level": null,
+      "hanging": false,
+      "hanging_from_level": null,
+      "skill_family": false,
+      "lower_back_risk_from_level": null,
+      "floor_level_advanced": null,
+      "budget_group": "lateral",
+      "eligibility": null,
+      "entry_seed": [
+        {
+          "test": "l_sit_hold_seconds",
+          "min": 35,
+          "level": 1,
+          "target": 15,
+          "ramp": {
+            "sessions": 2,
+            "then_level": 2,
+            "then_target": 10
+          }
+        }
+      ],
+      "gates": [],
+      "terminal": {
+        "kind": "load",
+        "handoff_exercise_id": "weighted_side_plank",
+        "load_step_kg_upper": 2.5
+      },
+      "variants": [],
+      "extras": [
+        "side_plank_star"
+      ],
+      "sources": [
+        "https://www.craftsbury.com/blog/motm-copenhagen-plank-variations-and-progressions",
+        "Harøy J et al. (2019), Br J Sports Med"
+      ],
+      "levels": [
+        {
+          "exercise_id": "side_plank",
+          "axis": "seconds",
+          "sets": 3,
+          "band_ref": "hold",
+          "band": {
+            "lo": 10,
+            "hi": 30,
+            "step": 5
+          },
+          "advance_sessions": 1,
+          "rest_s": 60,
+          "equipment_skip": true,
+          "level_idx": 0
+        },
+        {
+          "exercise_id": "copenhagen_short_lever",
+          "axis": "seconds",
+          "sets": 3,
+          "band_ref": "hold",
+          "band": {
+            "lo": 10,
+            "hi": 20,
+            "step": 5
+          },
+          "advance_sessions": 1,
+          "rest_s": 60,
+          "equipment_skip": true,
+          "level_idx": 1
+        },
+        {
+          "exercise_id": "copenhagen_plank",
+          "axis": "seconds",
+          "sets": 3,
+          "band_ref": "hold",
+          "band": {
+            "lo": 10,
+            "hi": 20,
+            "step": 5
+          },
+          "advance_sessions": 2,
+          "rest_s": 60,
+          "equipment_skip": true,
+          "level_idx": 2
+        },
+        {
+          "exercise_id": "copenhagen_dynamic",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "core_dyn",
+          "band": {
+            "lo": 6,
+            "hi": 12,
+            "step": 1
+          },
+          "advance_sessions": 2,
+          "rest_s": 75,
+          "equipment_skip": true,
+          "level_idx": 3
+        }
+      ],
+      "notes": "Entering at the Copenhagen: 2 sessions of the short lever at 3x15 s first (groin risk, Harøy 2019)."
+    },
+    {
+      "family": "posterior_chain",
+      "label": "Posterior chain (antagonist of compression)",
+      "axis_default": "reps",
+      "stimulus_ref": null,
+      "heavy_pull": false,
+      "heavy_pull_from_level": null,
+      "hanging": false,
+      "hanging_from_level": null,
+      "skill_family": false,
+      "lower_back_risk_from_level": null,
+      "floor_level_advanced": null,
+      "budget_group": "posterior_chain",
+      "eligibility": null,
+      "entry_seed": [],
+      "gates": [],
+      "terminal": {
+        "kind": "load",
+        "handoff_exercise_id": "back_extension",
+        "load_step_kg_lower": 5.0
+      },
+      "variants": [],
+      "extras": [],
+      "sources": [
+        "ENGINEERING CONSTANT (antagonist pairing, BW spec)"
+      ],
+      "levels": [
+        {
+          "exercise_id": "arch_hold",
+          "axis": "seconds",
+          "sets": 3,
+          "band_ref": "hold",
+          "band": {
+            "lo": 10,
+            "hi": 30,
+            "step": 5
+          },
+          "advance_sessions": 1,
+          "rest_s": 60,
+          "equipment_skip": true,
+          "level_idx": 0
+        },
+        {
+          "exercise_id": "back_extension",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "core_dyn",
+          "band": {
+            "lo": 8,
+            "hi": 12,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 60,
+          "equipment_skip": true,
+          "level_idx": 1
+        },
+        {
+          "exercise_id": "single_leg_back_extension",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "core_dyn",
+          "band": {
+            "lo": 6,
+            "hi": 10,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 60,
+          "equipment_skip": true,
+          "level_idx": 2
+        }
+      ],
+      "notes": "A core block with 2 compression exercises must include one exercise of this family."
+    },
+    {
+      "family": "anti_rotation",
+      "label": "Anti-rotation (Pallof)",
+      "axis_default": "reps",
+      "stimulus_ref": null,
+      "heavy_pull": false,
+      "heavy_pull_from_level": null,
+      "hanging": false,
+      "hanging_from_level": null,
+      "skill_family": false,
+      "lower_back_risk_from_level": null,
+      "floor_level_advanced": null,
+      "budget_group": "anti_rotation",
+      "eligibility": null,
+      "entry_seed": [],
+      "gates": [],
+      "terminal": {
+        "kind": "cap"
+      },
+      "variants": [],
+      "extras": [],
+      "sources": [
+        "UKClimbing core guide",
+        "Hörst — conditioning principles"
+      ],
+      "levels": [
+        {
+          "exercise_id": "pallof_press_half_kneeling",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "core_dyn",
+          "band": {
+            "lo": 8,
+            "hi": 12,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 60,
+          "equipment_skip": true,
+          "level_idx": 0
+        },
+        {
+          "exercise_id": "pallof_press",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "core_dyn",
+          "band": {
+            "lo": 8,
+            "hi": 12,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 60,
+          "equipment_skip": true,
+          "level_idx": 1
+        },
+        {
+          "exercise_id": "pallof_press_standing_pause",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "max_core",
+          "band": {
+            "lo": 5,
+            "hi": 8,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 60,
+          "equipment_skip": true,
+          "level_idx": 2
+        }
+      ],
+      "notes": "Needs a band (band / resistance_band) or a cable."
+    },
+    {
+      "family": "rotation",
+      "label": "Rotation (windshield wipers)",
+      "axis_default": "reps",
+      "stimulus_ref": null,
+      "heavy_pull": false,
+      "heavy_pull_from_level": null,
+      "hanging": true,
+      "hanging_from_level": 1,
+      "skill_family": false,
+      "lower_back_risk_from_level": null,
+      "floor_level_advanced": null,
+      "budget_group": "rotation",
+      "eligibility": null,
+      "entry_seed": [],
+      "gates": [],
+      "terminal": {
+        "kind": "cap"
+      },
+      "variants": [],
+      "extras": [],
+      "sources": [
+        "Hörst — Training for Climbing (core)"
+      ],
+      "levels": [
+        {
+          "exercise_id": "lying_windshield_wiper",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "core_dyn",
+          "band": {
+            "lo": 6,
+            "hi": 12,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 90,
+          "equipment_skip": true,
+          "level_idx": 0
+        },
+        {
+          "exercise_id": "half_windshield_wiper",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "core_dyn",
+          "band": {
+            "lo": 6,
+            "hi": 12,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 120,
+          "equipment_skip": true,
+          "level_idx": 1
+        },
+        {
+          "exercise_id": "windshield_wipers",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "core_dyn",
+          "band": {
+            "lo": 6,
+            "hi": 12,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 150,
+          "equipment_skip": true,
+          "level_idx": 2
+        }
+      ],
+      "notes": "Level 2 is terminal and optional (catalog safety note: flexion + rotation)."
+    },
+    {
+      "family": "push_horizontal",
+      "label": "Horizontal push (antagonist)",
+      "axis_default": "reps",
+      "stimulus_ref": null,
+      "heavy_pull": false,
+      "heavy_pull_from_level": null,
+      "hanging": false,
+      "hanging_from_level": null,
+      "skill_family": false,
+      "lower_back_risk_from_level": null,
+      "floor_level_advanced": null,
+      "budget_group": "push",
+      "eligibility": null,
+      "entry_seed": [],
+      "gates": [],
+      "terminal": {
+        "kind": "load",
+        "handoff_exercise_id": "weighted_pushup",
+        "load_step_kg_upper": 2.5
+      },
+      "variants": [],
+      "extras": [],
+      "sources": [
+        "https://www.liftosaur.com/programs/recommended-routine"
+      ],
+      "levels": [
+        {
+          "exercise_id": "incline_pushup",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "core_dyn",
+          "band": {
+            "lo": 8,
+            "hi": 12,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 60,
+          "equipment_skip": true,
+          "level_idx": 0
+        },
+        {
+          "exercise_id": "pushup",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "strength_dyn",
+          "band": {
+            "lo": 5,
+            "hi": 8,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 60,
+          "equipment_skip": true,
+          "level_idx": 1
+        },
+        {
+          "exercise_id": "ring_pushup",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "strength_dyn",
+          "band": {
+            "lo": 5,
+            "hi": 8,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 90,
+          "equipment_skip": true,
+          "level_idx": 2
+        },
+        {
+          "exercise_id": "ring_pushup_rto",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "strength_dyn",
+          "band": {
+            "lo": 5,
+            "hi": 8,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 90,
+          "equipment_skip": true,
+          "level_idx": 3
+        }
+      ],
+      "notes": "Antagonist at RIR 2-3: easy raises the reps, no promotion above intensity 'high'. One-arm push-up and pseudo-planche stay builder-only."
+    },
+    {
+      "family": "push_vertical",
+      "label": "Vertical push",
+      "axis_default": "reps",
+      "stimulus_ref": null,
+      "heavy_pull": false,
+      "heavy_pull_from_level": null,
+      "hanging": false,
+      "hanging_from_level": null,
+      "skill_family": false,
+      "lower_back_risk_from_level": null,
+      "floor_level_advanced": null,
+      "budget_group": "push",
+      "eligibility": null,
+      "entry_seed": [],
+      "gates": [
+        {
+          "level": 2,
+          "requires_note": "wall handstand hold of at least 30 s"
+        }
+      ],
+      "terminal": {
+        "kind": "cap"
+      },
+      "variants": [],
+      "extras": [],
+      "sources": [
+        "ENGINEERING CONSTANT (HSPU band)"
+      ],
+      "levels": [
+        {
+          "exercise_id": "pike_pushup",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "strength_dyn",
+          "band": {
+            "lo": 5,
+            "hi": 8,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 90,
+          "equipment_skip": true,
+          "level_idx": 0
+        },
+        {
+          "exercise_id": "elevated_pike_pushup",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "strength_dyn",
+          "band": {
+            "lo": 5,
+            "hi": 8,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 90,
+          "equipment_skip": true,
+          "level_idx": 1
+        },
+        {
+          "exercise_id": "handstand_pushup_wall",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "hspu",
+          "band": {
+            "lo": 3,
+            "hi": 6,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 120,
+          "equipment_skip": true,
+          "level_idx": 2
+        }
+      ]
+    },
+    {
+      "family": "dip",
+      "label": "Dip",
+      "axis_default": "reps",
+      "stimulus_ref": null,
+      "heavy_pull": false,
+      "heavy_pull_from_level": null,
+      "hanging": false,
+      "hanging_from_level": null,
+      "skill_family": false,
+      "lower_back_risk_from_level": null,
+      "floor_level_advanced": null,
+      "budget_group": "push",
+      "eligibility": null,
+      "entry_seed": [],
+      "gates": [],
+      "terminal": {
+        "kind": "handoff",
+        "handoff_exercise_id": "weighted_dip"
+      },
+      "variants": [],
+      "extras": [],
+      "sources": [
+        "https://www.liftosaur.com/programs/recommended-routine"
+      ],
+      "levels": [
+        {
+          "exercise_id": "ring_support_hold",
+          "axis": "seconds",
+          "sets": 3,
+          "band_ref": "hold",
+          "band": {
+            "lo": 10,
+            "hi": 30,
+            "step": 5
+          },
+          "advance_sessions": 1,
+          "rest_s": 60,
+          "equipment_skip": true,
+          "level_idx": 0
+        },
+        {
+          "exercise_id": "dip",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "strength_dyn",
+          "band": {
+            "lo": 5,
+            "hi": 8,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 120,
+          "equipment_skip": true,
+          "level_idx": 1
+        },
+        {
+          "exercise_id": "ring_dip",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "strength_dyn",
+          "band": {
+            "lo": 5,
+            "hi": 8,
+            "step": 1
+          },
+          "advance_sessions": 2,
+          "rest_s": 120,
+          "equipment_skip": true,
+          "level_idx": 2
+        }
+      ],
+      "notes": "Dip equipment keys (dip bars / parallel bars) are a later A brief."
+    },
+    {
+      "family": "pull_bw",
+      "label": "Bodyweight pull (only athletes WITHOUT a tested 2RM)",
+      "axis_default": "reps",
+      "stimulus_ref": null,
+      "heavy_pull": true,
+      "heavy_pull_from_level": 3,
+      "hanging": false,
+      "hanging_from_level": null,
+      "skill_family": false,
+      "lower_back_risk_from_level": null,
+      "floor_level_advanced": null,
+      "budget_group": "pull",
+      "eligibility": "untested_pulling_only",
+      "entry_seed": [],
+      "gates": [],
+      "terminal": {
+        "kind": "cap"
+      },
+      "variants": [],
+      "extras": [],
+      "sources": [
+        "https://www.liftosaur.com/programs/recommended-routine"
+      ],
+      "levels": [
+        {
+          "exercise_id": "pullup",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "strength_dyn",
+          "band": {
+            "lo": 5,
+            "hi": 8,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 120,
+          "equipment_skip": true,
+          "level_idx": 0
+        },
+        {
+          "exercise_id": "l_sit_pullup",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "strength_dyn",
+          "band": {
+            "lo": 5,
+            "hi": 8,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 120,
+          "equipment_skip": true,
+          "level_idx": 1
+        },
+        {
+          "exercise_id": "archer_pullup",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "strength_dyn",
+          "band": {
+            "lo": 5,
+            "hi": 8,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 150,
+          "equipment_skip": true,
+          "level_idx": 2
+        },
+        {
+          "exercise_id": "one_arm_pullup_assisted",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "one_arm",
+          "band": {
+            "lo": 1,
+            "hi": 3,
+            "step": 1
+          },
+          "advance_sessions": 2,
+          "rest_s": 180,
+          "equipment_skip": true,
+          "level_idx": 3
+        },
+        {
+          "exercise_id": "one_arm_pullup_negative",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "one_arm",
+          "band": {
+            "lo": 1,
+            "hi": 3,
+            "step": 1
+          },
+          "advance_sessions": 2,
+          "rest_s": 180,
+          "equipment_skip": true,
+          "level_idx": 4
+        },
+        {
+          "exercise_id": "one_arm_pullup",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "one_arm",
+          "band": {
+            "lo": 1,
+            "hi": 3,
+            "step": 1
+          },
+          "advance_sessions": 2,
+          "rest_s": 180,
+          "equipment_skip": true,
+          "level_idx": 5
+        }
+      ],
+      "notes": "A tested athlete keeps weighted_pullup with the anchored load (B364). Lock-offs at open angles only."
+    },
+    {
+      "family": "single_leg_squat",
+      "label": "Single-leg squat",
+      "axis_default": "reps",
+      "stimulus_ref": null,
+      "heavy_pull": false,
+      "heavy_pull_from_level": null,
+      "hanging": false,
+      "hanging_from_level": null,
+      "skill_family": false,
+      "lower_back_risk_from_level": null,
+      "floor_level_advanced": null,
+      "budget_group": "legs",
+      "eligibility": null,
+      "entry_seed": [],
+      "gates": [],
+      "terminal": {
+        "kind": "load",
+        "load_step_kg_lower": 5.0
+      },
+      "variants": [],
+      "extras": [],
+      "sources": [
+        "https://www.liftosaur.com/programs/recommended-routine"
+      ],
+      "levels": [
+        {
+          "exercise_id": "box_pistol_squat",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "strength_dyn",
+          "band": {
+            "lo": 5,
+            "hi": 8,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 75,
+          "equipment_skip": true,
+          "level_idx": 0
+        },
+        {
+          "exercise_id": "assisted_pistol_squat",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "strength_dyn",
+          "band": {
+            "lo": 5,
+            "hi": 8,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 75,
+          "equipment_skip": true,
+          "level_idx": 1
+        },
+        {
+          "exercise_id": "shrimp_squat",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "strength_dyn",
+          "band": {
+            "lo": 5,
+            "hi": 8,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 90,
+          "equipment_skip": true,
+          "level_idx": 2
+        },
+        {
+          "exercise_id": "pistol_squat",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "strength_dyn",
+          "band": {
+            "lo": 5,
+            "hi": 8,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 90,
+          "equipment_skip": true,
+          "level_idx": 3
+        }
+      ],
+      "notes": "pistol_squat_progression stays active (body-part picker) until the A brief updates it."
+    },
+    {
+      "family": "hamstring",
+      "label": "Hamstring (slider → Nordic)",
+      "axis_default": "reps",
+      "stimulus_ref": null,
+      "heavy_pull": false,
+      "heavy_pull_from_level": null,
+      "hanging": false,
+      "hanging_from_level": null,
+      "skill_family": false,
+      "lower_back_risk_from_level": null,
+      "floor_level_advanced": null,
+      "budget_group": "legs",
+      "eligibility": null,
+      "entry_seed": [],
+      "gates": [],
+      "terminal": {
+        "kind": "tempo",
+        "tempo_steps": [
+          {
+            "ecc_s": 5
+          }
+        ],
+        "why": "slower eccentric and a lower break point, not more reps"
+      },
+      "variants": [],
+      "extras": [],
+      "sources": [
+        "Petersen J et al. (2011), Am J Sports Med",
+        "Presland JD et al. (2018), J Sci Med Sport"
+      ],
+      "levels": [
+        {
+          "exercise_id": "slider_hamstring_curl",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "core_dyn",
+          "band": {
+            "lo": 8,
+            "hi": 12,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 60,
+          "equipment_skip": true,
+          "level_idx": 0
+        },
+        {
+          "exercise_id": "single_leg_slider_curl",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "core_dyn",
+          "band": {
+            "lo": 6,
+            "hi": 10,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 75,
+          "equipment_skip": true,
+          "level_idx": 1
+        },
+        {
+          "exercise_id": "nordic_curl_band_assisted",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "nordic",
+          "band": {
+            "lo": 4,
+            "hi": 8,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 120,
+          "equipment_skip": true,
+          "level_idx": 2
+        },
+        {
+          "exercise_id": "nordic_curl",
+          "axis": "reps",
+          "sets": 3,
+          "band_ref": "nordic",
+          "band": {
+            "lo": 4,
+            "hi": 8,
+            "step": 1
+          },
+          "advance_sessions": 1,
+          "rest_s": 120,
+          "equipment_skip": true,
+          "level_idx": 3
+        }
+      ],
+      "notes": "Nordic: 2-3x4-8 then maintenance once a week. DOMS: limit the volume in the first 2 weeks."
+    }
+  ],
+  "technique_ladders": [
+    {
+      "ladder": "feet",
+      "label": "Feet (precision and pressure)",
+      "tracked": true,
+      "levels": [
+        {
+          "level": "P1",
+          "description": "Flash-1 with one placement and zero noise (board ~7A, vertical ~7A+ for a 7C boulderer; scale to the athlete).",
+          "drills": [
+            "no_readjust_drill",
+            "sticky_feet",
+            "silent_feet_drill",
+            "tech_hard_target"
+          ]
+        },
+        {
+          "level": "P2",
+          "description": "The same rule at flash, plus glued feet on a 40° board.",
+          "drills": [
+            "glued_feet_board",
+            "no_readjust_drill",
+            "tech_hard_target"
+          ]
+        },
+        {
+          "level": "P3",
+          "description": "The rule inside limit work in the weak style (redpoint-1 / redpoint-2): foot held at the first placement on the crux.",
+          "drills": [
+            "vertical_small_feet_limit",
+            "glued_feet_board"
+          ],
+          "protocols": [
+            "limit_weak_style"
+          ]
+        },
+        {
+          "level": "P4",
+          "description": "Under fatigue and on rock: lead precision at onsight, foot slips per go on a project.",
+          "drills": [
+            "lead_precision_feet_above_bolt",
+            "crux_sequence_rehearsal"
+          ],
+          "protocols": [
+            "outdoor_technique_day"
+          ]
+        }
+      ],
+      "advance": "2 sessions in a row with ≤ 1 foot readjustment on the sample problem, and benchmark B1 stable or better.",
+      "regress": "≥ 3 readjustments on the sample problem for 2 sessions.",
+      "levers": [
+        "smaller feet",
+        "fewer readjustments",
+        "steeper",
+        "fatigue",
+        "rock"
+      ],
+      "support_drills": [
+        "toe_flexor_isometric",
+        "edge_calf_raise_bigtoe",
+        "small_feet_press_hold"
+      ],
+      "benchmark": "technique_benchmark_test",
+      "entry": "P1 by default; P2 when the athlete already places the feet once at flash-1.",
+      "measure": "Foot readjustments on ONE sample problem per session (video or partner).",
+      "sources": [
+        "UKClimbing article 12519 (Gresham)",
+        "Mountain Project forum 114032041",
+        "99boulders footwork drills"
+      ]
+    },
+    {
+      "ladder": "positions",
+      "label": "Body positioning",
+      "tracked": true,
+      "levels": [
+        {
+          "level": "Q1",
+          "description": "Board 40-45° around flash+1 with the 3-way position menu.",
+          "drills": [
+            "position_menu_3way",
+            "twist_lock_drill",
+            "flag_practice",
+            "tech_barn_door_2000"
+          ]
+        },
+        {
+          "level": "Q2",
+          "description": "The menu on the positioning crux of limit problems.",
+          "drills": [
+            "position_menu_3way"
+          ],
+          "protocols": [
+            "limit_weak_style"
+          ]
+        },
+        {
+          "level": "Q3",
+          "description": "Lead: straight-arm clips and rests found under pump.",
+          "drills": [
+            "lead_technique_under_pump",
+            "rest_and_clip_drill"
+          ]
+        },
+        {
+          "level": "Q4",
+          "description": "On sight: position decided on rock at first sight.",
+          "drills": [
+            "timed_route_preview"
+          ],
+          "protocols": [
+            "outdoor_technique_day"
+          ]
+        }
+      ],
+      "advance": "2 s hover on the crux in ≥ 4 attempts out of 5 for 2 sessions, or the lead rule kept on 2 routes out of 2.",
+      "regress": "Below 50%.",
+      "levers": [
+        "steeper or less obvious position",
+        "fatigue",
+        "on sight",
+        "rock"
+      ],
+      "benchmark": "technique_benchmark_test",
+      "entry": "Q1.",
+      "measure": "Hover 2 s on the crux x/5.",
+      "sources": [
+        "Udo Neumann — Lizard Skills",
+        "Lattice Training — movement concepts"
+      ]
+    },
+    {
+      "ladder": "falls",
+      "label": "Falls (fear of falling)",
+      "tracked": true,
+      "levels": [
+        {
+          "level": "F1",
+          "description": "Clip at the feet.",
+          "drills": [
+            "fall_ladder"
+          ]
+        },
+        {
+          "level": "F2",
+          "description": "1-2 m above the clip. Enables no-take leading.",
+          "drills": [
+            "fall_ladder",
+            "no_take_lead_onsight"
+          ]
+        },
+        {
+          "level": "F3",
+          "description": "A fall while moving on a crux. Enables the deliberate fall at the commit point.",
+          "drills": [
+            "fall_ladder",
+            "commit_map"
+          ]
+        }
+      ],
+      "advance": "Fear ≤ 3 for 2 sessions.",
+      "regress": "One fall at fear ≥ 7.",
+      "entry": "F1 (first assessed session).",
+      "measure": "Step, number of falls, max fear 0-10 once per session.",
+      "sources": [
+        "Garrido-Palomino I et al. (2023)",
+        "Ilgner A. — The Rock Warrior's Way"
+      ]
+    }
+  ],
+  "untracked_progressions": [
+    {
+      "drill": "variant_ladder_board",
+      "progression": "Anchor +1 sub-grade every 2-3 weeks, or a constraint from the limiter."
+    },
+    {
+      "drill": "timed_route_preview",
+      "progression": "Beta forecast: reading 2 → 1 min, then rests and clips predicted."
+    },
+    {
+      "drill": "three_attempt_comp",
+      "progression": "Send rate > 50% → grade +1; target 30-50%."
+    },
+    {
+      "drill": "no_take_lead_onsight",
+      "progression": "2 → 3 routes → onsight+1, never more than 3."
+    }
+  ],
+  "try_hard": {
+    "measure": "Outcome per key attempt: SEND / FALL / TAKE / LET_GO, plus moves past the point where you wanted to stop (0 / 1 / 2+). Effort 0-3 is optional and secondary.",
+    "trend": "Read on 4 weeks: % of non-sends ending in FALL versus TAKE + LET_GO. Flat for 3 weeks → grade -1 on the comp and no-take, fall ladder one step down (the problem is fear, not difficulty).",
+    "weekly_core": [
+      "three_attempt_comp",
+      "no_take_lead_onsight",
+      "limit with a 5-attempt budget"
+    ],
+    "drills": [
+      "pre_attempt_routine",
+      "three_attempt_comp",
+      "no_take_lead_onsight",
+      "fall_ladder",
+      "commit_map"
+    ]
+  },
+  "protocols": {
+    "limit_weak_style": {
+      "label": "Limit in the weak style",
+      "applies_to": [
+        "limit_bouldering",
+        "board_limit_boulders",
+        "system_board_limit",
+        "spray_wall_limit"
+      ],
+      "steps": [
+        "4 problems or sections of 3-5 moves: 2 power problems as usual, plus 2 chosen because the crux is FEET (small foot to load, lateral press, vertical 5-15°) or POSITION (flag, drop-knee, twist-lock on 40-45°), at redpoint-1 / redpoint-2.",
+        "On the 2 technique problems declare one constraint before starting: 'foot placed once' or 'position X on the crux'.",
+        "Fixed budget of 5 attempts per problem (a LET_GO uses one), 3 min between attempts, 5 min between problems.",
+        "Pre-attempt routine on every attempt; one more move only where the fall is clean onto the mat; breathe out hard on the hard moves."
+      ],
+      "progression": "Same problems for 2-3 weeks, then new ones; tighter constraint (smaller feet, less obvious position) before a harder grade.",
+      "measure": "Send yes/no, high point, outcome of non-sends (FALL / TAKE / LET_GO); on the 2 technique problems, foot held at the first placement on the crux yes/no.",
+      "safety": "Never a mono in the gym. One more move never on the high holds of Kilter/Moon, on top-outs, upside down or twisted on one hand.",
+      "finger_hard": true,
+      "sources": [
+        "Training for Climbing — limit bouldering",
+        "Lattice Training"
+      ]
+    },
+    "template_warmup": {
+      "label": "Technique warm-up (zero added minutes)",
+      "steps": [
+        "3-4 routes or boulders building up to flash-1, each with ONE focus: (1) silent feet, eyes on the foot until it is weighted; (2) hip to the wall and straight arm; (3) a flag or drop-knee where it fits; (4) everything together at normal speed."
+      ],
+      "drills": [
+        "silent_feet_drill",
+        "sticky_feet",
+        "hip_rotation_drill",
+        "straight_arms",
+        "flag_practice",
+        "small_feet_press_hold"
+      ],
+      "measure": "None. It is a warm-up, not the technique stimulus.",
+      "finger_hard": false,
+      "sources": [
+        "UKClimbing article 12519 (Gresham)"
+      ]
+    },
+    "outdoor_technique_day": {
+      "label": "Outdoor technique day",
+      "steps": [
+        "Warm-up with the feet rule (lead_precision_feet_above_bolt).",
+        "1-2 new routes on sight with a beta forecast (timed_route_preview: 2 min reading, sequence said out loud, then predicted yes/no on the key sections).",
+        "The project with a commit map.",
+        "On vertical sandstone: volume of vertical routes on small feet, the shoe as a variable to test (stiff edging vs soft smearing, one per go), foot slips noted per go."
+      ],
+      "measure": "Foot slips per go on the project; on sight yes/no.",
+      "safety": "Sandstone only ≥ 24 h after rain. First fall of a trip on clean steep terrain, never on a slab.",
+      "finger_hard": "only when an attempt is at or above redpoint-2 (stimulus.py OUTDOOR-HARD rule)",
+      "sources": [
+        "Lattice Training — projecting tips"
+      ]
+    },
+    "pocket_warmup": {
+      "label": "Pocket / mono specific warm-up",
+      "steps": [
+        "General finger warm-up first (hang_rampup_progressive).",
+        "pocket_rampup_hangboard: 4 progressive 10 s hangs on the 2- and 3-finger pockets, feet supported, ~50 → 80% bodyweight.",
+        "Only for climbers who use monos on rock: single_finger_pocket_rampup, feet always supported, effort ≤ 6/10."
+      ],
+      "applies_to": [
+        "hang_rampup_progressive"
+      ],
+      "drills": [
+        "pocket_rampup_hangboard",
+        "single_finger_pocket_rampup"
+      ],
+      "when": "Before limit work or a rock day with pockets.",
+      "safety": "Submaximal only, on a hangboard pocket only, never a mono in the gym. Watch pulleys and lumbricals of the pocket fingers: any discomfort ends pocket work for the day and is logged as pain 0-3.",
+      "finger_hard": false,
+      "sources": [
+        "Schöffl V et al. (2003), Wilderness Environ Med",
+        "Schweizer A (2003), J Hand Surg"
+      ]
+    }
+  }
+}

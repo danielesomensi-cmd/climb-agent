@@ -30,6 +30,7 @@ from backend.engine.adhoc_prescription import (
     effort_band_for_phase,
     propose_exercise_prescription,
 )
+from backend.engine.catalog_roles import is_library_only
 from backend.engine.body_part_picker import (
     BODY_PART_CATEGORIES,
     BODY_PART_ORDER,
@@ -537,10 +538,12 @@ def compose_adhoc_session(
     and display metadata.
     """
     today = today or _date.today().isoformat()
+    # C272: library-only entries (bodyweight ladder levels, technique /
+    # try-hard drills) are composed by hand, never by the builder.
     catalog_by_id = {
         str(ex.get("id")): ex
         for ex in catalog.values()
-        if isinstance(ex, dict) and ex.get("id")
+        if isinstance(ex, dict) and ex.get("id") and not is_library_only(ex)
     }
 
     equipment_set = intent.get("equipment_set") if intent.get("equipment_set") in ADHOC_EQUIPMENT_SETS else "home"

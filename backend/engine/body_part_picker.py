@@ -22,6 +22,7 @@ from datetime import date as _date
 from typing import Any, Dict, List, Optional, Sequence, Set
 
 from backend.engine.anchored_load import ANCHORED_EXERCISES, CUSTOM_INTENSITY, anchor_summary, anchored_load
+from backend.engine.catalog_roles import is_library_only
 from backend.engine.equipment_utils import KNOWN_EQUIPMENT_KEYS, expand_equipment
 from backend.engine.progression_v1 import (
     EXTERNAL_LOAD_FRESHNESS_DAYS,
@@ -327,6 +328,10 @@ def build_body_part_index(
     index: Dict[str, Set[str]] = {cat: set() for cat in BODY_PART_CATEGORIES}
     for ex in catalog:
         if _is_climbing_surface_exercise(ex):
+            continue
+        # C272: library-only entries (ladder levels, technique drills) are
+        # never picked by the generator — and never counted in the options.
+        if is_library_only(ex):
             continue
         ex_id = ex.get("id")
         if not ex_id:
