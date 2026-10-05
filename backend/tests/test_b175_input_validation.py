@@ -4,7 +4,7 @@ Covers:
 - D172-02: apply_events safe dict access (move_session, add_outdoor)
 - D172-03: ensure_monday error handling (422 on bad date)
 - D172-04: stale session warning in week auto-resolve
-- D172-06: set_availability uses discipline-aware weights
+- D172-06: set_availability (retired in B367 — now refused)
 """
 from __future__ import annotations
 
@@ -216,59 +216,21 @@ class TestStaleSessionGuard:
 
 
 # ---------------------------------------------------------------------------
-# D172-06: set_availability — discipline-aware base weights
+# D172-06: set_availability — retired in B367
 # ---------------------------------------------------------------------------
 
-class TestSetAvailabilityDisciplineWeights:
-    def _make_plan_with_discipline(self, discipline: str):
-        """Build a minimal plan dict with profile_snapshot.discipline set."""
+class TestSetAvailabilityRetired:
+    """D172-06 tested the discipline-aware weights of the set_availability
+    regeneration. B367 retired the event (it lost tests and the retest
+    snapshot); what remains to test is that it is refused."""
+
+    def test_set_availability_raises(self):
         plan = _plan()
-        plan["profile_snapshot"] = {
-            "phase_id": "base",
-            "discipline": discipline,
-            "domain_weights": {},
-            "allowed_locations": ["gym"],
-            "hard_cap_per_week": 3,
-        }
-        plan["start_date"] = "2026-01-05"
-        return plan
-
-    def test_boulder_profile_uses_boulder_weights(self):
-        plan = self._make_plan_with_discipline("boulder")
-        avail = _availability()
-        # Trigger set_availability event
-        updated = apply_events(
-            plan,
-            [{"event_type": "set_availability", "availability": {"weekday": "mon", "slot": "evening"}}],
-            availability=avail,
-        )
-        snapshot = updated.get("profile_snapshot") or {}
-        domain_weights = snapshot.get("domain_weights") or {}
-        # Boulder base phase emphasises volume_climbing (0.35) over lead (0.25)
-        # At minimum, updated plan should exist and have weeks
-        assert updated.get("weeks") is not None
-
-    def test_lead_profile_uses_lead_weights(self):
-        plan = self._make_plan_with_discipline("lead")
-        avail = _availability()
-        updated = apply_events(
-            plan,
-            [{"event_type": "set_availability", "availability": {"weekday": "mon", "slot": "evening"}}],
-            availability=avail,
-        )
-        assert updated.get("weeks") is not None
-
-    def test_missing_discipline_defaults_to_lead_with_warning(self, caplog):
-        import logging
-        plan = self._make_plan_with_discipline("lead")
-        # Remove discipline from snapshot
-        plan["profile_snapshot"].pop("discipline", None)
-        avail = _availability()
-        with caplog.at_level(logging.WARNING, logger="backend.engine.replanner_v1"):
-            updated = apply_events(
+        before = __import__("copy").deepcopy(plan)
+        with pytest.raises(ValueError, match="no longer supported"):
+            apply_events(
                 plan,
                 [{"event_type": "set_availability", "availability": {"weekday": "mon", "slot": "evening"}}],
-                availability=avail,
+                availability=_availability(),
             )
-        assert updated.get("weeks") is not None
-        assert any("discipline" in r.message for r in caplog.records)
+        assert plan == before

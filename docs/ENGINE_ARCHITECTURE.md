@@ -686,7 +686,7 @@ Processes event lists. Supported event types:
 - `complete_other_activity` / `add_other_activity` — non-climbing activities
 - `add_outdoor` / `complete_outdoor` / `undo_outdoor` / `remove_outdoor` — outdoor sessions
 - `change_gym` — equipment-aware session replacement via `_find_gym_change_replacement()`
-- `set_availability` — re-plan a day with new availability
+- `set_availability` — **retired in B367**: `ValueError` in the engine, 422 at `/events`. It regenerated the week with a fraction of the `GET /api/week` inputs (no tests, retest decisions, taper, finger device) and overwrote the snapshot; availability changes go through settings / `PUT /api/weekly-override/{week_start}`
 
 **`apply_day_add(plan, *, session_id, target_date, slot, location, phase_id, gym_id) → tuple`**
 

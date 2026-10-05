@@ -169,9 +169,13 @@ class TestSnapshotCarriesThePool:
         """Il replanner ricostruiva il pool da (phase_id, discipline): con A258
         avrebbe fatto sparire la sessione condizionata da una settimana
         replanificata."""
+        # B367: the only replanner path that rebuilt a week (set_availability)
+        # is retired — nothing in the replanner may rebuild a pool from
+        # (phase_id, discipline) again.
         src = Path(__file__).resolve().parents[1] / "engine" / "replanner_v1.py"
         text = src.read_text(encoding="utf-8")
-        assert 'snapshot.get("session_pool")' in text
+        assert "_build_session_pool(phase_id, discipline" not in text
+        assert "generate_phase_week(" not in text
 
 
 # ── 4. copertura della tirata a casa (HOME-ONLY-PULLING-GAP) ────────────

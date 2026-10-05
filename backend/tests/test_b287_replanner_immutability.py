@@ -128,71 +128,27 @@ def _done_sessions(plan: dict) -> list[dict]:
     ]
 
 
-# ── R-1: set_availability must not destroy completed sessions ───────────────
+# ── R-1: set_availability destroyed completed sessions → retired in B367 ────
+#
+# B287 routed it through regenerate_preserving_completed; B367 retired it
+# (it still regenerated with a fraction of the GET /api/week inputs and lost
+# tests + the retest snapshot). The invariant is now trivially kept: the event
+# is refused and the plan is never touched.
 
-class TestR1SetAvailabilityPreserves:
-    def test_completed_session_survives_regeneration(self):
-        """The bug: updated["weeks"] = regenerated["weeks"] wiped done sessions."""
+class TestR1SetAvailabilityRetired:
+    def test_engine_refuses_and_never_touches_the_plan(self):
         plan = _plan(CURRENT_KEY, done_on=(0,))
-        before = deepcopy(_done_sessions(plan)[0])
+        before = deepcopy(plan)
+        with pytest.raises(ValueError, match="no longer supported"):
+            apply_events(plan, [_set_availability_event(CURRENT_KEY)], availability=_availability())
+        assert plan == before
+        assert _done_sessions(plan)[0]["completed_at"] == before["weeks"][0]["days"][0]["sessions"][0]["completed_at"]
 
-        out = apply_events(
-            plan,
-            [_set_availability_event(CURRENT_KEY)],
-            availability=_availability(),
-        )
-
-        survivors = _done_sessions(out)
-        assert survivors, "set_availability regeneration destroyed the done session"
-        after = survivors[0]
-        # Full immutability contract: id, load, feedback, status, timestamp.
-        assert after["session_id"] == before["session_id"]
-        assert after["status"] == "done"
-        assert after["feedback_summary"] == before["feedback_summary"]
-        assert after["completed_at"] == before["completed_at"]
-        assert (after["resolved"]["resolved_session"]["exercise_instances"]
-                == before["resolved"]["resolved_session"]["exercise_instances"])
-
-    def test_past_days_of_current_week_copied_wholesale(self):
-        """Days before today are frozen even if regeneration would re-plan them."""
-        today = date.today()
-        offset = today.weekday()
-        if offset == 0:
-            pytest.skip("no past day inside the current week on a Monday")
+    def test_refused_even_mixed_with_valid_events(self):
         plan = _plan(CURRENT_KEY, done_on=(0,))
-        # Mark Monday's session skipped: skipped is preservable too.
-        plan["weeks"][0]["days"][0]["sessions"][0]["status"] = "skipped"
-
-        out = apply_events(
-            plan,
-            [_set_availability_event(CURRENT_KEY)],
-            availability=_availability(),
-        )
-
-        mon = out["weeks"][0]["days"][0]
-        assert [s.get("status") for s in mon["sessions"]] == ["skipped"]
-
-    def test_future_week_completed_ahead_of_time_preserved(self):
-        """Decision 4: floor = max(today, start_date) → a future week's completed
-        session is still preserved by the session-level merge."""
-        plan = _plan(FUTURE_KEY, done_on=(2,))
-        out = apply_events(
-            plan,
-            [_set_availability_event(FUTURE_KEY)],
-            availability=_availability(),
-        )
-        assert _done_sessions(out), "session completed ahead of time was lost"
-
-    def test_regeneration_still_happens(self):
-        """Guard against over-correcting: the plan must still be re-planned
-        (revision bumped), not just returned untouched."""
-        plan = _plan(CURRENT_KEY, done_on=(0,))
-        out = apply_events(
-            plan,
-            [_set_availability_event(CURRENT_KEY)],
-            availability=_availability(),
-        )
-        assert out.get("plan_revision", 1) > plan["plan_revision"]
+        with pytest.raises(ValueError):
+            apply_events(plan, [{"event_type": "mark_done", "date": CURRENT_KEY, "slot": "evening"},
+                                _set_availability_event(CURRENT_KEY)], availability=_availability())
 
 
 class TestPreserveFloor:
@@ -224,13 +180,14 @@ class TestR2EventsPastWeekGuard:
         deps.save_state(state, None)
 
     def test_set_availability_on_past_week_rejected(self):
+        """B367: refused as retired before any week check."""
         self._seed()
         r = client.post("/api/replanner/events", json={
             "week_plan": _plan(PAST_KEY, done_on=(0,)),
             "events": [_set_availability_event(PAST_KEY)],
         })
         assert r.status_code == 422, r.text
-        assert "past" in r.json()["detail"].lower()
+        assert "no longer supported" in r.json()["detail"]
 
     def test_override_on_past_week_still_rejected(self):
         """The sibling entry point keeps its B257 guard (no regression)."""
@@ -242,16 +199,16 @@ class TestR2EventsPastWeekGuard:
         assert r.status_code == 422, r.text
         assert "past" in r.json()["detail"].lower()
 
-    def test_set_availability_on_current_week_allowed(self):
-        """The guard must not block the current week."""
+    def test_set_availability_on_current_week_rejected_as_retired(self):
+        """B367: the current week is no exception — the event is retired."""
         self._seed()
+        plan = _plan(CURRENT_KEY, done_on=(0,))
         r = client.post("/api/replanner/events", json={
-            "week_plan": _plan(CURRENT_KEY, done_on=(0,)),
+            "week_plan": plan,
             "events": [_set_availability_event(CURRENT_KEY)],
         })
-        assert not (r.status_code == 422
-                    and "past" in str(r.json().get("detail", "")).lower()), \
-            "current week must not be rejected by the past-week guard"
+        assert r.status_code == 422, r.text
+        assert "no longer supported" in r.json()["detail"]
 
     def test_mark_done_on_past_week_still_allowed(self):
         """Scoped guard: retroactively ticking a forgotten session is explicit
@@ -276,39 +233,9 @@ class TestR3DisciplinePool:
         assert _build_session_pool("base", discipline="boulder") != \
             _build_session_pool("base", discipline="lead")
 
-    def test_boulder_user_gets_boulder_pool(self):
-        """The bug: _build_session_pool(phase_id) defaulted to lead, so a boulder
-        snapshot produced boulder weights + lead sessions."""
-        plan = _plan(CURRENT_KEY, discipline="boulder")
-        out = apply_events(
-            plan,
-            [_set_availability_event(CURRENT_KEY)],
-            availability=_availability(),
-        )
-        scheduled = {
-            s.get("session_id")
-            for d in out["weeks"][0]["days"]
-            for s in d.get("sessions", [])
-        }
-        lead_only = set(_SESSION_POOL["base"]) - set(_SESSION_POOL_BOULDER["base"])
-        assert not (scheduled & lead_only), (
-            f"boulder user was scheduled lead-only sessions: {scheduled & lead_only}"
-        )
-
-    def test_lead_user_unaffected(self):
-        plan = _plan(CURRENT_KEY, discipline="lead")
-        out = apply_events(
-            plan,
-            [_set_availability_event(CURRENT_KEY)],
-            availability=_availability(),
-        )
-        scheduled = {
-            s.get("session_id")
-            for d in out["weeks"][0]["days"]
-            for s in d.get("sessions", [])
-        }
-        boulder_only = set(_SESSION_POOL_BOULDER["base"]) - set(_SESSION_POOL["base"])
-        assert not (scheduled & boulder_only)
+    # B367: the two set_availability-driven checks (boulder pool / lead pool)
+    # went with the event — the replanner no longer rebuilds a session pool.
+    # The week router and generate_macrocycle keep their own discipline tests.
 
 
 # ── R-4: weekday fallback must never re-stamp a date ────────────────────────

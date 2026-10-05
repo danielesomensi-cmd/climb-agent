@@ -14,7 +14,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence
 logger = logging.getLogger(__name__)
 
 from backend.engine.macrocycle_v1 import _build_session_pool
-from backend.engine.planner_v2 import _INTENSITY_TO_LOAD, _SESSION_META, generate_phase_week
+from backend.engine.planner_v2 import _INTENSITY_TO_LOAD, _SESSION_META
 from backend.engine.session_tags import derive_session_tags, merge_declared_tags
 from backend.engine.other_activity_v1 import (
     ensure_other_activities_list,
@@ -122,6 +122,13 @@ OUTDOOR_INTENT_TO_DISCIPLINE = {
 OUTDOOR_SPOT_PLACEHOLDER = "Outdoor"
 
 SLOTS = ("morning", "lunch", "evening")
+
+# B367: event types apply_events no longer accepts (422 at the router).
+RETIRED_SET_AVAILABILITY = (
+    "set_availability is no longer supported — change availability in the "
+    "settings or with PUT /api/weekly-override/{week_start}"
+)
+RETIRED_EVENT_TYPES = frozenset({"set_availability"})
 
 # Load points for complementary sport feedback
 COMPLEMENTARY_LOAD_EASY = 10
@@ -1832,75 +1839,14 @@ def apply_events(
             })
 
         elif event_type == "set_availability":
-            if availability is not None and event.get("availability"):
-                av = event["availability"]
-                if event.get("date"):
-                    date_key = _parse_date(event["date"]).weekday()
-                    weekday = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")[date_key]
-                else:
-                    weekday = av.get("weekday")
-                    # Convert long-form weekday keys to short-form
-                    _WEEKDAY_LONG = {
-                        "monday": "mon", "tuesday": "tue", "wednesday": "wed",
-                        "thursday": "thu", "friday": "fri", "saturday": "sat",
-                        "sunday": "sun",
-                    }
-                    if weekday and weekday.lower() in _WEEKDAY_LONG:
-                        weekday = _WEEKDAY_LONG[weekday.lower()]
-                slot = av.get("slot")
-                if weekday and slot and weekday in availability and slot in availability[weekday]:
-                    for key in ("available", "locations", "preferred_location", "gym_id"):
-                        if key in av:
-                            availability[weekday][slot][key] = av[key]
-                snapshot = updated.get("profile_snapshot") or {}
-                phase_id = snapshot.get("phase_id", "base")
-                discipline = snapshot.get("discipline")
-                if not discipline:
-                    logger.warning(
-                        "set_availability: profile_snapshot missing 'discipline', defaulting to 'lead'"
-                    )
-                    discipline = "lead"
-                from backend.engine.macrocycle_v1 import _BASE_WEIGHTS, _BASE_WEIGHTS_BOULDER, _build_session_pool, _adjust_domain_weights
-                _weights_map = _BASE_WEIGHTS_BOULDER if discipline == "boulder" else _BASE_WEIGHTS
-                base_weights = _weights_map.get(phase_id, _weights_map["base"])
-                domain_weights = snapshot.get("domain_weights", base_weights)
-                # B287/R-3: the pool must follow the discipline, exactly like
-                # generate_macrocycle does (macrocycle_v1.py). Before this fix the
-                # call defaulted to discipline="lead", so a boulder user got
-                # boulder domain weights combined with a LEAD session pool.
-                # A258: prefer the pool the week was BUILT with. Rebuilding it
-                # from (phase_id, discipline) silently drops anything else the
-                # pool depends on — it already did, in B287/R-3, and would now
-                # make a profile-conditional session vanish from a replanned
-                # week. `apply_events` has no user_state in scope, so the
-                # snapshot is the only honest source. Fallback keeps weeks
-                # planned before A258 working.
-                session_pool = snapshot.get("session_pool") or _build_session_pool(
-                    phase_id, discipline=discipline
-                )
-                regenerated = generate_phase_week(
-                    phase_id=phase_id,
-                    domain_weights=domain_weights,
-                    session_pool=session_pool,
-                    start_date=updated["start_date"],
-                    availability=availability,
-                    allowed_locations=snapshot.get("allowed_locations", ["home", "gym"]),
-                    hard_cap_per_week=_safe_hard_cap(snapshot),
-                    planning_prefs=planning_prefs,
-                    default_gym_id=((planning_prefs or {}).get("default_gym_id")),
-                    gyms=gyms,
-                )
-                # B287/R-1: NEVER replace weeks wholesale. Before this fix the
-                # regenerated plan overwrote updated["weeks"] with no preserve
-                # step, so every done/skipped session in the week was destroyed —
-                # a direct violation of the past-session immutability pillar.
-                # Route through the same helper every other regeneration path
-                # uses, with the standard preserve floor.
-                merged = regenerate_preserving_completed(
-                    updated, regenerated, preserve_before=_preserve_floor(updated),
-                )
-                updated["weeks"] = merged["weeks"]
-                updated["profile_snapshot"] = regenerated["profile_snapshot"]
+            # B367: retired. It regenerated the week with a fraction of the
+            # inputs GET /api/week uses (no tests, no retest decisions, no
+            # pre-trip taper, no finger device, no previous week) and replaced
+            # the profile snapshot, losing retest_decisions. No client ever
+            # sent it; availability changes go through the weekly override
+            # (PUT /api/weekly-override/{week_start}) and the settings, which
+            # regenerate through the full path.
+            raise ValueError(RETIRED_SET_AVAILABILITY)
 
         elif event_type == "add_custom_session":
             # A207: add a user-defined custom session to a day. Custom sessions

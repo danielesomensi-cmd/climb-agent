@@ -17,6 +17,8 @@ from backend.api.key_status import build_key_conflicts, build_key_status, resolv
 from backend.engine.outdoor_log import compute_outdoor_load_score, load_outdoor_sessions, remove_outdoor_session
 from backend.engine.planner_v2 import _SESSION_META
 from backend.engine.replanner_v1 import (
+    RETIRED_EVENT_TYPES,
+    RETIRED_SET_AVAILABILITY,
     _session_matches,
     apply_day_add,
     apply_day_override,
@@ -85,9 +87,10 @@ def _get_supplementary_sessions(location: str) -> list:
 
 # B287/R-2: event types that rebuild the week from scratch (generate_phase_week)
 # rather than editing individual sessions. Only these are refused on a past week.
-# Keep in sync with the apply_events branches in replanner_v1.py — today
-# set_availability is the single call site of generate_phase_week.
-_REGENERATING_EVENT_TYPES = frozenset({"set_availability"})
+# Keep in sync with the apply_events branches in replanner_v1.py. B367: empty —
+# set_availability, the only one, is retired (RETIRED_EVENT_TYPES → 422). Any
+# future event type that calls generate_phase_week MUST be listed here.
+_REGENERATING_EVENT_TYPES: frozenset = frozenset()
 
 
 def _prev_week_days(state: dict, start_date: Optional[str]) -> Optional[list]:
@@ -449,6 +452,11 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
             status_code=422,
             detail="week_plan is required — generate one from GET /api/week/{week_num} first",
         )
+
+    # B367: retired event types are refused up front, whatever the week.
+    _retired = sorted({ev.get("event_type") for ev in req.events} & RETIRED_EVENT_TYPES)
+    if _retired:
+        raise HTTPException(status_code=422, detail=RETIRED_SET_AVAILABILITY)
 
     # B287/R-2: /override has carried the B257 past-week guard since B257, but
     # /events never did — and `set_availability` is reachable from BOTH (it is

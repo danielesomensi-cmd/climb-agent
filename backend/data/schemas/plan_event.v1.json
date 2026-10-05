@@ -8,7 +8,7 @@
     "event_version": {"type": "integer", "const": 1},
     "event_type": {
       "type": "string",
-      "enum": ["mark_done", "mark_skipped", "move_session", "set_availability"]
+      "enum": ["mark_done", "mark_skipped", "move_session"]
     },
     "date": {"type": "string"},
     "slot": {"type": "string", "enum": ["morning", "lunch", "evening"]},
@@ -50,13 +50,6 @@
     {
       "if": {"properties": {"event_type": {"const": "move_session"}}},
       "then": {"required": ["from_date", "from_slot", "to_date", "to_slot"]}
-    },
-    {
-      "if": {"properties": {"event_type": {"const": "set_availability"}}},
-      "then": {
-        "required": ["availability"],
-        "anyOf": [{"required": ["date"]}, {"properties": {"availability": {"required": ["weekday"]}}}]
-      }
     }
   ]
 }
