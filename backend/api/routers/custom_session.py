@@ -82,6 +82,22 @@ def _validate_tags(tags: list) -> None:
             raise HTTPException(status_code=422, detail=f"Tag too long (max 30 chars): {tag!r}")
 
 
+def _fill_rest_default(ex: dict, catalog: dict) -> dict:
+    """B370: a multi-set exercise saved without a rest between sets takes the
+    catalog's. The player reads a missing rest as 0 and shows no rest timer
+    (a 3x10 calf raise ran back to back). An explicit value, 0 included, wins;
+    a single set has no rest between sets to fill."""
+    if ex.get("rest_between_sets_seconds") is not None:
+        return ex
+    if (ex.get("sets") or 0) <= 1:
+        return ex
+    cat_ex = catalog.get(ex.get("exercise_id") or "") or {}
+    rest = (cat_ex.get("prescription_defaults") or {}).get("rest_between_sets_seconds")
+    if rest:
+        ex["rest_between_sets_seconds"] = rest
+    return ex
+
+
 def _enrich_exercise_display(ex: dict, catalog: dict) -> dict:
     """B283: attach catalog display data (name, cues, video, load_model,
     category, technique notes) to a stored custom exercise so the REAL guided
@@ -104,6 +120,7 @@ def _enrich_exercise_display(ex: dict, catalog: dict) -> dict:
         ex["video_url"] = cat_ex["video_url"]
     if not ex.get("notes") and defaults.get("notes"):
         ex["notes"] = defaults["notes"]
+    _fill_rest_default(ex, catalog)
     return ex
 
 
@@ -361,6 +378,8 @@ def enrich_custom_sessions_for_play(sessions: list) -> list:
             # already stored. Sessions saved between B283 and B324 carry cues but
             # no alt_sides, so the skip above left them one-sided forever.
             ex["alt_sides"] = bool((catalog.get(ex.get("exercise_id") or "") or {}).get("alt_sides"))
+            # B370: sessions saved before the rest default existed get it at read.
+            _fill_rest_default(ex, catalog)
             # A295: the measure the player may ask for (last-set reps, hang
             # margin, double progression) — derived at read, never stored.
             ex.pop("measure", None)
