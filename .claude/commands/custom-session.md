@@ -22,6 +22,7 @@ python scripts/athlete_context.py --date YYYY-MM-DD                        # se 
 - Legge Supabase in sola lettura, a ogni lancio, e stampa l'età dello stato.
 - Se fallisce, **ti fermi** e lo dici: non componi a memoria.
 - Leggi anche `docs/training/athlete_plan.md` (almeno §2-§5). Il blocco «Note atleta» con i livelli delle scale e le tasche lo stampa già lo script.
+- Leggi la sezione **«Note dell'atleta sugli esercizi»** (A303): sono le note che Daniele scrive nel feedback (dolore, attrezzo diverso, orario, sensazioni). Tienine conto nella proposta e dillo se una nota cambia la scelta.
 
 ## 2. Decidi COSA fare, prima del come
 

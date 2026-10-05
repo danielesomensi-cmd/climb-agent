@@ -546,7 +546,7 @@ class TestAthleteContext:
         st["macrocycle"] = golden.profiles()["advanced"]["macrocycle"]
         _add_done(st, "2026-09-24", [{"exercise_id": "test_l_sit_hold", "sets": 1}], sid="custom_test_day")
         ctx = ac.build_athlete_context(st, REF, with_proposals=False, include_next_week=False)
-        assert ctx["version"] == ac.VERSION == "c272.1"
+        assert ctx["version"] == ac.VERSION == "a303.1"
         assert _fam(ctx["bw_ladders"], "compression_floor")["exercise_id"] == "straddle_l_sit"
         ids = {d["exercise_id"] for d in ctx["technique_library"]["drills"]}
         assert {"glued_feet_board", "three_attempt_comp", "fall_ladder", "pocket_rampup_hangboard"} <= ids

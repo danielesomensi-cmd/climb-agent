@@ -950,7 +950,7 @@ The timer shows total time and intervals computed in real-time. During execution
 
 ## 16b. The Coach (AI Chat)
 
-The **Coach** (in the More menu, or from the card on Today) is a conversational training assistant that knows your plan and your history: your current phase and week, your assessment profile, your test baselines and current working loads, your recent sessions and outdoor logs, and your planned outdoor days and trips. It replies in the language you write in.
+The **Coach** (in the More menu, or from the card on Today) is a conversational training assistant that knows your plan and your history: your current phase and week, your assessment profile, your test baselines and current working loads, your recent sessions and outdoor logs, the notes you write on an exercise when you log it (last two weeks — "left elbow stiff on the last set" is read and taken into account), and your planned outdoor days and trips. It replies in the language you write in.
 
 It can also pull **real weather** on demand (OpenWeatherMap): just ask. Say "here" (allow location access on the Coach page) for current conditions where you are, or name any crag/city and a day up to 5 ahead — "what conditions will I find at Berdorf on Sunday?" gets a real answer with a friction score and advice. It only checks the weather when your question needs it, and it never invents conditions: if it can't reach the provider it tells you so.
 
