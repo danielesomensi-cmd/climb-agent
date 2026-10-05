@@ -143,7 +143,7 @@ backend/
                      # (no adaptation/ submodule: B299 deleted it — the only
                      #  closed loop is progression_v1.apply_feedback, see
                      #  docs/ENGINE_ARCHITECTURE.md §8)
-  api/               # FastAPI REST API (26 routers)
+  api/               # FastAPI REST API (27 routers)
     routers/         # state, catalog, onboarding, assessment, public_assessment, macrocycle,
                      # plan, week, session, replanner, feedback, outdoor, reports, quotes, user, admin, weekly_override, free_session, subscription, custom_session, body_part_picker, mobility, weather, coach, tips, milestones
   catalog/           # JSON data: exercises, sessions, templates, progressions (C272 ladders) (versioned under v1/)
@@ -179,7 +179,7 @@ user_state.assessment + user_state.goal
 
 ## API endpoints
 
-95 endpoints total (93 router + 2 app-level: health check + stripe webhook). B320 retired `/api/user/recovery-code` and `/api/user/recover`.
+98 endpoints total (96 router + 2 app-level: health check + stripe webhook). B320 retired `/api/user/recovery-code` and `/api/user/recover`.
 
 | Method | Path | Description |
 |--------|------|-------------|
