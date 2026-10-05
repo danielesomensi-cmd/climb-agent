@@ -149,6 +149,7 @@ function buildGuidedExercise(inst: Record<string, unknown>): GuidedExercise {
       measure: asMeasure(suggested.measure),
       // A298: the bodyweight ladder level the resolver prescribed (bw_ladder).
       ladder: asLadder((suggested.bw_ladder as Record<string, unknown> | undefined)?.ladder),
+      ladderSource: prescription.source === "bw_ladder" ? "engine" : undefined,
       targetReps: typeof suggested.target_reps === "number" ? suggested.target_reps : undefined,
       painFlag: suggested.pain_flag === true,
       rightHand: rightHand ? { externalLoadKg: rightHand.suggested_external_load_kg as number | undefined } : undefined,

@@ -905,6 +905,13 @@ export interface GuidedExercise {
     ladder?: LadderInfo;
     /** A298: the custom session the row comes from (the promotion tap rewrites it). */
     customSessionId?: string;
+    /**
+     * A298: where the dose came from — "engine" (resolver ladder stage,
+     * prescription.source "bw_ladder") or "ladder" (custom ladder row). Sent
+     * back as `bw_ladder` on the feedback item: a planned session that was
+     * never played is not cached server-side, so this is how the server knows.
+     */
+    ladderSource?: "engine" | "ladder";
     rightHand?: { externalLoadKg?: number };
     leftHand?: { externalLoadKg?: number };
   };

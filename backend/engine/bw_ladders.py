@@ -244,9 +244,13 @@ def _l_sit_test(state: Mapping[str, Any], ref: date, archived_weeks: ArchivedWee
 
 
 def _history(state: Mapping[str, Any], ref: date, archived_weeks: ArchivedWeeks,
-             doc: Mapping[str, Any]) -> Dict[str, Dict[str, Any]]:
+             doc: Mapping[str, Any], exclude: Optional[Iterable[Tuple[str, str]]] = None,
+             ) -> Dict[str, Dict[str, Any]]:
     """Per family: the highest level completed cleanly in the window, with
-    the latest dose logged at that level."""
+    the latest dose logged at that level. ``exclude``: ``(date, session_id)``
+    pairs left out (A298: the session whose feedback is being applied — it is
+    already marked done, and seeding from its own dose would count it twice)."""
+    skip = {(str(d), str(sid)) for d, sid in (exclude or ())}
     seed = doc.get("seed_rules") or {}
     win = int(seed.get("history_window_days") or 120)
     win_skill = int(seed.get("skill_family_history_window_days") or 60)
@@ -254,6 +258,8 @@ def _history(state: Mapping[str, Any], ref: date, archived_weeks: ArchivedWeeks,
     best: Dict[str, Dict[str, Any]] = {}
     for d, s, _src in iter_plan_sessions(state, archived_weeks):
         if s.get("status") != "done" or is_test_session(s):
+            continue
+        if skip and (str(d)[:10], str(s.get("session_id") or "")) in skip:
             continue
         dd = _as_date(d)
         if dd > ref:
@@ -327,7 +333,8 @@ def _row(fam: Mapping[str, Any], idx: Optional[int], *, source: str, target: Opt
 
 def seed_levels(state: Mapping[str, Any], ref_date: DateLike, *, archived_weeks: ArchivedWeeks = None,
                 equipment: Optional[Iterable[str]] = None,
-                ladders: Optional[Mapping[str, Any]] = None) -> Dict[str, Any]:
+                ladders: Optional[Mapping[str, Any]] = None,
+                exclude_sessions: Optional[Iterable[Tuple[str, str]]] = None) -> Dict[str, Any]:
     """Where the athlete stands on each bodyweight family on ``ref_date``.
 
     Order (BW selection rules): persisted state → tested gate → history →
@@ -347,7 +354,7 @@ def seed_levels(state: Mapping[str, Any], ref_date: DateLike, *, archived_weeks:
     except Exception:  # pragma: no cover
         pulling_tested = False
     eq = set(equipment) if equipment is not None else None
-    hist = _history(state, ref, archived_weeks, doc) if gate else {}
+    hist = _history(state, ref, archived_weeks, doc, exclude_sessions) if gate else {}
     l_sit = _l_sit_test(state, ref, archived_weeks) if gate else None
 
     rows: List[Dict[str, Any]] = []

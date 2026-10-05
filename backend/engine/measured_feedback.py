@@ -719,6 +719,11 @@ def attach_measure_fields(
         copy = dict(ex)
         eid = str(copy.get("exercise_id") or "")
         kind = measure_kind(eid)
+        if copy.get("progress_source") == "bw_ladder" and copy.get("measure"):
+            # A298: a ladder row already carries the ladder's measure (bw_reps /
+            # bw_hold) — a dp_reps here would show a double progression for a
+            # row whose dose the ladder sets.
+            kind = None
         if kind:
             copy["measure"] = kind
             if kind == MEASURE_DP_REPS:

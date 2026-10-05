@@ -242,6 +242,8 @@ export function buildGuidedStateFromExercises(
         restBetweenRepsSeconds: ex.rest_between_reps_seconds as number | undefined,
         restSeconds: ex.rest_between_sets_seconds as number | undefined,
         loadKg,
+        // A298: a ladder row at a terminal level carries its slower eccentric.
+        tempo: typeof ex.tempo === "string" ? (ex.tempo as string) : undefined,
         notes: ex.notes as string | undefined,
       },
       suggested: {
@@ -258,6 +260,7 @@ export function buildGuidedStateFromExercises(
         targetReps: typeof ex.target_reps === "number" ? (ex.target_reps as number) : undefined,
         // A298: ladder rows of a custom session (badge + promotion tap).
         ladder: asLadder(ex.ladder),
+        ladderSource: ex.progress_source === "bw_ladder" ? "ladder" : undefined,
         customSessionId: customSessionIdOf(sessionId),
       },
       cues: (ex.cues as string[] | undefined) ?? undefined,

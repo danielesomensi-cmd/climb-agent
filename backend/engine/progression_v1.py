@@ -2882,8 +2882,14 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
 
         # A298: bodyweight ladder families — bw_progression moves (tested
         # athletes / persisted entries only; None → nothing to do here, the
-        # bodyweight item never had a branch before A298).
-        if fb_load_model == "bodyweight_only":
+        # bodyweight item never had a branch before A298). A few ladder levels
+        # carry a load model of their own (back_extension, pallof_press,
+        # pallof_press_standing_pause, weighted_hollow_hold are external_load):
+        # their ladder level moves too, and the item then falls through to its
+        # load branch so the kg memory keeps working as before.
+        from backend.engine import bw_ladders as _bwl
+
+        if fb_load_model == "bodyweight_only" or _bwl.family_of(exercise_id, date_value or None):
             from backend.engine import bw_progression as _bwp
 
             if bw_phase is None:
@@ -2894,7 +2900,8 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
             )
             if _bw_out is not None:
                 bw_outcomes.append(_bw_out)
-            continue
+            if fb_load_model == "bodyweight_only":
+                continue
 
         if fb_load_model == "total_load":
             used_total = item.get("used_total_load_kg")

@@ -280,16 +280,26 @@ def tested(state: Mapping[str, Any], ref_date: DateLike) -> bool:
 def entries_for(
     state: Mapping[str, Any], ref_date: DateLike, *,
     equipment: Optional[Iterable[str]] = None, require_tested: bool = True,
-    archived_weeks: Any = None,
+    archived_weeks: Any = None, exclude_session_key: Optional[str] = None,
 ) -> Dict[str, Dict[str, Any]]:
     """``{family: entry}`` on ``ref_date``: the persisted entry when present,
     else the read-time seed (history / L-sit test). Empty for an untested
-    athlete when ``require_tested`` (the default): no consumer changes."""
+    athlete when ``require_tested`` (the default): no consumer changes.
+
+    ``exclude_session_key`` (``date|session_id``): the history seed ignores
+    that session — the feedback path passes the session it is applying, which
+    post_feedback has already marked done (otherwise its own dose would seed
+    the base one step below what was prescribed and done)."""
     if require_tested and not tested(state, ref_date):
         return {}
     fams = _families()
     out: Dict[str, Dict[str, Any]] = {}
-    seed = bl.seed_levels(state, ref_date, equipment=equipment, archived_weeks=archived_weeks)
+    exclude = None
+    if exclude_session_key and "|" in exclude_session_key:
+        d, sid = exclude_session_key.split("|", 1)
+        exclude = [(d[:10], sid)]
+    seed = bl.seed_levels(state, ref_date, equipment=equipment, archived_weeks=archived_weeks,
+                          exclude_sessions=exclude)
     persisted = _persisted(state)
     for row in seed.get("families") or []:
         name = str(row.get("family"))
@@ -324,6 +334,27 @@ def effective_entry(entry: Mapping[str, Any], fam: Mapping[str, Any], ref_date: 
     out.update({"level_idx": idx, "exercise_id": lv["exercise_id"], "axis": lv["axis"],
                 "sets": int(lv["sets"]), "target": int(lv["band"]["lo"]), "tempo_level": 0,
                 "added_kg": 0.0, "top_streak": 0, "vh_streak": 0, "reentry": {"gap_days": gap}})
+    return out
+
+
+def reentry_at_stored_level(entry: Mapping[str, Any], fam: Mapping[str, Any],
+                            ref_date: DateLike) -> Optional[Dict[str, Any]]:
+    """R11 when the athlete keeps the STORED level after a long gap (a custom
+    'ladder' row saved at that level): the same level restarted at the bottom
+    of its band, tempo and load cleared. None when there is no re-entry.
+
+    Without it the row would sit one level ABOVE the effective entry: the
+    user's own dose, no measure, feedback classified ``other_level`` and never
+    applied — so ``last_session_date`` never moved and the family stayed
+    frozen until a manual edit."""
+    eff = effective_entry(entry, fam, ref_date)
+    if not eff.get("reentry"):
+        return None
+    lv = _levels(fam)[int(entry["level_idx"])]
+    out = dict(entry)
+    out.update({"sets": int(lv["sets"]), "target": int(lv["band"]["lo"]), "tempo_level": 0, "added_kg": 0.0,
+                "top_streak": 0, "vh_streak": 0, "last_session_date": None,
+                "reentry": dict(eff["reentry"], kept_level=True)})
     return out
 
 
@@ -440,11 +471,13 @@ def measure_for_axis(axis: str) -> str:
 # next_state (R0-R12)
 # ---------------------------------------------------------------------------
 
+HANDOFF_MESSAGE = "Top of the ladder: move on to the loaded variant."
+#: Shown when no label and no measure came back (A295 "not rated").
+NOT_RATED_MESSAGE = "Not rated: the level stays as it is."
+
 _MESSAGES = {
-    "hold": "Not rated: the level stays as it is.",
     "frozen": "Performance phase: doses frozen.",
     "manual_only": "Next level is manual only (no lower-back zone configured).",
-    "handoff": "Top of the ladder: move on to the loaded variant.",
     "cap": "Top of the ladder: hold the top of the band.",
     "floor_warning": "Two very hard sessions at your floor level: check recovery.",
 }
@@ -464,6 +497,15 @@ def outcome_message(outcome: Mapping[str, Any], new: Mapping[str, Any], fam: Map
     if kind == "top_streak":
         left = int(outcome.get("sessions_left") or 1)
         return f"{left} more session{'s' if left != 1 else ''} at the top to move up"
+    if kind == "hold":
+        # A rated 'ok' (the unrated case never reaches here: apply_bw_item
+        # answers it with NOT_RATED_MESSAGE).
+        return f"Same dose next time: {dose['summary']}"
+    if kind == "handoff":
+        hid = outcome.get("handoff_exercise_id")
+        step = outcome.get("start_kg")
+        tail = f", start at +{step:g} kg" if step else ""
+        return f"Top of the ladder: move on to {_exercise_name(hid)}{tail}" if hid else HANDOFF_MESSAGE
     if kind in ("tempo_up",):
         return f"Last level: {dose['summary']}"
     if kind == "level_down":
@@ -512,7 +554,12 @@ def next_state(
             base = m
         raw = int(round(base)) + delta * step
     else:
+        base = float(target)
         raw = target + delta * step
+    # R5/R6: only a session actually performed at the top of the band (or at
+    # the R10 cap) counts towards a promotion. A projected target above hi
+    # (very_easy one step below, a measure plus a label) only reaches the top.
+    performed_top = int(round(base)) >= min(hi, cap)
 
     failed = label == "very_hard" or (completed is False and (label is not None or measured is not None))
     outcome: Dict[str, Any] = {"kind": "hold"}
@@ -553,7 +600,11 @@ def next_state(
         if frozen:
             # R-PHASE: regressions stay, nothing goes up.
             raw = min(raw, target)
-        if raw > hi or raw > cap:
+        if (raw > hi or raw > cap) and not performed_top:
+            new["target"] = min(hi, cap)
+            new["top_streak"] = 0
+            outcome = {"kind": "step_up"} if new["target"] > target else {"kind": "hold"}
+        elif raw > hi or raw > cap:
             new["target"] = hi
             top = int(cur.get("top_streak") or 0) + 1
             new["top_streak"] = top
@@ -625,17 +676,29 @@ def _advance(new: Dict[str, Any], fam: Mapping[str, Any], idx: int, *, frozen: b
     kind = term.get("kind")
     restart = max(lo, hi - TERMINAL_RESTART_STEPS * step)
     load_step = _num(term.get("load_step_kg_distal")) or _num(term.get("load_step_kg_upper")) or _num(term.get("load_step_kg_lower"))
+    handoff_id = term.get("handoff_exercise_id")
     if kind == "tempo":
         steps = term.get("tempo_steps") or []
         tl = int(new.get("tempo_level") or 0)
         if tl < len(steps):
             new.update({"tempo_level": tl + 1, "target": restart, "top_streak": 0})
             return new, {"kind": "tempo_up"}
+        if term.get("then") == "load" and handoff_id:
+            # R7: the load goes on the catalog's loaded variant, never as kg
+            # piled onto the bodyweight level.
+            return new, {"kind": "handoff", "handoff_exercise_id": handoff_id, "start_kg": load_step}
         if term.get("then") == "load" and load_step:
             new.update({"added_kg": _round_half(float(new.get("added_kg") or 0) + load_step),
                         "target": restart, "top_streak": 0})
             return new, {"kind": "load_up"}
         return new, {"kind": "cap"}
+    if kind == "load" and handoff_id:
+        # R7 'load' with a named loaded variant (weighted_l_sit,
+        # weighted_side_plank, back_extension, weighted_pushup): hand off to it.
+        # Kg piled onto the last bodyweight level (a loaded Copenhagen, a
+        # loaded unilateral back extension) is not a progression the catalog
+        # defines, and it had no ceiling.
+        return new, {"kind": "handoff", "handoff_exercise_id": handoff_id, "start_kg": load_step}
     if kind == "load" and load_step and not term.get("no_added_load"):
         new.update({"added_kg": _round_half(float(new.get("added_kg") or 0) + load_step),
                     "target": restart, "top_streak": 0})
@@ -715,12 +778,19 @@ def apply_bw_item(
         else:
             base = _normalize(persisted, fam)
     else:
-        base = entries_for(updated, date_value).get(family)
+        # The session being logged is already marked done: keep it out of the
+        # history seed, or its own dose becomes the base minus one step.
+        base = entries_for(updated, date_value, exclude_session_key=session_key).get(family)
     if base is None:
         return None
     eff = effective_entry(base, fam, date_value)
+    step_base = base
     if int(item_level) != int(eff["level_idx"]):
-        return {"family": family, "kind": "other_level", "applied": False}
+        kept = reentry_at_stored_level(base, fam, date_value)
+        if kept is None or int(item_level) != int(base["level_idx"]):
+            return {"family": family, "kind": "other_level", "applied": False}
+        # R11 with the stored level kept (custom row saved at that level).
+        step_base = eff = kept
     measured, test_hold = item_measure(item, eff["axis"])
     ctx = str(item.get("bw_ladder") or "")
     dose = dose_for(eff, fam, phase=phase)
@@ -729,12 +799,12 @@ def apply_bw_item(
     completed = item.get("completed")
     completed = None if completed is None else bool(completed)
     new, outcome = next_state(
-        base, fam, label=rating, completed=completed, measured=measured, test_hold=test_hold,
+        step_base, fam, label=rating, completed=completed, measured=measured, test_hold=test_hold,
         phase=phase, ref_date=date_value, custom=(ctx == "ladder"),
         lower_back_zone=has_lower_back_zone(updated),
     )
     if outcome.get("kind") == "hold" and rating is None and measured is None:
-        return {"family": family, "kind": "hold", "applied": False, "message": _MESSAGES["hold"]}
+        return {"family": family, "kind": "hold", "applied": False, "message": NOT_RATED_MESSAGE}
     outcome = dict(outcome)
     outcome["message"] = outcome_message(outcome, new, fam, phase)
     snap = _strip_private(base)
@@ -792,6 +862,12 @@ def attach_feedback_context(log_entry: Dict[str, Any], state: Mapping[str, Any],
                     _scan(s.get("exercises"), False)
                     _scan(s.get("exercise_instances"), True)
                     _scan(((s.get("resolved") or {}).get("resolved_session") or {}).get("exercise_instances"), True)
+    # The client may send the resolved session it played (``planned``): a
+    # planned engine session that was never played is not cached in the stored
+    # plan (B120 caches done/skipped only), so its instances may be there only.
+    for ps in log_entry.get("planned") or []:
+        if isinstance(ps, Mapping) and str(ps.get("session_id") or target_sid) == str(target_sid):
+            _scan(ps.get("exercise_instances"), True)
     if str(target_sid).startswith("custom_"):
         cs_id = str(target_sid)[len("custom_"):]
         for cs in state.get("custom_sessions") or []:
@@ -801,6 +877,11 @@ def attach_feedback_context(log_entry: Dict[str, Any], state: Mapping[str, Any],
         if not isinstance(item, dict):
             continue
         eid = str(item.get("exercise_id") or "")
+        # A tag sent by the client (the guided player knows the instance it
+        # played came from the ladder stage) is kept only when it is one of
+        # the known values.
+        if item.get("bw_ladder") not in (None, "", "engine", "ladder", "fixed"):
+            item.pop("bw_ladder", None)
         if eid in tags and not item.get("bw_ladder") and bl.family_of(eid, target_date):
             item["bw_ladder"] = tags[eid]
 
@@ -833,6 +914,10 @@ def resolve_custom_ladder_rows(state: Mapping[str, Any], exercises: Sequence[Map
         if entry is None or fam is None:
             continue
         eff = effective_entry(entry, fam, on)
+        kept = reentry_at_stored_level(entry, fam, on) if row_level == int(entry["level_idx"]) else None
+        if kept is not None:
+            # R11 with the row's (stored) level kept: bottom of its band.
+            eff = kept
         if row_level > int(eff["level_idx"]):
             # A harder level than the athlete's: the user's own dose stands.
             r["ladder"] = ladder_info(eff, fam, dose_for(eff, fam, phase=phase), row_level=row_level,
@@ -845,8 +930,19 @@ def resolve_custom_ladder_rows(state: Mapping[str, Any], exercises: Sequence[Map
                 r[f"stored_{k}"] = r.get(k)
             r[k] = v
         r["rest_between_sets_seconds"] = r.get("rest_between_sets_seconds") or dose["rest_s"]
+        # R7 terminal: the slower eccentric and the added kg are part of the
+        # dose — without them the row reads "3x6" and the athlete regresses.
+        if dose.get("tempo_ecc_s"):
+            r["tempo"] = f"{dose['tempo_ecc_s']} s eccentric"
+            r["tempo_eccentric_seconds"] = dose["tempo_ecc_s"]
+        if dose.get("added_kg"):
+            if r.get("load_kg") != dose["added_kg"]:
+                r["stored_load_kg"] = r.get("load_kg")
+            r["load_kg"] = dose["added_kg"]
         r["progress_source"] = "bw_ladder"
         r["ladder"] = ladder_info(eff, fam, dose, row_level=row_level, lower_back_zone=lbz)
+        if eff.get("reentry"):
+            r["ladder"]["reentry"] = dict(eff["reentry"])
         if family in seen:
             r["ladder"]["proposal"] = None
         seen.add(family)
@@ -862,8 +958,9 @@ def attach_technique_measures(state: Mapping[str, Any], exercises: Sequence[Mapp
     rows = [dict(r) for r in exercises or [] if isinstance(r, Mapping)]
     if not on or not tested(state, on):
         return rows
+    current = current_feet_drills(state)
     for r in rows:
-        kind = technique_measure_kind(str(r.get("exercise_id") or ""))
+        kind = technique_measure_kind(str(r.get("exercise_id") or ""), current)
         if kind and not r.get("measure"):
             r["measure"] = kind
             r["technique_level"] = technique_level(state, "feet" if kind == MEASURE_FEET else "falls")
@@ -992,21 +1089,43 @@ def ladder_view(state: Mapping[str, Any], ref_date: DateLike) -> Dict[str, Any]:
 # Resolver stage
 # ---------------------------------------------------------------------------
 
+#: Session intents whose dose must never be raised by the ladder stage: a
+#: recovery / deload / regeneration session keeps its catalog pick and dose
+#: (a mastered lower level would otherwise come back at the top of its band).
+RECOVERY_GOALS = frozenset({"regeneration", "recovery", "flexibility", "mobility"})
+
+
+def is_recovery_session(session: Optional[Mapping[str, Any]]) -> bool:
+    if not isinstance(session, Mapping):
+        return False
+    goal = str((session.get("intent") or {}).get("primary_goal") or "")
+    tags = {str(t) for t in session.get("phase_tags") or []}
+    return goal in RECOVERY_GOALS or "deload" in tags
+
+
 def build_resolve_context(state: Optional[Mapping[str, Any]], target_date: Any,
-                          phase: Optional[str] = None) -> Optional[Dict[str, Any]]:
+                          phase: Optional[str] = None,
+                          session: Optional[Mapping[str, Any]] = None) -> Optional[Dict[str, Any]]:
     """None (resolver unchanged, bit for bit) unless the athlete is tested on
-    ``target_date``. ``entries`` may be empty (technique measures only)."""
+    ``target_date``. ``entries`` may be empty (technique measures only).
+    A recovery / deload session (``session`` intent) gets no ladder stage —
+    only the technique measures."""
     if not state or not target_date:
         return None
     try:
         on = _iso(target_date)
         if not on or not tested(state, on):
             return None
-        entries = entries_for(state, on)
+        entries = {} if is_recovery_session(session) else entries_for(state, on)
     except Exception:  # never let the ladder break a resolution
         return None
     return {"date": on, "entries": entries, "phase": phase or phase_on(state, on),
-            "lower_back_zone": has_lower_back_zone(state), "used_families": set()}
+            "lower_back_zone": has_lower_back_zone(state), "used_families": set(),
+            "feet_drills": current_feet_drills(state)}
+
+
+#: Entry sources that can only sit above the R12 ceiling by the athlete's hand.
+MANUAL_SOURCES = frozenset({"user_edit", "feedback"})
 
 
 def swap_plan(ctx: Optional[Mapping[str, Any]], exercise_id: str) -> Optional[Dict[str, Any]]:
@@ -1025,7 +1144,13 @@ def swap_plan(ctx: Optional[Mapping[str, Any]], exercise_id: str) -> Optional[Di
     if entry is None or fam is None:
         return None
     eff = effective_entry(entry, fam, ctx["date"])
-    start = min(int(eff["level_idx"]), auto_ceiling(fam, ctx["lower_back_zone"]))
+    start = int(eff["level_idx"])
+    if entry.get("source") not in MANUAL_SOURCES:
+        # R12: the engine never ASSIGNS a lower-back level on its own (a seed
+        # above the ceiling is capped). An entry the athlete set by hand
+        # (settings, promotion tap — or moved by feedback from there) is his
+        # explicit choice and is honoured, or the loop dies on that family.
+        start = min(start, auto_ceiling(fam, ctx["lower_back_zone"]))
     order = list(range(start, -1, -1))
     return {"family": family, "entry": eff, "fam": fam, "order": order,
             "candidates": [_levels(fam)[i]["exercise_id"] for i in order]}
@@ -1048,7 +1173,10 @@ def stage_prescription(ctx: Mapping[str, Any], plan: Mapping[str, Any], level_id
         merged["tempo_eccentric_seconds"] = dose["tempo_ecc_s"]
         merged["tempo"] = f"{dose['tempo_ecc_s']} s eccentric"
     if dose.get("added_kg"):
+        # ``load_kg`` is what the session card and the guided player render
+        # ("Load: X kg"); added_load_kg is kept for the audit.
         merged["added_load_kg"] = dose["added_kg"]
+        merged["load_kg"] = dose["added_kg"]
     merged["source"] = "bw_ladder"
     ctx["used_families"].add(plan["family"])
     info = ladder_info(eff, fam, dose, row_level=level_idx, lower_back_zone=ctx["lower_back_zone"])
@@ -1073,10 +1201,30 @@ def feet_drills() -> frozenset:
     return frozenset(out)
 
 
-def technique_measure_kind(exercise_id: str) -> Optional[str]:
+def feet_level_drills(level: Optional[str]) -> frozenset:
+    """The drills of one feet level (P1 when unknown)."""
+    t = _tech_ladders().get("feet") or {}
+    levels = t.get("levels") or []
+    if not levels:
+        return frozenset()
+    lv = next((x for x in levels if str(x.get("level")) == str(level)), levels[0])
+    return frozenset(str(d) for d in lv.get("drills") or [])
+
+
+def current_feet_drills(state: Mapping[str, Any]) -> frozenset:
+    """Drills of the athlete's CURRENT feet level: only their readjustment
+    count speaks for that level (a P1 drill at flash-1 says nothing about
+    holding the foot inside limit work at P3)."""
+    return feet_level_drills(technique_level(state, "feet"))
+
+
+def technique_measure_kind(exercise_id: str, feet_drill_ids: Optional[Iterable[str]] = None) -> Optional[str]:
+    """The technique measure a drill carries. ``feet_drill_ids``: the drills of
+    the athlete's current feet level (None = any feet drill, catalog view)."""
     if exercise_id in FALL_DRILLS:
         return MEASURE_FEAR
-    if exercise_id in feet_drills():
+    pool = feet_drills() if feet_drill_ids is None else frozenset(feet_drill_ids)
+    if exercise_id in pool:
         return MEASURE_FEET
     return None
 
@@ -1144,25 +1292,25 @@ def technique_next(entry: Optional[Mapping[str, Any]], ladder: str, value: float
 def apply_technique_measures(updated: Dict[str, Any], items: Sequence[Mapping[str, Any]], *,
                              date_value: str, session_key: str) -> List[Dict[str, Any]]:
     """One number per ladder per session (the lowest readjustment count, the
-    highest fear). Tested athletes only — the measure is only asked of them."""
+    highest fear). Tested athletes only — the measure is only asked of them.
+    Feet: only the drills of the level the athlete stood on BEFORE this
+    session feed it (advance and regress alike)."""
     if not date_value or not tested(updated, date_value):
         return []
-    feet_vals = [int(_num(i.get("sample_readjust"))) for i in items
-                 if isinstance(i, Mapping) and _num(i.get("sample_readjust")) is not None
-                 and str(i.get("exercise_id") or "") in feet_drills()]
-    fear_vals = [int(_num(i.get("fear_max"))) for i in items
-                 if isinstance(i, Mapping) and _num(i.get("fear_max")) is not None
-                 and str(i.get("exercise_id") or "") in FALL_DRILLS]
     out = []
     store = _store(updated)
     tech = store.get(TECHNIQUE_KEY) if isinstance(store.get(TECHNIQUE_KEY), dict) else {}
-    for ladder, vals, pick in (("feet", feet_vals, min), ("falls", fear_vals, max)):
-        if not vals:
-            continue
+    for ladder, field, pick in (("feet", "sample_readjust", min), ("falls", "fear_max", max)):
         cur = tech.get(ladder) if isinstance(tech.get(ladder), Mapping) else None
         prev = (cur or {}).get("_prev") if isinstance((cur or {}).get("_prev"), Mapping) else None
         base = prev.get("entry") if prev and prev.get("session_key") == session_key else cur
         base = {k: v for k, v in (base or {}).items() if k != "_prev"} or None
+        drills = feet_level_drills((base or {}).get("level")) if ladder == "feet" else FALL_DRILLS
+        vals = [int(_num(i.get(field))) for i in items
+                if isinstance(i, Mapping) and _num(i.get(field)) is not None
+                and str(i.get("exercise_id") or "") in drills]
+        if not vals:
+            continue
         new, kind = technique_next(base, ladder, float(pick(vals)), date_value)
         new["_prev"] = {"session_key": session_key, "entry": base}
         tech[ladder] = new

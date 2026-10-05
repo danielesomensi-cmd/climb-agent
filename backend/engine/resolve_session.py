@@ -1491,7 +1491,7 @@ def _bw_apply_instance(bw_ctx: Optional[Dict[str, Any]], inst: Dict[str, Any],
         if audit.get("measure"):
             sug["measure"] = audit["measure"]
         return
-    kind = _bwp.technique_measure_kind(norm_str(inst.get("exercise_id")))
+    kind = _bwp.technique_measure_kind(norm_str(inst.get("exercise_id")), bw_ctx.get("feet_drills"))
     if kind:
         inst.setdefault("suggested", {})["measure"] = kind
 
@@ -1719,7 +1719,7 @@ def resolve_session(
     if user_state and target_date:
         from backend.engine import bw_progression as _bwp
         try:
-            bw_ctx = _bwp.build_resolve_context(user_state, target_date, phase)
+            bw_ctx = _bwp.build_resolve_context(user_state, target_date, phase, session=session)
         except Exception:  # never let the ladder layer break a resolution
             logger.warning("resolve_session: bw ladder context failed — catalog doses", exc_info=True)
             bw_ctx = None
