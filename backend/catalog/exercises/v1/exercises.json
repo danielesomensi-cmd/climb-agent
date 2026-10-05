@@ -2441,6 +2441,9 @@
       "phase_affinity": [
         "strength_power",
         "performance"
+      ],
+      "protocol_refs": [
+        "limit_weak_style"
       ]
     },
     {
@@ -2500,6 +2503,9 @@
       ],
       "phase_affinity": [
         "strength_power"
+      ],
+      "protocol_refs": [
+        "limit_weak_style"
       ]
     },
     {
@@ -9725,6 +9731,9 @@
       "phase_affinity": [
         "base",
         "deload"
+      ],
+      "protocol_refs": [
+        "pocket_warmup"
       ]
     },
     {
@@ -10472,6 +10481,9 @@
       "phase_affinity": [
         "strength_power",
         "performance"
+      ],
+      "protocol_refs": [
+        "limit_weak_style"
       ]
     },
     {
@@ -10530,6 +10542,9 @@
       "load_model": "grade_relative",
       "phase_affinity": [
         "strength_power"
+      ],
+      "protocol_refs": [
+        "limit_weak_style"
       ]
     },
     {
@@ -14570,6 +14585,4095 @@
       "phase_affinity": [
         "base",
         "deload"
+      ]
+    },
+    {
+      "id": "tuck_l_sit",
+      "name": "Tuck L-Sit",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "compression",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "core_compression",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "wrist_sensitive"
+      ],
+      "phase_affinity": [
+        "base",
+        "deload"
+      ],
+      "experience_minimum_years": 0,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": null,
+        "work_seconds": 10,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Knees pulled to the chest, arms locked. Band 10-30 s, +5 s per step."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Entry level of the floor compression ladder: the L-sit with the knees tucked, which shortens the lever while teaching shoulder depression and hip flexor drive. (GMB L-sit progression; Antranik)",
+      "cues": [
+        "Push the floor away: shoulders down, elbows locked",
+        "Knees to the chest, feet off the floor",
+        "Build wrist tolerance first: lean slightly forward if the wrists complain"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "sources": [
+        "https://gmb.io/l-sit/",
+        "https://antranik.org/?p=6184"
+      ]
+    },
+    {
+      "id": "one_leg_l_sit",
+      "name": "One-Leg L-Sit",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "compression",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "core_compression",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "wrist_sensitive"
+      ],
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ],
+      "experience_minimum_years": 0,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": null,
+        "work_seconds": 10,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "One leg straight, the other tucked; switch legs each set. Band 10-30 s, +5 s per step."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Second level of the floor compression ladder: one leg extended, the other tucked. (GMB L-sit progression)",
+      "cues": [
+        "Extended leg straight, quad tight, toes pointed",
+        "Shoulders depressed, chest tall",
+        "Switch the extended leg every set"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "sources": [
+        "https://gmb.io/l-sit/"
+      ]
+    },
+    {
+      "id": "straddle_l_sit",
+      "name": "Straddle L-Sit",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "compression",
+      "intensity_level": "high",
+      "fatigue_cost": 5,
+      "recency_group": "core_compression",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "wrist_sensitive"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ],
+      "experience_minimum_years": 1,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": null,
+        "work_seconds": 20,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 75,
+        "notes": "Legs straight and wide, hands between the legs. Band 10-30 s, +5 s per step."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Straddle L-sit: legs straight and wide apart with the hands between them. Harder than the floor L-sit because the hips must flex further with the legs apart; the bridge to the V-sit. (Antranik L-sit to V-sit)",
+      "cues": [
+        "Hands between the legs, fingers forward",
+        "Lift by pressing the floor away, not by leaning back",
+        "Legs straight and wide, knees to the ceiling"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "sources": [
+        "https://antranik.org/?p=6184"
+      ]
+    },
+    {
+      "id": "v_sit_45",
+      "name": "V-Sit 45°",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "compression",
+      "intensity_level": "high",
+      "fatigue_cost": 6,
+      "recency_group": "core_compression",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "wrist_sensitive"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ],
+      "experience_minimum_years": 2,
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": null,
+        "work_seconds": 5,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90,
+        "notes": "Legs 45° above horizontal. Band 5-10 s, +2 s per step. Gate: compression_pulses in the same block."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "V-sit with the legs 45° above horizontal. Active compression strength and pike flexibility are the real limit: do the seated compression pulses in the same block. (Antranik)",
+      "cues": [
+        "Hips forward of the hands, shoulders depressed",
+        "Pull the legs up with the hip flexors, do not swing",
+        "Stop the set when the legs sink below 45°"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "sources": [
+        "https://antranik.org/?p=6184"
+      ]
+    },
+    {
+      "id": "v_sit",
+      "name": "V-Sit",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "compression",
+      "intensity_level": "max",
+      "fatigue_cost": 7,
+      "recency_group": "core_compression",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "wrist_sensitive"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "performance"
+      ],
+      "experience_minimum_years": 3,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": null,
+        "work_seconds": 5,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 120,
+        "notes": "Legs close to vertical. Band 5-10 s, +2 s per step; criterion 3x8 s."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Full V-sit: legs close to vertical, torso leaning back over the hands. Top of the floor compression ladder (criterion 3x8 s). (Antranik)",
+      "cues": [
+        "Push the shoulders down hard and lean back",
+        "Legs as close to the face as you can hold",
+        "Quality over time: stop when the legs drop"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "sources": [
+        "https://antranik.org/?p=6184"
+      ]
+    },
+    {
+      "id": "compression_pulses",
+      "name": "Seated Compression Pulses",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "compression",
+      "intensity_level": "medium",
+      "fatigue_cost": 3,
+      "recency_group": "core_compression_mobility",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ],
+      "experience_minimum_years": 0,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 10,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 45,
+        "notes": "Seated, legs straight, hands beside the knees: lift both heels 2-3 cm and lower. 3x8-12."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Active pike compression drill: seated with straight legs, hands beside the knees, lift the heels off the floor with the hip flexors. Gate exercise for the V-sit levels — pike mobility, not strength, is what usually stops progress. (Antranik)",
+      "cues": [
+        "Sit tall, legs straight and together",
+        "Hands beside the knees, not behind the hips",
+        "Lift the heels with the hip flexors, no rocking back"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "sources": [
+        "https://antranik.org/?p=6184"
+      ]
+    },
+    {
+      "id": "weighted_l_sit",
+      "name": "Weighted L-Sit (Ankle Weights)",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "compression",
+      "intensity_level": "max",
+      "fatigue_cost": 6,
+      "recency_group": "core_compression",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "wrist_sensitive"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "performance"
+      ],
+      "experience_minimum_years": 3,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": null,
+        "work_seconds": 10,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90,
+        "notes": "Terminal of the floor ladder: ankle weights, +1 kg per step (distal load step). Band 10-20 s."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Floor L-sit loaded with ankle weights. Terminal step of the floor compression ladder once the bodyweight holds are capped. The load sits at the end of the lever, so steps are small (1 kg).",
+      "cues": [
+        "Same position as the bodyweight L-sit — the weight must not change the shape",
+        "Add 1 kg only when every set reaches the top of the band"
+      ],
+      "video_url": null,
+      "load_model": "external_load",
+      "sources": [
+        "https://gmb.io/l-sit/"
+      ]
+    },
+    {
+      "id": "hanging_knee_raise",
+      "name": "Hanging Knee Raise",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "compression",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "core_compression",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "base",
+        "deload"
+      ],
+      "experience_minimum_years": 0,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 10,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Knees to the chest from a dead hang, no swing. 3x8-12."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "medium",
+        "skin": "none"
+      },
+      "description": "Entry level of the hanging compression ladder: knees raised to the chest from an active hang. (Recommended Routine; hanging leg raise progression)",
+      "cues": [
+        "Active shoulders before the knees move",
+        "Tilt the pelvis back at the top",
+        "Lower in 2 s, no swing"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "sources": [
+        "https://akuaku.org/Sarco+/progression-hanging-leg-raise-progression.html",
+        "https://www.liftosaur.com/programs/recommended-routine"
+      ]
+    },
+    {
+      "id": "ring_fallout",
+      "name": "Ring Fallout",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_extension",
+      "intensity_level": "high",
+      "fatigue_cost": 5,
+      "recency_group": "core_rollout",
+      "equipment_required": [
+        "rings"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ],
+      "experience_minimum_years": 1,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 8,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90,
+        "notes": "Rings at hip, thigh or knee height (lower = harder; dose note). 3x6-12."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Fallout on gymnastic rings from the knees or the feet: an ab-wheel rollout whose difficulty is set by the ring height. Lower rings lengthen the lever. Ring height is part of the dose. (Training for Climbing core)",
+      "cues": [
+        "Hollow body: ribs down, glutes squeezed",
+        "Arms go forward and overhead, hips follow",
+        "Come back before the lower back sags"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "sources": [
+        "https://trainingforclimbing.com/?p=10070"
+      ]
+    },
+    {
+      "id": "ab_wheel_rollout_standing_wall",
+      "name": "Standing Rollout to Wall",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_extension",
+      "intensity_level": "high",
+      "fatigue_cost": 6,
+      "recency_group": "core_rollout",
+      "equipment_required": [
+        "ab_wheel"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ],
+      "experience_minimum_years": 2,
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": 5,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90,
+        "notes": "Standing, roll out to a wall placed at the range you can control. 3-5x3-8."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Standing ab-wheel rollout stopped by a wall, so the range is capped where you can still hold a hollow position. First standing level of the rollout ladder. (Legendary Strength)",
+      "cues": [
+        "Wall at a distance you can control",
+        "Hips and shoulders move together",
+        "Pull back with the lats, not the hips"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "sources": [
+        "https://legendarystrength.com/?p=6721"
+      ]
+    },
+    {
+      "id": "ab_wheel_rollout_standing_eccentric",
+      "name": "Standing Rollout (Eccentric Only)",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_extension",
+      "intensity_level": "max",
+      "fatigue_cost": 7,
+      "recency_group": "core_rollout",
+      "equipment_required": [
+        "ab_wheel"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "performance"
+      ],
+      "experience_minimum_years": 3,
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": 4,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 120,
+        "notes": "Lower in 3-4 s from standing, come back on the knees. 3-5x3-5."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Standing rollout, lowering phase only: roll out from standing in 3-4 s and return from the knees. Lower-back risk: never assigned by the engine until a lower-back pain zone exists; manual use only.",
+      "cues": [
+        "Ribs down for the whole descent",
+        "Stop the range the moment the hips drop",
+        "Return on the knees"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "sources": [
+        "https://legendarystrength.com/?p=6721"
+      ]
+    },
+    {
+      "id": "ab_wheel_rollout_standing",
+      "name": "Standing Rollout",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_extension",
+      "intensity_level": "max",
+      "fatigue_cost": 8,
+      "recency_group": "core_rollout",
+      "equipment_required": [
+        "ab_wheel"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "performance"
+      ],
+      "experience_minimum_years": 3,
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": 5,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 120,
+        "notes": "Full standing rollout and return. 3-5x3-8."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Full standing ab-wheel rollout. Top of the rollout ladder. Lower-back risk: manual use only until a lower-back pain zone exists.",
+      "cues": [
+        "Hollow body from start to finish",
+        "Full range only if the back stays flat",
+        "Pull back with straight arms"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "sources": [
+        "https://legendarystrength.com/?p=6721"
+      ]
+    },
+    {
+      "id": "bench_hip_lift",
+      "name": "Bench Reverse Hip Lift",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "compression",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "core_dragon_flag",
+      "equipment_required": [
+        "bench"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ],
+      "experience_minimum_years": 0,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 10,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Lying on a bench, hands behind the head on the bench: lift the hips toward the ceiling. 3x8-12."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Lying reverse hip lift on a bench: hands hold the bench behind the head, the pelvis curls up toward the ceiling. Entry level of the dragon flag ladder (no loaded trunk flexion against resistance).",
+      "cues": [
+        "Hands grip the bench behind the head",
+        "Curl the pelvis up, do not throw the legs",
+        "Lower in 2-3 s"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "sources": [
+        "https://www.12minuteathlete.com/dragon-flag-tutorial/"
+      ]
+    },
+    {
+      "id": "candlestick_hold",
+      "name": "Candlestick Hold",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "isometric_hold",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "core_dragon_flag",
+      "equipment_required": [
+        "bench"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ],
+      "experience_minimum_years": 1,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": null,
+        "work_seconds": 15,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Body vertical, weight on the upper back, never on the neck. 3x10-30 s."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Candlestick hold on a bench: body straight and vertical, weight on the shoulder blades. Teaches the top position of the dragon flag. (12 Minute Athlete)",
+      "cues": [
+        "Shoulder blades on the bench, never the neck",
+        "Body straight from shoulders to toes",
+        "Squeeze glutes and quads"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "sources": [
+        "https://www.12minuteathlete.com/dragon-flag-tutorial/"
+      ]
+    },
+    {
+      "id": "dragon_flag_tuck_negative",
+      "name": "Tuck Dragon Flag Negative",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_extension",
+      "intensity_level": "high",
+      "fatigue_cost": 6,
+      "recency_group": "core_dragon_flag",
+      "equipment_required": [
+        "bench"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ],
+      "experience_minimum_years": 2,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 4,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 120,
+        "notes": "Lower in 5 s with the knees tucked. 3x3-5."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Tuck dragon flag, lowering phase only: from the candlestick, lower in 5 s with the knees tucked. The negative comes before the concentric. (12 Minute Athlete)",
+      "cues": [
+        "Never arch the lower back",
+        "Shoulder blades on the bench, never the neck",
+        "5 s down, reset at the top"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "sources": [
+        "https://www.12minuteathlete.com/dragon-flag-tutorial/"
+      ]
+    },
+    {
+      "id": "dragon_flag_tuck",
+      "name": "Tuck Dragon Flag",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_extension",
+      "intensity_level": "high",
+      "fatigue_cost": 6,
+      "recency_group": "core_dragon_flag",
+      "equipment_required": [
+        "bench"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ],
+      "experience_minimum_years": 2,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 4,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 120,
+        "notes": "Tuck dragon flag up and down. 3x3-6."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Tuck dragon flag, full repetition. (12 Minute Athlete)",
+      "cues": [
+        "Hips stay in line with the shoulders",
+        "Control both directions",
+        "Stop before the back arches"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "sources": [
+        "https://www.12minuteathlete.com/dragon-flag-tutorial/"
+      ]
+    },
+    {
+      "id": "dragon_flag_straddle_negative",
+      "name": "Straddle Dragon Flag Negative",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_extension",
+      "intensity_level": "max",
+      "fatigue_cost": 7,
+      "recency_group": "core_dragon_flag",
+      "equipment_required": [
+        "bench"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "performance"
+      ],
+      "experience_minimum_years": 3,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 4,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 120,
+        "notes": "Lower in 5 s with the legs straddled. 3x3-5. Lower-back risk: manual use only."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Straddle dragon flag, lowering phase only. Lower-back risk: never assigned by the engine until a lower-back pain zone exists. (Caliverse)",
+      "cues": [
+        "Legs straight and wide",
+        "Body in one line",
+        "Stop the range before the back arches"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "sources": [
+        "https://www.caliverse.app/exercises/negative-straddle-dragon-flag-1580"
+      ]
+    },
+    {
+      "id": "dragon_flag_straddle",
+      "name": "Straddle Dragon Flag",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_extension",
+      "intensity_level": "max",
+      "fatigue_cost": 8,
+      "recency_group": "core_dragon_flag",
+      "equipment_required": [
+        "bench"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "performance"
+      ],
+      "experience_minimum_years": 3,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 4,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 150,
+        "notes": "Straddle dragon flag up and down. 3x3-6. Lower-back risk: manual use only."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Straddle dragon flag, full repetition. Lower-back risk: manual use only. (Caliverse)",
+      "cues": [
+        "Body in one line",
+        "Control both directions",
+        "Shoulder blades on the bench"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "sources": [
+        "https://www.caliverse.app/exercises/negative-straddle-dragon-flag-1580"
+      ]
+    },
+    {
+      "id": "dragon_flag_negative",
+      "name": "Dragon Flag Negative",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_extension",
+      "intensity_level": "max",
+      "fatigue_cost": 8,
+      "recency_group": "core_dragon_flag",
+      "equipment_required": [
+        "bench"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "performance"
+      ],
+      "experience_minimum_years": 4,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 4,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 150,
+        "notes": "Full dragon flag, lower in 5 s. 3x3-5. Lower-back risk: manual use only."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Full dragon flag, lowering phase only. Lower-back risk: manual use only. (12 Minute Athlete)",
+      "cues": [
+        "Legs together and straight",
+        "Body in one line from shoulders to toes",
+        "5 s down"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "sources": [
+        "https://www.12minuteathlete.com/dragon-flag-tutorial/"
+      ]
+    },
+    {
+      "id": "dragon_flag",
+      "name": "Dragon Flag",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_extension",
+      "intensity_level": "max",
+      "fatigue_cost": 9,
+      "recency_group": "core_dragon_flag",
+      "equipment_required": [
+        "bench"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "performance"
+      ],
+      "experience_minimum_years": 4,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 4,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 180,
+        "notes": "Full dragon flag up and down. 3x3-6. Lower-back risk: manual use only."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Full dragon flag. Top of the dragon flag ladder. Lower-back risk: manual use only. (12 Minute Athlete)",
+      "cues": [
+        "Body in one line",
+        "Never arch the lower back",
+        "Shoulder blades on the bench, never the neck"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "sources": [
+        "https://www.12minuteathlete.com/dragon-flag-tutorial/"
+      ]
+    },
+    {
+      "id": "rkc_plank",
+      "name": "RKC Plank",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_extension",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "core_anti_extension",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ],
+      "experience_minimum_years": 0,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": null,
+        "work_seconds": 12,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Maximal tension: pelvis tucked, glutes and quads squeezed, elbows pulled to the toes. 2-3x10-15 s."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "High-tension plank: posterior pelvic tilt, glutes and quads squeezed, elbows driven toward the toes. Higher EMG than the standard plank (Schoenfeld & Contreras 2014). For advanced athletes this whole family is warm-up only.",
+      "cues": [
+        "Tuck the pelvis, squeeze glutes hard",
+        "Pull the elbows toward the toes without moving",
+        "Short sets at maximal tension, not long sets"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "sources": [
+        "Schoenfeld B, Contreras B (2014), Strength Cond J — RKC plank vs standard plank EMG"
+      ]
+    },
+    {
+      "id": "hollow_rock",
+      "name": "Hollow Rock",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_extension",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "core_anti_extension",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ],
+      "experience_minimum_years": 0,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 20,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Rock in the hollow position without losing the shape. 3x15-30."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Hollow body rocks: the hollow hold made dynamic. Warm-up level for advanced athletes.",
+      "cues": [
+        "Lower back glued to the floor",
+        "Rock from the hollow shape, not by bending",
+        "Arms by the ears"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only"
+    },
+    {
+      "id": "weighted_hollow_hold",
+      "name": "Weighted Hollow Hold",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_extension",
+      "intensity_level": "high",
+      "fatigue_cost": 5,
+      "recency_group": "core_anti_extension",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ],
+      "experience_minimum_years": 2,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": null,
+        "work_seconds": 20,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Plate or dumbbell held overhead in the hollow position. 3x15-30 s. Lower-back risk: manual use only."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Hollow hold with a plate held overhead. Lower-back risk: never assigned by the engine until a lower-back pain zone exists.",
+      "cues": [
+        "Lower back flat on the floor before the weight goes up",
+        "Lighter weight if the back lifts"
+      ],
+      "video_url": null,
+      "load_model": "external_load"
+    },
+    {
+      "id": "front_lever_advanced_tuck",
+      "name": "Front Lever (Advanced Tuck)",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "isometric_hold",
+      "intensity_level": "high",
+      "fatigue_cost": 6,
+      "recency_group": "core_front_lever",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive",
+        "elbow_sensitive"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ],
+      "experience_minimum_years": 2,
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": null,
+        "work_seconds": 8,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 150,
+        "notes": "Flat back, hips at 90°. Band 5-15 s, +2 s per step; advance at 4x15 s (two sessions)."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "none"
+      },
+      "description": "Advanced tuck front lever: back flat and horizontal, hips at 90°, knees bent. Counts as a heavy pull: never in the 24 h before limit or strength_long. (climbing.com front lever guide)",
+      "cues": [
+        "Arms locked, shoulders depressed",
+        "Back flat, not rounded like the tuck",
+        "Stop 1-2 s before the position breaks"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "sources": [
+        "https://www.climbing.com/skills/how-to-train-for-a-front-lever/"
+      ]
+    },
+    {
+      "id": "front_lever_full",
+      "name": "Front Lever (Full)",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "isometric_hold",
+      "intensity_level": "max",
+      "fatigue_cost": 8,
+      "recency_group": "core_front_lever",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive",
+        "elbow_sensitive"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "performance"
+      ],
+      "experience_minimum_years": 4,
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": null,
+        "work_seconds": 5,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 180,
+        "notes": "Full front lever. Band 5-10 s, +2 s per step. No added weight: progress to raises and rows."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "none"
+      },
+      "description": "Full front lever. Top hold of the front lever ladder; beyond it the ladder moves to dynamic variants (raises, rows), never to ankle weights (distal load on the elbow).",
+      "cues": [
+        "Body in one line, hips level with the shoulders",
+        "Arms locked",
+        "Quality over time"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "sources": [
+        "https://www.climbing.com/skills/how-to-train-for-a-front-lever/"
+      ]
+    },
+    {
+      "id": "front_lever_raise_tuck",
+      "name": "Tuck Front Lever Raise",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "pull_horizontal",
+      "intensity_level": "high",
+      "fatigue_cost": 6,
+      "recency_group": "core_front_lever",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive",
+        "elbow_sensitive"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ],
+      "experience_minimum_years": 2,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 4,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 150,
+        "notes": "From a hang, raise into the tuck lever with straight arms. 3x3-5."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "none"
+      },
+      "description": "Dynamic tuck front lever raise: straight-arm raise from the hang into the tuck lever. Same-level dynamic variant.",
+      "cues": [
+        "Straight arms all the way",
+        "Lead with the hips",
+        "Lower slowly"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "sources": [
+        "https://www.climbing.com/skills/how-to-train-for-a-front-lever/"
+      ]
+    },
+    {
+      "id": "front_lever_negative",
+      "name": "Front Lever Negative",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "pull_horizontal",
+      "intensity_level": "high",
+      "fatigue_cost": 7,
+      "recency_group": "core_front_lever",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive",
+        "elbow_sensitive"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ],
+      "experience_minimum_years": 3,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 3,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 150,
+        "notes": "Lower from the inverted hang through the lever in 5 s. 3x3."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "none"
+      },
+      "description": "Front lever negative: lower from the inverted hang through the lever position in 5 s. Same-level dynamic variant.",
+      "cues": [
+        "5 s through the lever position",
+        "Arms straight",
+        "Stop when the body breaks"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "sources": [
+        "https://www.climbing.com/skills/how-to-train-for-a-front-lever/"
+      ]
+    },
+    {
+      "id": "front_lever_raise",
+      "name": "Front Lever Raise",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "pull_horizontal",
+      "intensity_level": "max",
+      "fatigue_cost": 8,
+      "recency_group": "core_front_lever",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive",
+        "elbow_sensitive"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "performance"
+      ],
+      "experience_minimum_years": 4,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 4,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 180,
+        "notes": "Full front lever raise with straight arms. 3x3-5."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "none"
+      },
+      "description": "Full front lever raise. Terminal step of the front lever ladder after the full hold.",
+      "cues": [
+        "Straight body, straight arms",
+        "Controlled both ways"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "sources": [
+        "https://www.climbing.com/skills/how-to-train-for-a-front-lever/"
+      ]
+    },
+    {
+      "id": "front_lever_row",
+      "name": "Front Lever Row",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core",
+        "strength_pulling"
+      ],
+      "pattern": "pull_horizontal",
+      "intensity_level": "max",
+      "fatigue_cost": 8,
+      "recency_group": "core_front_lever",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive",
+        "elbow_sensitive"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "performance"
+      ],
+      "experience_minimum_years": 4,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 4,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 180,
+        "notes": "From the lever position of your level, row the bar to the chest. 3x3-5."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "none"
+      },
+      "description": "Front lever row: from the lever position of the current level, pull the bar to the chest keeping the body horizontal. Terminal step of the front lever ladder.",
+      "cues": [
+        "Body stays horizontal",
+        "Bar to the lower chest",
+        "Lower slowly"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "sources": [
+        "https://www.climbing.com/skills/how-to-train-for-a-front-lever/"
+      ]
+    },
+    {
+      "id": "copenhagen_short_lever",
+      "name": "Copenhagen Plank (Short Lever)",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_lateral_flexion",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "core_lateral",
+      "equipment_required": [
+        "bench"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "knee_injury"
+      ],
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ],
+      "experience_minimum_years": 0,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": null,
+        "work_seconds": 15,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Knee on the bench (short lever). 3x10-20 s per side; two sessions here before the long lever."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Copenhagen side plank with the knee on the bench: the short-lever ramp before the full Copenhagen (groin strain risk with a cold start — Harøy 2019).",
+      "cues": [
+        "Knee on the bench, body in one line",
+        "Lift the bottom leg to the bench",
+        "Hips do not sag"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "unilateral": true,
+      "alt_sides": true,
+      "sources": [
+        "https://www.craftsbury.com/blog/motm-copenhagen-plank-variations-and-progressions",
+        "Harøy J et al. (2019), Br J Sports Med — Copenhagen adduction programme"
+      ]
+    },
+    {
+      "id": "copenhagen_dynamic",
+      "name": "Copenhagen Dips",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_lateral_flexion",
+      "intensity_level": "high",
+      "fatigue_cost": 5,
+      "recency_group": "core_lateral",
+      "equipment_required": [
+        "bench"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "knee_injury"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ],
+      "experience_minimum_years": 2,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 8,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 75,
+        "notes": "Long-lever Copenhagen: lower and lift the hip. 3x6-12 per side."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Dynamic Copenhagen: from the long-lever position, lower the hip toward the floor and lift it back. Top of the lateral ladder. (Craftsbury Copenhagen progressions)",
+      "cues": [
+        "Top foot on the bench, body straight",
+        "Lower the hip under control",
+        "Drive up with the top leg"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "unilateral": true,
+      "alt_sides": true,
+      "sources": [
+        "https://www.craftsbury.com/blog/motm-copenhagen-plank-variations-and-progressions"
+      ]
+    },
+    {
+      "id": "weighted_side_plank",
+      "name": "Weighted Side Plank",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_lateral_flexion",
+      "intensity_level": "high",
+      "fatigue_cost": 5,
+      "recency_group": "core_lateral",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ],
+      "experience_minimum_years": 1,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": null,
+        "work_seconds": 20,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Plate on the hip. 3x15-30 s per side."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Side plank with a plate on the hip. Terminal load step of the lateral ladder.",
+      "cues": [
+        "Plate on the top hip",
+        "Body in one line",
+        "Lighter plate if the hips sag"
+      ],
+      "video_url": null,
+      "load_model": "external_load",
+      "unilateral": true,
+      "alt_sides": true
+    },
+    {
+      "id": "side_plank_star",
+      "name": "Star Side Plank",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_lateral_flexion",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "core_lateral",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ],
+      "experience_minimum_years": 1,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": null,
+        "work_seconds": 15,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Top arm and leg raised. 3x10-20 s per side. Accessory outside the ladder (hip abductors)."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Side plank with the top arm and leg raised (star). Accessory outside the lateral ladder, for the hip abductors.",
+      "cues": [
+        "Top leg lifted and straight",
+        "Hips stay high",
+        "Body in one plane"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "unilateral": true,
+      "alt_sides": true
+    },
+    {
+      "id": "arch_hold",
+      "name": "Arch Hold (Superman)",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "hinge",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "core_posterior_chain",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "base",
+        "deload"
+      ],
+      "experience_minimum_years": 0,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": null,
+        "work_seconds": 15,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 45,
+        "notes": "Face down, arms overhead, chest and legs lifted. 3x10-30 s."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Prone arch hold: the antagonist of the hollow and of compression work. Entry level of the posterior chain ladder.",
+      "cues": [
+        "Glutes squeezed, legs straight",
+        "Lift chest and legs a few centimetres",
+        "Neck neutral, eyes down"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only"
+    },
+    {
+      "id": "single_leg_back_extension",
+      "name": "Single-Leg Back Extension",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "hinge",
+      "intensity_level": "high",
+      "fatigue_cost": 4,
+      "recency_group": "core_posterior_chain",
+      "equipment_required": [
+        "bench"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ],
+      "experience_minimum_years": 1,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 8,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Back extension on one leg. 3x6-10 per leg."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Back extension on one leg: doubles the load on the hamstrings and glutes of the working side. Posterior chain antagonist for sessions with two compression exercises.",
+      "cues": [
+        "Hinge at the hips, back neutral",
+        "Squeeze the glute at the top",
+        "No hyperextension"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "unilateral": true,
+      "alt_sides": true
+    },
+    {
+      "id": "pallof_press_half_kneeling",
+      "name": "Pallof Press (Half-Kneeling)",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_rotation",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "core_anti_rotation",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "resistance_band",
+        "band",
+        "cable_machine"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "base",
+        "deload"
+      ],
+      "experience_minimum_years": 0,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 10,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 45,
+        "notes": "Half-kneeling, band at chest height to the side. 3x8-12 per side."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Pallof press from half-kneeling: the narrow base makes pelvic control the first thing to learn. Entry level of the anti-rotation ladder.",
+      "cues": [
+        "Inside knee down",
+        "Press straight out, zero rotation",
+        "Glute of the down leg squeezed"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "alt_sides": true
+    },
+    {
+      "id": "pallof_press_standing_pause",
+      "name": "Pallof Press (Standing, Pause)",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_rotation",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "core_anti_rotation",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "resistance_band",
+        "band",
+        "cable_machine"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ],
+      "experience_minimum_years": 0,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 5,
+        "work_seconds": 5,
+        "rest_between_reps_seconds": 5,
+        "rest_between_sets_seconds": 45,
+        "notes": "Standing, hold each press 5 s. 3x5x5 s per side."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Standing Pallof press with a 5 s hold at full extension. Top of the anti-rotation ladder.",
+      "cues": [
+        "Hold 5 s at full extension",
+        "Zero rotation",
+        "Breathe behind the brace"
+      ],
+      "video_url": null,
+      "load_model": "external_load",
+      "alt_sides": true
+    },
+    {
+      "id": "lying_windshield_wiper",
+      "name": "Lying Windshield Wiper",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "rotation",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "core_rotation",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ],
+      "experience_minimum_years": 0,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 8,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90,
+        "notes": "Lying on the back, legs vertical: lower them side to side under control. 2-3x6-12."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Windshield wipers lying on the floor: legs vertical, lowered side to side. Entry level of the rotation ladder.",
+      "cues": [
+        "Shoulders stay on the floor",
+        "Legs together",
+        "Lower only as far as you control"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only"
+    },
+    {
+      "id": "half_windshield_wiper",
+      "name": "Half Windshield Wiper (Hanging)",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "rotation",
+      "intensity_level": "high",
+      "fatigue_cost": 5,
+      "recency_group": "core_rotation",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ],
+      "experience_minimum_years": 2,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 6,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 120,
+        "notes": "Hanging, legs at the bar, rotate to 45° each side. 2-3x6-12."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "medium",
+        "skin": "none"
+      },
+      "description": "Hanging windshield wiper with half range (45° each side). Hanging exercise: not in the 24 h before limit or strength_long.",
+      "cues": [
+        "Toes at the bar first",
+        "Rotate only 45°",
+        "No swing"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only"
+    },
+    {
+      "id": "ring_pushup_rto",
+      "name": "Ring Push-Up (RTO)",
+      "category": "strength_accessory",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "push",
+      "intensity_level": "high",
+      "fatigue_cost": 5,
+      "recency_group": "push_horizontal",
+      "equipment_required": [
+        "rings"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "wrist_sensitive",
+        "shoulder_sensitive"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ],
+      "experience_minimum_years": 1,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 6,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90,
+        "notes": "Rings turned out at the top. 3x5-8 at RIR 2-3 (antagonist)."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Ring push-up with the rings turned out at the top (RTO). Top bodyweight level of the horizontal push ladder; antagonist work at RIR 2-3.",
+      "cues": [
+        "Body in one line",
+        "Turn the rings out at lockout",
+        "Elbows close to the body"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only"
+    },
+    {
+      "id": "weighted_pushup",
+      "name": "Weighted Push-Up",
+      "category": "strength_accessory",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "push",
+      "intensity_level": "high",
+      "fatigue_cost": 5,
+      "recency_group": "push_horizontal",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ],
+      "experience_minimum_years": 1,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 6,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90,
+        "notes": "Plate on the upper back or a vest, +2.5 kg per step. 3x5-8."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Push-up with a plate or vest. Terminal load step of the horizontal push ladder.",
+      "cues": [
+        "Plate secure on the upper back",
+        "Full range",
+        "Body in one line"
+      ],
+      "video_url": null,
+      "load_model": "external_load"
+    },
+    {
+      "id": "elevated_pike_pushup",
+      "name": "Elevated Pike Push-Up",
+      "category": "strength_accessory",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "strength_general",
+        "handstand_skill"
+      ],
+      "pattern": "push",
+      "intensity_level": "high",
+      "fatigue_cost": 5,
+      "recency_group": "push_vertical",
+      "equipment_required": [
+        "bench"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ],
+      "experience_minimum_years": 1,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 6,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90,
+        "notes": "Feet on a bench, hips high. 3x5-8."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Pike push-up with the feet on a bench: more bodyweight on the shoulders. Bridge from the pike push-up to the wall handstand push-up.",
+      "cues": [
+        "Hips over the shoulders",
+        "Head goes in front of the hands",
+        "Elbows at 45°"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only"
+    },
+    {
+      "id": "ring_support_hold",
+      "name": "Ring Support Hold",
+      "category": "strength_accessory",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "push",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "push_dip",
+      "equipment_required": [
+        "rings"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ],
+      "experience_minimum_years": 0,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": null,
+        "work_seconds": 20,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Arms locked, rings close to the body, turned out. 3x10-30 s."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Support hold on rings: stability base of the dip ladder.",
+      "cues": [
+        "Arms locked",
+        "Rings by the hips",
+        "Shoulders down, away from the ears"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only"
+    },
+    {
+      "id": "ring_dip",
+      "name": "Ring Dip",
+      "category": "strength_accessory",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "push",
+      "intensity_level": "high",
+      "fatigue_cost": 6,
+      "recency_group": "push_dip",
+      "equipment_required": [
+        "rings"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ],
+      "experience_minimum_years": 2,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 6,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 120,
+        "notes": "Full ring dip. 3x5-8; two sessions at the top before the weighted dip."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Dip on rings: harder than the bar dip because the rings must be stabilised. Top bodyweight level of the dip ladder.",
+      "cues": [
+        "Rings close to the body",
+        "Shoulders no lower than the elbows",
+        "Turn the rings out at the top"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only"
+    },
+    {
+      "id": "one_arm_pullup_negative",
+      "name": "One-Arm Pull-Up Negative",
+      "category": "main_strength",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "strength_general",
+        "strength_pulling"
+      ],
+      "pattern": "pull_vertical",
+      "intensity_level": "max",
+      "fatigue_cost": 8,
+      "recency_group": "pullup_one_arm",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "elbow_sensitive",
+        "shoulder_sensitive"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "performance"
+      ],
+      "experience_minimum_years": 4,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 2,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 180,
+        "notes": "Lower on one arm in 3-5 s, starting from the elbow at 90°. 3x1-3. Open angles only, never a closed lock-off."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "none"
+      },
+      "description": "One-arm pull-up, lowering phase only. For athletes WITHOUT a tested weighted 2RM: a tested athlete keeps the weighted pull-up (anchored load).",
+      "cues": [
+        "Pull up with both hands to 90° at the elbow, release one there — never from the top",
+        "Lower in 3-5 s",
+        "Stop at the first elbow discomfort"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only"
+    },
+    {
+      "id": "one_arm_pullup",
+      "name": "One-Arm Pull-Up",
+      "category": "main_strength",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "strength_general",
+        "strength_pulling"
+      ],
+      "pattern": "pull_vertical",
+      "intensity_level": "max",
+      "fatigue_cost": 9,
+      "recency_group": "pullup_one_arm",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "elbow_sensitive",
+        "shoulder_sensitive"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "performance"
+      ],
+      "experience_minimum_years": 5,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 2,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 180,
+        "notes": "Full one-arm pull-up. 3x1-3."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "none"
+      },
+      "description": "One-arm pull-up. Top of the bodyweight pull ladder (untested athletes only).",
+      "cues": [
+        "Dead hang start, shoulder engaged",
+        "Pull without twisting away",
+        "Controlled descent"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only"
+    },
+    {
+      "id": "box_pistol_squat",
+      "name": "Box Pistol Squat",
+      "category": "strength_accessory",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "squat",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "legs_single_leg_squat",
+      "equipment_required": [
+        "bench"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ],
+      "experience_minimum_years": 0,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 6,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 75,
+        "notes": "Single-leg squat to a box or bench. 3x5-8 per leg."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Single-leg squat to a box: entry level of the single-leg squat ladder.",
+      "cues": [
+        "Sit back to the box under control",
+        "Knee tracks over the toes",
+        "Stand without rocking"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "unilateral": true,
+      "alt_sides": true
+    },
+    {
+      "id": "assisted_pistol_squat",
+      "name": "Assisted Pistol Squat",
+      "category": "strength_accessory",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "squat",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "legs_single_leg_squat",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "rings",
+        "band",
+        "resistance_band"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ],
+      "experience_minimum_years": 0,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 6,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 75,
+        "notes": "Full-depth pistol holding rings or a doorframe. 3x5-8 per leg."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Pistol squat to full depth with light hand assistance.",
+      "cues": [
+        "Use the hands only as much as needed",
+        "Free leg straight in front",
+        "Heel down"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "unilateral": true,
+      "alt_sides": true
+    },
+    {
+      "id": "shrimp_squat",
+      "name": "Shrimp Squat",
+      "category": "strength_accessory",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "squat",
+      "intensity_level": "high",
+      "fatigue_cost": 5,
+      "recency_group": "legs_single_leg_squat",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "knee_injury"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ],
+      "experience_minimum_years": 1,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 6,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90,
+        "notes": "Rear foot held behind, knee to the floor. 3x5-8 per leg."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Shrimp squat: single-leg squat with the free foot held behind.",
+      "cues": [
+        "Hold the rear foot",
+        "Knee touches the floor softly",
+        "Torso leans forward to balance"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "unilateral": true,
+      "alt_sides": true
+    },
+    {
+      "id": "pistol_squat",
+      "name": "Pistol Squat",
+      "category": "strength_accessory",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "squat",
+      "intensity_level": "high",
+      "fatigue_cost": 5,
+      "recency_group": "legs_single_leg_squat",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "knee_injury"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ],
+      "experience_minimum_years": 1,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 6,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90,
+        "notes": "Full pistol squat. 3x5-8 per leg; then +5 kg per step."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Full pistol squat. Top bodyweight level of the single-leg squat ladder.",
+      "cues": [
+        "Free leg straight",
+        "Full depth with control",
+        "Stand without bouncing"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "unilateral": true,
+      "alt_sides": true
+    },
+    {
+      "id": "slider_hamstring_curl",
+      "name": "Slider Hamstring Curl",
+      "category": "strength_accessory",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "hinge",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "legs_hamstring",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ],
+      "experience_minimum_years": 0,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 10,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Hips up, heels on sliders or a towel: curl in and out. 3x8-12."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Slider hamstring curl: bridge position with the heels on sliders, curl in and slide out. Entry level of the hamstring ladder.",
+      "cues": [
+        "Hips stay up",
+        "Slow on the way out",
+        "Squeeze the glutes"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only"
+    },
+    {
+      "id": "single_leg_slider_curl",
+      "name": "Single-Leg Slider Curl",
+      "category": "strength_accessory",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "hinge",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "legs_hamstring",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ],
+      "experience_minimum_years": 0,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 8,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 75,
+        "notes": "One heel on the slider, the other leg up. 3x6-10 per leg."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Single-leg slider hamstring curl.",
+      "cues": [
+        "Hips level",
+        "Slow eccentric",
+        "Free leg vertical"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "unilateral": true,
+      "alt_sides": true
+    },
+    {
+      "id": "nordic_curl_band_assisted",
+      "name": "Band-Assisted Nordic Curl",
+      "category": "strength_accessory",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "hinge",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "legs_hamstring",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "resistance_band",
+        "band"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ],
+      "experience_minimum_years": 0,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 5,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 120,
+        "notes": "Band anchored high behind, around the chest. 2-3x4-8. DOMS: low volume in the first 2 weeks."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Nordic curl with band assistance at the chest. Bridge to the full Nordic curl; low volume is enough for the adaptation (Petersen 2011; Presland 2018).",
+      "cues": [
+        "Body straight from knees to head",
+        "Resist the fall as long as possible",
+        "Push back up with the hands"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "sources": [
+        "Petersen J et al. (2011), Am J Sports Med — Nordic hamstring programme",
+        "Presland JD et al. (2018), J Sci Med Sport — low-volume Nordic training"
+      ]
+    },
+    {
+      "id": "glued_feet_board",
+      "name": "Glued Feet (Board)",
+      "category": "technique",
+      "time_min": 20,
+      "role": [
+        "library"
+      ],
+      "domain": [
+        "technique_footwork"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "technique_footwork_steep",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ],
+      "experience_minimum_years": 2,
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": 3,
+        "work_seconds": null,
+        "rest_between_reps_seconds": 180,
+        "rest_between_sets_seconds": 120,
+        "notes": "3-4 board benchmarks at flash to flash+1. A foot that comes off cancels the attempt; 3 attempts per problem. 15-20 min at the START of the session, never after limit work."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Steep-wall footwork drill, the inverse of foot flyaways: climb board benchmarks at flash level where any foot cut cancels the attempt. Toe and heel hooks where the problem asks for them. Trains the body tension and foot pressure that keep the feet on overhangs.",
+      "cues": [
+        "A cut foot ends the attempt — reset and start again",
+        "Pull with the toes, press with the hips",
+        "First two weeks: hooks only on big holds; stop at the first discomfort behind the knee",
+        "Fall only from a controlled position, never upside down"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "focus": "footwork",
+      "sources": [
+        "Lattice Training — movement concepts",
+        "UKClimbing article 12519 (Gresham) — footwork drills"
+      ],
+      "progression": "Board angle 30 → 40 → 50°, then hooks on smaller holds. One lever at a time.",
+      "measure": "% of attempts with no foot cut (one number per session)."
+    },
+    {
+      "id": "position_menu_3way",
+      "name": "Position Menu (3 Ways)",
+      "category": "technique",
+      "time_min": 20,
+      "role": [
+        "library"
+      ],
+      "domain": [
+        "technique_body_position"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "technique_positioning_menu",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ],
+      "experience_minimum_years": 2,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 3,
+        "work_seconds": null,
+        "rest_between_reps_seconds": 120,
+        "rest_between_sets_seconds": 180,
+        "notes": "3 board problems at 40-45°, around flash+1. Climb each section 3 ways (square-on, flag, twist-lock / drop-knee / back-step), 1-2 goes per version, then the whole problem with the version that held a 2 s hover."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Body-positioning menu: each section of a steep board problem is climbed three different ways, then the whole problem with the version that let you hover the next hold for 2 s. Builds the repertoire of positions and the habit of choosing the efficient one.",
+      "cues": [
+        "Hip in over the supporting foot",
+        "Long arm, the legs do the work",
+        "Knee never beyond the foot on a drop-knee; do not repeat a deep drop-knee on the same section"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "focus": "body_position",
+      "sources": [
+        "Udo Neumann — Lizard Skills",
+        "Lattice Training — movement concepts"
+      ],
+      "progression": "Q1 board 40-45° at flash+1 → Q2 the menu on the positioning crux of limit problems → Q3 lead under pump → Q4 decided on sight on rock.",
+      "measure": "2 s hover on the crux yes/no (x out of 5 attempts); problem sent with the chosen version yes/no."
+    },
+    {
+      "id": "variant_ladder_board",
+      "name": "Variant Ladder (Board)",
+      "category": "technique",
+      "time_min": 30,
+      "role": [
+        "library"
+      ],
+      "domain": [
+        "technique_constraint"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "technique_variability",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ],
+      "experience_minimum_years": 2,
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": 12,
+        "work_seconds": null,
+        "rest_between_reps_seconds": 120,
+        "rest_between_sets_seconds": null,
+        "notes": "3 anchor problems at flash, each in 4 versions (original, smaller or banned feet on one side, angle +5-10°, a hand restriction): 12 problems in mixed order, about 2 attempts each. Alternate weeks with the position menu."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Variability practice on the board: three anchor problems, each climbed in four versions in a mixed order. Varied practice transfers better than repeating the same movement (Seifert et al.). Finger-hard only when the variants reach redpoint-2 or harder.",
+      "cues": [
+        "Shuffle the order, do not block by problem",
+        "About 2 attempts per variant, then move on",
+        "Pick the restriction from your weakness"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "focus": "constraint",
+      "sources": [
+        "Seifert L et al. — skill transfer and variability in climbing (Sheffield Hallam repository 10171, 12544)",
+        "Frontiers in Psychology (2022) 961435 — variability of practice in climbing"
+      ],
+      "progression": "Anchor +1 sub-grade every 2-3 weeks, or a constraint taken from the current limiter (not tracked as a level).",
+      "measure": "Variants sent within 2 attempts (one number per session)."
+    },
+    {
+      "id": "lead_technique_under_pump",
+      "name": "Lead Technique Under Pump",
+      "category": "technique",
+      "time_min": 40,
+      "role": [
+        "library"
+      ],
+      "domain": [
+        "technique_lead"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "high",
+      "fatigue_cost": 6,
+      "recency_group": "technique_lead_rules",
+      "equipment_required": [
+        "gym_routes"
+      ],
+      "location_allowed": [
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ],
+      "experience_minimum_years": 3,
+      "prescription_defaults": {
+        "sets": 2,
+        "reps": 1,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 600,
+        "notes": "2 lead routes around onsight to onsight+1, each with ONE rule declared on the ground: (a) every clip from a straight arm with the hip in; (b) at every rest, feet still and hips under for 2 s before shaking out; (c) find and use 3 rests, name them afterwards; (d) steady rhythm on the endurance section. First lap at onsight-2 with feet loaded 3 s before a hand moves."
+      },
+      "stress_tags": {
+        "fingers": "medium",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "low"
+      },
+      "description": "The technique that matters at the top grades on sport routes: resting (kneebars, shaking out, unloading the arms), clipping from a straight arm, rhythm. One declared rule per route, applied while pumped. Finger-hard when the routes are at or above onsight.",
+      "cues": [
+        "One rule per route, said out loud before leaving the ground",
+        "Clip from a straight arm with the hip in",
+        "At a rest: feet still, hips under, then shake"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "focus": "body_position",
+      "sources": [
+        "Hörst E. — Training for Climbing (resting and clipping)",
+        "Lattice Training"
+      ],
+      "progression": "Steeper and longer route, then a harder route, then the rule applied under deeper pump.",
+      "measure": "Rule kept yes/no per route; rests found (count)."
+    },
+    {
+      "id": "rest_and_clip_drill",
+      "name": "Rest and Clip Drill",
+      "category": "technique",
+      "time_min": 20,
+      "role": [
+        "library"
+      ],
+      "domain": [
+        "technique_lead"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "technique_lead_rules",
+      "equipment_required": [
+        "gym_routes"
+      ],
+      "location_allowed": [
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ],
+      "experience_minimum_years": 2,
+      "prescription_defaults": {
+        "sets": 2,
+        "reps": 1,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 300,
+        "notes": "1-2 medium overhanging routes (onsight-2 to onsight-1): at every possible rest try a kneebar, a resting drop-knee, straight-arm shake-outs; for every clip choose the cheapest clipping position (high or low, straight arm)."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Rest and clip exploration on medium overhanging routes: every rest is tried in several ways and every clip from the cheapest position. Replaces volume, it is not added on top.",
+      "cues": [
+        "Kneebars only with a knee pad on long routes",
+        "No forced twisting",
+        "Decide where to clip from before you get there"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "focus": "relaxation",
+      "sources": [
+        "Hörst E. — Training for Climbing (resting and clipping)"
+      ],
+      "progression": "Steeper routes, then the same choices made on sight.",
+      "measure": "Rests used per route."
+    },
+    {
+      "id": "vertical_small_feet_limit",
+      "name": "Vertical Small-Feet Limit Bouldering",
+      "category": "main_strength",
+      "time_min": 35,
+      "role": [
+        "library"
+      ],
+      "domain": [
+        "technique_footwork",
+        "technique_boulder"
+      ],
+      "pattern": "climbing_limit_boulder",
+      "intensity_level": "high",
+      "fatigue_cost": 6,
+      "recency_group": "limit_small_feet",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "spraywall",
+        "homewall"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [
+        "finger_sensitive"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ],
+      "experience_minimum_years": 3,
+      "prescription_defaults": {
+        "sets": 5,
+        "reps": 5,
+        "work_seconds": null,
+        "rest_between_reps_seconds": 180,
+        "rest_between_sets_seconds": 180,
+        "notes": "4-6 vertical or 5-15° problems where the FEET are the crux, around redpoint-1 to redpoint-2, 4-6 attempts each, 3 min rest. Never a mono in the gym. Counts as limit work and a finger-hard day.",
+        "grade_ref": "boulder_max_rp",
+        "grade_offset": -1
+      },
+      "stress_tags": {
+        "fingers": "high",
+        "elbow": "medium",
+        "cns": "high",
+        "skin": "medium"
+      },
+      "description": "Limit bouldering where the crux is the feet: lateral presses on tiny footholds, low open smears with counter-pressure, toes pointed into pockets. Specific overload for foot pressure on vertical terrain; it is the 'feet' choice of the two weak-style problems in a limit session. Finger-hard.",
+      "cues": [
+        "The feet are the crux: hit them first time",
+        "Push sideways or out-and-low, then pull",
+        "Only fall while moving"
+      ],
+      "video_url": null,
+      "load_model": "grade_relative",
+      "sources": [
+        "https://www.ukclimbing.com/articles/page.php?id=13482",
+        "https://pmc.ncbi.nlm.nih.gov/articles/PMC4327382"
+      ],
+      "progression": "Smaller feet → smaller hands. Never steepness as the lever, never a mono.",
+      "measure": "Foot slips per attempt; high point."
+    },
+    {
+      "id": "lead_precision_feet_above_bolt",
+      "name": "Lead Precision Feet Above the Bolt",
+      "category": "technique",
+      "time_min": 15,
+      "role": [
+        "library"
+      ],
+      "domain": [
+        "technique_lead",
+        "technique_footwork"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "medium",
+      "fatigue_cost": 3,
+      "recency_group": "technique_lead_rules",
+      "equipment_required": [
+        "gym_routes"
+      ],
+      "location_allowed": [
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ],
+      "experience_minimum_years": 2,
+      "prescription_defaults": {
+        "sets": 2,
+        "reps": 1,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 240,
+        "notes": "2 lead laps on vertical small-edge routes 2-3 grades below onsight. Rule: every foot loaded and still for 3 s before a hand moves. Clean the soles at the base. Log foot slips per lap."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Foot pressure under the condition where it fails: on lead, above the protection, where anxiety moves attention to the hands (Pijpers/Oudejans). Also the warm-up rule of an outdoor technique day.",
+      "cues": [
+        "3 s weighted on the foot before the hand moves",
+        "Heels down, push through the foot",
+        "Breathe out at each clip"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "focus": "footwork",
+      "sources": [
+        "https://research.vu.nl/en/publications/the-role-of-anxiety-in-perceiving-and-realizing-affordances/",
+        "https://trainingforclimbing.com/?p=665"
+      ],
+      "progression": "Harder route or smaller feet when 0 slips on 2 laps in a row.",
+      "measure": "Foot slips per lap."
+    },
+    {
+      "id": "crux_sequence_rehearsal",
+      "name": "Crux Foot-Sequence Rehearsal (Rope-Tight)",
+      "category": "technique",
+      "time_min": 20,
+      "role": [
+        "library"
+      ],
+      "domain": [
+        "climbing_routes",
+        "technique_lead"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "high",
+      "fatigue_cost": 4,
+      "recency_group": "route_crux_work",
+      "equipment_required": [
+        "gym_routes"
+      ],
+      "location_allowed": [
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [
+        "finger_sensitive"
+      ],
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ],
+      "experience_minimum_years": 2,
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": 3,
+        "work_seconds": null,
+        "rest_between_reps_seconds": 60,
+        "rest_between_sets_seconds": 240,
+        "notes": "On the project with the rope tight: 3 repetitions of the crux FOOT sequence. Load-bearing holds such as a mono are only touched (or hang on the quickdraw). Vary heel height and press direction on the critical foot; mark the variant that holds and remove all tick marks at the end of the day. Brush the soles before each repetition."
+      },
+      "stress_tags": {
+        "fingers": "medium",
+        "elbow": "low",
+        "cns": "medium",
+        "skin": "medium"
+      },
+      "description": "The real foot sequence on the real rock, rope tight: the highest-transfer footwork practice for a project. The counterbalancing foot is the most common error (MacLeod).",
+      "cues": [
+        "Feet first: place, press, then pull",
+        "Push in the direction the foothold allows",
+        "Clean soles before every repetition"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "focus": "footwork",
+      "sources": [
+        "https://www.lacrux.com/en/training/this-is-how-you-improve-your-foot-technique/",
+        "https://latticetraining.com/blog/training-tips-for-climbers-stuck-on-your-project/",
+        "https://trainingforclimbing.com/?p=1265"
+      ],
+      "progression": "Rope-tight sequence → crux from the bolt below → links.",
+      "measure": "Foot pops per repetition; the variant that held."
+    },
+    {
+      "id": "small_feet_press_hold",
+      "name": "Small-Foot Press and Hold",
+      "category": "technique",
+      "time_min": 5,
+      "role": [
+        "library"
+      ],
+      "domain": [
+        "technique_footwork"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "low",
+      "fatigue_cost": 1,
+      "recency_group": "technique_footwork_pressure",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "gym_routes",
+        "spraywall",
+        "homewall"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "base",
+        "deload"
+      ],
+      "experience_minimum_years": 2,
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": 4,
+        "work_seconds": 10,
+        "rest_between_reps_seconds": 20,
+        "rest_between_sets_seconds": 60,
+        "notes": "Warm-up primer. Vertical wall, good hands: one foot on a tiny foothold, the other off; unweight the hands to 2 fingers and hold 10 s. Lateral press on a nubbin, low open smear with counter-pressure, toe pointed into a small pocket. 4 reps per foot."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Warm-up primer for pressure on tiny feet, biased to lateral and counter-pressure pushes rather than straight-down edging. Warm-up only: it is not the technique stimulus.",
+      "cues": [
+        "Push in the direction the foothold wants",
+        "Hips over or against the foot",
+        "Take the weight off the hands down to 2 fingers"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "unilateral": true,
+      "alt_sides": true,
+      "focus": "footwork",
+      "sources": [
+        "https://latticetraining.com/blog/rock-climbing-footwork-the-basics",
+        "https://www.vdiffclimbing.com/sport-technique-footwork/"
+      ],
+      "progression": "Chip → lateral press on a nubbin → low open smear → pivot on the same hold. No level bookkeeping.",
+      "measure": "None (warm-up)."
+    },
+    {
+      "id": "toe_flexor_isometric",
+      "name": "Toe Flexor Isometric Press",
+      "category": "conditioning",
+      "time_min": 6,
+      "role": [
+        "library"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "calf_raise",
+      "intensity_level": "medium",
+      "fatigue_cost": 1,
+      "recency_group": "lower_body_foot",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ],
+      "experience_minimum_years": 0,
+      "prescription_defaults": {
+        "sets": 5,
+        "reps": 5,
+        "work_seconds": 5,
+        "rest_between_reps_seconds": 20,
+        "rest_between_sets_seconds": 60,
+        "notes": "Big toe presses down into a bathroom scale at about 90% effort for 5 s, then the lesser toes. Per foot. Monthly reference reading."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "none",
+        "skin": "none"
+      },
+      "description": "Cheap, low-fatigue toe flexor strength (Goldmann 2013 used near-maximal isometrics). Supports the pressure skill on small feet; it does not replace it — transfer to climbing is plausible but weakly evidenced.",
+      "cues": [
+        "Press with the toe pad, no claw",
+        "Heel down",
+        "Near-max, never painful"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "unilateral": true,
+      "alt_sides": true,
+      "sources": [
+        "https://fis.dshs-koeln.de/en/publications/the-potential-of-toe-flexor-muscles-to-enhance-performance/"
+      ],
+      "progression": "Monthly retest; at +10% keep the same dose.",
+      "measure": "Scale reading (kg) once a month."
+    },
+    {
+      "id": "edge_calf_raise_bigtoe",
+      "name": "Single-Leg Edge Calf Raise (Big Toe)",
+      "category": "conditioning",
+      "time_min": 6,
+      "role": [
+        "library"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "calf_raise",
+      "intensity_level": "medium",
+      "fatigue_cost": 2,
+      "recency_group": "lower_body_calf",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ],
+      "experience_minimum_years": 0,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 8,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Single leg on a 2-3 cm edge: 3 s up, 2 s hold over the big toe, 3 s down, 3x8-10, then 2x20 s isometric hold at the top."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "none",
+        "skin": "none"
+      },
+      "description": "Calf and big-toe strength in the edging position. Twice a week after any session.",
+      "cues": [
+        "Weight over the big toe",
+        "Slow lowering phase",
+        "Hold the top as if on a nubbin"
+      ],
+      "video_url": null,
+      "load_model": "external_load",
+      "unilateral": true,
+      "alt_sides": true,
+      "sources": [
+        "https://theclimbingdoctor.com/lower-body-strength-for-high-stepping-and-edging-3/"
+      ],
+      "progression": "Bodyweight → dumbbell 4-8 kg.",
+      "measure": "Load or reps every 4 weeks."
+    },
+    {
+      "id": "technique_benchmark_test",
+      "name": "Technique Benchmark (Board)",
+      "category": "technique",
+      "time_min": 25,
+      "role": [
+        "library"
+      ],
+      "domain": [
+        "technique_footwork",
+        "technique_body_position"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "technique_benchmark",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ],
+      "experience_minimum_years": 2,
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": 2,
+        "work_seconds": null,
+        "rest_between_reps_seconds": 300,
+        "rest_between_sets_seconds": null,
+        "notes": "Every 4 weeks, fresh, filmed from the side from a fixed spot: B1 'feet' benchmark at 25-30° and B2 'positioning' benchmark at 40° (fixed board problems that are never reset). Monthly: flash rate on 10 never-tried problems at a fixed grade, 1 attempt each."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Technique benchmark on fixed board problems plus a monthly flash rate. Not a strength test and never scheduled by the retest policy: it is read on the 8-week trend, never session by session.",
+      "cues": [
+        "Same problems, same angle, same camera spot",
+        "Fresh, at the start of the technique session",
+        "One attempt per problem for the flash rate"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "focus": "footwork",
+      "sources": [
+        "Lattice Training — assessment principles"
+      ],
+      "progression": "Read the 8-week trend: time, stops > 2 s, foot and hand readjustments, send.",
+      "measure": "B1/B2: time, stops > 2 s, foot readjusts, hand readjusts, sent; flash rate n/10."
+    },
+    {
+      "id": "three_attempt_comp",
+      "name": "Three-Attempt Comp",
+      "category": "technique",
+      "time_min": 50,
+      "role": [
+        "library"
+      ],
+      "domain": [
+        "technique_boulder"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "high",
+      "fatigue_cost": 6,
+      "recency_group": "technique_tryhard",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "spraywall",
+        "board_kilter",
+        "board_moonboard",
+        "board_other"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ],
+      "experience_minimum_years": 2,
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": 7,
+        "work_seconds": null,
+        "rest_between_reps_seconds": 180,
+        "rest_between_sets_seconds": null,
+        "notes": "6-8 problems just above flash level (or board benchmarks at flash+1). 2 min reading with a feet and hip plan, at most 3 attempts, about 3 min rest; holds may be touched but sections never worked. A LET_GO counts as a used attempt.",
+        "grade_ref": "boulder_max_os",
+        "grade_offset": 1
+      },
+      "stress_tags": {
+        "fingers": "high",
+        "elbow": "medium",
+        "cns": "high",
+        "skin": "medium"
+      },
+      "description": "Competition-format try-hard practice: read, plan, and give each problem at most three real attempts. Letting go costs an attempt, so stopping early has a price. Finger-hard when the grade reaches redpoint-2.",
+      "cues": [
+        "Pre-attempt routine before every attempt",
+        "Only fall while moving",
+        "One more move only where the fall is clean onto the mat"
+      ],
+      "video_url": null,
+      "load_model": "grade_relative",
+      "focus": "relaxation",
+      "sources": [
+        "Gripped Magazine — try-hard workout"
+      ],
+      "progression": "Send rate > 50% → grade +1; target 30-50%.",
+      "measure": "Sends / attempts; % of non-sends ending in FALL versus TAKE + LET_GO."
+    },
+    {
+      "id": "no_take_lead_onsight",
+      "name": "No-Take Lead (Try-Hard)",
+      "category": "technique",
+      "time_min": 40,
+      "role": [
+        "library"
+      ],
+      "domain": [
+        "technique_lead",
+        "technique_relaxation"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "high",
+      "fatigue_cost": 5,
+      "recency_group": "technique_tryhard",
+      "equipment_required": [
+        "gym_routes"
+      ],
+      "location_allowed": [
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ],
+      "experience_minimum_years": 3,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 1,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 300,
+        "notes": "2-3 routes from onsight to onsight+1. Never ask for a take, never block: reach the chain or fall moving upward. Only with clean falls, the usual belayer with a soft catch, and the fall ladder at F2 or above.",
+        "grade_ref": "lead_max_os",
+        "grade_offset": 0
+      },
+      "stress_tags": {
+        "fingers": "medium",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "low"
+      },
+      "description": "Trying hard to the very end as a trainable skill, on routes that do not matter (Findlay; Ilgner). The outcome of every route is logged.",
+      "cues": [
+        "Decide at the rest, then no renegotiation",
+        "Only fall while moving",
+        "Pre-attempt routine before each route"
+      ],
+      "video_url": null,
+      "load_model": "grade_relative",
+      "focus": "relaxation",
+      "sources": [
+        "https://www.hazel-findlay.com/blog/thoughts-on-trying-hard",
+        "https://alpinist.com/features/the-warriors-way-arno-ilgner-discusses-fear-in-climbing/"
+      ],
+      "progression": "2 → 3 routes → onsight+1. Never more than 3.",
+      "measure": "Outcome per route (SEND / FALL / TAKE / LET_GO) and moves past the point where you wanted to stop. Target: TAKE + LET_GO < 20% of non-sends within 6 weeks."
+    },
+    {
+      "id": "fall_ladder",
+      "name": "Fall Ladder (3 Steps)",
+      "category": "technique",
+      "time_min": 10,
+      "role": [
+        "library"
+      ],
+      "domain": [
+        "technique_lead"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "medium",
+      "fatigue_cost": 3,
+      "recency_group": "technique_tryhard",
+      "equipment_required": [
+        "gym_routes"
+      ],
+      "location_allowed": [
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ],
+      "experience_minimum_years": 1,
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": 4,
+        "work_seconds": null,
+        "rest_between_reps_seconds": 60,
+        "rest_between_sets_seconds": null,
+        "notes": "At the start of a lead session, steep clean terrain, the usual belayer with a soft catch. F1 clip at the feet → F2 1-2 m above the clip → F3 a fall WHILE MOVING on a crux. 3-4 falls. Fear 0-10 noted ONCE per session."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "none",
+        "skin": "none"
+      },
+      "description": "Three-step fall ladder for fear of falling (intentional fall practice reduces fear — Garrido-Palomino 2023). Intensive phase 1-2 times a week for 4-6 weeks, then 2-3 maintenance falls at the start of every lead day. Enables no-take leading from F2 and a deliberate fall at the commit point from F3.",
+      "cues": [
+        "Never on terrain with a ledge",
+        "Stick-clip the low bolts",
+        "First fall of a trip on clean steep terrain, never on a slab"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "focus": "relaxation",
+      "sources": [
+        "Garrido-Palomino I et al. (2023) — intentional fall practice RCT",
+        "Ilgner A. — The Rock Warrior's Way"
+      ],
+      "progression": "Step up with fear ≤ 3 for 2 sessions; step down after a fall at fear ≥ 7.",
+      "measure": "Step F1-F3, number of falls, max fear 0-10 (once per session)."
+    },
+    {
+      "id": "pre_attempt_routine",
+      "name": "Pre-Attempt Routine",
+      "category": "technique",
+      "time_min": 2,
+      "role": [
+        "library"
+      ],
+      "domain": [
+        "technique_relaxation"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "low",
+      "fatigue_cost": 1,
+      "recency_group": "technique_tryhard",
+      "equipment_required": [],
+      "location_allowed": [
+        "gym",
+        "home",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "base",
+        "deload"
+      ],
+      "experience_minimum_years": 0,
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": 1,
+        "work_seconds": 45,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "notes": "One fixed 30-45 s routine before every key attempt: clean soles → 2 slow breaths → mime the sequence → one cue word out loud, chosen for that crux → 'go'. From 'go' there is no renegotiation until the next rest. Change the word, never the ritual. Practise it for 2 weeks in the gym before using it on a project."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "none",
+        "skin": "none"
+      },
+      "description": "A single fixed pre-attempt routine. Motivational self-talk has a moderate effect on performance (Hatzigeorgiadis 2014 meta-analysis); committing at 'go' follows Ilgner. No power poses (Ranehill 2015).",
+      "cues": [
+        "Same ritual every time, only the cue word changes",
+        "Breathe out hard on the hard moves",
+        "After 'go' you only decide again at the next rest"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "focus": "relaxation",
+      "sources": [
+        "Hatzigeorgiadis A et al. (2011/2014) — self-talk meta-analysis",
+        "Ilgner A. — The Rock Warrior's Way",
+        "Ranehill E et al. (2015), Psychol Sci — power pose replication"
+      ],
+      "progression": "None — the outcome is the measure.",
+      "measure": "None (the outcome of the attempt is the measure)."
+    },
+    {
+      "id": "commit_map",
+      "name": "Commit Map (Project Protocol)",
+      "category": "technique",
+      "time_min": 15,
+      "role": [
+        "library"
+      ],
+      "domain": [
+        "climbing_routes",
+        "technique_relaxation"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "high",
+      "fatigue_cost": 4,
+      "recency_group": "technique_tryhard",
+      "equipment_required": [
+        "gym_routes"
+      ],
+      "location_allowed": [
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ],
+      "experience_minimum_years": 3,
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": 1,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "notes": "On the working laps mark the 2-3 points where you 'switch off' and the fall at each (clean yes/no). Before every lead go say the point and the action out loud. After: commit point reached, outcome (FALL / TAKE / LET_GO). When the fall there is clean and the fall ladder is at F3, one go per session takes it on purpose while trying the move."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "none",
+        "skin": "none"
+      },
+      "description": "Project protocol for trying hard where it matters: map the commit points of the route, declare the action before each go, log the outcome at the commit point.",
+      "cues": [
+        "Name the point and the action before leaving the ground",
+        "Fall while moving, not by letting go",
+        "Only commit on purpose where the fall is clean"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "focus": "relaxation",
+      "sources": [
+        "Ilgner A. — The Rock Warrior's Way"
+      ],
+      "progression": "Commit point reached more often → deliberate fall at the commit point (F3 only).",
+      "measure": "% of goes ending in FALL or SEND at the commit point."
+    },
+    {
+      "id": "pocket_rampup_hangboard",
+      "name": "Pocket Ramp-Up (2-3 Finger, Hangboard)",
+      "category": "warmup_specific",
+      "time_min": 8,
+      "role": [
+        "library"
+      ],
+      "domain": [
+        "finger_strength"
+      ],
+      "pattern": "isometric_hang",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "finger_pocket_warmup",
+      "equipment_required": [
+        "hangboard"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "base",
+        "deload"
+      ],
+      "experience_minimum_years": 3,
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": 4,
+        "work_seconds": 10,
+        "rest_between_reps_seconds": 60,
+        "rest_between_sets_seconds": null,
+        "notes": "On the 2-finger and 3-finger pockets of a hangboard, after a general finger warm-up: 4 progressive hangs of 10 s, feet on a chair or the floor, at roughly 50% → 60% → 70% → 80% of bodyweight. Submaximal only, never to failure, never a mono."
+      },
+      "stress_tags": {
+        "fingers": "medium",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Pocket-specific warm-up before limit bouldering or a rock day with pockets: progressive submaximal loading of the 2- and 3-finger pockets of a hangboard. Pocket loading concentrates the force on few pulleys and the lumbricals of the unused fingers, so it is ramped, never maximal (Schöffl 2003; Schweizer 2003).",
+      "cues": [
+        "Feet stay in contact: unload with the legs, not by jumping on",
+        "Open-hand grip in the pocket, no crimp",
+        "Stop at the first pulley or palm discomfort — that ends pocket work for the day"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "sources": [
+        "Schöffl V et al. (2003), Wilderness Environ Med — pulley injuries in rock climbers",
+        "Schweizer A (2003), J Hand Surg — lumbrical tears in rock climbers"
+      ],
+      "progression": "Only the top step grows (70 → 80% bodyweight) when it feels easy; never a max test, never a mono.",
+      "measure": "None (warm-up). Any pulley or palm discomfort is logged as pain 0-3 for the finger zone."
+    },
+    {
+      "id": "single_finger_pocket_rampup",
+      "name": "Single-Finger Bias Ramp-Up (Supported)",
+      "category": "warmup_specific",
+      "time_min": 6,
+      "role": [
+        "library"
+      ],
+      "domain": [
+        "finger_strength"
+      ],
+      "pattern": "isometric_hang",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "finger_pocket_warmup",
+      "equipment_required": [
+        "hangboard"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": [
+        "base",
+        "deload"
+      ],
+      "experience_minimum_years": 5,
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": 4,
+        "work_seconds": 8,
+        "rest_between_reps_seconds": 60,
+        "rest_between_sets_seconds": null,
+        "notes": "Only for climbers who already use one-finger pockets on rock. Feet ALWAYS on the floor or a chair: the chosen finger in a deep hangboard pocket, the other fingers relaxed out of the way, load lifted by the legs in 4 steps of 8 s at an effort of about 3, 4, 5 and 6 out of 10. Never a free hang, never a gym mono, never to failure."
+      },
+      "stress_tags": {
+        "fingers": "medium",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Progressive submaximal loading of one finger before a rock day with monos. The load is controlled by the feet, so it stays submaximal; a one-finger free hang belongs on the route, not in the gym. Watch pulleys and lumbricals.",
+      "cues": [
+        "Feet never leave the support",
+        "Deep pocket, finger slightly bent, no crimp",
+        "Any sharp sensation ends it — no second try"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "sources": [
+        "Schöffl V et al. (2003), Wilderness Environ Med — pulley injuries in rock climbers",
+        "Schweizer A (2003), J Hand Surg — lumbrical tears in rock climbers"
+      ],
+      "progression": "None — the effort ceiling stays at 6/10. It is a warm-up, not a training stimulus.",
+      "measure": "None. Discomfort is logged as pain 0-3 for the finger zone."
+    },
+    {
+      "id": "hanging_leg_raise_horizontal",
+      "name": "Hanging Leg Raise (to Horizontal)",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "compression",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "core_compression",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 8,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Legs straight to horizontal (90°). Band 8-12 reps, +1 rep per step. Control the negative. No kipping."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Straight-leg raise from a dead hang to horizontal (hips at 90°): the step between the bent-knee raise and knees-to-elbows / toes-to-bar. The catalog's hanging_leg_raise goes to the bar, so it sits higher on the ladder. (Recommended Routine hanging leg raise progression; Horst)",
+      "cues": [
+        "Start from a dead hang with shoulders actively engaged — not passive",
+        "Initiate with scapular depression before hip flexion, no kipping",
+        "Legs straight, stop at horizontal and hold 1 s",
+        "Slow controlled eccentric: 2-3 seconds down, avoid swinging"
+      ],
+      "video_url": "https://trainingforclimbing.com/video-advanced-core-training-for-climbers/",
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ],
+      "sources": [
+        "https://www.liftosaur.com/programs/recommended-routine",
+        "https://akuaku.org/Sarco+/progression-hanging-leg-raise-progression.html"
       ]
     }
   ]

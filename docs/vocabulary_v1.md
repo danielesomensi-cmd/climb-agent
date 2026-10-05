@@ -136,9 +136,31 @@ Allowed `role` values:
 - `conditioning`
 - `test` *(assessment / benchmark exercises — e.g., critical force test, MED test)*
 - `recovery` *(active recovery exercises — regeneration climbing, light mobility)*
+- `ladder` *(C272 — a level of a bodyweight ladder in `backend/catalog/progressions/v1/bw_ladders.json`; library-only)*
+- `library` *(C272 — technique / positioning / try-hard / pocket drill or protocol; library-only)*
 
 Notes:
 - `role` can be an array if an exercise is legitimately reusable across roles (e.g., scapular control).
+- **Library-only roles (C272).** `ladder` and `library` are never requested by a template block, so `resolve_session` never selects them; `backend/engine/catalog_roles.is_library_only()` removes them explicitly from the other engine-built pools (body-part picker, ad-hoc builder, coach composer pool). They are visible to the custom-session builder and to Claude Code (`/custom-session`, `scripts/athlete_context.py`). A library-only exercise carries ONLY that role, never mixed with an engine role.
+
+#### Optional descriptive fields (C272)
+
+On library-only exercises (allowed on any exercise, never read by the engine):
+
+- `progression` — how the drill gets harder (one lever at a time).
+- `measure` — the one number logged per session (e.g. foot readjustments on a sample problem, hover x/5, FALL vs TAKE + LET_GO).
+- `sources` — citations (URLs or bibliographic strings).
+- `protocol_refs` — ids of protocols in `bw_ladders.json` → `protocols` that apply to this exercise (set on the four limit exercises → `limit_weak_style`, on `hang_rampup_progressive` → `pocket_warmup`). The resolver does not copy it into a session.
+
+#### Progressions file (`backend/catalog/progressions/v1/bw_ladders.json`, C272)
+
+- `families[]` — 16 bodyweight families: `family`, `axis_default` (`reps` | `seconds`), `stimulus_ref` (`null` or a `stimulus.py` family), `heavy_pull` / `heavy_pull_from_level`, `hanging` / `hanging_from_level`, `skill_family` (60-day history window instead of 120), `lower_back_risk_from_level` (manual only from that level until a lower-back pain zone exists), `floor_level_advanced`, `entry_seed[]` (`{test, min, max?, level, target | target_from_test{divisor|factor}, ramp?, requires_equipment?}`), `gates[]`, `terminal` (`kind`: `tempo` | `load` | `handoff` | `cap`), `variants[]`, `extras[]`, `levels[]` (`level_idx` from 0, `exercise_id`, `axis`, `sets`, `band{lo,hi,step}`, `advance_sessions`, `rest_s`).
+- `technique_ladders[]` — `feet` (P1-P4), `positions` (Q1-Q4), `falls` (F1-F3): levels with drills, `advance`, `regress`, `measure`. The athlete's current technique level lives in the athlete plan notes, not in `user_state`.
+- `protocols{}` — `limit_weak_style`, `template_warmup`, `outdoor_technique_day`, `pocket_warmup`.
+- `history_aliases[]` — `hanging_leg_raise` counts as `toes_to_bar` for every log (its catalog note says "straight legs to bar"); an alias may carry an optional `before` cut-off date. The to-horizontal level is `hanging_leg_raise_horizontal`.
+- `heavy_pull_exercise_ids()` (bw_ladders.py) — the ladder heavy pulls (front lever: every level, variants, raise/row; `pull_bw` from L3). `athlete_context` adds a day carrying one of them to the heavy-pull days of a **tested** athlete; `retest_policy.is_heavy_pulling_session` does not read them.
+- `FINGER_HARD_LIBRARY_IDS` (stimulus.py) — library drills that make a session finger-hard without being a stimulus exposure (`three_attempt_comp`). Every library-only exercise with `stress_tags.fingers == "high"` must be finger-hard (test-pinned).
+- Read by `backend/engine/bw_ladders.py`: `family_of()` and the read-only `seed_levels()` (sources `state` | `history` | `test` | `none` | `catalog` | `not_applicable`). No `bw_progression` key exists in `user_state` yet (BW-PROGRESSION brief).
 
 ---
 

@@ -31,6 +31,9 @@ CANONICAL_DOMAINS = {
 CANONICAL_ROLES = {
     "warmup", "activation", "main", "accessory", "cooldown",
     "prehab", "technique", "conditioning", "test", "recovery",
+    # C272: library-only roles — no template block requests them, the engine
+    # never selects them (catalog_roles.LIBRARY_ONLY_ROLES).
+    "ladder", "library",
 }
 
 

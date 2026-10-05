@@ -50,6 +50,7 @@ from datetime import date, datetime, timedelta
 from functools import lru_cache
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 
+from backend.engine import bw_ladders as _bw
 from backend.engine import retest_policy as rp
 from backend.engine import limit_log as _limit_log
 from backend.engine.anchored_load import (
@@ -78,7 +79,7 @@ from backend.engine.stimulus import (
 DateLike = Union[date, str]
 ArchivedWeeks = Optional[Union[Mapping[str, Any], Sequence[Mapping[str, Any]]]]
 
-VERSION = "a297.1"
+VERSION = "c272.1"
 
 # ---------------------------------------------------------------------------
 # Constants. Shared with the engine, never copied: the command and the docs
@@ -127,7 +128,7 @@ from backend.engine import key_sessions_v1 as ks1  # noqa: E402
 TECHNIQUE_MIN_DRILLS = ks1.TECHNIQUE_MIN_DRILLS
 WARMUP_TECHNIQUE_DRILLS = ks1.WARMUP_TECHNIQUE_DRILLS
 #: Exercises that make a session a try-hard practice.
-TRYHARD_EXERCISE_IDS = ("fall_practice",)
+TRYHARD_EXERCISE_IDS = ("fall_practice", "fall_ladder", "three_attempt_comp", "no_take_lead_onsight", "commit_map")
 #: Custom sessions whose name starts with this are Daniele's recurring "Work"
 #: lunch sessions: re-checked against the day guards and at each phase change.
 _WORK_RE = re.compile(r"^\s*Work\b", re.IGNORECASE)
@@ -462,10 +463,15 @@ def _guards(
 
     heavy: Dict[str, List[str]] = {}
     finger_tagged: Dict[str, List[str]] = {}
+    # C272 review: the ladder heavy pulls (every front-lever level and variant,
+    # one-arm pull-up from L3) count as heavy-pull days — decision 2026-10-04,
+    # and what the rendered ladder line promises. TESTED athletes only: an
+    # untested athlete's guards (and so the in-app composer) stay pre-C272.
+    bw_heavy = _bw.heavy_pull_exercise_ids() if _bw.tested_gate(state, today) else frozenset()
     for k in range(-7, GUARD_DAYS + 7):
         d = today + timedelta(days=k)
         for s in sessions_on(d):
-            if rp.is_heavy_pulling_session(state, s, d):
+            if rp.is_heavy_pulling_session(state, s, d) or (bw_heavy and _bw.carries_heavy_bw_pull(s, bw_heavy)):
                 heavy.setdefault(d.isoformat(), []).append(str(s.get("session_id")))
             if session_flag(s, "finger"):
                 finger_tagged.setdefault(d.isoformat(), []).append(str(s.get("session_id")))
@@ -829,6 +835,35 @@ def _trips(state: Mapping[str, Any], today: date) -> List[Dict[str, Any]]:
     return sorted(out, key=lambda r: r["start_date"])
 
 
+def _equipment_keys(state: Mapping[str, Any]) -> List[str]:
+    """Every equipment key the athlete has anywhere (home + gyms) — used only to
+    skip a ladder test seed that needs equipment (the dragon flag needs a bench)."""
+    eq = state.get("equipment") or {}
+    keys = set(eq.get("home") or []) | set(eq.get("available") or [])
+    for g in eq.get("gyms") or []:
+        if isinstance(g, Mapping):
+            keys |= set(g.get("equipment") or [])
+    return sorted(str(k) for k in keys)
+
+
+def _bw_ladders(state: Mapping[str, Any], today: date, archived_weeks: ArchivedWeeks) -> Dict[str, Any]:
+    """C272: current level per bodyweight family — a READ-ONLY seed
+    (``bw_ladders.seed_levels``: history, else the L-sit test). Never written."""
+    try:
+        return _bw.seed_levels(state, today, archived_weeks=archived_weeks, equipment=_equipment_keys(state))
+    except Exception as exc:  # pragma: no cover - a broken ladder file must not kill the context
+        return {"source": "error", "error": f"{type(exc).__name__}: {exc}", "families": []}
+
+
+def _technique_library(catalog: Mapping[str, Mapping[str, Any]]) -> Dict[str, Any]:
+    """C272: the technique / positioning / try-hard / pocket drill library and
+    the technique ladders (levels per athlete live in the athlete plan notes)."""
+    try:
+        return _bw.technique_library(catalog)
+    except Exception as exc:  # pragma: no cover
+        return {"source": "error", "error": f"{type(exc).__name__}: {exc}", "drills": []}
+
+
 def _warnings(ctx: Mapping[str, Any]) -> List[Dict[str, Any]]:
     out: List[Dict[str, Any]] = []
     ks = ctx.get("key_sessions") or {}
@@ -924,6 +959,8 @@ def build_athlete_context(
         "limit_log": _limit_log_view(st),
         "limits": _limits(st),
         "trips": _trips(st, td),
+        "bw_ladders": _bw_ladders(st, td, arch),
+        "technique_library": _technique_library(cat),
     }
     if position.get("available") and include_next_week:
         # Planning view: the next week too (no proposals: they are only made
@@ -1027,6 +1064,80 @@ def _render_keys(L: List[str], ks: Mapping[str, Any], label: str) -> None:
     if sm:
         L.append(f"  Requisiti {sm.get('required')}: coperti {sm.get('covered')}, fatti {sm.get('done')}. "
                  "Uno stimolo saltato in una settimana passata è perso, non è debito.")
+
+
+_BW_SOURCE_IT = {"history": "storico", "test": "test", "state": "stato", "none": "nessun dato",
+                 "catalog": "catalogo", "not_applicable": "non applicabile"}
+
+
+def _render_bw_ladders(L: List[str], bw: Mapping[str, Any]) -> None:
+    """C272: current level per bodyweight family (read-only seed)."""
+    L.append("")
+    L.append("## Scale corpo libero (livello attuale, seed in sola lettura — C272)")
+    if bw.get("source") == "error":
+        L.append(f"  non calcolabile ({bw.get('error')})")
+        return
+    if not bw.get("tested_gate"):
+        L.append("  atleta non testato: nessun seed, valgono le dosi del catalogo")
+        return
+    lsit = bw.get("l_sit_test")
+    if lsit:
+        L.append(f"  L-sit {lsit['value']:g} s (log test del {lsit['log_date']})")
+    for r in bw.get("families") or []:
+        src = _BW_SOURCE_IT.get(r.get("source"), r.get("source"))
+        if r.get("level_idx") is None:
+            why = f" — {r['why']}" if r.get("why") else ""
+            L.append(f"  {r['family']}: {src}{why}")
+            continue
+        unit = " s" if r.get("axis") == "seconds" else ""
+        band = r.get("band") or {}
+        bits = [f"L{r['level_idx']}/{r['n_levels'] - 1} {r['exercise_id']} {r['sets']}×{r['target']}{unit} "
+                f"(banda {band.get('lo')}-{band.get('hi')}{unit}, passo {band.get('step')})"]
+        ev = r.get("evidence") or {}
+        if r.get("source") == "history" and ev:
+            bits.append(f"[storico: {ev.get('exercise_id')} {ev.get('sets') or '?'}×{ev.get('dose') or '?'} "
+                        f"il {ev.get('date')}, {ev.get('label') or 'non valutato'} → −1 passo]")
+        elif r.get("source") == "test":
+            sf = r.get("seeded_from") or {}
+            bits.append(f"[test {sf.get('test')} {sf.get('value'):g} del {sf.get('log_date')}]")
+        else:
+            bits.append(f"[{src}]")
+        if r.get("at_top_of_band"):
+            bits.append("IN CIMA ALLA BANDA: prossimo passo terminale o livello successivo")
+        if r.get("ramp"):
+            rp_ = r["ramp"]
+            bits.append(f"rampa: {rp_.get('sessions')} sedute qui, poi L{rp_.get('then_level')} a {rp_.get('then_target')}{unit}")
+        if r.get("gate"):
+            bits.append(f"richiede {r['gate']} nel blocco")
+        if r.get("manual_only"):
+            bits.append("SOLO MANUALE (rischio lombare)")
+        if r.get("heavy_pull"):
+            bits.append("conta come tirata pesante")
+        if r.get("hanging"):
+            bits.append("appeso: mai nelle 24 h prima di limit/strength_long")
+        if r.get("next_exercise_id"):
+            bits.append(f"poi {r['next_exercise_id']}")
+        L.append(f"  {r['family']}: " + " · ".join(bits))
+    L.append("  Il seed non scrive niente: le promozioni le decidi tu con Daniele finché non arriva il brief A "
+             "della progressione (scale in backend/catalog/progressions/v1/bw_ladders.json).")
+
+
+def _render_technique_library(L: List[str], lib: Mapping[str, Any]) -> None:
+    """C272: the technique / try-hard drill library and the technique ladders."""
+    L.append("")
+    L.append("## Libreria tecnica / try-hard (id con role 'library' — solo composizione a mano)")
+    if lib.get("source") == "error":
+        L.append(f"  non disponibile ({lib.get('error')})")
+        return
+    for t in lib.get("technique_ladders") or []:
+        lv = " · ".join(f"{x['level']} [{', '.join(x['drills'])}]" for x in t.get("levels") or [])
+        L.append(f"  Scala {t.get('ladder')}: {lv}")
+    for d in lib.get("drills") or []:
+        tag = " (dita-hard)" if d.get("finger_hard") else ""
+        L.append(f"  {d['exercise_id']}{tag} — misura: {d.get('measure') or '—'}")
+    if lib.get("protocols"):
+        L.append(f"  Protocolli (bw_ladders.json → protocols): {', '.join(lib['protocols'])}")
+    L.append("  Il livello corrente di PIEDI / POSIZIONI / CADUTE sta nelle «Note atleta» qui sotto.")
 
 
 def render_text(ctx: Mapping[str, Any], *, plan_notes: Optional[str] = None,
@@ -1160,6 +1271,9 @@ def render_text(ctx: Mapping[str, Any], *, plan_notes: Optional[str] = None,
                  f"FALL sul totale dei non-send: {th.get('fall_pct_of_non_send')}%")
     else:
         L.append("  nessun tentativo loggato nel formato (non è una sessione chiave mancante)")
+
+    _render_bw_ladders(L, ctx.get("bw_ladders") or {})
+    _render_technique_library(L, ctx.get("technique_library") or {})
 
     lim = ctx.get("limits") or {}
     trips = ctx.get("trips") or []
@@ -1512,10 +1626,11 @@ def render_composer_block(
 # ---------------------------------------------------------------------------
 
 def _finger_hard_ids() -> set:
-    from backend.engine.stimulus import EXERCISE_FAMILY, FAMILY_FINGER_MAX, FINGER_FATIGUE_EXTRA_IDS
+    from backend.engine.stimulus import (EXERCISE_FAMILY, FAMILY_FINGER_MAX, FINGER_FATIGUE_EXTRA_IDS,
+                                         FINGER_HARD_LIBRARY_IDS)
 
     ids = {eid for eid, fam in EXERCISE_FAMILY.items() if fam in (FAMILY_FINGER_MAX, FAMILY_LIMIT_POWER)}
-    return ids | set(FINGER_FATIGUE_EXTRA_IDS)
+    return ids | set(FINGER_FATIGUE_EXTRA_IDS) | set(FINGER_HARD_LIBRARY_IDS)
 
 
 def _pulling_max_ids() -> set:

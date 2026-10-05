@@ -31,7 +31,7 @@ def test_version_is_2_1(exercises):
 
 
 def test_total_count(exercise_list):
-    assert len(exercise_list) == 263  # C266: +4 steady-state cardio (incline walk, bike, easy run, loaded approach) on top of D262's 259
+    assert len(exercise_list) == 336  # C272: +73 library-only (54 bodyweight ladder levels, 19 technique / try-hard / pocket drills) on top of C266's 263
 
 
 def test_all_have_canonical_prescription_fields(exercise_list):

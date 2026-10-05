@@ -5,7 +5,7 @@
 > **Aggiornamento.** Lo aggiorna Claude, nello stesso brief o su richiesta di Daniele, quando un criterio di scala è raggiunto. Lo dice a Daniele e scrive la data.
 > **Fonti.** Analisi del 2026-10-04: `TECH` (tecnica e try-hard), `BW` (corpo libero), `NIKITA` (progetto corrente), decisioni vincolanti in `docs/audit/D282_train_harder_phase1.md`. Le dosi senza una fonte pubblicata sono **ENGINEERING CONSTANT**.
 
-Ultimo aggiornamento: 2026-10-04 (A293).
+Ultimo aggiornamento: 2026-10-05 (C272: scale corpo libero, libreria tecnica / try-hard e riscaldamento tasche nel catalogo).
 
 ---
 
@@ -97,10 +97,11 @@ Il test conta come esposizione. Durante il rientro, max hang al massimo 5 serie.
 ### Dita a tasca e mono
 
 - Sul **mono** usa il **medio sinistro**. Con la **mano destra** tira molto **bidito e tridito**.
-- **Riscaldamento specifico** prima di limit e outdoor (in testa alla seduta dita):
-  - carico progressivo del medio sinistro e delle tasche a 2-3 dita della destra;
-  - su tasca di trave, 3-4 sospensioni progressive (50% → 70-80%);
-  - id catalogo: `hang_rampup_progressive`, poi le tasche nelle note.
+- **Riscaldamento specifico** prima di limit e outdoor (in testa alla seduta dita), protocollo `pocket_warmup` di `backend/catalog/progressions/v1/bw_ladders.json`:
+  1. `hang_rampup_progressive` (riscaldamento dita generico);
+  2. `pocket_rampup_hangboard`: 4 sospensioni da 10 s sulle tasche a **2 e 3 dita della trave**, piedi appoggiati, circa 50% → 60% → 70% → 80% del peso. Per lui: bidito e tridito con la **destra** (dove tira di più), poi la sinistra;
+  3. `single_finger_pocket_rampup`: carico progressivo del **medio sinistro** in una tasca profonda della trave, **piedi sempre a terra o sulla sedia**, sforzo 3 → 4 → 5 → 6 su 10. Mai una sospensione libera su un dito, mai il mono della palestra.
+  Le id del catalogo sono generiche (role `library`, mai scelte dal motore): le specifiche sue (dito, mano) vanno nelle `notes` della riga.
 - **Lavoro su tasca solo submassimale e solo su una tasca di hangboard.** Mai un mono in palestra (il simulatore è un buco a 2 dita).
 - **Sorvegliare puleggia e lombricali** di quelle dita. Un fastidio alla puleggia chiude la giornata. Circa 6 carichi veri del mono per giornata outdoor (ENGINEERING CONSTANT).
 
@@ -119,25 +120,25 @@ Il test conta come esposizione. Durante il rientro, max hang al massimo 5 serie.
 - Sui 2 problemi tecnici vale un vincolo dichiarato prima di partire: «piede piazzato una volta sola» oppure «posizione X sul crux».
 - La tecnica entra nel limit **senza aggiungere un giorno dita**.
 
-**Drill disponibili nel catalogo oggi:**
+**Drill nel catalogo.** Quelli marcati *(C272)* hanno role `library`: il motore non li sceglie mai, si compongono solo a mano (questo comando, il builder). Scale e protocolli completi in `backend/catalog/progressions/v1/bw_ladders.json` (`technique_ladders`, `protocols`); lo script li stampa nella sezione «Libreria tecnica / try-hard».
 
 | Blocco | Id catalogo | Dose / note |
 |---|---|---|
-| Riscaldamento a costo zero | `silent_feet_drill`, `foothold_stare`, `straight_arms`, `hip_rotation_drill`, `flag_practice` | 3-4 boulder in salita fino a flash −1, un focus ciascuno |
-| Precisione di piedi (scala PIEDI) | `no_readjust_drill`, `sticky_feet`, `tech_hard_target`, `tech_five_step`, `tap_and_place` | 4 problemi × 2 giri a flash −1/flash; un aggiustamento = si ripete |
-| Posizione (scala POSIZIONI) | `twist_lock_drill`, `flag_practice`, `tech_barn_door_2000`, `tech_hips_first`, `freeze_drill` | board 40-45° a 7A+/7B, ogni sezione in 3 modi (frontale, flag, twist/drop-knee) |
-| Varianti / adattabilità | `tech_contrast_bouldering`, `three_limb_drill`, `one_hand_climbing`, `tech_single_leg_climbing` | 3 problemi àncora a flash in 4 versioni |
+| Riscaldamento a costo zero | `silent_feet_drill`, `foothold_stare`, `straight_arms`, `hip_rotation_drill`, `flag_practice`, `small_feet_press_hold` *(C272)* | 3-4 boulder in salita fino a flash −1, un focus ciascuno (protocollo `template_warmup`) |
+| Precisione di piedi (scala PIEDI) | `no_readjust_drill`, `sticky_feet`, `tech_hard_target`, `tech_five_step`, `tap_and_place`, `glued_feet_board` *(C272)* | 4 problemi × 2 giri a flash −1/flash; un aggiustamento = si ripete. glued_feet: 15-20' in apertura, piede staccato = tentativo annullato |
+| Piedi al limite | `vertical_small_feet_limit` *(C272, dita-hard)* | 4-6 problemi verticali/5-15° col crux sui piedi, RP-1/RP-2: è la scelta «piedi» dei 2 problemi nello stile debole |
+| Posizione (scala POSIZIONI) | `position_menu_3way` *(C272)*, `twist_lock_drill`, `flag_practice`, `tech_barn_door_2000`, `tech_hips_first`, `freeze_drill` | board 40-45° a 7A+/7B, ogni sezione in 3 modi (frontale, flag, twist/drop-knee), hover 2 s |
+| Varianti / adattabilità | `variant_ladder_board` *(C272)*, `tech_contrast_bouldering`, `three_limb_drill`, `one_hand_climbing`, `tech_single_leg_climbing` | 3 problemi àncora a flash in 4 versioni, ordine mescolato; settimane alterne con il menu posizioni |
+| Lead | `lead_technique_under_pump`, `rest_and_clip_drill`, `lead_precision_feet_above_bolt` *(C272)* | 1 regola tecnica dichiarata per via; riposi e rinvii; piede caricato 3 s |
+| Progetto | `crux_sequence_rehearsal`, `commit_map` *(C272)* | sequenza piedi a corda tesa; mappa dei punti di impegno |
 | Tallone | `heel_hook_specific_drill` | 2 settimane su prese grandi; stop al primo fastidio dietro il ginocchio |
 | Lettura | `timed_route_preview` | Beta Forecast: 2' di lettura, sequenza ad alta voce, poi «previsto sì/no» |
 | Pacing / lento | `slow_climbing`, `tech_smooth_is_fast` | deload: chiave tecnica a severità bassa |
-| Limit | `limit_bouldering`, `board_limit_boulders`, `system_board_limit`, `spray_wall_limit` | il limit nello stile debole (vedi sopra) |
-| Forza del piede | `single_leg_calf_raise` | 3×8-10 sul bordo, 2 volte a settimana dopo una seduta qualsiasi |
+| Limit | `limit_bouldering`, `board_limit_boulders`, `system_board_limit`, `spray_wall_limit` | il limit nello stile debole (protocollo `limit_weak_style`, vedi sopra) |
+| Forza del piede | `toe_flexor_isometric`, `edge_calf_raise_bigtoe` *(C272)*, `single_leg_calf_raise` | 2 volte a settimana dopo una seduta qualsiasi |
+| Benchmark | `technique_benchmark_test` *(C272)* | ogni 4 settimane: B1 piedi 25-30°, B2 posizione 40°, flash rate su 10. Non passa dalla retest policy e **non chiude la chiave tecnica** (è un test: il suo gruppo di recency è escluso) |
 
-**Drill proposti ma NON ancora in catalogo** (arrivano con C271): `glued_feet_board`, `position_menu_3way`, `variant_ladder_board`, `lead_technique_under_pump`, `rest_and_clip_drill`, `vertical_small_feet_limit`, `lead_precision_feet_above_bolt`, `three_attempt_comp`, `no_take_lead_onsight`, `toe_flexor_isometric`, `edge_calf_raise_bigtoe`, `technique_benchmark_test`, `pre_attempt_routine`.
-
-Finché non esistono:
-- si usa l'id esistente più vicino;
-- la regola specifica va nelle `notes` della riga. Esempio: `no_readjust_drill` con la nota «glued feet: un piede che si stacca annulla il tentativo, Kilter 40°, 3 tentativi».
+Conteggio per la chiave tecnica (A294): servono ≥ 2 drill tecnici diversi, esclusi i drill di riscaldamento e quelli try-hard (gruppo `technique_tryhard`).
 
 **Tecnica da 8b:** riposi (kneebar, scuotere, scaricare le braccia), rinvio a braccio teso e anca dentro, ritmo costante sulla resistenza, link dal basso.
 - Nelle settimane senza roccia: seduta lead in palestra con 1 regola tecnica dichiarata per via.
@@ -180,7 +181,8 @@ A Berdorf: volume verticale 7a-7c su piedi piccoli, scarpetta annotata, scivolat
   - gara a 3 tentativi: 6-8 problemi appena sopra il flash, 2' di lettura, massimo 3 tentativi;
   - no-take: 2-3 vie da OS a OS+1, vietato chiedere corda, solo con fall ladder ≥ F2 e assicuratore abituale;
   - il limit con budget di tentativi.
-  Nella settimana vanno anche le cadute (`fall_practice`, fall ladder): fase intensiva per 4-6 settimane, poi 2-3 cadute a inizio di ogni giornata lead.
+  Nella settimana vanno anche le cadute (`fall_ladder` a 3 gradini, oppure `fall_practice`): fase intensiva per 4-6 settimane, poi 2-3 cadute a inizio di ogni giornata lead.
+- **Id del catalogo (C272, role `library`):** `pre_attempt_routine`, `three_attempt_comp`, `no_take_lead_onsight`, `fall_ladder`, `commit_map`. Contano per la componente try-hard della settimana (A294), come `fall_practice`. `three_attempt_comp` (flash+1, cioè ≥ RP−2 per te) è **dita-hard per tutte le guardie** (gap 48 h, blocco 72 h del test, tetto per seduta: `stimulus.FINGER_HARD_LIBRARY_IDS`); non è un'esposizione limit_power.
 - **Misura primaria = l'esito:** % di non-send chiusi in FALL rispetto a TAKE+LET_GO, più i movimenti provati dopo il punto in cui volevi fermarti. Lo sforzo 0-3 è secondario e facoltativo.
 - **Se l'esito è piatto da 3 settimane:** grado −1 su gara e no-take, fall ladder giù di un gradino. Il problema è la paura, non la difficoltà. Né più volume né più grado.
 
@@ -226,18 +228,33 @@ Senza roccia: giovedì lead in palestra (cadute 10', 2 vie con regola tecnica, n
 
 ## 6. Corpo libero e core (scale BW)
 
-Per un atleta col suo livello, un esercizio a corpo libero a due braccia è **troppo facile**: va reso unilaterale, assistito o zavorrato. Le scale complete (con i livelli NEW) arrivano con il brief di catalogo. Qui sotto, solo gli id **già in catalogo** e il punto di partenza consigliato da BW:
+Per un atleta col suo livello, un esercizio a corpo libero a due braccia è **troppo facile**: va reso unilaterale, assistito o zavorrato.
 
-| Famiglia | Livelli esistenti (dal più facile) | Partenza per Daniele |
+Le **16 scale** stanno in `backend/catalog/progressions/v1/bw_ladders.json` (livelli da 0, bande, passi, terminali, fonti). I livelli nuovi hanno role `ladder`: il motore non li sceglie ancora, si usano nelle custom. **Il livello attuale per famiglia lo stampa lo script** (sezione «Scale corpo libero»), calcolato in sola lettura:
+1. dallo **storico** degli ultimi 120 giorni (60 per front lever e dragon flag): il livello più alto fatto senza hard/very_hard, con dose = ultima dose − 1 passo;
+2. altrimenti dal **test L-sit** (log `test_l_sit_hold` entro 90 giorni): target ≈ test/3 sul livello d'ingresso;
+3. per un atleta non testato: nessun seed, dosi del catalogo.
+
+Il seed **non scrive niente**: le promozioni (label easy/very_easy, 2 sedute in cima per i livelli a rischio) le proponi tu a Daniele finché non arriva il brief A della progressione.
+
+| Famiglia | Livelli (dal più facile) | Partenza indicata da BW per Daniele |
 |---|---|---|
-| Compressione a terra | `core_l_sit` | L-sit 60 s misurato: straddle L-sit 3×20 s (NEW) al posto di `core_l_sit` 5×15 s |
-| Compressione appesi | `hanging_leg_raise` → `knees_to_elbows` → `toes_to_bar` → `weighted_hanging_leg_raise` | `toes_to_bar` 3×6 con eccentrica di 3 s, poi 5 s, poi +1 kg alle caviglie |
-| Rollout | `ab_wheel_rollout` (in ginocchio) | già oltre il criterio: ring fallout (NEW) 3×6; in piedi solo manuale (zona lombare) |
-| Front lever | `front_lever_tuck` → `front_lever_one_leg` → `front_lever_straddle` | straddle 4×10 s. **Mai** nelle 24 h prima di limit/strength_long; conta come tirata pesante |
-| Laterale | `side_plank` → `copenhagen_plank` | copenhagen: 2 sedute in versione corta, poi lunga 3×10 s |
-| Rotazione | `windshield_wipers` | 2-3×6-12 |
-| Spinta | `pushup`, `ring_pushup`, `pike_pushup`, `handstand_pushup_wall` | `ring_pushup` 3×8 |
-| Femorali | `nordic_curl` | 2×4-8 |
+| Compressione a terra | `tuck_l_sit` → `one_leg_l_sit` → `core_l_sit` → `straddle_l_sit` → `v_sit_45` → `v_sit` (terminale `weighted_l_sit`) | L-sit 60 s: `straddle_l_sit` 3×20 s. Dal V-sit serve `compression_pulses` nel blocco |
+| Compressione appesi | `hanging_knee_raise` → `hanging_leg_raise_horizontal` (a 90°) → `knees_to_elbows` → `toes_to_bar` (`hanging_leg_raise` del catalogo arriva alla sbarra: conta come `toes_to_bar`) (poi eccentrica 3 s, 5 s, poi `weighted_hanging_leg_raise` +1 kg) | storico T2B: eccentrica, poi +1 kg alle caviglie |
+| Rollout | `ab_wheel_rollout` → `ring_fallout` → `ab_wheel_rollout_standing_wall` → `ab_wheel_rollout_standing_eccentric` → `ab_wheel_rollout_standing` | `ring_fallout` 3×6 (anelli all'altezza del ginocchio). In piedi solo manuale (zona lombare) |
+| Dragon flag (panca) | `bench_hip_lift` → `candlestick_hold` → `dragon_flag_tuck_negative` → `dragon_flag_tuck` → straddle neg. → straddle → neg. → `dragon_flag` | `dragon_flag_tuck_negative` 3×4 da 5 s al posto di `v_up` |
+| Hollow / plank | `plank` → `rkc_plank` → `core_hollow_hold` → `hollow_rock` → `weighted_hollow_hold` | per lui solo riscaldamento |
+| Front lever | `front_lever_tuck` → `front_lever_advanced_tuck` → `front_lever_one_leg` → `front_lever_straddle` → `front_lever_full` (poi `front_lever_raise`, `front_lever_row`; varianti `front_lever_raise_tuck`, `front_lever_negative`) | straddle 4×10 s. Conta come tirata pesante nelle guardie del contesto (2 per 7 gg; `bw_ladders.heavy_pull_exercise_ids`). **A mano:** mai nelle 24 h prima di limit/strength_long e lontano 48 h dal test trazione (la retest policy non lo conta). Nessuna zavorra |
+| Laterale | `side_plank` → `copenhagen_short_lever` → `copenhagen_plank` → `copenhagen_dynamic` (terminale `weighted_side_plank`) | 2 sedute short lever 3×15 s, poi lunga 3×10 s |
+| Catena posteriore | `arch_hold` → `back_extension` → `single_leg_back_extension` | obbligatoria con 2 esercizi di compressione in seduta |
+| Anti-rotazione | `pallof_press_half_kneeling` → `pallof_press` → `pallof_press_standing_pause` | solo attivazione per lui |
+| Rotazione | `lying_windshield_wiper` → `half_windshield_wiper` → `windshield_wipers` | 2-3×6-12 |
+| Spinta orizzontale | `incline_pushup` → `pushup` → `ring_pushup` → `ring_pushup_rto` (terminale `weighted_pushup`) | `ring_pushup` 3×8 → RTO |
+| Spinta verticale | `pike_pushup` → `elevated_pike_pushup` → `handstand_pushup_wall` | `elevated_pike_pushup` 3×5 |
+| Dip | `ring_support_hold` → `dip` → `ring_dip` (poi `weighted_dip`) | — |
+| Trazione a corpo libero | `pullup` → … → `one_arm_pullup` | **non per lui**: 2RM testato, la trazione resta `weighted_pullup` ancorato |
+| Squat a una gamba | `box_pistol_squat` → `assisted_pistol_squat` → `shrimp_squat` → `pistol_squat` | — |
+| Femorali | `slider_hamstring_curl` → `single_leg_slider_curl` → `nordic_curl_band_assisted` → `nordic_curl` | `nordic_curl` 2×4-8 |
 
 **Budget per seduta:** al massimo `toes_to_bar` **oppure** front lever, più rollout oppure dragon flag, più eventualmente copenhagen. Non tutte le famiglie insieme. Con 2 esercizi di compressione serve un esercizio di catena posteriore (`back_extension`).
 
@@ -291,13 +308,13 @@ Il testo fra i due marcatori qui sotto è stampato da `scripts/athlete_context.p
 
 <!-- athlete-context:notes -->
 Livelli scale (aggiornati 2026-10-04, partenza consigliata — da confermare alla prima seduta tracciata):
-- PIEDI: P2 (flash 7A+/7B, 1 piazzamento, 0 rumore; glued_feet a 40° quando arriva C271)
+- PIEDI: P2 (flash 7A+/7B, 1 piazzamento, 0 rumore; glued_feet_board a 40°)
 - POSIZIONI: Q1 (board 40-45° a 7A+/7B, menu a 3 versioni)
 - CADUTE: da valutare (prima seduta di fall_practice: F1 → F2 se paura ≤3)
 Limitatori: 1) piedi 2) posizione 3) try-hard. Ogni custom non di recupero ha un blocco tecnica o try-hard con UN target misurabile.
 Forza: continua a progredire (carichi SOLO da anchored_load, mai working_loads grezzi, mai il 2RM).
-Tasche: mono = medio SINISTRO; bi/tridito con la DESTRA. Riscaldamento specifico su tasca di trave prima di limit/outdoor; tasche solo submassimali su hangboard, mai mono in palestra; attenzione a pulegge/lombricali.
-Core: niente dead_bug/plank/plank_shoulder_tap/pallof come blocco principale; front lever mai nelle 24 h prima di limit/strength_long.
+Tasche: mono = medio SINISTRO; bi/tridito con la DESTRA. Prima di limit/outdoor: pocket_rampup_hangboard (2-3 dita, destra prima) + single_finger_pocket_rampup (medio sinistro, piedi appoggiati); solo submassimale su trave, mai mono in palestra; attenzione a pulegge/lombricali.
+Core: livello per famiglia nella sezione «Scale corpo libero» dello script (seed in sola lettura); niente dead_bug/plank/plank_shoulder_tap/pallof come blocco principale; front lever mai nelle 24 h prima di limit/strength_long.
 Progetto corrente: Cima Nikita 8a (Berdorf) — NON si pianifica attorno a Nikita; registro «T1 M7 piede R✓ I2».
 Berdorf: solo ≥24 h dopo la pioggia.
 <!-- /athlete-context:notes -->

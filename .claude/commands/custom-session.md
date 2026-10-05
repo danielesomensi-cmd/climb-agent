@@ -8,6 +8,7 @@ Questa è la **fonte unica** delle regole per comporre le sessioni custom di Dan
 
 - Le costanti (gap dita, blocchi dei test, tetto della tirata pesante) **non si ricopiano qui**: le stampa lo script, importandole da `backend/engine/athlete_context.py`.
 - Il programma (obiettivo, limitatori, scale, try-hard, settimane tipo, tasche, progetto corrente) sta in `docs/training/athlete_plan.md`.
+- Le scale (16 famiglie a corpo libero, PIEDI / POSIZIONI / CADUTE) e i protocolli (`limit_weak_style`, `template_warmup`, `outdoor_technique_day`, `pocket_warmup`) stanno in `backend/catalog/progressions/v1/bw_ladders.json` (C272).
 
 Richiesta dell'utente: $ARGUMENTS
 
@@ -37,7 +38,7 @@ python scripts/athlete_context.py --date YYYY-MM-DD                        # se 
   - Avvisi `HIIT_ON_GUARD_DAY` / `WORK_RECURRENCE_PHASE_CHANGE`: le ricorrenze «Work —» di Daniele vanno riviste (spostate o rese Z2) e proposte a lui, non ignorate.
 - Uno stimolo chiave `NOT_DUE` (per esempio il limit in PE dentro il gap di 12 giorni) **non** si aggiunge.
 - **Retest:** decide la retest policy (sezione «Retest»). Non si sposta e non si aggiunge un test a mano. Si riporta la riga «ufficiale / lavoro / prossimo test».
-- **Ogni sessione non di puro recupero** contiene un **blocco tecnica** (piedi o posizione, drill id + livello di scala) **oppure** un **blocco try-hard**, con **UN target misurabile** nelle note. Esempi: «campione ≤1 aggiustamento», «hover 2 s 4/5», «non-send chiusi in FALL», «F2, paura ≤3». La tecnica va fatta da freschi, a inizio seduta, vicino al limite (flash..RP-2): mai dopo il limit, mai 6b+/6C.
+- **Ogni sessione non di puro recupero** contiene un **blocco tecnica** (piedi o posizione, drill id + livello di scala) **oppure** un **blocco try-hard**, con **UN target misurabile** nelle note. I drill e la loro misura li stampa lo script («Libreria tecnica / try-hard»); il livello di scala corrente sta nelle «Note atleta». Esempi: «campione ≤1 aggiustamento», «hover 2 s 4/5», «non-send chiusi in FALL», «F2, paura ≤3». La tecnica va fatta da freschi, a inizio seduta, vicino al limite (flash..RP-2): mai dopo il limit, mai 6b+/6C.
 - **La forza continua a progredire:** non togliere né ridurre finger_max, pulling_max e limit per far posto ad altro. Tecnica e try-hard sostituiscono volume.
 
 ## 3. Componi
@@ -54,15 +55,15 @@ python scripts/athlete_context.py --date YYYY-MM-DD                        # se 
    - (c) nessuna sessione di catalogo pianificata nella settimana porta lo stesso stimolo.
    Altrimenti la custom resta senza dita e senza tirata massimale.
 3. **Per ogni riga** controlla nel catalogo (`backend/catalog/exercises/v1/exercises.json`) `description`, `cues`, `load_model` e `prescription_defaults`. Le tue note non li contraddicono. Calibra sul suo livello misurato: un esercizio a corpo libero a due braccia per lui è troppo facile, quindi lo rendi unilaterale, assistito o zavorrato.
-4. **Solo id esistenti nel catalogo.** I drill di C271 non ancora presenti (elenco in `athlete_plan.md` §3) si rendono con l'id esistente più vicino e la regola nelle `notes`.
+4. **Solo id esistenti nel catalogo.** Dal C272 ci sono anche gli id con role `library` (drill tecnica / try-hard / tasche: `glued_feet_board`, `position_menu_3way`, `three_attempt_comp`, `fall_ladder`, `pocket_rampup_hangboard`…) e `ladder` (livelli delle scale a corpo libero): il motore non li sceglie mai da solo, ma in una custom si usano come qualsiasi altro id. Per un drill con `grade_ref` il grado lo calcola il player; la regola specifica (vincolo, target) va nelle `notes`.
 5. **Più duro, in quest'ordine:** intensità (RIR 1-2) → densità → frequenza → volume. Mai a cedimento sulle dita, al massimo 1 blocco a RIR 1, domanda sul dolore (0-3 per zona) a fine seduta.
-6. **Core avanzato di default:** `toes_to_bar`, `weighted_hanging_leg_raise`, `windshield_wipers`, `ab_wheel_rollout` / ring fallout, front lever secondo la scala.
+6. **Core e corpo libero dalla scala:** per ogni famiglia usa il **livello e la dose** della sezione «Scale corpo libero» dello script (seed in sola lettura: storico −1 passo, oppure test L-sit). Se la riga dice «IN CIMA ALLA BANDA», proponi a Daniele il passo terminale o il livello successivo, non decidere da solo. «SOLO MANUALE» = livello lombare, solo se lo chiede lui. Atleta non testato o famiglia senza dati: dose del catalogo.
    - Il front lever solo senza tirata massimale nelle 24 h dopo.
    - `dead_bug`, `plank`, `plank_shoulder_tap`, `pallof_press`, `core_hollow_hold` al massimo come attivazione.
    - Budget: `toes_to_bar` **oppure** front lever, più rollout, più eventualmente copenhagen.
 7. **Accessori a rotazione A/B:** guarda «Varietà» e ruota fuori i gruppi «usati troppo».
 8. **Struttura:**
-   - riscaldamento specifico 10-12', con riscaldamento tasche (medio sinistro, bi/tridito destra) prima di limit o outdoor;
+   - riscaldamento specifico 10-12', con riscaldamento tasche prima di limit o outdoor (protocollo `pocket_warmup`: `hang_rampup_progressive` → `pocket_rampup_hangboard` bi/tridito destra → `single_finger_pocket_rampup` medio sinistro, piedi appoggiati);
    - 1-2 blocchi principali;
    - ≤ 2 accessori;
    - 3' di chiusura.
