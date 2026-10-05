@@ -67,6 +67,38 @@ def effort_band_for_phase(phase: Optional[str]) -> Optional[str]:
     return PHASE_EFFORT_BAND.get(phase)
 
 
+def effort_band_for(
+    phase: Optional[str],
+    energy: Optional[str],
+    guards: Optional[Dict[str, Any]] = None,
+) -> Optional[str]:
+    """A297: the effort cue of the phase, tempered by the athlete's energy and
+    the recovery guards of the session day. Display-only, like
+    ``effort_band_for_phase`` (which stays: it is the flag-off path).
+
+    - low energy → the cue says to keep 1-2 more reps in reserve;
+    - a guarded day (no max fingers and/or no heavy pulling) → the cue names
+      what stays submaximal, so "Hard — heavy, low reps" is never shown the
+      evening before a limit session without its caveat.
+    """
+    band = effort_band_for_phase(phase)
+    if band is None:
+        return None
+    notes = []
+    if energy == "low":
+        notes.append("low energy: keep 1-2 more reps in reserve")
+    g = guards or {}
+    blocked = []
+    if g.get("finger_max_ok") is False:
+        blocked.append("fingers")
+    if g.get("heavy_pull_ok") is False:
+        blocked.append("heavy pulling")
+    if blocked:
+        why = "pain flag" if g.get("pain_axes") else "recovery guard"
+        notes.append(f"{' and '.join(blocked)} submaximal today ({why})")
+    return band + (" — " + "; ".join(notes) if notes else "")
+
+
 def propose_exercise_prescription(
     exercise_id: str,
     catalog: Dict[str, Any],

@@ -24,8 +24,11 @@ Contract:
   ``retest_policy.retest_status``. When a contract does not exist yet the
   section says so and is labelled ``source: "fallback"``.
 - ``render_text(ctx)`` renders it in Italian for the CLI (Claude Code reads the
-  output). There is deliberately no renderer for the in-app composer prompt:
-  that integration point belongs to A297 (R7b), behind ``COACH_ATHLETE_CONTEXT``.
+  output). ``render_coach_block`` / ``render_composer_block`` (A297, R7b) render
+  it in English for the in-app coach chat and ad-hoc composer — the single
+  prompt integration point, wired by ``backend.coach.athlete_block`` behind
+  ``COACH_ATHLETE_CONTEXT``. ``composer_guard_view`` / ``drop_heavy_pulls``
+  turn the day's guards into deterministic pool exclusions.
 
 Key sessions: A294 owns their definition (derived at read, never persisted).
 ``key_sessions`` / ``key_sessions_next_week`` are
@@ -48,11 +51,16 @@ from functools import lru_cache
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 
 from backend.engine import retest_policy as rp
+from backend.engine import limit_log as _limit_log
 from backend.engine.anchored_load import (
     ANCHORED_EXERCISES,
+    AXIS_FINGER,
+    AXIS_PULLING,
     HEAVY_PULL_WEEKLY_MAX,
     WORKING_ENTRY_MAX_AGE_D,
     anchored_load,
+    fatigue_for,
+    pain_for,
 )
 from backend.engine.macro_position import position_on
 from backend.engine.stimulus import (
@@ -70,7 +78,7 @@ from backend.engine.stimulus import (
 DateLike = Union[date, str]
 ArchivedWeeks = Optional[Union[Mapping[str, Any], Sequence[Mapping[str, Any]]]]
 
-VERSION = "a293.1"
+VERSION = "a297.1"
 
 # ---------------------------------------------------------------------------
 # Constants. Shared with the engine, never copied: the command and the docs
@@ -504,10 +512,15 @@ def _guards(
         d_iso = d.isoformat()
         prev_d, next_d = (d - timedelta(days=1)).isoformat(), (d + timedelta(days=1)).isoformat()
         reasons_finger: List[str] = []
+        # A297: every reason also carries a language-neutral code + detail, so
+        # the English coach/composer renderers never parse the Italian text.
+        codes_finger: List[Dict[str, str]] = []
         if prev_d in fh:
             reasons_finger.append(f"dita hard il {prev_d} ({', '.join(fh[prev_d])})")
+            codes_finger.append({"code": "finger_hard_adjacent", "detail": f"{prev_d} {', '.join(fh[prev_d])}"})
         if next_d in fh:
             reasons_finger.append(f"dita hard il {next_d} ({', '.join(fh[next_d])})")
+            codes_finger.append({"code": "finger_hard_adjacent", "detail": f"{next_d} {', '.join(fh[next_d])}"})
         gap = _finger_spacing_gap(state, d)
         for j in range(1, gap + 1):
             before, after = (d - timedelta(days=j)).isoformat(), (d + timedelta(days=j)).isoformat()
@@ -515,39 +528,55 @@ def _guards(
                 reasons_finger.append(
                     f"sessione con tag dita il {before} ({', '.join(finger_tagged[before])}): giorni dita "
                     f"entro lo spacing del replanner ({gap} gg)")
+                codes_finger.append({"code": "finger_spacing",
+                                     "detail": f"{before} {', '.join(finger_tagged[before])} ({gap} d)"})
             if after in finger_tagged and not (j == 1 and after in fh):
                 reasons_finger.append(
                     f"sessione con tag dita il {after} ({', '.join(finger_tagged[after])}): spacing del "
                     f"replanner {gap} gg, la declasserebbe a regeneration_easy")
+                codes_finger.append({"code": "finger_spacing",
+                                     "detail": f"{after} {', '.join(finger_tagged[after])} ({gap} d)"})
         hang_tests = tests_within(d, RETEST_BLOCK_H // 24, "test_max_hang")
         if hang_tests:
             reasons_finger.append(f"test dita entro {RETEST_BLOCK_H} h: {', '.join(hang_tests)}")
+            codes_finger.append({"code": "hang_test_soon", "detail": ", ".join(hang_tests)})
         heavy_7d = heavy_window(d)
         reasons_pull: List[str] = []
+        codes_pull: List[Dict[str, str]] = []
         if heavy_7d:
             reasons_pull.append(f"già {len(heavy_7d)} sedute di tirata pesante in una finestra di 7 gg "
                                 f"che contiene questo giorno ({', '.join(heavy_7d)})")
+            codes_pull.append({"code": "heavy_pull_week", "detail": ", ".join(heavy_7d)})
         pl = pre_limit(d)
         if pl:
             reasons_pull.append(f"il giorno dopo c'è {', '.join(pl)}: niente trazione ≥85% né front lever")
+            codes_pull.append({"code": "pre_limit", "detail": f"{next_d} {', '.join(pl)}"})
         pull_tests = tests_within(d, PULL_TEST_BLOCK_H // 24, "test_max_weighted_pullup")
         if pull_tests:
             reasons_pull.append(f"test trazione entro {PULL_TEST_BLOCK_H} h: {', '.join(pull_tests)}")
+            codes_pull.append({"code": "pull_test_soon", "detail": ", ".join(pull_tests)})
         # Both a max-finger and a heavy-pull insertion make the day hard.
         common: List[str] = []
+        codes_common: List[Dict[str, str]] = []
         pos_d = position_on(mc, d) or {}
         if pos_d.get("phase_id") == "deload":
             common.append("fase deload: niente massimali")
+            codes_common.append({"code": "deload", "detail": ""})
         wk = _monday(d)
         cap_d = _hard_cap_of_week(state, wk)
         hd = hard_days_of_week(wk)
         if cap_d is not None and d_iso not in hd and len(hd) >= cap_d:
             common.append(f"cap giorni hard della settimana raggiunto ({len(hd)}/{cap_d})")
+            codes_common.append({"code": "hard_cap", "detail": f"{len(hd)}/{cap_d}"})
         reasons_finger.extend(common)
         reasons_pull.extend(common)
+        codes_finger.extend(codes_common)
+        codes_pull.extend(codes_common)
         reasons_hiit: List[str] = []
+        codes_hiit: List[Dict[str, str]] = []
         if max_day(d) or max_day(d + timedelta(days=1)):
             reasons_hiit.append("sessione max lo stesso giorno o il giorno dopo")
+            codes_hiit.append({"code": "max_session_adjacent", "detail": ""})
         rows.append({
             "date": d_iso,
             "weekday": d.strftime("%a").lower(),
@@ -555,14 +584,17 @@ def _guards(
             "finger_hard_today_sessions": fh.get(d_iso, []),
             "finger_max_ok": not reasons_finger,
             "finger_reasons": reasons_finger,
+            "finger_codes": codes_finger,
             "finger_spacing_gap_d": gap,
             "heavy_pull_ok": not reasons_pull,
             # Front lever counts as heavy pulling (decision 2026-10-04): same
             # 2-per-7-days window, same 24 h before limit, same caps.
             "front_lever_ok": not reasons_pull,
             "pull_reasons": reasons_pull,
+            "pull_codes": codes_pull,
             "hiit_ok": not reasons_hiit,
             "hiit_reasons": reasons_hiit,
+            "hiit_codes": codes_hiit,
         })
 
     # Weekly hard cap: hard days of the current week vs the plan snapshot cap.
@@ -621,6 +653,7 @@ def _variety(state: Mapping[str, Any], today: date, archived_weeks: ArchivedWeek
     start = _monday(today) - timedelta(days=7 * (VARIETY_WEEKS - 1))
     groups: Dict[str, Dict[str, Any]] = {}
     exercises: Dict[str, int] = {}
+    last_date: Dict[str, str] = {}
     for d, s, _src in iter_plan_sessions(state, archived_weeks):
         dd = _as_date(d)
         if not (start <= dd <= today) or s.get("status") != "done" or is_test_session(s):
@@ -641,6 +674,7 @@ def _variety(state: Mapping[str, Any], today: date, archived_weeks: ArchivedWeek
             g["last_date"] = max(filter(None, [g["last_date"], d]))
             g["exercises"].add(ex)
             exercises[ex] = exercises.get(ex, 0) + 1
+            last_date[ex] = max(last_date.get(ex, ""), d)
     rows = []
     for g in groups.values():
         g = dict(g)
@@ -655,6 +689,9 @@ def _variety(state: Mapping[str, Any], today: date, archived_weeks: ArchivedWeek
         "overused": [r["group"] for r in rows if r["overused"]
                      and r.get("category") not in ("warmup_general", "warmup_specific", "flexibility", "mobility")],
         "exercise_counts": dict(sorted(exercises.items(), key=lambda kv: (-kv[1], kv[0]))),
+        # A297: per-exercise last DONE date in the window — the recency the
+        # ad-hoc builder ranks on (never the resolver's custom-blind list).
+        "exercise_last_date": dict(sorted(last_date.items())),
     }
 
 
@@ -723,6 +760,48 @@ def _tryhard(state: Mapping[str, Any], today: date,
         "logged_attempts": sum(counts.values()),
         "fall_pct_of_non_send": round(100.0 * counts["FALL"] / non_send, 1) if non_send else None,
     }
+
+
+def _load_flags(state: Mapping[str, Any], today: date) -> Dict[str, Any]:
+    """A295 pain blocks and the B364 fatigue rule, per axis, on ``today`` —
+    read with the same helpers ``anchored_load`` applies, never recomputed."""
+    out: Dict[str, Any] = {"pain": {}, "fatigue": {}}
+    for axis in (AXIS_FINGER, AXIS_PULLING):
+        p = pain_for(state, axis, today)
+        if p is not None:
+            out["pain"][axis] = p
+        f = fatigue_for(state, axis, today)
+        if f is not None:
+            out["fatigue"][axis] = f
+    return out
+
+
+#: Limit-log entries carried in the context (A296).
+LIMIT_LOG_RECENT = 4
+
+
+def _limit_log_view(state: Mapping[str, Any]) -> List[Dict[str, Any]]:
+    """The newest A296 limit-log entries, summarised (problems counted, never
+    copied whole)."""
+    out: List[Dict[str, Any]] = []
+    for e in _limit_log.recent(state, LIMIT_LOG_RECENT):
+        problems = [p for p in e.get("problems") or [] if isinstance(p, Mapping)]
+        out.append({
+            "date": e.get("date"),
+            "source": e.get("source"),
+            "surface": e.get("surface"),
+            "exercise_id": e.get("exercise_id"),
+            "target_grade": e.get("target_grade"),
+            "problems": len(problems),
+            "sent": sum(1 for p in problems if p.get("outcome") == _limit_log.OUTCOME_SENT),
+            "best_sent": _limit_log.best_sent(problems) if problems else None,
+            "step": e.get("step"),
+            "step_reason": e.get("step_reason"),
+            "next_target_grade": e.get("next_target_grade"),
+            "qualifies": e.get("qualifies"),
+            "warning": e.get("warning"),
+        })
+    return out
 
 
 def _limits(state: Mapping[str, Any]) -> Dict[str, Any]:
@@ -800,8 +879,14 @@ def build_athlete_context(
     archived_weeks: ArchivedWeeks = None,
     outdoor_rows: Optional[Sequence[Mapping[str, Any]]] = None,
     catalog: Optional[Mapping[str, Mapping[str, Any]]] = None,
+    with_proposals: bool = True,
+    include_next_week: bool = True,
 ) -> Dict[str, Any]:
-    """The read-only athlete context on ``today``. See the module docstring."""
+    """The read-only athlete context on ``today``. See the module docstring.
+
+    ``with_proposals`` / ``include_next_week`` (A297): the in-app composer
+    needs neither the catch-up proposals (each one is a replanner simulation)
+    nor next week's key view, so it turns them off to stay fast."""
     st: Dict[str, Any] = copy.deepcopy(dict(state or {}))
     arch = copy.deepcopy(archived_weeks) if archived_weeks is not None else None
     rows = copy.deepcopy(list(outdoor_rows)) if outdoor_rows is not None else None
@@ -827,7 +912,7 @@ def build_athlete_context(
         "maxima": _maxima(st, td, arch),
         "anchors": _anchors(st, td),
         "retest": _retest(st, td, arch, rows),
-        "key_sessions": _key_sessions(st, td, arch, rows, cat),
+        "key_sessions": _key_sessions(st, td, arch, rows, cat, with_proposals=with_proposals),
         "key_sessions_next_week": None,
         "upcoming": _upcoming(st, td, arch),
         "recent": _recent(st, td, arch, rows),
@@ -835,10 +920,12 @@ def build_athlete_context(
         "variety": _variety(st, td, arch, cat),
         "working_loads": _working_loads(st, td),
         "try_hard": _tryhard(st, td, rows),
+        "load_flags": _load_flags(st, td),
+        "limit_log": _limit_log_view(st),
         "limits": _limits(st),
         "trips": _trips(st, td),
     }
-    if position.get("available"):
+    if position.get("available") and include_next_week:
         # Planning view: the next week too (no proposals: they are only made
         # for the current week).
         next_monday = _monday(td) + timedelta(days=7)
@@ -1099,10 +1186,553 @@ def render_text(ctx: Mapping[str, Any], *, plan_notes: Optional[str] = None,
     return "\n".join(L) + "\n"
 
 
+# ---------------------------------------------------------------------------
+# A297 (R7b) — English renderers for the in-app coach and composer prompts.
+#
+# The single integration point of the engine's athlete data (B364 maxima and
+# anchored loads, A295 pain / fatigue / retest signals, A294 key sessions, A296
+# limit log) into an LLM prompt. Neutral for any user: no internal brief ids,
+# no "fallback" labels, no Italian, nothing that is not computed. A section
+# whose source failed is left out, never guessed.
+# ---------------------------------------------------------------------------
+
+#: Default character budgets (≈ 4 chars/token).
+COACH_BLOCK_MAX_CHARS = 3500
+COMPOSER_BLOCK_MAX_CHARS = 2500
+
+_PROTOCOL_EN = {
+    rp.PROTOCOL_HANG_7S: "max hang 7s",
+    rp.PROTOCOL_HANG_5S: "max hang 5s",
+    rp.PROTOCOL_PULLUP_2RM: "weighted pull-up 2RM",
+}
+
+_GUARD_EN = {
+    "finger_hard_adjacent": "finger-hard day {detail}",
+    "finger_spacing": "finger session {detail} inside the plan's finger spacing",
+    "hang_test_soon": "hang test within " + str(RETEST_BLOCK_H) + " h ({detail})",
+    "heavy_pull_week": "heavy pulling already on {detail} (max " + str(HEAVY_PULL_MAX_PER_7D) + " per 7 days)",
+    "pre_limit": "{detail} the next day",
+    "pull_test_soon": "pull-up test within " + str(PULL_TEST_BLOCK_H) + " h ({detail})",
+    "deload": "deload phase",
+    "hard_cap": "weekly hard-day cap reached ({detail})",
+    "max_session_adjacent": "max session the same day or the next",
+}
+
+_AXIS_EN = {AXIS_FINGER: "fingers", AXIS_PULLING: "pulling"}
+
+
+def _codes_en(codes: Iterable[Mapping[str, Any]]) -> str:
+    seen: List[str] = []
+    for c in codes or []:
+        tpl = _GUARD_EN.get(str(c.get("code")))
+        if not tpl:
+            continue
+        txt = tpl.format(detail=str(c.get("detail") or "").strip()).replace(" ()", "")
+        if txt not in seen:
+            seen.append(txt)
+    return "; ".join(seen)
+
+
+def _position_en(pos: Mapping[str, Any]) -> str:
+    if not pos.get("available"):
+        return "No active macrocycle."
+    out = (f"Phase {pos.get('phase_id')} week {pos.get('week_in_phase_1based')}/{pos.get('phase_weeks')} "
+           f"(macrocycle week {pos.get('abs_week')}/{pos.get('total_weeks')}); next: "
+           f"{pos.get('next_phase_id') or 'end of cycle'} from {pos.get('phase_end')}")
+    if pos.get("paused"):
+        out += " — PLAN PAUSED"
+    return out + "."
+
+
+def _maxima_lines_en(ctx: Mapping[str, Any]) -> List[str]:
+    out: List[str] = []
+    for proto, m in (ctx.get("maxima") or {}).items():
+        if not m:
+            continue
+        if not m.get("tested"):
+            # A297 review: a stale test (> TEST_FRESH_DAYS) or a baseline-only
+            # self-report stays visible — flagged as such — exactly like the
+            # pre-A297 B364 line, so the coach never reads the leftover raw
+            # baseline numbers as a current tested max.
+            out.append(f"- {_PROTOCOL_EN.get(proto, proto)}: {_fmt_kg(m.get('total_kg'))} kg total, from "
+                       f"{m.get('date')} (stale or not a test — not a current tested max; it changes ONLY "
+                       "with a test)")
+            continue
+        bits = [f"{_fmt_kg(m.get('total_kg'))} kg total"]
+        if m.get("one_rm_kg"):
+            bits.append(f"1RM {_fmt_kg(m.get('one_rm_kg'))} kg")
+        bits.append(f"tested {m.get('date')} ({m.get('age_days')} d ago"
+                    + (f", converted from the {m.get('source_seconds')}s test" if m.get("converted") else "") + ")")
+        if m.get("confidence"):
+            bits.append(f"confidence {m['confidence']} ({m.get('confidence_exposures')} exposures "
+                        f"in the {rp.LOW_CONF_WINDOW_D} days before the test)")
+        if m.get("trend"):
+            bits.append(f"trend {m['trend']} {m.get('delta_pct')}%")
+        out.append(f"- {_PROTOCOL_EN.get(proto, proto)}: " + ", ".join(bits))
+    return out
+
+
+def _anchor_line_en(ex: str, a: Mapping[str, Any]) -> str:
+    ext = _num(a.get("external")) or 0.0
+    ext_s = f"+{_fmt_kg(ext)} kg" if ext >= 0 else f"-{_fmt_kg(-ext)} kg (assisted)"
+    pct = a.get("pct_of_official")
+    ref = a.get("official_one_rm") or a.get("official_total")
+    ref_lbl = "1RM" if a.get("official_one_rm") else "max"
+    line = (f"- {ex}: {a.get('rep_scheme')} at {ext_s} ({_fmt_kg(a.get('total'))} kg total"
+            + (f", {round(pct * 100)}% of the {_fmt_kg(ref)} kg {ref_lbl}" if pct else "") + ")")
+    ramp = a.get("ramp") or {}
+    if (ramp.get("factor") or 1.0) < 1.0:
+        line += f"; re-entry after a break (exposure {ramp.get('n')}), capped lower"
+    if a.get("guards"):
+        line += f"; capped by {', '.join(str(g) for g in a['guards'])}"
+    if a.get("pain"):
+        line += "; pain flag → reduced"
+    if a.get("fatigue"):
+        line += "; fatigue flag → at the phase floor"
+    if a.get("ceiling_note"):
+        line += "; at the ceiling of the tested max (the next retest raises it)"
+    return line
+
+
+def _load_flags_lines_en(ctx: Mapping[str, Any]) -> List[str]:
+    lf = ctx.get("load_flags") or {}
+    out: List[str] = []
+    for axis, p in sorted((lf.get("pain") or {}).items()):
+        out.append(f"- Pain ({p.get('site')}, score {p.get('score')}/3) active {p.get('from')} → {p.get('until')}: "
+                   f"{_AXIS_EN.get(axis, axis)} loads are reduced and no max {_AXIS_EN.get(axis, axis)} efforts "
+                   "while it lasts (the engine removes them from ad-hoc sessions); keep that work submaximal "
+                   "and ask how it feels.")
+    for axis, f in sorted((lf.get("fatigue") or {}).items()):
+        out.append(f"- Fatigue: {len(f.get('hard_days') or [])} hard/very hard {_AXIS_EN.get(axis, axis)} sessions in "
+                   "14 days → loads held at the phase floor.")
+    return out
+
+
+def _limit_lines_en(ctx: Mapping[str, Any]) -> List[str]:
+    out: List[str] = []
+    for e in ctx.get("limit_log") or []:
+        line = (f"- {e.get('date')} {str(e.get('surface') or '?').replace('_', ' ')}"
+                f" ({e.get('source')}), target {e.get('target_grade') or '?'}: ")
+        if e.get("problems"):
+            line += f"{e['problems']} problems, {e.get('sent')} sent"
+            if e.get("best_sent"):
+                line += f" (best {e['best_sent']})"
+        else:
+            line += "no problems logged"
+        if e.get("next_target_grade"):
+            line += f" → next target {e['next_target_grade']}"
+        if e.get("warning") == "hard_attempts_guard":
+            line += " [too many hard attempts]"
+        out.append(line)
+    return out
+
+
+def _retest_lines_en(ctx: Mapping[str, Any]) -> List[str]:
+    out: List[str] = []
+    for axis, row in ((ctx.get("retest") or {}).get("axes") or {}).items():
+        if not row.get("covered"):
+            continue
+        nt = row.get("next_test")
+        if nt:
+            nxt = f"next test {nt.get('date')} ({nt.get('source')})"
+            if nt.get("blockers"):
+                nxt += " — currently blocked: " + ", ".join(str(b.get("code")) for b in nt["blockers"])
+        else:
+            nxt = f"no test due yet ({str(row.get('next_test_reason') or '').replace('_', ' ')})"
+        sig = row.get("signals") or {}
+        out.append(f"- {_AXIS_EN.get(axis, axis)}: {nxt}; not before {row.get('earliest_retest')}; "
+                   f"measured retest signals {sig.get('count')}/{sig.get('needed')}")
+    return out
+
+
+def _key_text(ctx: Mapping[str, Any]) -> str:
+    ks = ctx.get("key_sessions") or {}
+    if ks.get("source") == "error":
+        return ""
+    try:
+        return ks1.key_status_text(ks)
+    except Exception:  # pragma: no cover - defensive: never break the prompt
+        return ""
+
+
+def _restricted_days_en(ctx: Mapping[str, Any], limit: int) -> List[str]:
+    out: List[str] = []
+    for d in (ctx.get("guards") or {}).get("days") or []:
+        bits: List[str] = []
+        if not d.get("finger_max_ok"):
+            bits.append("no max finger work (" + _codes_en(d.get("finger_codes") or []) + ")")
+        if not d.get("heavy_pull_ok"):
+            bits.append("no pulling ≥85% 1RM or front lever (" + _codes_en(d.get("pull_codes") or []) + ")")
+        if not d.get("hiit_ok"):
+            bits.append("no HIIT")
+        if bits:
+            out.append(f"- {d['date']} {d.get('weekday')}: " + "; ".join(bits))
+        if len(out) >= limit:
+            break
+    return out
+
+
+def _clip(lines: List[str], max_chars: int) -> str:
+    """Join, dropping whole lines from the end (never cutting mid-line) until
+    the block fits the budget; the header lines are always kept."""
+    text = "\n".join(lines)
+    while len(text) > max_chars and len(lines) > 2:
+        lines = lines[:-1]
+        text = "\n".join(lines)
+    return text
+
+
+def render_coach_block(ctx: Mapping[str, Any], *, max_chars: int = COACH_BLOCK_MAX_CHARS) -> str:
+    """English athlete-context block for the coach CHAT prompt (dynamic,
+    never cached). Sections are ordered by importance so a budget cut drops the
+    least important (variety, limit log) first."""
+    L: List[str] = [
+        f"## Athlete context (computed by the engine for {ctx.get('as_of')})",
+        "(Deterministic engine facts — never contradict them and never invent numbers outside them. "
+        "An official max changes ONLY with a test, never with feedback; training loads are set by the "
+        "engine from it.)",
+        "- Position: " + _position_en(ctx.get("position") or {}),
+    ]
+    maxima = _maxima_lines_en(ctx)
+    if maxima:
+        L.append("Official maxima (tests only):")
+        L.extend(maxima)
+    anchors = [(ex, a) for ex, a in ((ctx.get("anchors") or {}).get("exercises") or {}).items() if a]
+    if anchors:
+        L.append("Training loads today (engine, valid only for the stated sets x reps):")
+        L.extend(_anchor_line_en(ex, a) for ex, a in anchors)
+    flags = _load_flags_lines_en(ctx)
+    if flags:
+        L.extend(flags)
+    keys = _key_text(ctx)
+    if keys:
+        L.append("Key sessions this week — never suggest dropping or replacing one without saying which "
+                 "stimulus is lost; a missed key stimulus of a past week is gone, not owed:")
+        L.extend(keys.splitlines())
+    hc = (ctx.get("guards") or {}).get("hard_cap") or {}
+    restricted = _restricted_days_en(ctx, limit=5)
+    if restricted or hc.get("cap") is not None:
+        L.append("Recovery guards for the next days"
+                 + (f" (hard days this week {hc.get('count')}/{hc.get('cap')})" if hc.get("cap") is not None else "")
+                 + ":")
+        L.extend(restricted or ["- no finger / pulling restrictions in the next days"])
+    retest = _retest_lines_en(ctx)
+    if retest:
+        L.append("Retest policy (only the policy schedules tests):")
+        L.extend(retest)
+    limit = _limit_lines_en(ctx)
+    if limit:
+        L.append("Limit-boulder log (newest first):")
+        L.extend(limit)
+    over = (ctx.get("variety") or {}).get("overused") or []
+    if over:
+        L.append(f"- Used {OVERUSED_MIN}+ times in the last {VARIETY_WEEKS} weeks (rotate): " + ", ".join(over[:10]))
+    return _clip(L, max_chars)
+
+
+def day_guard(ctx: Mapping[str, Any], day: Optional[DateLike] = None) -> Optional[Dict[str, Any]]:
+    """The guard row of ``day`` (default: ``as_of``), or None when outside the
+    guard horizon."""
+    d_iso = _as_date(day).isoformat() if day is not None else str(ctx.get("as_of"))
+    for row in (ctx.get("guards") or {}).get("days") or []:
+        if row.get("date") == d_iso:
+            return row
+    return None
+
+
+def _grades_en(state: Mapping[str, Any]) -> str:
+    g = ((state.get("assessment") or {}).get("grades") or {})
+    bits = [f"{lbl} {g[k]}" for k, lbl in (("lead_max_rp", "lead RP"), ("lead_max_os", "lead OS"),
+                                            ("boulder_max_rp", "boulder RP (Font)")) if g.get(k)]
+    return ", ".join(bits)
+
+
+def render_composer_block(
+    ctx: Mapping[str, Any],
+    *,
+    state: Optional[Mapping[str, Any]] = None,
+    day: Optional[DateLike] = None,
+    max_chars: int = COMPOSER_BLOCK_MAX_CHARS,
+) -> str:
+    """English ``ATHLETE CONTEXT`` for the ad-hoc composer, placed AFTER the
+    athlete's literal request: the request decides what is trained, this
+    constrains how. Only certain data; ≤ ``max_chars``."""
+    d_iso = _as_date(day).isoformat() if day is not None else str(ctx.get("as_of"))
+    L: List[str] = [
+        f"ATHLETE CONTEXT (engine-computed for the session day {d_iso}; the request decides WHAT is "
+        "trained, this context constrains HOW):",
+        "- " + _position_en(ctx.get("position") or {}),
+    ]
+    if state is not None and _grades_en(state):
+        L.append(f"- Level: {_grades_en(state)}.")
+    g = day_guard(ctx, d_iso)
+    if g is not None:
+        if g.get("finger_max_ok") and g.get("heavy_pull_ok"):
+            L.append("- Guards on this day: no finger / pulling restriction.")
+        else:
+            if not g.get("finger_max_ok"):
+                L.append("- Guard: NO max finger work this day (max hangs, limit boulders, campus) — "
+                         + _codes_en(g.get("finger_codes") or []) + ". The engine removes such lines.")
+            if not g.get("heavy_pull_ok"):
+                L.append("- Guard: NO pulling at ≥85% 1RM and NO front lever this day — "
+                         + _codes_en(g.get("pull_codes") or []) + ". Moderate pulling is fine.")
+        if not g.get("hiit_ok"):
+            L.append("- Avoid HIIT / VO2 intervals: a max session is the same day or the next.")
+    for line in _load_flags_lines_en(ctx):
+        L.append(line)
+    ks = ctx.get("key_sessions") or {}
+    if ks.get("source") != "error" and ks.get("requirements"):
+        parts = []
+        for r in ks["requirements"]:
+            st = str(r.get("status"))
+            nxt = [p for p in r.get("planned") or [] if not p.get("unmarked")]
+            txt = f"{r.get('label')} {st}"
+            if st == "planned" and nxt:
+                txt += f" ({str(nxt[0].get('date'))[5:]})"
+            parts.append(txt)
+        L.append("- Key sessions this week: " + "; ".join(parts)
+                 + ". Do not duplicate a key stimulus that is planned this week; never replace a key session.")
+    anchored = [ex for ex, a in ((ctx.get("anchors") or {}).get("exercises") or {}).items() if a]
+    if anchored:
+        L.append("- Exercises marked [ANCHOR] get their load from the athlete's tested max (engine-set): pick "
+                 "them for the stimulus, never swap them for a variant to change the load.")
+    for e in (ctx.get("limit_log") or [])[:1]:
+        if e.get("next_target_grade"):
+            L.append(f"- Limit target on {str(e.get('surface') or '?').replace('_', ' ')}: "
+                     f"{e['next_target_grade']} (last limit session {e.get('date')}).")
+    over = (ctx.get("variety") or {}).get("overused") or []
+    if over:
+        L.append(f"- Overused in the last {VARIETY_WEEKS} weeks (prefer alternatives, marked [OVERUSED]): "
+                 + ", ".join(over[:10]) + ".")
+    return _clip(L, max_chars)
+
+
+# ---------------------------------------------------------------------------
+# A297 — the composer guard derived from the context (deterministic)
+# ---------------------------------------------------------------------------
+
+def _finger_hard_ids() -> set:
+    from backend.engine.stimulus import EXERCISE_FAMILY, FAMILY_FINGER_MAX, FINGER_FATIGUE_EXTRA_IDS
+
+    ids = {eid for eid, fam in EXERCISE_FAMILY.items() if fam in (FAMILY_FINGER_MAX, FAMILY_LIMIT_POWER)}
+    return ids | set(FINGER_FATIGUE_EXTRA_IDS)
+
+
+def _pulling_max_ids() -> set:
+    from backend.engine.stimulus import EXERCISE_FAMILY, FAMILY_PULLING_MAX
+
+    return {eid for eid, fam in EXERCISE_FAMILY.items() if fam == FAMILY_PULLING_MAX}
+
+
+def front_lever_ids(catalog: Mapping[str, Mapping[str, Any]]) -> set:
+    """Front-lever variants (counted as heavy pulling, decision 2026-10-04)."""
+    return {str(eid) for eid, ex in catalog.items()
+            if str(eid).startswith("front_lever") or (ex or {}).get("recency_group") == "core_front_lever"}
+
+
+def heavy_pull_pct(state: Mapping[str, Any], exercise_id: str, day: DateLike, *,
+                   sets: Optional[int] = None, reps: Optional[int] = None,
+                   session_exercise_ids: Optional[Iterable[str]] = None) -> Optional[float]:
+    """% of 1RM of a weighted pull prescribed by ``anchored_load`` on ``day``,
+    or None when the athlete has no tested max (not verifiable)."""
+    anch = anchored_load(state, exercise_id, date=_as_date(day).isoformat(), sets=sets, reps=reps,
+                         session_exercise_ids=session_exercise_ids)
+    if anch is None:
+        return None
+    return _num(anch.get("pct_of_official"))
+
+
+def athlete_is_tested(ctx: Optional[Mapping[str, Any]]) -> bool:
+    """True when the athlete has at least one TESTED official max (source test
+    and < TEST_FRESH_DAYS old). DECISIONS (global): higher intensities and the
+    anchor rules apply only to tested athletes; an untested athlete's ad-hoc
+    selection stays the pre-A297 one (guards still remove, never add)."""
+    return any(bool(m and m.get("tested")) for m in ((ctx or {}).get("maxima") or {}).values())
+
+
+#: ENGINEERING CONSTANT (design choice, no published source): finger-hard /
+#: campus exercises allowed in ONE ad-hoc session — 2 normally, 1 on a
+#: low-energy day. Without it the intensity ranking stacks four campus drills
+#: or three max-hang protocols in one preview.
+MAX_FINGER_HARD_PER_SESSION = 2
+MAX_FINGER_HARD_PER_SESSION_LOW_ENERGY = 1
+
+
+def finger_hard_session_ids(catalog: Mapping[str, Mapping[str, Any]]) -> set:
+    """Exercises that count against ``MAX_FINGER_HARD_PER_SESSION``: the
+    finger-max / limit-power families, the finger-fatigue hangs and every
+    campus drill (campus_sprint_endurance included)."""
+    ids = {i for i in _finger_hard_ids() if i in catalog}
+    ids |= {str(eid) for eid in catalog if str(eid).startswith("campus_")}
+    return ids
+
+
+def _max_intensity_ids(catalog: Mapping[str, Mapping[str, Any]], domains: Iterable[str]) -> set:
+    """Catalog exercises at ``intensity_level == "max"`` in any of ``domains``
+    (bodyweight max pulls such as one_arm_pullup_assisted are not in the
+    pulling_max family, but they are a max pulling effort all the same)."""
+    want = set(domains)
+    out = set()
+    for eid, ex in catalog.items():
+        ex = ex or {}
+        if ex.get("intensity_level") != "max":
+            continue
+        dom = ex.get("domain") or []
+        if isinstance(dom, str):
+            dom = [dom]
+        if want & set(dom):
+            out.add(str(eid))
+    return out
+
+
+def cap_finger_hard(
+    exercises: List[Dict[str, Any]],
+    catalog: Mapping[str, Mapping[str, Any]],
+    energy: Optional[str],
+) -> List[str]:
+    """Remove, in place, the finger-hard / campus lines beyond the per-session
+    cap (LLM path, after validation; first ones kept). Returns ``dropped``."""
+    ids = finger_hard_session_ids(catalog)
+    cap = MAX_FINGER_HARD_PER_SESSION_LOW_ENERGY if energy == "low" else MAX_FINGER_HARD_PER_SESSION
+    n = 0
+    keep: List[Dict[str, Any]] = []
+    dropped: List[str] = []
+    for e in exercises:
+        eid = str(e.get("exercise_id"))
+        if eid in ids:
+            if n >= cap:
+                dropped.append(f"{eid}: more than {cap} finger-hard / campus exercises in one session")
+                continue
+            n += 1
+        keep.append(e)
+    exercises[:] = keep
+    return dropped
+
+
+_FINGER_DOMAINS = ("finger_strength", "finger_max_strength", "contact_strength")
+_PULLING_DOMAINS = ("strength_pulling",)
+
+
+def composer_guard_view(
+    state: Mapping[str, Any],
+    ctx: Mapping[str, Any],
+    day: Optional[DateLike],
+    catalog: Mapping[str, Mapping[str, Any]],
+) -> Dict[str, Any]:
+    """What the guards of ``day`` take out of an ad-hoc session, from session
+    PROPERTIES (never a load score):
+
+    - ``exclude_ids``: removed from the pool before anyone picks — finger-hard
+      exercises on a NO-finger-max day; front-lever variants on a NO-heavy-pull
+      day; and, for the deterministic builder only (``builder_exclude_ids``),
+      the weighted pulls whose catalog scheme would land ≥ 85 % 1RM;
+    - ``heavy_pull_check``: the LLM path re-checks every composed weighted pull
+      at ITS reps after validation (``drop_heavy_pulls``);
+    - ``dropped``: one human-readable line per family removed, with the reason,
+      for the preview's audit trail.
+    """
+    g = day_guard(ctx, day) if ctx else None
+    out: Dict[str, Any] = {"day": None, "finger_max_ok": True, "heavy_pull_ok": True, "hiit_ok": True,
+                           "exclude_ids": [], "builder_exclude_ids": [], "heavy_pull_check": False,
+                           "dropped": [], "reasons": {}, "pain_axes": []}
+    day_d: Optional[date] = None
+    if day is not None:
+        day_d = _as_date(day)
+    elif ctx and ctx.get("as_of"):
+        day_d = _as_date(ctx["as_of"])
+    # A297 review: an active A295 pain block (score ≥ 2) on an axis makes the
+    # day a NO-max day on that axis, guard horizon or not — the anchored-load
+    # reduction alone never stopped the builder from picking campus / max
+    # hangs, whose loads are not anchored.
+    pain = {axis: pain_for(state, axis, day_d) for axis in (AXIS_FINGER, AXIS_PULLING)} if day_d else {}
+    pain = {a: p for a, p in pain.items() if p is not None}
+    if g is None and not pain:
+        return out
+    out["day"] = g["date"] if g is not None else day_d.isoformat()
+    out["finger_max_ok"] = bool(g.get("finger_max_ok")) if g is not None else True
+    out["heavy_pull_ok"] = bool(g.get("heavy_pull_ok")) if g is not None else True
+    out["hiit_ok"] = bool(g.get("hiit_ok")) if g is not None else True
+    finger_why = _codes_en(g.get("finger_codes") or []) if g is not None else ""
+    pull_why = _codes_en(g.get("pull_codes") or []) if g is not None else ""
+    for axis, p in sorted(pain.items()):
+        txt = f"pain {p.get('site')} {p.get('score')}/3 until {p.get('until')}"
+        out["pain_axes"].append(axis)
+        if axis == AXIS_FINGER:
+            out["finger_max_ok"] = False
+            finger_why = "; ".join(x for x in (finger_why, txt) if x)
+        else:
+            out["heavy_pull_ok"] = False
+            pull_why = "; ".join(x for x in (pull_why, txt) if x)
+    excl: set = set()
+    if not out["finger_max_ok"]:
+        out["reasons"]["finger"] = finger_why
+        ids = {i for i in _finger_hard_ids() if i in catalog}
+        ids |= _max_intensity_ids(catalog, _FINGER_DOMAINS)
+        excl |= ids
+        if ids:
+            out["dropped"].append(f"guard: max finger work left out — {finger_why}")
+    builder_extra: set = set()
+    if not out["heavy_pull_ok"]:
+        out["reasons"]["pull"] = pull_why
+        fl = front_lever_ids(catalog)
+        # A297 review: a max-intensity bodyweight pull (one-arm pull-up) is a
+        # ≥85% pulling effort too, even without an anchored load to check.
+        max_pulls = _max_intensity_ids(catalog, _PULLING_DOMAINS)
+        excl |= fl | max_pulls
+        if fl:
+            out["dropped"].append(f"guard: front lever left out — {pull_why}")
+        if max_pulls:
+            out["dropped"].append(f"guard: max-intensity pulls left out ({', '.join(sorted(max_pulls))}) — "
+                                  f"{pull_why}")
+        out["heavy_pull_check"] = True
+        for eid in sorted(_pulling_max_ids()):
+            if eid not in catalog:
+                continue
+            pct = heavy_pull_pct(state, eid, out["day"])
+            if pct is not None and pct >= rp.HEAVY_PULL_PCT_1RM:
+                builder_extra.add(eid)
+    out["exclude_ids"] = sorted(excl)
+    out["builder_exclude_ids"] = sorted(excl | builder_extra)
+    return out
+
+
+def drop_heavy_pulls(
+    state: Mapping[str, Any],
+    exercises: List[Dict[str, Any]],
+    view: Mapping[str, Any],
+) -> List[str]:
+    """Remove, in place, the composed weighted pulls that land ≥ 85 % 1RM at
+    their own sets/reps on a NO-heavy-pull day. Returns the ``dropped`` lines.
+    Untested athletes are not verifiable and keep the line (their load is the
+    remembered working load, unchanged by A297)."""
+    if not view.get("heavy_pull_check") or not view.get("day"):
+        return []
+    pulls = _pulling_max_ids()
+    ids = [str(e.get("exercise_id")) for e in exercises]
+    dropped: List[str] = []
+    keep: List[Dict[str, Any]] = []
+    for e in exercises:
+        eid = str(e.get("exercise_id"))
+        if eid in pulls:
+            pct = heavy_pull_pct(state, eid, view["day"], sets=e.get("sets"), reps=e.get("reps"),
+                                 session_exercise_ids=ids)
+            if pct is not None and pct >= rp.HEAVY_PULL_PCT_1RM:
+                dropped.append(f"{eid}: guard — {round(pct * 100)}% of 1RM on a no-heavy-pull day "
+                               f"({(view.get('reasons') or {}).get('pull') or 'recovery guard'})")
+                continue
+        keep.append(e)
+    exercises[:] = keep
+    return dropped
+
+
 __all__ = [
     "VERSION", "FINGER_GAP_H", "RETEST_BLOCK_H", "PULL_TEST_BLOCK_H", "HEAVY_PULL_MAX_PER_7D",
     "OVERUSED_MIN", "VARIETY_WEEKS",
     "ATHLETE_PLAN_PATH", "NOTES_BEGIN", "NOTES_END",
     "build_athlete_context", "render_text", "extract_plan_notes", "load_exercise_catalog",
     "key_requirements_for", "key_matches", "WARMUP_TECHNIQUE_DRILLS",
+    "render_coach_block", "render_composer_block", "day_guard", "composer_guard_view",
+    "drop_heavy_pulls", "front_lever_ids", "COACH_BLOCK_MAX_CHARS", "COMPOSER_BLOCK_MAX_CHARS",
+    "athlete_is_tested", "finger_hard_session_ids", "cap_finger_hard", "MAX_FINGER_HARD_PER_SESSION",
+    "MAX_FINGER_HARD_PER_SESSION_LOW_ENERGY",
 ]
