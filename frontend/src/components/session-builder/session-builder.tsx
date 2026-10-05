@@ -117,6 +117,15 @@ export function SessionBuilder({ sessionId, onDirtyChange }: SessionBuilderProps
     return map;
   }, [catalogData]);
 
+  // A304: exercise_id → catalog load model ("Auto load" on weighted rows).
+  const catalogLoadModelMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const ex of catalogData?.exercises ?? []) {
+      map.set(ex.id, ex.load_model);
+    }
+    return map;
+  }, [catalogData]);
+
   // Initialize from existing session in edit mode (wait for catalog to resolve names)
   // B355 — idratazione one-shot da dati asincroni (sessione + catalogo): finché
   // la query non risolve i nomi non c'è nulla da mostrare, e la guardia
@@ -333,6 +342,7 @@ export function SessionBuilder({ sessionId, onDirtyChange }: SessionBuilderProps
               index={i}
               total={entries.length}
               tag={entry.tag}
+              loadModel={catalogLoadModelMap.get(entry.exercise.exercise_id)}
               onMoveUp={() => moveExercise(i, -1)}
               onMoveDown={() => moveExercise(i, 1)}
               onEdit={() => setEditingIndex(i)}

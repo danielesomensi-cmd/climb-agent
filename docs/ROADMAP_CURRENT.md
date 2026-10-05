@@ -11,7 +11,7 @@
 
 ## Open
 
-- **A302-FOLLOWUPS** (P2, da A302 2026-10-05): (a) il builder mostra «Fixed kg» solo per le quattro ancorate — ora che ogni riga con carico segue il carico di lavoro serve il toggle Auto/Fixed su tutte (frontend → branch + preview). (b) chiuso senza modifiche — decisione Daniele 2026-10-05: il solo voto fa salire il carico; ripetizioni non inserite = serie fatte come da piano. (c) chiuso da A303.
+- **A302-FOLLOWUPS** (P2, da A302 2026-10-05): (a) → A304 (branch `brief/A304-fixed-kg-all-loaded-rows`, in attesa di preview). (b) chiuso senza modifiche — decisione Daniele 2026-10-05: il solo voto fa salire il carico; ripetizioni non inserite = serie fatte come da piano. (c) chiuso da A303.
 
 **A300-FE — editor della struttura adattativa (frontend, da [[A300]], 2026-10-05)** 🟡 P2 — Impostazioni: ruolo / durata / focus per slot e rotazione dei pranzi, anteprima di cosa viene mantenuto prima di salvare, badge `secondary_warnings` / `unmet_secondary` sulla settimana, guida in-app con le 4 sessioni C274. Branch `brief/A300-fe-…` + preview Vercel + OK di Daniele. La migrazione del profilo di Daniele (mattine spente, 6 sere primarie, pranzi mar-ven complementari 45' al Work con tapis roulant, `target_training_days_per_week` 6) la fa la sessione principale dopo il merge.
 

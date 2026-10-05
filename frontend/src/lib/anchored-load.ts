@@ -13,6 +13,32 @@ export const ANCHORED_EXERCISE_IDS: ReadonlySet<string> = new Set([
   "weighted_chinup",
 ]);
 
+/** A302: catalog load models whose custom rows follow the training load. */
+export const FOLLOWED_LOAD_MODELS: ReadonlySet<string> = new Set(["external_load", "total_load"]);
+
+/**
+ * A304: a custom row that is not one of the anchored four but carries a weight
+ * (curl, RDL, wrist curl…) follows the training load on the day it is played
+ * (backend `custom_working_load`) — unless it is a ladder row in Progress mode.
+ */
+export function followsTrainingLoad(
+  ex: { exercise_id?: string | null; progress_mode?: string | null },
+  loadModel: string | null | undefined,
+): boolean {
+  if (!ex.exercise_id || isAnchoredExercise(ex.exercise_id)) return false;
+  if (ex.progress_mode === "ladder") return false;
+  return !!loadModel && FOLLOWED_LOAD_MODELS.has(loadModel);
+}
+
+/** A304: the row's kg is set by the app on the day played ("Auto"), not by the stored value. */
+export function isAutoLoadRow(
+  ex: { exercise_id?: string | null; progress_mode?: string | null; load_mode?: string | null },
+  loadModel: string | null | undefined,
+): boolean {
+  if (ex.load_mode === "fixed") return false;
+  return isAnchoredExercise(ex.exercise_id) || followsTrainingLoad(ex, loadModel);
+}
+
 export function isAnchoredExercise(exerciseId: string | null | undefined): boolean {
   return !!exerciseId && ANCHORED_EXERCISE_IDS.has(exerciseId);
 }

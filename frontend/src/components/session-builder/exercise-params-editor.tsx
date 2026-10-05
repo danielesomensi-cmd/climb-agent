@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { CustomSessionExercise } from "@/lib/types";
-import { isAnchoredExercise } from "@/lib/anchored-load";
+import { followsTrainingLoad, isAnchoredExercise } from "@/lib/anchored-load";
 import { useBuilderExercises } from "@/lib/hooks/queries";
 import { Minus, Plus } from "lucide-react";
 
@@ -92,13 +92,14 @@ export function ExerciseParamsEditor({
 
   // B364: missing load_mode on an anchored exercise means "anchored" (backend default).
   const anchored = isAnchoredExercise(draft.exercise_id);
-  const fixed = anchored && draft.load_mode === "fixed";
   // A298: a level of a bodyweight ladder — Progress (follow my level) / Fixed.
   const { data: catalogData } = useBuilderExercises("", "");
-  const ladderable =
-    draft.progress_mode != null ||
-    !!(catalogData?.exercises ?? []).find((e) => e.id === draft.exercise_id)?.ladder;
+  const catalogEntry = (catalogData?.exercises ?? []).find((e) => e.id === draft.exercise_id);
+  const ladderable = draft.progress_mode != null || !!catalogEntry?.ladder;
   const progressing = draft.progress_mode === "ladder";
+  // A304: any other weighted row follows the training load unless fixed.
+  const follows = followsTrainingLoad(draft, catalogEntry?.load_model);
+  const fixed = (anchored || follows) && draft.load_mode === "fixed";
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
@@ -173,10 +174,11 @@ export function ExerciseParamsEditor({
             />
           )}
 
-          {anchored && (
+          {(anchored || follows) && (
             <div className="space-y-1.5">
               <Label className="text-sm">Load</Label>
-              {/* B364: anchored exercises follow your tested max unless you fix the kg. */}
+              {/* B364: anchored exercises follow your tested max unless you fix the kg.
+                  A304: other weighted rows follow your training load unless you fix it. */}
               <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Load mode">
                 <Button
                   type="button"
@@ -202,13 +204,17 @@ export function ExerciseParamsEditor({
               <p className="text-xs text-muted-foreground">
                 {fixed
                   ? "The kg below is used every time you play this session."
-                  : "With a recent test, the app sets the kg on the day you play it (from your max and training load). The kg below is used only without a recent test."}
+                  : anchored
+                    ? "With a recent test, the app sets the kg on the day you play it (from your max and training load). The kg below is used only without a recent test."
+                    : "The app uses your training load for this exercise on the day you play it, so it moves with your feedback. The kg below is used until you have logged it once."}
               </p>
             </div>
           )}
 
           <Stepper
-            label={anchored && !fixed ? "Kg without a recent test" : "Load"}
+            label={
+              anchored && !fixed ? "Kg without a recent test" : follows && !fixed ? "Kg until first logged" : "Load"
+            }
             value={draft.load_kg}
             onChange={(v) => update({ load_kg: v ?? 0 })}
             min={0}

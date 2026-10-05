@@ -3,18 +3,18 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { CustomSessionExercise } from "@/lib/types";
-import { isAnchoredExercise } from "@/lib/anchored-load";
+import { isAutoLoadRow } from "@/lib/anchored-load";
 import { ChevronUp, ChevronDown, Pencil, Trash2 } from "lucide-react";
 
-function formatPrescription(ex: CustomSessionExercise): string {
+function formatPrescription(ex: CustomSessionExercise, loadModel?: string): string {
   const parts: string[] = [];
   const perSide = ex.alt_sides ? " per side" : "";   // B324
   if (ex.reps != null) parts.push(`${ex.sets}\u00d7${ex.reps}${perSide}`);
   else if (ex.work_seconds != null) parts.push(`${ex.sets}\u00d7${ex.work_seconds}s${perSide}`);
   else parts.push(`${ex.sets} sets${perSide}`);
 
-  // B364: an anchored exercise in "Auto" gets its kg on the day it is played.
-  if (isAnchoredExercise(ex.exercise_id) && ex.load_mode !== "fixed") parts.push("Auto load");
+  // B364 / A304: a row in "Auto" gets its kg on the day it is played.
+  if (isAutoLoadRow(ex, loadModel)) parts.push("Auto load");
   if (ex.progress_mode === "ladder") parts.push("Follows level");
   else if (ex.load_kg > 0) parts.push(`${ex.load_kg}kg`);
   if (ex.rest_between_sets_seconds != null) parts.push(`Rest ${ex.rest_between_sets_seconds}s`);
@@ -27,6 +27,8 @@ interface BuilderExerciseCardProps {
   index: number;
   total: number;
   tag?: "warmup" | "cooldown";
+  /** A304: catalog load model, to tell an "Auto load" row. */
+  loadModel?: string;
   onMoveUp: () => void;
   onMoveDown: () => void;
   onEdit: () => void;
@@ -39,6 +41,7 @@ export function BuilderExerciseCard({
   index,
   total,
   tag,
+  loadModel,
   onMoveUp,
   onMoveDown,
   onEdit,
@@ -61,7 +64,7 @@ export function BuilderExerciseCard({
           )}
         </div>
         <p className="text-xs text-muted-foreground mt-0.5">
-          {formatPrescription(exercise)}
+          {formatPrescription(exercise, loadModel)}
         </p>
       </div>
       <div className="flex items-center gap-0.5 shrink-0">
