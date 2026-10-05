@@ -9,11 +9,16 @@ Covered here:
 
 - ``stimulus.outdoor_fatigue_days``: which outdoor days count (planned, logged
   hard, big load, completed without a route log) and which do not (a measured
-  easy day); ``outdoor_slot``; a logged day without a plan block; no redpoint;
+  easy day); a bare ``outdoor_slot`` (availability, not a crag day); a past
+  planned day never completed; an ungradable route; a multi-crag load sum; a
+  logged day without a plan block; no redpoint;
 - ``guards_v1``: ``post_outdoor`` (Saturday at Berdorf → Sunday finger session,
   planned or logged, across the week boundary), ``finger_gap`` both ways and
   with a 2-day spacing, ``finger_test_72h``, ``hiit_near_max``, ``hard_cap`` —
   one alert per pair, the crag day never flagged itself, history not flagged;
+  a weekend crag past the cap; a hard session the day before a crag; a Monday
+  crag of the next week; a planner week with an outdoor-only day unchanged;
+- ``check_insertion`` reads the route log for ``added_guard_warnings``;
 - determinism, no mutation, nothing rewritten after an outdoor override;
 - weeks without outdoor: no new alert;
 - ``athlete_context`` guards: the day after / before a planned crag day, HIIT,
@@ -112,10 +117,45 @@ class TestOutdoorFatigueDays:
         assert out[_d(5)]["reason"] == OUTDOOR_REASON_PLANNED and out[_d(5)]["status"] == "planned"
         assert out[_d(5)]["spot"] == "Berdorf"
 
-    def test_outdoor_slot_counts_as_planned(self):
+    def test_bare_outdoor_slot_is_availability_not_a_crag_day(self):
+        # Review: the planner's outdoor_slot is never marked done and nothing
+        # clears it — counting it gave permanent alerts on planner weeks.
         plan = _plan({})
         _day(plan, 5)["outdoor_slot"] = True
-        assert outdoor_fatigue_days({}, self._days(plan), load_threshold=65)[_d(5)]["reason"] == OUTDOOR_REASON_PLANNED
+        assert outdoor_fatigue_days({}, self._days(plan), load_threshold=65) == {}
+        # Used for the gym instead (converted slot): still nothing.
+        _day(plan, 5)["sessions"] = [_sess(EASY)]
+        assert outdoor_fatigue_days({}, self._days(plan), load_threshold=65) == {}
+
+    def test_bare_outdoor_slot_counts_through_its_log(self):
+        plan = _plan({})
+        _day(plan, 5)["outdoor_slot"] = True
+        out = outdoor_fatigue_days(ATHLETE, self._days(plan), load_threshold=65,
+                                   outdoor_rows=[_log(_d(5), "8a")])
+        assert out[_d(5)]["reason"] == OUTDOOR_REASON_HARD
+
+    def test_past_declared_day_never_completed_does_not_count(self):
+        plan = _plan({})
+        _crag(plan, 5)  # planned, never done, never logged
+        assert outdoor_fatigue_days({}, self._days(plan), load_threshold=65, today=_d(6)) == {}
+        # Today and later: still planned, still counts.
+        assert _d(5) in outdoor_fatigue_days({}, self._days(plan), load_threshold=65, today=_d(5))
+        assert _d(5) in outdoor_fatigue_days({}, self._days(plan), load_threshold=65)
+
+    def test_ungradable_route_is_unknown_not_easy(self):
+        plan = _plan({})
+        _crag(plan, 5, "done")
+        out = outdoor_fatigue_days(ATHLETE, self._days(plan), load_threshold=65,
+                                   outdoor_rows=[_log(_d(5), "6a", "???")])
+        assert out[_d(5)]["reason"] == OUTDOOR_REASON_UNLOGGED
+
+    def test_multi_crag_day_load_is_the_sum(self):
+        rows = [_log(_d(5), load=40), _log(_d(5), load=30)]
+        rows[1]["entry"]["spot_name"] = "Freyr"
+        # Same entry twice (rows + state copy) counts once.
+        state = {"outdoor_log": [dict(rows[0]["entry"])]}
+        out = outdoor_fatigue_days(state, [], load_threshold=65, outdoor_rows=rows)
+        assert out[_d(5)]["reason"] == OUTDOOR_REASON_LOAD and out[_d(5)]["load"] == 70
 
     def test_done_without_log_counts_conservatively(self):
         plan = _plan({})
@@ -255,6 +295,75 @@ class TestGuards:
         assert alerts[0]["count"] == 3
         assert {"date": _d(2), "slot": None, "session_id": None} in alerts[0]["with"]
 
+    def test_crag_day_past_the_cap_at_the_end_of_the_week(self):
+        # Review: the weekend crag day is the common case — it has no session
+        # to flag, so the latest hard session is flagged instead.
+        plan = _plan({0: [_sess(HARD)], 2: [_sess(HARD)]}, hard_cap=2)
+        _crag(plan, 5)
+        alerts = guards_v1.evaluate(plan)
+        assert _codes(alerts) == [("hard_cap", _d(2), HARD)]
+        assert alerts[0]["count"] == 3
+        assert {"date": _d(5), "slot": None, "session_id": None} in alerts[0]["with"]
+
+    def test_finger_test_the_day_after_a_crag_is_one_alert(self):
+        plan = _plan({6: [_sess(TEST)]})
+        _crag(plan, 5)
+        assert _codes(guards_v1.evaluate(plan)) == [("post_outdoor", _d(6), TEST)]
+
+    def test_finger_gap_session_and_crag_is_one_alert(self):
+        plan = _plan({2: [_sess(FINGER)], 3: [_sess(LIMIT)]}, recovery_multiplier=2.0)
+        _crag(plan, 5)
+        gaps = [w for w in guards_v1.evaluate(plan) if w["code"] == "finger_gap" and w["date"] == _d(3)]
+        assert len(gaps) == 1
+        assert {"date": _d(5), "slot": None, "session_id": None} in gaps[0]["with"]
+        assert any(w["session_id"] == FINGER for w in gaps[0]["with"])
+
+    def test_hard_session_the_day_before_a_crag_day(self):
+        plan = _plan({4: [_sess(HARD)]})
+        _crag(plan, 5)
+        alerts = guards_v1.evaluate(plan)
+        assert _codes(alerts) == [("hard_back_to_back", _d(4), HARD)]
+        assert alerts[0]["outdoor"]["date"] == _d(5)
+
+    def test_sunday_finger_before_next_monday_crag(self):
+        plan = _plan({6: [_sess(FINGER)]})
+        nxt = _plan({}, start=_d(7))
+        _crag(nxt, 0)
+        assert guards_v1.evaluate(plan) == []
+        alerts = guards_v1.evaluate(plan, next_days=nxt["weeks"][0]["days"])
+        assert _codes(alerts) == [("finger_gap", _d(6), FINGER)]
+        # Next week's sessions are never read.
+        nxt2 = _plan({0: [_sess(LIMIT)]}, start=_d(7))
+        assert guards_v1.evaluate(plan, next_days=nxt2["weeks"][0]["days"]) == []
+
+    def test_past_planned_crag_day_does_not_alert(self):
+        plan = _plan({6: [_sess(LIMIT)]})
+        _crag(plan, 5)  # planned, the athlete did not go
+        assert guards_v1.evaluate(plan, None, _d(6)) == []
+
+    def test_planner_week_with_outdoor_only_day_gets_no_outdoor_alert(self):
+        """Review: a week the planner generated on its own (outdoor-only
+        availability day → bare outdoor_slot) gets exactly the alerts it had
+        without the slot — the planner's spacing ignores the slot."""
+        import sys
+        from pathlib import Path
+
+        sys.path.insert(0, str(Path(__file__).parent))
+        from test_a300_complementary_slots import daniele_availability, days_of, plan as gen
+
+        for dn in ("mon", "tue", "wed", "thu", "fri", "sat", "sun"):
+            av = daniele_availability()
+            av[dn]["evening"] = {"available": True, "locations": ["outdoor"], "preferred_location": "outdoor",
+                                 "role": "primary"}
+            wp = gen("strength_power", availability=av)
+            assert any(d.get("outdoor_slot") for d in days_of(wp))
+            stripped = copy.deepcopy(wp)
+            for d in days_of(stripped):
+                d.pop("outdoor_slot", None)
+            got = guards_v1.evaluate(wp, None, "2026-10-12", {})
+            assert got == guards_v1.evaluate(stripped, None, "2026-10-12", {})
+            assert all("outdoor" not in w for w in got)
+
     def test_history_is_not_flagged(self):
         plan = _plan({6: [_sess(LIMIT, status="done")]})
         _crag(plan, 5, "done")
@@ -360,6 +469,25 @@ def test_build_guard_warnings_reads_the_route_log(monkeypatch):
     # With the user: the log says it was an easy day.
     assert guard_status.build_guard_warnings(ATHLETE, plan, MON, user_id="u1") == []
     assert calls == [("u1", _d(-7), _d(6))]
+
+
+def test_check_insertion_reads_the_route_log():
+    """Review: added_guard_warnings must judge an easy-logged crag day like the
+    week's guard_warnings do (outdoor_rows passed to both evaluate calls)."""
+    from backend.engine import key_sessions_v1 as ks
+
+    plan = _plan({})
+    _crag(plan, 5, "done", outdoor_load_score=30)
+    st = {**copy.deepcopy(ATHLETE), "week_plans": {MON: plan}}
+    cs = {"id": "cs_hang", "name": "Hangs", "exercises": [
+        {"exercise_id": "max_hang_7s", "sets": 5, "work_seconds": 7, "load_mode": "anchored"}]}
+    ev = [{"event_type": "add_custom_session", "custom_session_id": "cs_hang",
+           "target_date": _d(6), "slot": "evening", "location": "home"}]
+    res = ks.check_insertion(st, MON, plan=plan, events=ev, custom_sessions=[cs],
+                             outdoor_rows=[_log(_d(5), "6a")])
+    assert res["added_guard_warnings"] == []
+    res = ks.check_insertion(st, MON, plan=plan, events=ev, custom_sessions=[cs])
+    assert [(w["code"], w["date"]) for w in res["added_guard_warnings"]] == [("post_outdoor", _d(6))]
 
 
 def test_outdoor_load_score_survives_the_field_merge():

@@ -708,6 +708,17 @@ def _prev_days(state: Mapping[str, Any], ws: date, archived_weeks: ArchivedWeeks
         return None
 
 
+def _next_days(state: Mapping[str, Any], ws: date, archived_weeks: ArchivedWeeks) -> Optional[List[Dict[str, Any]]]:
+    """B372: the next week's days (for a declared crag day on its Monday)."""
+    nxt = _week_plan(state, ws + timedelta(days=7), archived_weeks)
+    if not nxt:
+        return None
+    try:
+        return (nxt.get("weeks") or [{}])[0].get("days") or None
+    except (IndexError, AttributeError):
+        return None
+
+
 def _simulate_add(state: Mapping[str, Any], plan: Mapping[str, Any], event: Mapping[str, Any],
                   ws: date, archived_weeks: ArchivedWeeks,
                   custom_sessions: Optional[List[Dict[str, Any]]] = None,
@@ -823,7 +834,8 @@ def _guard_view(state: Mapping[str, Any], plan: Mapping[str, Any], ws: date,
     previous week like the click's path. B372: with the outdoor route log, so
     a proposal next to a crag day is judged like the click's path judges it."""
     return _guards_mod.evaluate(plan, _prev_days(state, ws, archived_weeks),
-                                today.isoformat() if today else None, state, outdoor_rows=outdoor_rows)
+                                today.isoformat() if today else None, state, outdoor_rows=outdoor_rows,
+                                next_days=_next_days(state, ws, archived_weeks))
 
 
 def _added_present(after: Mapping[str, Any], d_iso: str, slot: str, session_id: str) -> bool:
@@ -1690,9 +1702,12 @@ def check_insertion(
     # cap, pre-trip) — the insertion itself rewrites nothing any more.
     prev = _prev_days(st, ws, archived_weeks)
     td_iso = _as_date(today).isoformat()
+    # B372: with the outdoor route log, like the week's ``guard_warnings``
+    # (an easy-logged crag day must not count here and not there).
+    nxt = _next_days(st, ws, archived_weeks)
     guard_warnings = _guards_mod.new_warnings(
-        _guards_mod.evaluate(before_plan, prev, td_iso, st),
-        _guards_mod.evaluate(after_plan, prev, td_iso, st_after),
+        _guards_mod.evaluate(before_plan, prev, td_iso, st, outdoor_rows=outdoor_rows, next_days=nxt),
+        _guards_mod.evaluate(after_plan, prev, td_iso, st_after, outdoor_rows=outdoor_rows, next_days=nxt),
     )
     return {"week_plan": after_plan, "adjustments": adjustments, "key_status": after,
             "key_conflicts": conflicts, "added_guard_warnings": guard_warnings}

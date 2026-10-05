@@ -981,21 +981,54 @@ def is_outdoor_day(day: Mapping[str, Any]) -> bool:
     )
 
 
+def is_declared_outdoor_day(day: Mapping[str, Any]) -> bool:
+    """B372: an outdoor day the USER put on the plan — a spot, a pitch ladder,
+    or an outdoor block planned / done. The planner's bare ``outdoor_slot`` is
+    availability, not a declaration: nothing ever marks it done, nothing clears
+    it when the slot is used for the gym, so it never counts as a crag day for
+    the fatigue alerts on its own (only its route log / load can)."""
+    if not isinstance(day, Mapping):
+        return False
+    return bool(
+        day.get("outdoor_spot_name") or day.get("outdoor_spot_id") or day.get("outdoor_plan")
+        or day.get("outdoor_session_status") in ("planned", "done")
+    )
+
+
 def _outdoor_logged_loads(
     state: Mapping[str, Any], outdoor_rows: Optional[Sequence[Mapping[str, Any]]],
 ) -> Dict[str, float]:
-    """Highest logged ``load_score`` per date (``outdoor_logs`` rows +
-    ``state.outdoor_log``)."""
+    """Logged ``load_score`` per date (``outdoor_logs`` rows +
+    ``state.outdoor_log``): the SUM over the day's distinct (date, spot)
+    entries, the day total B341 defines for a multi-crag day (a copy of the
+    same entry in both sources counts once, rows first)."""
     out: Dict[str, float] = {}
+    seen = set()
     for row in list(outdoor_rows or []) + list(state.get("outdoor_log") or []):
         if not isinstance(row, Mapping):
             continue
         entry = row.get("entry") if isinstance(row.get("entry"), Mapping) else row
         d = str(entry.get("date") or "")[:10]
         v = _num(entry.get("load_score"))
-        if d and v is not None and v > out.get(d, float("-inf")):
-            out[d] = v
+        if not d or v is None:
+            continue
+        key = (d, str(entry.get("spot_id") or entry.get("spot_name") or ""))
+        if key in seen:
+            continue
+        seen.add(key)
+        out[d] = out.get(d, 0.0) + v
     return out
+
+
+def _route_measurable(state: Mapping[str, Any], route: Mapping[str, Any], entry_discipline: str) -> bool:
+    """A logged route the OUTDOOR-HARD rule can judge: its discipline has a
+    threshold (the athlete has a redpoint there) AND its grade sits on that
+    discipline's ladder. A '?' or a typo is unknown, not easy."""
+    disc = _route_discipline(route, entry_discipline)
+    if hard_climb_threshold(state, disc) is None:
+        return False
+    g = _norm_lead(route.get("grade")) if disc == "lead" else _norm_boulder(route.get("grade"))
+    return g is not None
 
 
 def outdoor_fatigue_days(
@@ -1006,6 +1039,7 @@ def outdoor_fatigue_days(
     outdoor_rows: Optional[Sequence[Mapping[str, Any]]] = None,
     since: Optional[DateLike] = None,
     until: Optional[DateLike] = None,
+    today: Optional[DateLike] = None,
 ) -> Dict[str, Dict[str, Any]]:
     """B372 — the outdoor days that count as a hard, finger-loading day for the
     fatigue ALERTS (``guards_v1``, ``athlete_context`` guards). Never used to
@@ -1017,21 +1051,29 @@ def outdoor_fatigue_days(
     - ``outdoor_hard``: the log (``outdoor_rows`` / ``state.outdoor_log``) has
       a route at/above the OUTDOOR-HARD threshold (``outdoor_hard_days``) —
       also a logged day with no outdoor block on the plan;
-    - ``outdoor_load``: its load (day ``outdoor_load_score`` or logged
-      ``load_score``) reaches ``load_threshold`` (the replanner's
-      ``OUTDOOR_RIPPLE_THRESHOLD``) — also a logged day with no block;
-    - a day whose log carries routes, none hard, below the load threshold, does
-      NOT count: an easy day out, measured;
+    - ``outdoor_load``: its load (day ``outdoor_load_score`` or the logged
+      ``load_score``, summed over the day's crags) reaches ``load_threshold``
+      (the replanner's ``OUTDOOR_RIPPLE_THRESHOLD``) — also a logged day with
+      no block;
+    - a day whose log carries routes, all gradable and none hard, below the
+      load threshold, does NOT count: an easy day out, measured;
     - ``outdoor_unlogged``: a completed outdoor day of the plan whose routes are
-      unknown (not logged, or not passed in) — counts, conservatively: a day at
-      the crag loads the fingers until the log says otherwise;
-    - ``outdoor_planned``: an outdoor day of the plan not completed yet
-      (``outdoor_slot`` or a block with status planned): counts, its
-      intensity is not known before the day.
+      unknown (not logged, not passed in, or ungradable) — counts,
+      conservatively: a day at the crag loads the fingers until the log says
+      otherwise;
+    - ``outdoor_planned``: an outdoor day the user declared
+      (``is_declared_outdoor_day``) and has not completed yet, on or after
+      *today* (``None`` = every date): counts, its intensity is not known
+      before the day. A declared day already past, never completed and never
+      logged, does not count — the athlete did not go.
+
+    A bare planner ``outdoor_slot`` is availability, not a crag day: it counts
+    only through its log (hard / load), like a day with no block.
 
     *days*: plan days (any iterable, later copies of a date win). Pure and
     deterministic.
     """
+    t_iso = _as_iso(today) if today is not None else None
     s_iso = _as_iso(since) if since is not None else None
     u_iso = _as_iso(until) if until is not None else None
     hard = {o["date"]: o for o in outdoor_hard_days(state, since=since, until=until, outdoor_rows=outdoor_rows)}
@@ -1040,13 +1082,13 @@ def outdoor_fatigue_days(
     # 8a is not "easy", it is unknown.
     with_routes = {
         str(e.get("date"))[:10] for e in _outdoor_entries(state, outdoor_rows)
-        if all(hard_climb_threshold(state, _route_discipline(r, str(e.get("discipline") or ""))) is not None
+        if all(_route_measurable(state, r, str(e.get("discipline") or ""))
                for r in e.get("routes") or [] if isinstance(r, Mapping))
     }
     logged_load = _outdoor_logged_loads(state, outdoor_rows)
     by_date: Dict[str, Mapping[str, Any]] = {}
     for day in days or []:
-        if not is_outdoor_day(day):
+        if not is_declared_outdoor_day(day):
             continue
         d = str(day.get("date") or "")[:10]
         if d and _in_window(d, s_iso, u_iso):
@@ -1074,7 +1116,7 @@ def outdoor_fatigue_days(
             continue  # logged, measured easy
         elif done:
             out[d] = _row(d, "done", OUTDOOR_REASON_UNLOGGED, spot, load)
-        else:
+        elif t_iso is None or d >= t_iso:
             out[d] = _row(d, "planned", OUTDOOR_REASON_PLANNED, spot, load)
     for d, h in hard.items():
         if d not in out:

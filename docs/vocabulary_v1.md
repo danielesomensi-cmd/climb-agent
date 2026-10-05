@@ -1497,19 +1497,25 @@ GuardWarning (backend/engine/guards_v1.py, computed at read, NEVER persisted):
   Only sessions that can still change are flagged (not done/skipped, not before `today`); history counts.
 
   B372 — outdoor days (stimulus.outdoor_fatigue_days(state, days, load_threshold=OUTDOOR_RIPPLE_THRESHOLD,
-  outdoor_rows=, since=, until=) → {date: {date, status, reason, spot, load, grade, route}}). A day counts,
-  first rule that applies:
+  outdoor_rows=, since=, until=, today=) → {date: {date, status, reason, spot, load, grade, route}}). A day
+  counts, first rule that applies:
     outdoor_hard      a logged route at/above the OUTDOOR-HARD threshold (also a logged day with no plan block)
-    outdoor_load      day outdoor_load_score / logged load_score ≥ 65
-    (not counted)     a log whose routes are all classifiable and none hard, load < 65: an easy day, measured
-    outdoor_unlogged  completed plan day (outdoor_session_status done) with no classifiable route log
-    outdoor_planned   plan outdoor day not completed (outdoor_slot, or block with status planned)
-  A counted day is hard + finger for: finger_gap (both ways; the day right after is post_outdoor's, one alert
-  per pair), finger_test_72h (flags the test), hiit_near_max (merged into one alert with a max session),
-  hard_cap (a hard day of the week), post_outdoor. Never flagged itself: in `with` as
-  {date, slot: null, session_id: null}; the warning carries `outdoor: {date, reason, spot, load}`.
-  evaluate(..., outdoor_rows=) — the outdoor_logs rows; build_guard_warnings(..., user_id=) reads them
-  (previous week + the week). athlete_context guards use the same days (finger_hard_today_sessions /
+    outdoor_load      day outdoor_load_score / logged load_score (summed over the day's crags) ≥ 65
+    (not counted)     a log whose routes are all gradable (threshold + grade on the ladder) and none hard,
+                      load < 65: an easy day, measured
+    outdoor_unlogged  completed plan day (outdoor_session_status done) with no gradable route log
+    outdoor_planned   a DECLARED outdoor day (stimulus.is_declared_outdoor_day: spot, outdoor_plan or block
+                      planned/done) not completed, on/after `today` — a past one never completed does not count
+  A bare planner `outdoor_slot` is availability, not a crag day: it counts only through its log (hard/load).
+  A counted day is hard + finger for: finger_gap (both ways, one alert per session with sessions and crag days
+  in `with`; the day right after is post_outdoor's), finger_test_72h (flags the test; the test the day after is
+  post_outdoor's), hiit_near_max (merged into one alert with a max session), hard_cap (a hard day of the week;
+  a crag day past the cap flags the latest hard session), hard_back_to_back (a hard non-finger session the day
+  before), post_outdoor. Never flagged itself: in `with` as {date, slot: null, session_id: null}; the warning
+  carries `outdoor: {date, reason, spot, load}`.
+  evaluate(..., outdoor_rows=, next_days=) — the outdoor_logs rows; the next week's days (read only for a
+  declared crag day on its Monday); build_guard_warnings(..., user_id=) reads both (rows: previous week + the
+  week), and so do key_sessions_v1's proposals and check_insertion. athlete_context guards use the same days (finger_hard_today_sessions /
   finger_hard_adjacent detail = the reason; hard_cap.hard_days; hiit_ok).
 ```
 

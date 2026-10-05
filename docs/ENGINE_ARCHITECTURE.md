@@ -721,8 +721,8 @@ alert") no user action rewrites a session the user did not touch. `apply_day_add
 `guard_warnings[]` sibling of `week_plan` on `GET /api/week` and every replanner response (codes `finger_gap`,
 `finger_test_72h`, `heavy_pull_7d`, `hiit_near_max`, `hard_cap`, `pre_trip`, `post_outdoor`, `hard_back_to_back` — see
 `docs/vocabulary_v1.md` §5.7.1). Only sessions that can still change are flagged; history counts. Since B372
-an outdoor day (planned, logged hard, big load, or completed without a route log —
-`stimulus.outdoor_fatigue_days`) is a hard, finger-loading day for these alerts and for the `athlete_context`
+an outdoor day (declared and still ahead, logged hard, big load, or completed without a route log —
+`stimulus.outdoor_fatigue_days`; the planner's bare `outdoor_slot` is availability and does not count) is a hard, finger-loading day for these alerts and for the `athlete_context`
 guards; nothing is rewritten and planner-generated weeks do not change.
 
 - `_enforce_caps()` / `_enforce_no_consecutive_finger()` (via `_reconcile`) survive as a **probe** on a copy: the

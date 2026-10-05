@@ -60,9 +60,14 @@ Outdoor days (B372). An outdoor day that counts (``stimulus.outdoor_fatigue_days
 is a hard, finger-loading day for every guard: ``finger_gap`` (both ways — the
 session before a crag day is flagged too, since the crag day itself carries no
 session to flag; the day right after is ``post_outdoor``'s), ``finger_test_72h``
-(a crag day within 72 h before a finger test flags the test), ``hiit_near_max``
-(HIIT on, or the day before, a crag day), ``hard_cap`` (the crag day is one of
-the week's hard days) and ``post_outdoor``. An outdoor day is never flagged
+(a crag day within 72 h before a finger test flags the test; the test the day
+after is ``post_outdoor``'s), ``hiit_near_max`` (HIIT on, or the day before, a
+crag day), ``hard_cap`` (the crag day is one of the week's hard days; when it
+is past the cap the latest hard session is flagged), ``hard_back_to_back`` (a
+hard non-finger session the day before a crag day) and ``post_outdoor``. A
+declared crag day on the next week's Monday is read through ``next_days``. The
+planner's bare ``outdoor_slot`` is availability, not a crag day (it counts only
+through its route log / load), so planner-generated weeks get no outdoor alert. An outdoor day is never flagged
 itself — it has no session — it appears in ``with`` as
 ``{date, slot: None, session_id: None}``, and the warning names it in
 ``outdoor`` (``{date, reason, spot, load}``). Nothing is rewritten.
@@ -139,7 +144,9 @@ class _Timeline:
     def __init__(self, plan: Mapping[str, Any], prev_days: Optional[Sequence[Mapping[str, Any]]],
                  state: Optional[Mapping[str, Any]] = None,
                  outdoor_rows: Optional[Sequence[Mapping[str, Any]]] = None,
-                 outdoor_load_threshold: Optional[float] = None):
+                 outdoor_load_threshold: Optional[float] = None,
+                 today: Optional[str] = None,
+                 next_days: Optional[Sequence[Mapping[str, Any]]] = None):
         self.by_date: Dict[str, List[Mapping[str, Any]]] = {}
         self.day_by_date: Dict[str, Mapping[str, Any]] = {}
         self.plan_dates: List[str] = []
@@ -159,14 +166,21 @@ class _Timeline:
         self.plan_dates = sorted(set(self.plan_dates))
         # B372: the outdoor days that count as hard, finger-loading days.
         self.outdoor: Dict[str, Dict[str, Any]] = {}
+        # The next week's leading days (``next_days``) are read for their
+        # outdoor block only — a Monday crag day after this week's Sunday
+        # session — never for their sessions.
         if outdoor_load_threshold is not None and self.day_by_date:
             from backend.engine.stimulus import outdoor_fatigue_days
 
-            dates = sorted(self.day_by_date)
+            days_for_outdoor = dict(self.day_by_date)
+            for day in list(next_days or []):
+                if isinstance(day, Mapping) and _parse(day.get("date")) is not None:
+                    days_for_outdoor.setdefault(str(day["date"])[:10], day)
+            dates = sorted(days_for_outdoor)
             self.outdoor = outdoor_fatigue_days(
-                state or {}, [self.day_by_date[d] for d in dates],
+                state or {}, [days_for_outdoor[d] for d in dates],
                 load_threshold=outdoor_load_threshold, outdoor_rows=outdoor_rows,
-                since=dates[0], until=dates[-1])
+                since=dates[0], until=dates[-1], today=today)
 
     def outdoor_on(self, d: date) -> Optional[Dict[str, Any]]:
         return self.outdoor.get(d.isoformat())
@@ -251,32 +265,36 @@ def _finger_gap(tl: _Timeline, em: _Emitter, gap: int) -> None:
         for k in range(1, gap + 1):
             prev = d - timedelta(days=k)
             before.extend(_ref(prev.isoformat(), x) for x in tl.on(prev) if session_flag(x, "finger"))
-        if before:
-            for s in here:
-                if not em.flaggable(d_iso, s):
-                    continue
-                em.emit(CODE_FINGER_GAP, d_iso, s, before,
-                        f"{_label(s)} on {d_iso} loads the fingers within {gap} day(s) of "
-                        f"{before[0]['session_id']} on {before[0]['date']}: the finger gap asks for "
-                        f"{24 * (gap + 1)} h between them.",
-                        gap_days=gap)
         # B372: an outdoor day on either side. The day right after a crag day
-        # is ``post_outdoor``'s (one alert per pair, not two).
+        # is ``post_outdoor``'s. One alert per session: sessions and crag days
+        # all go in ``with``.
+        crags: List[Tuple[int, Dict[str, Any]]] = []
         for k in range(-gap, gap + 1):
             if k in (0, 1):
                 continue
             o = tl.outdoor_on(d - timedelta(days=k))
-            if o is None:
+            if o is not None:
+                crags.append((k, o))
+        if not before and not crags:
+            continue
+        with_ = before + [_outdoor_ref(o["date"]) for _k, o in crags]
+        if before:
+            side = "of"
+            msg_tail = f"{before[0]['session_id']} on {before[0]['date']}"
+            if crags:
+                msg_tail += f" and {_outdoor_label(crags[0][1])}"
+        else:
+            k0, o0 = crags[0]
+            side = "before" if k0 < 0 else "of"
+            msg_tail = f"{_outdoor_label(o0)} ({_OUTDOOR_WHY.get(o0.get('reason'), 'outdoor')})"
+        extra = {"outdoor": _outdoor_info(crags[0][1])} if crags else {}
+        for s in here:
+            if not em.flaggable(d_iso, s):
                 continue
-            for s in here:
-                if not em.flaggable(d_iso, s):
-                    continue
-                side = "before" if k < 0 else "of"
-                em.emit(CODE_FINGER_GAP, d_iso, s, [_outdoor_ref(o["date"])],
-                        f"{_label(s)} on {d_iso} loads the fingers within {gap} day(s) {side} "
-                        f"{_outdoor_label(o)} ({_OUTDOOR_WHY.get(o.get('reason'), 'outdoor')}): "
-                        f"the finger gap asks for {24 * (gap + 1)} h between them.",
-                        gap_days=gap, outdoor=_outdoor_info(o))
+            em.emit(CODE_FINGER_GAP, d_iso, s, with_,
+                    f"{_label(s)} on {d_iso} loads the fingers within {gap} day(s) {side} {msg_tail}: "
+                    f"the finger gap asks for {24 * (gap + 1)} h between them.",
+                    gap_days=gap, **extra)
 
 
 def _is_finger_test(s: Mapping[str, Any]) -> bool:
@@ -310,6 +328,8 @@ def _finger_test(tl: _Timeline, em: _Emitter, block_days: int) -> None:
             if not em.flaggable(t_iso, t):
                 continue
             for k in range(0, block_days + 1):
+                if k == 1:
+                    continue  # the test the day right after is ``post_outdoor``'s
                 o = tl.outdoor_on(td - timedelta(days=k))
                 if o is None:
                     continue
@@ -393,7 +413,12 @@ def _hard_cap(plan: Mapping[str, Any], em: _Emitter, outdoor: Optional[Mapping[s
                 for s in day.get("sessions") or [] if _counts_as_hard(s)]
     all_refs += [_outdoor_ref(str(day["date"])[:10]) for day in hard_days
                  if str(day["date"])[:10] in outdoor]
-    for day in hard_days[cap:]:
+    # A crag day carries no session to flag: the excess is taken, latest
+    # first, from the hard days that hold a hard session (a weekend crag day
+    # past the cap flags the latest hard session instead).
+    excess = len(hard_days) - cap
+    with_session = [day for day in hard_days if any(_counts_as_hard(s) for s in day.get("sessions") or [])]
+    for day in with_session[max(0, len(with_session) - excess):]:
         d_iso = str(day["date"])[:10]
         for s in day.get("sessions") or []:
             if not _counts_as_hard(s) or not em.flaggable(d_iso, s):
@@ -476,6 +501,22 @@ def _hard_back_to_back(tl: _Timeline, em: _Emitter) -> None:
                 for e in pair:
                     if em.flaggable(prev, e):
                         em.emit(CODE_HARD_BACK_TO_BACK, prev, e, [_ref(d_iso, s)], msg)
+    # B372: a hard session the day BEFORE a crag day that counts. The crag day
+    # is the user's (declared or logged), so the pair is always flagged.
+    # Finger-tagged sessions are ``finger_gap``'s (one alert per pair); the day
+    # after a crag day is ``post_outdoor``'s.
+    for d_iso in tl.plan_dates:
+        d = _parse(d_iso)
+        o = tl.outdoor_on(d + timedelta(days=1))
+        if o is None:
+            continue
+        for s in tl.on(d):
+            if not _is_hard(s) or session_flag(s, "finger") or not em.flaggable(d_iso, s):
+                continue
+            em.emit(CODE_HARD_BACK_TO_BACK, d_iso, s, [_outdoor_ref(o["date"])],
+                    f"{_label(s)} on {d_iso} is a hard session the day before {_outdoor_label(o)} "
+                    f"({_OUTDOOR_WHY.get(o.get('reason'), 'outdoor')}): back-to-back hard days.",
+                    outdoor=_outdoor_info(o))
 
 
 def evaluate(
@@ -484,6 +525,7 @@ def evaluate(
     today: Optional[str] = None,
     state: Optional[Mapping[str, Any]] = None,
     outdoor_rows: Optional[Sequence[Mapping[str, Any]]] = None,
+    next_days: Optional[Sequence[Mapping[str, Any]]] = None,
 ) -> List[Dict[str, Any]]:
     """What the guards object to in *plan* — alerts only, see the module doc.
 
@@ -495,6 +537,9 @@ def evaluate(
     *outdoor_rows*: the ``outdoor_logs`` rows of the window (B372) — the route
     log that tells a hard crag day from an easy one; ``None`` reads
     ``state.outdoor_log`` only (a completed day without routes then counts).
+    *next_days*: the next week's days, read ONLY for a declared outdoor day at
+    the start of the next week (a Sunday finger session before a Monday crag
+    day); their sessions are ignored.
     """
     if not isinstance(plan, Mapping) or not _days_of(plan):
         return []
@@ -502,7 +547,8 @@ def evaluate(
     from backend.engine.replanner_v1 import OUTDOOR_RIPPLE_THRESHOLD, _recovery_gap
 
     st: Mapping[str, Any] = state if isinstance(state, Mapping) else {}
-    tl = _Timeline(plan, prev_days, st, outdoor_rows, OUTDOOR_RIPPLE_THRESHOLD)
+    tl = _Timeline(plan, prev_days, st, outdoor_rows, OUTDOOR_RIPPLE_THRESHOLD,
+                   today=str(today)[:10] if today else None, next_days=next_days)
     em = _Emitter(tl.plan_dates, today)
     gap = max(1, int(_recovery_gap(dict(plan))))
 

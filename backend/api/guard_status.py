@@ -38,6 +38,24 @@ def prev_week_days(state: Mapping[str, Any], start_date: Optional[str]) -> Optio
         return None
 
 
+def next_week_days(state: Mapping[str, Any], start_date: Optional[str]) -> Optional[list]:
+    """B372: days of the week following *start_date* — read by the guards for
+    a declared crag day on its Monday only."""
+    if not start_date:
+        return None
+    try:
+        next_monday = (datetime.strptime(str(start_date)[:10], "%Y-%m-%d").date() + timedelta(days=7)).isoformat()
+    except ValueError:
+        return None
+    nxt = (state.get("week_plans") or {}).get(next_monday)
+    if not isinstance(nxt, Mapping):
+        return None
+    try:
+        return (nxt.get("weeks") or [{}])[0].get("days") or None
+    except (IndexError, AttributeError):
+        return None
+
+
 _NO_USER = object()
 
 
@@ -68,7 +86,7 @@ def build_guard_warnings(
         rows = None if user_id is _NO_USER else outdoor_rows_for(user_id, plan.get("start_date"))
         return guards_v1.evaluate(
             plan, prev_week_days(state or {}, plan.get("start_date")), resolve_today(today), state or {},
-            outdoor_rows=rows,
+            outdoor_rows=rows, next_days=next_week_days(state or {}, plan.get("start_date")),
         )
     except Exception:
         logger.warning("A301: guard alerts failed", exc_info=True)

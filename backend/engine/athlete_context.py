@@ -503,7 +503,7 @@ def _guards(
         fh.setdefault(r["date"], []).append(str(r.get("session_id") or r["reason"]))
     outdoor = outdoor_fatigue_days(
         state, [day for _d, day, _src in iter_plan_days(state, archived_weeks)],
-        load_threshold=OUTDOOR_RIPPLE_THRESHOLD, outdoor_rows=outdoor_rows, since=lo, until=hi)
+        load_threshold=OUTDOOR_RIPPLE_THRESHOLD, outdoor_rows=outdoor_rows, since=lo, until=hi, today=today)
     for o_d, o in outdoor.items():
         if o["reason"] not in fh.get(o_d, []):
             fh.setdefault(o_d, []).append(o["reason"])
