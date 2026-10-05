@@ -553,19 +553,31 @@ def get_week(
                 cached = state.get("current_week_plan")
             if _is_servable_plan(cached, week_start_key):
                 week_plan = cached
-                # B216 Defect A: self-heal legacy current_week_plan on
-                # calendar rollover. Cache-hit confirms per-week cache is
-                # correct; if the legacy slot still points to a prior Monday,
-                # resync so downstream readers (feedback.py, free_session.py,
-                # etc.) see the right week without needing a force-regen.
-                if is_current_week:
-                    legacy = state.get("current_week_plan") or {}
-                    if legacy.get("start_date") != week_start_key:
-                        state["current_week_plan"] = cached
-                        save_state(state, user_id)
         except Exception:
             logger.warning("Failed to read cached week plan, regenerating")
             week_plan = None
+        # B216 Defect A: self-heal legacy current_week_plan on calendar
+        # rollover. Cache-hit confirms per-week cache is correct; if the legacy
+        # slot still points to a prior Monday, resync so downstream readers
+        # (feedback.py, free_session.py, etc.) see the right week without
+        # needing a force-regen.
+        # B368: this save sat inside the cache-read try above, so a transient
+        # storage error (Supabase statement timeout, 2026-10-05) threw away a
+        # perfectly good cached plan, regenerated the week from scratch with no
+        # old plan to preserve from, and saved it over the user's customs and
+        # forced sessions. A failed resync is only logged now: the cached plan
+        # is still served and nothing is regenerated.
+        if week_plan is not None and is_current_week:
+            legacy = state.get("current_week_plan") or {}
+            if legacy.get("start_date") != week_start_key:
+                state["current_week_plan"] = week_plan
+                try:
+                    save_state(state, user_id)
+                except Exception:
+                    logger.warning(
+                        "B368: legacy current_week_plan resync failed — serving cached plan",
+                        exc_info=True,
+                    )
 
     if week_plan is None:
         # A281: the taper replaces the old 6-day "no hard sessions" window with
