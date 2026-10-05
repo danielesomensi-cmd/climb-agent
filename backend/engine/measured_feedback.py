@@ -632,6 +632,10 @@ def sanitize_log_entry(log_entry: Dict[str, Any]) -> List[str]:
                 item.pop("hang_held_s", None)
             else:
                 item["hang_held_s"] = v
+        # A298: bodyweight hold / technique measures.
+        from backend.engine.bw_progression import sanitize_item as _bw_sanitize
+
+        _bw_sanitize(item, warnings)
         if "problems" in item:
             # A296: limit problem log — invalid rows dropped one by one.
             from backend.engine.limit_log import sanitize_problems
@@ -715,6 +719,11 @@ def attach_measure_fields(
         copy = dict(ex)
         eid = str(copy.get("exercise_id") or "")
         kind = measure_kind(eid)
+        if copy.get("progress_source") == "bw_ladder" and copy.get("measure"):
+            # A298: a ladder row already carries the ladder's measure (bw_reps /
+            # bw_hold) — a dp_reps here would show a double progression for a
+            # row whose dose the ladder sets.
+            kind = None
         if kind:
             copy["measure"] = kind
             if kind == MEASURE_DP_REPS:

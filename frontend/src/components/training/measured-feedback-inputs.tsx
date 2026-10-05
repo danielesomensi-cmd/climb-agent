@@ -18,6 +18,7 @@ import {
   PAIN_OPTIONS,
   PAIN_SITE_OPTIONS,
   lastSetStepperMax,
+  stepperBounds,
 } from "@/lib/measured-feedback";
 
 const CHIP =
@@ -34,6 +35,9 @@ export function LastSetRepsStepper({
   targetReps,
   label,
   hint,
+  max: maxOverride,
+  unit = "rep",
+  min = 0,
 }: {
   id: string;
   value: number | undefined;
@@ -42,10 +46,15 @@ export function LastSetRepsStepper({
   targetReps?: number;
   label: string;
   hint?: string;
+  /** A298: upper bound for the non-rep measures (seconds, readjustments, fear). */
+  max?: number;
+  /** A298: unit word used in the +/- aria labels. */
+  unit?: string;
+  min?: number;
 }) {
-  const max = lastSetStepperMax(prescribedReps, targetReps);
+  const max = maxOverride ?? lastSetStepperMax(prescribedReps, targetReps);
   const start = targetReps ?? prescribedReps ?? 0;
-  const dec = () => onChange(value == null ? Math.max(0, start - 1) : Math.max(0, value - 1));
+  const dec = () => onChange(value == null ? Math.max(min, start - 1) : Math.max(min, value - 1));
   const inc = () => onChange(value == null ? Math.min(max, start) : Math.min(max, value + 1));
   return (
     <div className="space-y-1.5">
@@ -53,7 +62,7 @@ export function LastSetRepsStepper({
       <div className="flex items-center gap-2" role="group" aria-labelledby={`${id}-label`}>
         <button
           type="button"
-          aria-label="One rep fewer"
+          aria-label={`One ${unit} fewer`}
           onClick={dec}
           onPointerDown={tapFeedback}
           className={cn(CHIP, CHIP_OFF, "w-11 px-0 flex items-center justify-center")}
@@ -71,7 +80,7 @@ export function LastSetRepsStepper({
         </span>
         <button
           type="button"
-          aria-label="One rep more"
+          aria-label={`One ${unit} more`}
           onClick={inc}
           onPointerDown={tapFeedback}
           className={cn(CHIP, CHIP_OFF, "w-11 px-0 flex items-center justify-center")}
@@ -169,6 +178,60 @@ export function MeasureInput({
   }
   if (measure === "hang_margin") {
     return <HangMarginChips value={hangMargin} onChange={onHangMargin} />;
+  }
+  // A298: bodyweight ladder rows and technique ladders — one optional number.
+  if (measure === "bw_reps") {
+    return (
+      <LastSetRepsStepper
+        id={id}
+        value={lastSetReps}
+        onChange={onLastSetReps}
+        prescribedReps={prescribedReps}
+        max={stepperBounds(measure, prescribedReps).max}
+        label="Clean reps on your weakest set"
+        hint="Optional. It moves your level more precisely than the label alone."
+      />
+    );
+  }
+  if (measure === "bw_hold") {
+    return (
+      <LastSetRepsStepper
+        id={id}
+        value={lastSetReps}
+        onChange={onLastSetReps}
+        prescribedReps={prescribedReps}
+        max={stepperBounds(measure).max}
+        unit="second"
+        label="Seconds held on your weakest set"
+        hint="Optional. Stop at the target: it only matters if you fell short."
+      />
+    );
+  }
+  if (measure === "feet_readjust") {
+    return (
+      <LastSetRepsStepper
+        id={id}
+        value={lastSetReps}
+        onChange={onLastSetReps}
+        max={stepperBounds(measure).max}
+        unit="readjustment"
+        label="Foot readjustments on the sample problem"
+        hint="One problem per session (video or partner). ≤ 1 twice in a row moves the feet ladder up."
+      />
+    );
+  }
+  if (measure === "fear_max") {
+    return (
+      <LastSetRepsStepper
+        id={id}
+        value={lastSetReps}
+        onChange={onLastSetReps}
+        max={stepperBounds(measure).max}
+        unit="point"
+        label="Max fear today (0–10)"
+        hint="Once per session. ≤ 3 twice in a row moves the falls ladder up."
+      />
+    );
   }
   return null;
 }

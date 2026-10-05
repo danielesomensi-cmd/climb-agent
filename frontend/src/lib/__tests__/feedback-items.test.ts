@@ -323,3 +323,39 @@ describe("A296 — limit problem log in guided feedback items", () => {
     expect(item.problems).toBeUndefined();
   });
 });
+
+describe("A298 — bodyweight ladder dose source travels with the feedback", () => {
+  it("tags the dialog item when the resolver prescribed the ladder dose", () => {
+    const session = {
+      resolved: {
+        resolved_session: {
+          exercise_instances: [
+            { exercise_id: "straddle_l_sit", load_model: "bodyweight_only", prescription: { source: "bw_ladder", sets: 3 } },
+            { exercise_id: "plank", load_model: "bodyweight_only", prescription: { sets: 2 } },
+          ],
+        },
+      },
+    };
+    const exs = extractFeedbackExercises(session);
+    const items = buildDialogFeedbackItems(exs, { straddle_l_sit: "easy", plank: "easy" }, {});
+    expect(items[0].bw_ladder).toBe("engine");
+    expect(items[1].bw_ladder).toBeUndefined();
+  });
+
+  it("tags the guided item from suggested.ladderSource", () => {
+    const ex = {
+      exerciseId: "straddle_l_sit",
+      name: "Straddle L-sit",
+      category: "core",
+      blockUid: "",
+      loadModel: "bodyweight_only",
+      prescription: {},
+      suggested: { ladderSource: "engine" },
+      status: "done",
+      feedbackLabel: "easy",
+    } as GuidedExercise;
+    expect(buildGuidedFeedbackItems([ex])[0].bw_ladder).toBe("engine");
+    const plain = { ...ex, suggested: {} } as GuidedExercise;
+    expect(buildGuidedFeedbackItems([plain])[0].bw_ladder).toBeUndefined();
+  });
+});

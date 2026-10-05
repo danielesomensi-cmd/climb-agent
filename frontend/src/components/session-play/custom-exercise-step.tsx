@@ -9,6 +9,7 @@ import { unlockAudio } from "@/lib/audio-unlock";
 import { countdownTick, longBeep, transitionBeep } from "@/lib/beep";
 import { completeFeedback, tapFeedback } from "@/lib/haptics";
 import { displaySetNumber, sideForSet } from "@/lib/alt-sides";
+import { LadderBadge } from "@/components/training/ladder-badge";
 import type { CustomSessionExercise } from "@/lib/types";
 import { PHASE_TEXT } from "./player-phase-colors";
 
@@ -194,6 +195,12 @@ export function CustomExerciseStep({
         </div>
         {exercise.notes && (
           <p className="text-xs text-muted-foreground italic max-w-md mx-auto">{exercise.notes}</p>
+        )}
+        {/* A298: bodyweight ladder level of this row */}
+        {exercise.ladder && (
+          <div className="max-w-md mx-auto">
+            <LadderBadge ladder={exercise.ladder} compact />
+          </div>
         )}
       </div>
 

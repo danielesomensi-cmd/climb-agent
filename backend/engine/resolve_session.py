@@ -1134,6 +1134,7 @@ def _resolve_inline_block(
     session_id: Optional[str] = None,
     rot_ctx: Any = None,
     session_local_ids: Optional[List[str]] = None,
+    bw_ctx: Optional[Dict[str, Any]] = None,
 ) -> int:
     """Resolve an inline block (module with block_id + selection, no template_id).
 
@@ -1281,6 +1282,17 @@ def _resolve_inline_block(
 
         chosen_by = "p0_inline_block"
 
+    # A298: bodyweight ladder stage (tested athletes; None → unchanged).
+    _bw_plan = _bw_lvl = None
+    if bw_ctx and selected_ex is not None and chosen_by == "p0_inline_block":
+        selected_ex, _bw_plan, _bw_lvl = _bw_ladder_stage(
+            bw_ctx, selected_ex, exercises,
+            location=location, available_equipment=available_equipment,
+            role_req=role_req, domain_req=domain_req, pattern_req=pattern_req,
+            intensity_max=intensity_max_req, limitation_map=limitation_map,
+            finger_device=_finger_dev, user_age=user_age, experience_years=experience_years,
+        )
+
     selected_list: List[Dict[str, Any]] = []
     if selected_ex:
         instance_counter += 1
@@ -1311,6 +1323,10 @@ def _resolve_inline_block(
             user_state=user_state,
             exercise_id=ex_id,
         )
+        _bw_audit = None
+        if _bw_plan is not None:
+            from backend.engine import bw_progression as _bwp
+            _bw_audit = _bwp.stage_prescription(bw_ctx, _bw_plan, _bw_lvl, merged)
 
         ex_attrs = selected_ex.get("attributes") or {}
         inst = {
@@ -1339,6 +1355,7 @@ def _resolve_inline_block(
             if sug:
                 inst["suggested"] = sug
         _apply_limitation_to_instance(inst, selected_ex, limitation_map or {})
+        _bw_apply_instance(bw_ctx, inst, _bw_audit)
         exercise_instances.append(inst)
         recent_ex_ids.append(norm_str(ex_id))
         session_local_ids.append(norm_str(ex_id))
@@ -1365,6 +1382,118 @@ def _resolve_inline_block(
     })
 
     return instance_counter
+
+
+# ---------------------------------------------------------------------------
+# A298: bodyweight ladder stage (tested athletes only)
+# ---------------------------------------------------------------------------
+
+def _bw_candidate_ok(
+    cand: Dict[str, Any],
+    *,
+    location: str,
+    available_equipment: List[str],
+    role_req: Any,
+    domain_req: Any,
+    pattern_req: Any,
+    intensity_max: Optional[str],
+    limitation_map: Optional[Dict[str, str]],
+    finger_device: Optional[str],
+    user_age: Optional[int],
+    experience_years: Optional[float],
+    phase: Optional[str],
+) -> bool:
+    """A298: does a ladder level pass EVERY filter of the block it would
+    replace the engine pick in? The single-candidate P0 call covers location,
+    equipment, age, experience, role, intensity_max and severe
+    contraindications; domain / pattern / active contraindications are soft in
+    P0 (non-zeroing), so they are checked here as hard filters, plus
+    phase_affinity. A level carrying the library-only role ``ladder`` counts as
+    the block's role: the ladder stage only reaches it by a swap inside the
+    family of an exercise the block already picked."""
+    if cand.get("active") is False:
+        return False
+    roles = set(ex_roles(cand))
+    patched = dict(cand)
+    if "ladder" in roles:
+        patched["role"] = sorted(roles | set(norm_list_str(role_req)))
+    picked, _trace = pick_best_exercise_p0(
+        exercises=[patched], location=location, available_equipment=available_equipment,
+        role_req=role_req, domain_req=domain_req, pattern_req=pattern_req,
+        intensity_max=intensity_max, limitation_map=limitation_map, finger_device=finger_device,
+        user_age=user_age, experience_years=experience_years, active_only=True,
+        strict_test_exemption=True,
+    )
+    if picked is None:
+        return False
+    dom = set(norm_list_str(domain_req))
+    if dom and set(ex_domains(cand)).isdisjoint(dom):
+        return False
+    pat = set(norm_list_str(pattern_req))
+    if pat and set(ex_patterns(cand)).isdisjoint(pat):
+        return False
+    if limitation_map:
+        contras = {ZONE_TO_CONTRAINDICATION[z] for z, sev in limitation_map.items()
+                   if sev in ("active", "severe") and z in ZONE_TO_CONTRAINDICATION}
+        if contras & set(norm_list_str(cand.get("contraindications"))):
+            return False
+    aff = norm_list_str(cand.get("phase_affinity"))
+    if phase and aff and norm_str(phase) not in aff:
+        return False
+    return True
+
+
+def _bw_ladder_stage(
+    bw_ctx: Optional[Dict[str, Any]],
+    selected_ex: Optional[Dict[str, Any]],
+    exercises: List[Dict[str, Any]],
+    **filters: Any,
+) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]], Optional[int]]:
+    """A298: (exercise, ladder plan, level) after the ladder stage.
+
+    The engine pick is replaced only by a level of the SAME family that passes
+    every block filter: the athlete's level first (capped by the lower-back
+    rule), then downwards. The original pick, when it is one of those levels,
+    always passes. No candidate → the original pick, no ladder dose. One
+    family per session: a second block on the same family keeps its own pick
+    (A290 A/B variety)."""
+    from backend.engine import bw_progression as _bwp
+
+    if not bw_ctx or not selected_ex:
+        return selected_ex, None, None
+    plan = _bwp.swap_plan(bw_ctx, norm_str(get_ex_id(selected_ex)))
+    if not plan:
+        return selected_ex, None, None
+    by_id = {norm_str(get_ex_id(e)): e for e in exercises}
+    orig = norm_str(get_ex_id(selected_ex))
+    for lvl, cand_id in zip(plan["order"], plan["candidates"]):
+        if cand_id == orig:
+            return selected_ex, plan, lvl
+        cand = by_id.get(cand_id)
+        if cand is None:
+            continue
+        if _bw_candidate_ok(cand, phase=bw_ctx.get("phase"), **filters):
+            return cand, plan, lvl
+    return selected_ex, None, None
+
+
+def _bw_apply_instance(bw_ctx: Optional[Dict[str, Any]], inst: Dict[str, Any],
+                       audit: Optional[Dict[str, Any]]) -> None:
+    """A298: audit copy of the ladder dose in ``suggested.bw_ladder`` and the
+    bodyweight / technique measure the player may ask for."""
+    if not bw_ctx:
+        return
+    from backend.engine import bw_progression as _bwp
+
+    if audit is not None:
+        sug = inst.setdefault("suggested", {})
+        sug["bw_ladder"] = {"ladder": audit["ladder"], "dose": audit["dose"]}
+        if audit.get("measure"):
+            sug["measure"] = audit["measure"]
+        return
+    kind = _bwp.technique_measure_kind(norm_str(inst.get("exercise_id")), bw_ctx.get("feet_drills"))
+    if kind:
+        inst.setdefault("suggested", {})["measure"] = kind
 
 
 def _inject_prehab_for_limitations(
@@ -1585,6 +1714,15 @@ def resolve_session(
             rot_ctx = None
     _tested = rot_ctx is not None
     session_local_ids: List[str] = []
+    # A298: bodyweight ladder context — None (bit for bit) unless tested.
+    bw_ctx = None
+    if user_state and target_date:
+        from backend.engine import bw_progression as _bwp
+        try:
+            bw_ctx = _bwp.build_resolve_context(user_state, target_date, phase, session=session)
+        except Exception:  # never let the ladder layer break a resolution
+            logger.warning("resolve_session: bw ladder context failed — catalog doses", exc_info=True)
+            bw_ctx = None
 
     # recent history (B159b: reads from week_plans in user_state)
     if _tested:
@@ -1673,6 +1811,7 @@ def resolve_session(
                 session_id=session_id,
                 rot_ctx=rot_ctx,
                 session_local_ids=session_local_ids,
+                bw_ctx=bw_ctx,
             )
             continue
 
@@ -1812,6 +1951,16 @@ def resolve_session(
                     )
                     chosen_by = "p0_hard_filters"
 
+            # A298: bodyweight ladder stage (tested athletes; None → unchanged).
+            _bw_plan = _bw_lvl = None
+            if bw_ctx and selected_ex is not None and chosen_by == "p0_hard_filters":
+                selected_ex, _bw_plan, _bw_lvl = _bw_ladder_stage(
+                    bw_ctx, selected_ex, exercises,
+                    location=location, available_equipment=available_equipment,
+                    role_req=role_req, domain_req=domain_req, pattern_req=pattern_req,
+                    intensity_max=None, limitation_map=limitation_map,
+                    finger_device=finger_device, user_age=user_age, experience_years=experience_years,
+                )
 
             if selected_ex:
                 instance_counter += 1
@@ -1839,6 +1988,10 @@ def resolve_session(
                     user_state=user_state,
                     exercise_id=ex_id,
                 )
+                _bw_audit = None
+                if _bw_plan is not None:
+                    from backend.engine import bw_progression as _bwp
+                    _bw_audit = _bwp.stage_prescription(bw_ctx, _bw_plan, _bw_lvl, merged)
 
                 ex_attrs = selected_ex.get("attributes") or {}
                 inst = {
@@ -1867,6 +2020,7 @@ def resolve_session(
                     if sug:
                         inst["suggested"] = sug
                 _apply_limitation_to_instance(inst, selected_ex, limitation_map)
+                _bw_apply_instance(bw_ctx, inst, _bw_audit)
                 exercise_instances.append(inst)
                 recent_ex_ids.append(norm_str(ex_id))  # update "recent" inside this resolution too
                 session_local_ids.append(norm_str(ex_id))

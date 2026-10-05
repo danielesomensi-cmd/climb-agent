@@ -52,6 +52,11 @@ def _validate_import(data: Any) -> None:
             f"schema_version non supportata: {sv!r} (attesa: '1.5')"
         )
 
+    # A298: optional, but when present it must be an object of family entries.
+    bwp = data.get("bw_progression")
+    if bwp is not None and not isinstance(bwp, dict):
+        raise ValueError("Campo non valido: 'bw_progression' deve essere un oggetto JSON")
+
     for key, msg in _REQUIRED_DICT_KEYS.items():
         if key not in data:
             raise ValueError(f"Campo obbligatorio mancante: {key!r}")

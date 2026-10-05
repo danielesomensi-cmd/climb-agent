@@ -20,6 +20,7 @@ import { FEEDBACK_OPTIONS } from "@/lib/format";
 import { measureFields, withFeedbackContract, type MeasureValues } from "@/lib/measured-feedback";
 import type { LimitProblemDraft, SessionPain } from "@/lib/types";
 import { MeasureInput, PainPicker } from "@/components/training/measured-feedback-inputs";
+import { LadderBadge } from "@/components/training/ladder-badge";
 import { LimitProblemLogger } from "@/components/training/limit-problem-logger";
 import { limitFeedbackFields, limitTargetFor } from "@/lib/limit-problems";
 
@@ -55,6 +56,8 @@ function ExerciseFeedbackCard({
   onProblemsChange,
   surface,
   onSurfaceChange,
+  customSessionId,
+  date,
 }: {
   name: string;
   prescriptionSummary: string;
@@ -76,6 +79,9 @@ function ExerciseFeedbackCard({
   /** A296 (review): the wall the athlete says he is on (null = server default). */
   surface: string | null;
   onSurfaceChange: (surface: string) => void;
+  /** A298: the session the promotion tap rewrites, and the day played. */
+  customSessionId?: string;
+  date?: string;
 }) {
   const limit = limitTargetFor(exercise, surface);
   return (
@@ -89,6 +95,8 @@ function ExerciseFeedbackCard({
       {prescriptionSummary && (
         <p className="text-[11px] text-muted-foreground -mt-1">{prescriptionSummary}</p>
       )}
+      {/* A298: ladder level + promotion proposal (custom 'ladder' rows) */}
+      <LadderBadge ladder={exercise.ladder} customSessionId={customSessionId} date={date} compact />
       <div className="flex flex-wrap gap-1.5">
         {FEEDBACK_OPTIONS.map((opt) => (
           <button
@@ -686,6 +694,8 @@ export default function SessionPlayPage() {
                   }
                   onLoadChange={(kg) => setKgByIndex((prev) => ({ ...prev, [i]: kg }))}
                   exercise={ex}
+                  customSessionId={id}
+                  date={date || undefined}
                   measures={measuresByIndex[i] ?? {}}
                   onMeasuresChange={(patch) =>
                     setMeasuresByIndex((prev) => ({ ...prev, [i]: { ...(prev[i] ?? {}), ...patch } }))

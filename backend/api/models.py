@@ -461,6 +461,11 @@ class CustomSessionExerciseEntry(BaseModel):
     # 'anchored' (default when missing) recomputes the load on the day the
     # session is played; 'fixed' keeps the user's kg. Ignored elsewhere.
     load_mode: Optional[Literal["anchored", "fixed"]] = None
+    # A298: for an exercise that is a level of a bodyweight ladder, 'ladder'
+    # gets the dose of the athlete's level when the session is played (and a
+    # promotion proposal to confirm with a tap); 'fixed' (or missing — every
+    # row saved before A298) keeps the user's sets/reps. Ignored elsewhere.
+    progress_mode: Optional[Literal["ladder", "fixed"]] = None
 
 
 class CustomSessionCreateRequest(BaseModel):

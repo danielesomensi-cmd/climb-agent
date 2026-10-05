@@ -51,7 +51,43 @@ export const OVERHOLD_CAP_S = 6;
  */
 export const OVERHOLD_TAP_LATENCY_S = 1;
 
-const MEASURES: ReadonlySet<string> = new Set(["last_set_reps", "hang_margin", "dp_reps"]);
+const MEASURES: ReadonlySet<string> = new Set([
+  "last_set_reps",
+  "hang_margin",
+  "dp_reps",
+  // A298
+  "bw_reps",
+  "bw_hold",
+  "feet_readjust",
+  "fear_max",
+]);
+
+/**
+ * A298 — the stepper measures. They all ride the SAME value slot
+ * (`MeasureValues.lastSetReps`, the one number the stepper edits) so the four
+ * players need no new state; `measureFields` sends it under the field the
+ * server expects for that measure.
+ */
+export const STEPPER_MEASURE_FIELD: Readonly<Record<string, string>> = {
+  last_set_reps: "last_set_reps",
+  dp_reps: "last_set_reps",
+  bw_reps: "last_set_reps",
+  bw_hold: "held_s",
+  feet_readjust: "sample_readjust",
+  fear_max: "fear_max",
+};
+
+/** A298 — stepper bounds and step for the measures that are not rep counts. */
+export function stepperBounds(
+  measure: FeedbackMeasure | undefined,
+  prescribed?: number,
+): { max: number; step: number } {
+  if (measure === "bw_hold") return { max: 120, step: 1 };
+  if (measure === "feet_readjust") return { max: 30, step: 1 };
+  if (measure === "fear_max") return { max: 10, step: 1 };
+  if (measure === "bw_reps") return { max: Math.min(30, Math.max((prescribed ?? 0) + 6, 10)), step: 1 };
+  return { max: lastSetStepperMax(prescribed), step: 1 };
+}
 
 export function asMeasure(value: unknown): FeedbackMeasure | undefined {
   return typeof value === "string" && MEASURES.has(value) ? (value as FeedbackMeasure) : undefined;
@@ -88,6 +124,13 @@ export function measureFields(
   if ((measure === "last_set_reps" || measure === "dp_reps") && values.lastSetReps != null) {
     out.last_set_reps = values.lastSetReps;
     if (measure === "dp_reps" && values.targetReps != null) out.target_reps = values.targetReps;
+  }
+  // A298: bodyweight weakest set (reps or seconds held) and the technique numbers.
+  if (
+    (measure === "bw_reps" || measure === "bw_hold" || measure === "feet_readjust" || measure === "fear_max") &&
+    values.lastSetReps != null
+  ) {
+    out[STEPPER_MEASURE_FIELD[measure]] = values.lastSetReps;
   }
   if (measure === "hang_margin") {
     if (values.hangMargin) out.hang_margin = values.hangMargin;

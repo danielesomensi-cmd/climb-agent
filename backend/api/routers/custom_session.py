@@ -21,6 +21,8 @@ from backend.api.models import CustomSessionCreateRequest, CustomSessionUpdateRe
 from backend.engine.adhoc_prescription import propose_exercise_prescription
 from backend.engine.progression_v1 import limit_grade_target
 from backend.engine.anchored_load import resolve_custom_exercises
+from backend.engine.bw_ladders import family_of
+from backend.engine.bw_progression import attach_technique_measures, resolve_custom_ladder_rows
 from backend.engine.measured_feedback import attach_measure_fields, measure_kind
 from backend.engine.custom_session import compute_custom_session_load, estimate_custom_session_duration
 
@@ -111,6 +113,9 @@ def _dump_exercise(ex) -> dict:
     d = ex.model_dump()
     if d.get("load_mode") is None:
         d.pop("load_mode", None)
+    # A298: progress_mode stored only when set (missing = 'fixed').
+    if d.get("progress_mode") is None:
+        d.pop("progress_mode", None)
     return d
 
 
@@ -240,6 +245,11 @@ def list_exercises(
             # A242: deterministic starting proposal + last-logged memory (C.2/C.3).
             "proposal": propose_exercise_prescription(ex["id"], catalog, state, phase, today=proposal_day),
         })
+        # A298: a level of a bodyweight ladder — the builder offers the
+        # Progress / Fixed toggle (progress_mode) on it.
+        _lad = family_of(ex["id"])
+        if _lad:
+            results[-1]["ladder"] = {"family": _lad[0], "level_idx": _lad[1]}
 
     # Sort by domain (first entry), then name
     results.sort(key=lambda r: (
@@ -386,6 +396,11 @@ def get_session(
             out = enrich_custom_sessions_for_play([s])[0]
             if day:
                 out["exercises"] = resolve_custom_exercises(state, out.get("exercises") or [], day)
+                # A298: ladder rows get the dose of the athlete's level that
+                # day (+ badge / promotion proposal); technique drills their
+                # one-number measure. Tested athletes only.
+                out["exercises"] = resolve_custom_ladder_rows(state, out.get("exercises") or [], day)
+                out["exercises"] = attach_technique_measures(state, out.get("exercises") or [], day)
                 out["resolved_for_date"] = day
             # A295: measure kind (+ double-progression target with a date).
             out["exercises"] = attach_measure_fields(state, out.get("exercises") or [], day)

@@ -37,6 +37,9 @@ function exerciseToDefaults(ex: BuilderExercise): CustomSessionExercise {
     // can label it "per side" pre-save; the server re-derives it on persist.
     alt_sides: ex.alt_sides === true,
     notes: "",
+    // A298: a new row on a bodyweight ladder follows the athlete's level by
+    // default (the dose is read on the day played; "Fixed" in the editor).
+    ...(ex.ladder ? { progress_mode: "ladder" as const } : {}),
   };
 }
 

@@ -735,7 +735,21 @@ def _is_heavy_pull(state: Mapping[str, Any], s: Mapping[str, Any], d_iso: str) -
 
     if s.get("status") == "skipped":
         return False
-    return FAMILY_PULLING_MAX in session_stimuli(s) and is_heavy_pulling_session(state, s, d_iso)
+    if FAMILY_PULLING_MAX in session_stimuli(s) and is_heavy_pulling_session(state, s, d_iso):
+        return True
+    return _carries_bw_heavy_pull(state, s, d_iso)
+
+
+def _carries_bw_heavy_pull(state: Mapping[str, Any], s: Mapping[str, Any], d_iso: str) -> bool:
+    """A298 (DECISIONS: "no ≥85 % pull OR FRONT LEVER within 24 h before
+    limit/strength_long"): any front lever level — and the one-arm pull-up
+    levels — count as a heavy pull for a TESTED athlete, the same definition
+    athlete_context uses. Untested athletes: unchanged (False)."""
+    from backend.engine import bw_ladders as _bw
+
+    if s.get("status") == "skipped" or not _bw.carries_heavy_bw_pull(s):
+        return False
+    return _bw.tested_gate(state, d_iso)
 
 
 def _is_limit_class(s: Mapping[str, Any]) -> bool:
@@ -1456,7 +1470,8 @@ def _conflicts(
                         and SLOT_INDEX.get(str(x.get("slot")), 9) < SLOT_INDEX.get(str(s.get("slot")), 9)]
                 cands = [x for x in days.get(prev, []) if x.get("status") != "skipped"] + same
                 heavy = [x for x in cands if x.get("session_id") != s.get("session_id")
-                         and is_heavy_pulling_session(state, x, prev) and not is_finger_hard_session(x)]
+                         and (is_heavy_pulling_session(state, x, prev) or _carries_bw_heavy_pull(state, x, prev))
+                         and not is_finger_hard_session(x)]
                 if heavy:
                     out.append({"code": "pulling_overlap", "severity": "medium", "date": d, "slot": s.get("slot"),
                                 "session_id": s.get("session_id"),

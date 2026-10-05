@@ -29,6 +29,8 @@ export interface FeedbackDialogExercise {
   measure?: FeedbackMeasure;
   targetReps?: number;
   prescribedReps?: number;
+  /** A298: the dose came from the resolver's ladder stage. */
+  ladderSource?: "engine";
 }
 
 /**
@@ -81,6 +83,7 @@ export function extractFeedbackExercises(
       measure: asMeasure(suggested.measure),
       targetReps: typeof suggested.target_reps === "number" ? suggested.target_reps : undefined,
       prescribedReps: reps,
+      ladderSource: prescription.source === "bw_ladder" ? "engine" : undefined,
     };
   });
 }
@@ -110,6 +113,7 @@ export function buildDialogFeedbackItems(
     };
     const label = labels[ex.exercise_id];
     if (label) item.feedback_label = label;
+    if (ex.ladderSource) item.bw_ladder = ex.ladderSource;
     Object.assign(
       item,
       measureFields(ex.measure, { targetReps: ex.targetReps, ...(measures[ex.exercise_id] ?? {}) }),
@@ -188,6 +192,8 @@ export function buildGuidedFeedbackItems(
       ...labelField(ex),
       completed: ex.status === "done",
     };
+    // A298: tell the server the dose came from the bodyweight ladder.
+    if (ex.suggested.ladderSource) item.bw_ladder = ex.suggested.ladderSource;
     if (ex.usedTotalLoadKg != null) {
       item.used_total_load_kg = ex.usedTotalLoadKg;
     }

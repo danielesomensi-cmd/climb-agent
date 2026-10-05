@@ -240,6 +240,8 @@ export function SessionBuilder({ sessionId, onDirtyChange }: SessionBuilderProps
         load_kg: e.exercise.load_kg || undefined,
         // B364: keep the user's load mode (missing = "anchored" on the server).
         load_mode: e.exercise.load_mode ?? undefined,
+        // A298: ladder rows (missing = "fixed" on the server).
+        progress_mode: e.exercise.progress_mode ?? undefined,
         notes: e.exercise.notes || undefined,
       })),
     };
