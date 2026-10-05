@@ -51,6 +51,8 @@ EMPTY_TEMPLATE: Dict[str, Any] = {
     "free_sessions": [],
     # A296: limit log — written only by apply_feedback / free-session finish.
     "limit_log": [],
+    # A298: bodyweight ladder levels {family: entry, "technique": {...}}.
+    "bw_progression": {},
     "quote_history": [],
     "history_index": {"outdoor_log_paths": []},
 }

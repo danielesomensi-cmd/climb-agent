@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { CustomSessionExercise } from "@/lib/types";
 import { isAnchoredExercise } from "@/lib/anchored-load";
+import { useBuilderExercises } from "@/lib/hooks/queries";
 import { Minus, Plus } from "lucide-react";
 
 interface StepperProps {
@@ -92,6 +93,12 @@ export function ExerciseParamsEditor({
   // B364: missing load_mode on an anchored exercise means "anchored" (backend default).
   const anchored = isAnchoredExercise(draft.exercise_id);
   const fixed = anchored && draft.load_mode === "fixed";
+  // A298: a level of a bodyweight ladder — Progress (follow my level) / Fixed.
+  const { data: catalogData } = useBuilderExercises("", "");
+  const ladderable =
+    draft.progress_mode != null ||
+    !!(catalogData?.exercises ?? []).find((e) => e.id === draft.exercise_id)?.ladder;
+  const progressing = draft.progress_mode === "ladder";
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
@@ -101,6 +108,39 @@ export function ExerciseParamsEditor({
         </DrawerHeader>
 
         <div className="px-4 space-y-5 pb-2">
+          {ladderable && (
+            <div className="space-y-1.5">
+              <Label className="text-sm">Dose</Label>
+              <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Progress mode">
+                <Button
+                  type="button"
+                  role="radio"
+                  aria-checked={progressing}
+                  variant={progressing ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => update({ progress_mode: "ladder" })}
+                >
+                  Progress
+                </Button>
+                <Button
+                  type="button"
+                  role="radio"
+                  aria-checked={!progressing}
+                  variant={progressing ? "outline" : "default"}
+                  size="sm"
+                  onClick={() => update({ progress_mode: "fixed" })}
+                >
+                  Fixed
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {progressing
+                  ? "With a recent test, the app sets sets and reps from your level on this ladder on the day you play it, and proposes the next level when you are ready. The values below are used only without one."
+                  : "The sets and reps below are used every time you play this session."}
+              </p>
+            </div>
+          )}
+
           <Stepper
             label="Sets"
             value={draft.sets}

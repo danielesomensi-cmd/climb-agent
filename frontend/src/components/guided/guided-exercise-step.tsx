@@ -10,6 +10,7 @@ import { AlertTriangle, Check, SkipForward, Lightbulb, Film, Info, Timer, Play, 
 import type { GuidedExercise, HangMargin, LimitProblem, LimitProblemDraft } from "@/lib/types";
 import { ExerciseTimer } from "@/components/guided/exercise-timer";
 import { MeasureInput } from "@/components/training/measured-feedback-inputs";
+import { LadderBadge } from "@/components/training/ladder-badge";
 import { OVERHOLD_CAP_S, type MeasureValues } from "@/lib/measured-feedback";
 import { FEEDBACK_OPTIONS } from "@/lib/format";
 import { tapFeedback } from "@/lib/haptics";
@@ -744,6 +745,11 @@ export function GuidedExerciseStep({
                   ))}
                 </div>
               </div>
+            )}
+
+            {/* A298: bodyweight ladder level (+ the custom promotion proposal) */}
+            {exercise.suggested.ladder && (
+              <LadderBadge ladder={exercise.suggested.ladder} customSessionId={exercise.suggested.customSessionId} />
             )}
 
             {/* A295: pain block active on this zone */}

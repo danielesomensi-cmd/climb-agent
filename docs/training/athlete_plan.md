@@ -5,7 +5,7 @@
 > **Aggiornamento.** Lo aggiorna Claude, nello stesso brief o su richiesta di Daniele, quando un criterio di scala è raggiunto. Lo dice a Daniele e scrive la data.
 > **Fonti.** Analisi del 2026-10-04: `TECH` (tecnica e try-hard), `BW` (corpo libero), `NIKITA` (progetto corrente), decisioni vincolanti in `docs/audit/D282_train_harder_phase1.md`. Le dosi senza una fonte pubblicata sono **ENGINEERING CONSTANT**.
 
-Ultimo aggiornamento: 2026-10-05 (C272: scale corpo libero, libreria tecnica / try-hard e riscaldamento tasche nel catalogo).
+Ultimo aggiornamento: 2026-10-05 (C272: scale corpo libero, libreria tecnica / try-hard e riscaldamento tasche nel catalogo; A298: scale a ciclo chiuso, righe custom `progress_mode: "ladder"`, PIEDI / CADUTE tracciate dagli aggiustamenti sul problema campione e dalla paura 0-10).
 
 ---
 
@@ -235,7 +235,7 @@ Le **16 scale** stanno in `backend/catalog/progressions/v1/bw_ladders.json` (liv
 2. altrimenti dal **test L-sit** (log `test_l_sit_hold` entro 90 giorni): target ≈ test/3 sul livello d'ingresso;
 3. per un atleta non testato: nessun seed, dosi del catalogo.
 
-Il seed **non scrive niente**: le promozioni (label easy/very_easy, 2 sedute in cima per i livelli a rischio) le proponi tu a Daniele finché non arriva il brief A della progressione.
+**Ciclo chiuso (A298).** Il livello vive nello stato (chiave bw_progression) e si muove col feedback: label ±1/±2 passi nella banda (mai salti di livello), la misura «reps pulite / secondi tenuti sulla serie più debole» fa da base, 2 very_hard di fila → livello giù, promozione dopo 1 seduta in cima alla banda (2 sui livelli a rischio), congelato in performance/deload (−1 serie), livelli lombari solo a mano. Nelle sedute del motore la promozione è automatica; **nelle custom le righe di scala vanno scritte con `progress_mode: "ladder"`**: la dose la calcola l'app il giorno della seduta e la promozione arriva come proposta da confermare con un tap («Switch»). «fixed» solo per una dose volutamente diversa (non muove il livello, salvo una misura). Livello manuale: PUT /api/bw-progression/{family}. Il seed resta il punto di partenza finché il primo feedback non lo scrive.
 
 | Famiglia | Livelli (dal più facile) | Partenza indicata da BW per Daniele |
 |---|---|---|

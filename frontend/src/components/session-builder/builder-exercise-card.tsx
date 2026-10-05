@@ -15,6 +15,7 @@ function formatPrescription(ex: CustomSessionExercise): string {
 
   // B364: an anchored exercise in "Auto" gets its kg on the day it is played.
   if (isAnchoredExercise(ex.exercise_id) && ex.load_mode !== "fixed") parts.push("Auto load");
+  if (ex.progress_mode === "ladder") parts.push("Follows level");
   else if (ex.load_kg > 0) parts.push(`${ex.load_kg}kg`);
   if (ex.rest_between_sets_seconds != null) parts.push(`Rest ${ex.rest_between_sets_seconds}s`);
   return parts.join(" \u00b7 ");

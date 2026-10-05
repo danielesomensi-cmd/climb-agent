@@ -1,6 +1,12 @@
 import type { GuidedExercise, GuidedSessionState } from "@/lib/types";
 import { anchoredLoadNotes } from "@/lib/anchored-load";
 import { asMeasure } from "@/lib/measured-feedback";
+import { asLadder } from "@/lib/bw-ladder";
+
+/** A298: "custom_cs_ab12" → "cs_ab12" (the promotion tap rewrites that session). */
+function customSessionIdOf(sessionId: string): string | undefined {
+  return sessionId.startsWith("custom_") ? sessionId.slice("custom_".length) : undefined;
+}
 
 const MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -250,6 +256,9 @@ export function buildGuidedStateFromExercises(
         // A295: read-time measure metadata (custom / ad-hoc / body-part rows).
         measure: asMeasure(ex.measure),
         targetReps: typeof ex.target_reps === "number" ? (ex.target_reps as number) : undefined,
+        // A298: ladder rows of a custom session (badge + promotion tap).
+        ladder: asLadder(ex.ladder),
+        customSessionId: customSessionIdOf(sessionId),
       },
       cues: (ex.cues as string[] | undefined) ?? undefined,
       videoUrl: (ex.video_url as string | undefined) ?? undefined,

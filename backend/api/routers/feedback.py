@@ -315,6 +315,11 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
     # clients do not send them, and the weighted pull-up max is re-based from
     # (load, reps). Only fills items that carry no reps of their own.
     _attach_prescribed_reps(req.log_entry, state, target_date, target_sid)
+    # A298: where each ladder item's dose came from (engine bw_ladder / custom
+    # 'ladder' row / 'fixed') — a 'fixed' row with another dose never moves
+    # the bodyweight progression.
+    from backend.engine import bw_progression as _bwp
+    _bwp.attach_feedback_context(req.log_entry, state, target_date, target_sid)
     # A295: the measured-feedback fields are cleaned by hand (the router does
     # not validate the schema): an out-of-range value is dropped with a
     # warning and the request still succeeds, so an outbox retry never sticks.
@@ -558,6 +563,10 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
         response["limit_summary"] = _limit_summary
     if limitation_suggestions:
         response["limitation_suggestions"] = limitation_suggestions
+    # A298: one line per ladder moved by this session ("Next time: 3x25 s").
+    _bw_lines = _bwp.session_outcomes(state, f"{target_date}|{str(req.log_entry.get('session_id') or '')}")
+    if _bw_lines:
+        response["bw_ladder_updates"] = _bw_lines
     if stale_exercise_warning:
         response["warning"] = stale_exercise_warning
     return response

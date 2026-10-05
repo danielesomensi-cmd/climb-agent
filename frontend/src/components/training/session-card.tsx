@@ -8,6 +8,7 @@ import { queryKeys } from "@/lib/query-keys";
 import { sessionResolutionState } from "@/lib/session-resolution";
 import { anchoredLoadNotes } from "@/lib/anchored-load";
 import { asMeasure } from "@/lib/measured-feedback";
+import { asLadder } from "@/lib/bw-ladder";
 import { buildGuidedStateFromExercises, guidedStorageKey, hasSavedProgress } from "@/lib/guided-session-utils";
 import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, Search, RefreshCw, Mountain, Star } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -146,6 +147,8 @@ function buildGuidedExercise(inst: Record<string, unknown>): GuidedExercise {
       loadNotes: anchoredLoadNotes(suggested),
       // A295: measured feedback — what the athlete may record on this exercise.
       measure: asMeasure(suggested.measure),
+      // A298: the bodyweight ladder level the resolver prescribed (bw_ladder).
+      ladder: asLadder((suggested.bw_ladder as Record<string, unknown> | undefined)?.ladder),
       targetReps: typeof suggested.target_reps === "number" ? suggested.target_reps : undefined,
       painFlag: suggested.pain_flag === true,
       rightHand: rightHand ? { externalLoadKg: rightHand.suggested_external_load_kg as number | undefined } : undefined,

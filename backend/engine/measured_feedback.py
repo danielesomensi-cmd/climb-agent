@@ -632,6 +632,10 @@ def sanitize_log_entry(log_entry: Dict[str, Any]) -> List[str]:
                 item.pop("hang_held_s", None)
             else:
                 item["hang_held_s"] = v
+        # A298: bodyweight hold / technique measures.
+        from backend.engine.bw_progression import sanitize_item as _bw_sanitize
+
+        _bw_sanitize(item, warnings)
         if "problems" in item:
             # A296: limit problem log — invalid rows dropped one by one.
             from backend.engine.limit_log import sanitize_problems

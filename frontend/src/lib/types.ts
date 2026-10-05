@@ -901,6 +901,10 @@ export interface GuidedExercise {
     measure?: FeedbackMeasure;
     targetReps?: number;
     painFlag?: boolean;    // a pain block is active on this exercise's zone
+    /** A298: bodyweight ladder level of this row (engine bw_ladder or custom 'ladder'). */
+    ladder?: LadderInfo;
+    /** A298: the custom session the row comes from (the promotion tap rewrites it). */
+    customSessionId?: string;
     rightHand?: { externalLoadKg?: number };
     leftHand?: { externalLoadKg?: number };
   };
@@ -972,7 +976,41 @@ export interface LimitProblem {
 export type LimitProblemDraft = Omit<LimitProblem, "outcome"> & { outcome: LimitProblemOutcome | null };
 
 /** A295 — measured feedback (feedback_contract 2). */
-export type FeedbackMeasure = "last_set_reps" | "hang_margin" | "dp_reps";
+export type FeedbackMeasure =
+  | "last_set_reps"
+  | "hang_margin"
+  | "dp_reps"
+  // A298: bodyweight ladder rows (weakest set) and the technique ladders.
+  | "bw_reps"
+  | "bw_hold"
+  | "feet_readjust"
+  | "fear_max";
+
+/** A298 — where the athlete stands on a bodyweight ladder (read-time, never stored). */
+export interface LadderProposal {
+  kind: "promotion" | "switch";
+  to_level_idx: number;
+  to_exercise_id: string;
+  to_name: string;
+}
+export interface LadderInfo {
+  family: string;
+  family_label?: string;
+  level_idx: number;
+  n_levels: number;
+  level_name: string;
+  band: string;
+  dose: string;
+  next_exercise_id?: string | null;
+  next_name?: string | null;
+  frozen?: boolean;
+  manual_only_next?: boolean;
+  gate?: string | null;
+  proposal?: LadderProposal | null;
+  entry_level_idx?: number;
+  above_level?: boolean;
+  source?: string;
+}
 export type HangMargin = "failed" | "0-2" | "3-5" | ">5";
 export type PainSite = "fingers" | "elbow" | "shoulder" | "other";
 export interface SessionPain {
@@ -1019,6 +1057,13 @@ export interface CustomSessionExercise {
   surface_options?: string[];
   surface_targets?: Record<string, { target_grade?: string; target_grade_low?: string }>;
   log_problems?: boolean;
+  // A298: bodyweight ladder rows. "ladder" = dose of the athlete's level read
+  // on the day played (+ promotion proposal); "fixed"/missing = the saved dose.
+  progress_mode?: "ladder" | "fixed";
+  progress_source?: "bw_ladder";
+  ladder?: LadderInfo;
+  stored_reps?: number | null;
+  stored_work_seconds?: number | null;
 }
 
 export interface CustomSession {
@@ -1062,6 +1107,8 @@ export interface BuilderExercise {
   alt_sides?: boolean;   // B324: run once per side
   // A242: deterministic starting proposal + last-logged memory (custom-only).
   proposal?: ExerciseProposal;
+  /** A298: the exercise is a level of a bodyweight ladder (Progress / Fixed toggle). */
+  ladder?: { family: string; level_idx: number };
 }
 
 export interface ExerciseProposal {

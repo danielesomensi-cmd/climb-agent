@@ -287,7 +287,15 @@ class TestCatalogEntries:
 # ---------------------------------------------------------------------------
 
 class TestEngineUnchanged:
-    def test_resolver_golden_three_profiles_unchanged_vs_main(self):
+    def test_resolver_golden_three_profiles_unchanged_vs_main(self, monkeypatch):
+        # A298: the ladder stage deliberately changes the bodyweight rows of
+        # TESTED athletes (their level, their dose). This golden pins the C272
+        # claim — the catalog additions alone change no selection — so it runs
+        # with the ladder stage off; the untested profile is pinned with the
+        # stage ON in test_a298_bw_progression (bit for bit).
+        from backend.engine import bw_progression
+
+        monkeypatch.setattr(bw_progression, "build_resolve_context", lambda *a, **k: None)
         expected = json.loads(FIXTURE.read_text(encoding="utf-8"))["resolver"]
         now = golden.compute()
         assert set(now) == set(expected)

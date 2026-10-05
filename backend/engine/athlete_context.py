@@ -850,9 +850,27 @@ def _bw_ladders(state: Mapping[str, Any], today: date, archived_weeks: ArchivedW
     """C272: current level per bodyweight family — a READ-ONLY seed
     (``bw_ladders.seed_levels``: history, else the L-sit test). Never written."""
     try:
-        return _bw.seed_levels(state, today, archived_weeks=archived_weeks, equipment=_equipment_keys(state))
+        out = _bw.seed_levels(state, today, archived_weeks=archived_weeks, equipment=_equipment_keys(state))
     except Exception as exc:  # pragma: no cover - a broken ladder file must not kill the context
         return {"source": "error", "error": f"{type(exc).__name__}: {exc}", "families": []}
+    # A298: the closed loop — what the persisted entry adds to the seed view
+    # (proposal waiting for a tap, last outcome, terminal tempo / load), and
+    # the technique ladders (feet / falls) tracked from the logged numbers.
+    persisted = state.get("bw_progression") if isinstance(state.get("bw_progression"), Mapping) else {}
+    for r in out.get("families") or []:
+        p = persisted.get(r.get("family"))
+        if r.get("source") == "state" and isinstance(p, Mapping):
+            for k in ("pending_promotion", "last_outcome", "tempo_level", "added_kg", "top_streak"):
+                if p.get(k):
+                    r[k] = copy.deepcopy(p[k])
+    try:
+        from backend.engine import bw_progression as _bwp
+
+        out["technique_levels"] = _bwp.technique_view(state)
+        out["phase_frozen"] = _bwp.is_frozen(_bwp.phase_on(state, today))
+    except Exception:  # pragma: no cover
+        pass
+    return out
 
 
 def _technique_library(catalog: Mapping[str, Mapping[str, Any]]) -> Dict[str, Any]:
@@ -1073,7 +1091,7 @@ _BW_SOURCE_IT = {"history": "storico", "test": "test", "state": "stato", "none":
 def _render_bw_ladders(L: List[str], bw: Mapping[str, Any]) -> None:
     """C272: current level per bodyweight family (read-only seed)."""
     L.append("")
-    L.append("## Scale corpo libero (livello attuale, seed in sola lettura — C272)")
+    L.append("## Scale corpo libero (livello attuale — stato A298, altrimenti seed C272)")
     if bw.get("source") == "error":
         L.append(f"  non calcolabile ({bw.get('error')})")
         return
@@ -1111,6 +1129,14 @@ def _render_bw_ladders(L: List[str], bw: Mapping[str, Any]) -> None:
             bits.append(f"richiede {r['gate']} nel blocco")
         if r.get("manual_only"):
             bits.append("SOLO MANUALE (rischio lombare)")
+        if r.get("pending_promotion"):
+            bits.append(f"PROPOSTA IN ATTESA: passa a {(r['pending_promotion'] or {}).get('exercise_id')}")
+        if r.get("tempo_level"):
+            bits.append(f"terminale: tempo livello {r['tempo_level']}")
+        if r.get("added_kg"):
+            bits.append(f"+{r['added_kg']:g} kg")
+        if r.get("last_outcome"):
+            bits.append(f"ultimo: {(r['last_outcome'] or {}).get('message')}")
         if r.get("heavy_pull"):
             bits.append("conta come tirata pesante")
         if r.get("hanging"):
@@ -1118,8 +1144,16 @@ def _render_bw_ladders(L: List[str], bw: Mapping[str, Any]) -> None:
         if r.get("next_exercise_id"):
             bits.append(f"poi {r['next_exercise_id']}")
         L.append(f"  {r['family']}: " + " · ".join(bits))
-    L.append("  Il seed non scrive niente: le promozioni le decidi tu con Daniele finché non arriva il brief A "
-             "della progressione (scale in backend/catalog/progressions/v1/bw_ladders.json).")
+    tech = bw.get("technique_levels") or {}
+    tl = [f"{k} {v.get('level')}" for k, v in tech.items() if isinstance(v, Mapping) and v.get("level")]
+    if tl:
+        L.append(f"  Scale tecniche tracciate: {', '.join(tl)} (piedi: aggiustamenti sul problema campione; cadute: paura 0-10)")
+    if bw.get("phase_frozen"):
+        L.append("  Fase performance/deload: dosi congelate (−1 serie), nessuna promozione.")
+    L.append("  Ciclo chiuso A298: lo stato (bw_progression) si muove col feedback (label + misura), le "
+             "promozioni nel motore sono automatiche, nelle custom sono proposte da confermare con un tap. "
+             "Nelle custom scrivi le righe di scala con progress_mode 'ladder' (dose letta il giorno della "
+             "seduta); 'fixed' solo se vuoi una dose diversa.")
 
 
 def _render_technique_library(L: List[str], lib: Mapping[str, Any]) -> None:

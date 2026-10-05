@@ -222,6 +222,7 @@ def _with_custom_anchored_loads(week_plan: dict, state: dict) -> dict:
     (``anchored_load.resolve_custom_exercises``). Done and skipped sessions are
     returned exactly as stored (immutability); the stored plan is untouched."""
     from backend.engine.anchored_load import resolve_custom_exercises
+    from backend.engine.bw_progression import attach_technique_measures, resolve_custom_ladder_rows
     from backend.engine.measured_feedback import attach_measure_fields
 
     out = deepcopy(week_plan)
@@ -238,6 +239,14 @@ def _with_custom_anchored_loads(week_plan: dict, state: dict) -> dict:
                     continue
                 if session_entry.get("exercises"):
                     session_entry["exercises"] = resolve_custom_exercises(
+                        state, session_entry["exercises"], day,
+                    )
+                    # A298: ladder rows (progress_mode 'ladder') get the dose
+                    # of the athlete's level; feet / falls drills their measure.
+                    session_entry["exercises"] = resolve_custom_ladder_rows(
+                        state, session_entry["exercises"], day,
+                    )
+                    session_entry["exercises"] = attach_technique_measures(
                         state, session_entry["exercises"], day,
                     )
                     # A295: which measure the player may ask for, and the

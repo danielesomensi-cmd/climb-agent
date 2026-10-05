@@ -53,6 +53,9 @@ _ALLOWED_STATE_KEYS = {
     # B270: allow Settings to keep the engine-facing bodyweight copies in sync
     # with assessment.body (progression/resolver read these, not assessment.body).
     "body", "bodyweight_kg",
+    # A298: bodyweight ladder levels (also written by apply_feedback and the
+    # dedicated /api/bw-progression endpoints).
+    "bw_progression",
 }
 
 

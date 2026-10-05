@@ -37,6 +37,7 @@ import type {
 import { localToday } from "./key-sessions";
 import { notifyLimitationSuggestions, type LimitationSuggestion } from "./limitation-suggestions";
 import { notifyLimitSummary, type LimitSummary } from "./limit-problems";
+import { notifyBwLadderUpdates, type BwLadderUpdate } from "./bw-ladder";
 import type { EvidenceStyle, GradeEvidence } from "./grade-evidence";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -696,6 +697,7 @@ export const postFeedback = (data: {
     week_plan?: WeekPlan;
     limitation_suggestions?: LimitationSuggestion[];
     limit_summary?: LimitSummary[];
+    bw_ladder_updates?: BwLadderUpdate[];
     warning?: string;
   }>("/api/feedback", {
     method: "POST",
@@ -707,8 +709,20 @@ export const postFeedback = (data: {
     // A296: what the limit log made of a limit session (target step, the
     // hard-attempts warning, a send above the boulder RP to confirm).
     notifyLimitSummary(res?.limit_summary);
+    // A298: "Next time: 3x25 s" / "Promoted: …" per bodyweight ladder moved.
+    notifyBwLadderUpdates(res?.bw_ladder_updates);
     return res;
   });
+
+// A298 — bodyweight ladders
+export const resolveLadderPromotion = (
+  family: string,
+  data: { accept: boolean; date?: string; custom_session_id?: string },
+) =>
+  request<{ family: string; accepted: boolean; rows_rewritten: number }>(
+    `/api/bw-progression/${encodeURIComponent(family)}/promotion`,
+    { method: "POST", body: JSON.stringify(data) },
+  );
 
 // Outdoor
 export const getOutdoorSpots = () =>
