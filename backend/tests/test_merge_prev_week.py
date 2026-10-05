@@ -517,7 +517,8 @@ class TestPlannedLoadPreservation:
         new = _make_week_plan("2026-02-23")
         new["weekly_load_summary"] = {"planned_load": 165, "total_load": 165}
 
-        result = merge_prev_week_sessions(prev, new)
+        # B369 review: only a regeneration that skipped days of the week.
+        result = merge_prev_week_sessions(prev, new, preserve_before="2026-02-25")
         assert result["weekly_load_summary"]["planned_load"] == 395
 
     def test_merge_falls_back_to_total_load(self):
@@ -527,8 +528,20 @@ class TestPlannedLoadPreservation:
         new = _make_week_plan("2026-02-23")
         new["weekly_load_summary"] = {"planned_load": 100, "total_load": 100}
 
-        result = merge_prev_week_sessions(prev, new)
+        result = merge_prev_week_sessions(prev, new, preserve_before="2026-02-25")
         assert result["weekly_load_summary"]["planned_load"] == 350
+
+    def test_whole_week_regeneration_keeps_fresh_planned_load(self):
+        """B369 review: a stale future week regenerated whole (no
+        preserve_before, or preserve_before on its Monday) keeps the fresh
+        summary — the new structure's load, not the old one's."""
+        prev = _make_week_plan("2026-02-23")
+        prev["weekly_load_summary"] = {"planned_load": 520, "total_load": 520}
+        new = _make_week_plan("2026-02-23")
+        new["weekly_load_summary"] = {"planned_load": 310, "total_load": 310}
+        for pb in (None, "2026-02-23", "2026-02-20"):
+            result = merge_prev_week_sessions(prev, new, preserve_before=pb)
+            assert result["weekly_load_summary"] == {"planned_load": 310, "total_load": 310}
 
     def test_regen_preserves_planned_load(self):
         """regenerate_preserving_completed restores planned_load from old plan."""

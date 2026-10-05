@@ -1482,15 +1482,35 @@ is_preservable(session)   = status ∈ {done, skipped} | is_user_owned(session)
 - **`user_moved`** (constraint, B369): stamped by `move_session` on the moved session. The logged event gains
   `moved_session_id` (what left the source slot).
 - **`day_override.whole_day`** (adaptation, B369): `true` when the override replaced every session of the day.
+- **`day_override.replaced_slots`** (adaptation, B369 review): whole-day override → the slots the day held at
+  override time (a slot added later by a new structure still gets the engine's session).
+  **`replaced_session_id` / `replaced_slot`**: partial override (`session_index`) → the one session it replaced.
+  A partial override with no `slot` in the request takes the replaced session's slot (`OverrideRequest.slot` is
+  now optional; whole-day default stays `evening`).
+- **`move_session` event `replaced_session_id`** (B369 review): the session the move overwrote in the target slot.
 - **User removals** = `adaptations[]` events `remove_session` (`date`, `session_ref`/`slot`), the source side of
-  `move_session` (`from_date`, `session_ref` or `moved_session_id`, `from_slot`), and `day_override` with
-  `whole_day` or `outdoor`. Read by `user_owned.removed_refs` / `whole_day_override_dates`; the merge carries
-  `adaptations[]` forward so the next regeneration still honours them.
+  `move_session` (`from_date`, `session_ref` or `moved_session_id`, `from_slot`) and its `replaced_session_id` at
+  `to_date`/`to_slot`, `day_override` `replaced_session_id`/`replaced_slot` and `replaced_slots`, and the whole
+  date for an outdoor override or a pre-review `whole_day` one without `replaced_slots`. Read by
+  `user_owned.removed_refs` / `whole_day_override_dates`; the merge carries `adaptations[]` forward so the next
+  regeneration still honours them. An engine session leaves a regenerated day only through a removal: a slot
+  shared by a user session and an engine session keeps both; a slot the user's session took over (skip stub,
+  done, edit) does not get the engine's session back.
+- **`regeneration_guard_warnings`** (adaptation, B369 review): `{type, warnings: [{date, slot, action:
+  "guard_alert", reason: finger_spacing_downshift | hard_cap_downshift, previous_session_id, session_id}]}` —
+  what the guards would downshift in a regenerated week once the merge put the user's sessions back. Alert
+  only, nothing rewritten; recomputed at each regeneration (never piled up); absent for a week without user
+  sessions.
+- **Ownership markers survive guard rewrites** (B369 review): reconcile / ripple / protected-neighbour rewrites
+  keep the user markers in `constraints_applied` (`user_owned.carry_user_markers`), so a rewritten user session
+  is still kept by the next regeneration; finger compensation never swaps out a user-owned session.
 - **`_stale`** (week plan flag, B369): set by `deps.mark_weeks_stale` on the cached current/future weeks (never a
   past week) by `invalidate_week_cache` (macrocycle generate, onboarding, start-week, test-reminder confirm),
   `PUT /api/state` when `availability` / `planning_prefs` / `weekly_overrides` actually change,
   `PUT`/`DELETE /api/weekly-override/{week}` (that week only), `start-new-cycle` (weeks ≥ the new start) and
-  resume (weeks ≥ this Monday). `GET /api/week` regenerates a stale week through
+  resume (weeks ≥ this Monday). The current week's frozen floor is `max(preserve_before, client today)` — the
+  client cannot lower it below its own today (B369 review). `weekly_load_summary.planned_load` is restored from
+  the old plan only when the regeneration skipped days of the week. `GET /api/week` regenerates a stale week through
   `regenerate_preserving_completed` and saves it without the flag; `persist_week_plan` keeps the flag on an edit.
   Replaces the deletions and the `_prev_week_plan` stash (no longer written; a legacy stash is merged only when it
   is the same week, else discarded).

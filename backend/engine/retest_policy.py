@@ -799,12 +799,34 @@ def _locked_by_merge(state: Mapping[str, Any], ws: date, today: Optional[date]) 
     their slot, and today is copied wholesale when it holds a done session.
     A test placed there would be silently overwritten after generation.
     B369: preserved = done/skipped or user-owned (``user_owned.is_preservable``),
-    the same predicate the merge uses."""
-    from backend.engine.user_owned import is_preservable
+    the same predicate the merge uses. B369 review: the merge also drops the
+    engine sessions the user took out — every slot of a date replaced wholesale
+    (``whole_day_override_dates``) and the slots of the recorded removals
+    (``removed_refs``) — so a test placed there would vanish just the same."""
+    from backend.engine.user_owned import is_preservable, removed_refs, whole_day_override_dates
 
     slots: List[Dict[str, Any]] = []
     dates: List[str] = []
-    for day in _plan_days(_hot_plan(state, ws.isoformat())):
+    plan = _hot_plan(state, ws.isoformat())
+    test_ids = {sid for sids in AXIS_TEST_SESSIONS_ALL.values() for sid in sids}
+
+    def _future(d_iso: str) -> bool:
+        d = _parse_date(d_iso)
+        return d is not None and (today is None or d >= today)
+
+    for d_iso in whole_day_override_dates(plan or {}):
+        if _future(d_iso[:10]) and d_iso[:10] not in dates:
+            dates.append(d_iso[:10])
+    for d_iso, ref, slot in removed_refs(plan or {}):
+        d_iso = d_iso[:10]
+        if not _future(d_iso):
+            continue
+        if slot:
+            slots.append({"date": d_iso, "slot": slot})
+        elif ref in test_ids and d_iso not in dates:
+            # A test the user removed by id: the same id is dropped there again.
+            dates.append(d_iso)
+    for day in _plan_days(plan):
         d_iso = str(day.get("date") or "")[:10]
         d = _parse_date(d_iso)
         if d is None or (today is not None and d < today):

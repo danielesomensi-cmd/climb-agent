@@ -549,7 +549,9 @@ You can regenerate your plan from **Settings**:
 
 - custom sessions, sessions added from the body-part picker or the coach, quick-adds (forced or not), day overrides, sessions you moved, re-scheduled key sessions, sessions whose exercises you edited;
 - sessions you already marked done or skipped, and your outdoor days with their pitch plans;
-- what you **removed**: a session you deleted, or the spot you moved a session away from, does not come back when the week is rebuilt. If you replaced a whole day with an override, the app does not add its own sessions back to that day.
+- what you **removed**: a session you deleted, or the spot you moved a session away from, does not come back when the week is rebuilt. If you replaced a whole day with an override, the app does not add its own sessions back to the slots you replaced; if you replaced one session of a day, only that one stays out (and the new session takes its slot, e.g. the lunch). A session you added next to a planned one in the same slot does not cost you the planned one.
+
+If keeping your sessions puts two finger days back to back or goes over your hard-day cap, the rebuilt week records an alert about it — it does not change your sessions or the app's own ones for you.
 
 Changing your availability or planning preferences now updates the weeks already planned (current and future), not only the weeks you have not opened yet. If a week cannot be rebuilt for a technical reason, you keep seeing your current plan unchanged and the app tries again the next time you open it.
 

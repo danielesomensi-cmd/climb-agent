@@ -633,6 +633,17 @@ def get_week(
         # B369: the athlete's local today when the client sent one.
         today_str = _client_today(today) if is_current_week else None
         effective_preserve = preserve_before or today_str
+        if is_current_week and preserve_before:
+            # B369 review: the client cannot lower the frozen floor below its
+            # today — the planner skips the days before today, so a day
+            # between preserve_before and today would be merged as mutable
+            # and lose its planned sessions. ISO strings compare correctly.
+            try:
+                _pb = datetime.strptime(str(preserve_before)[:10], "%Y-%m-%d").date().isoformat()
+            except ValueError:
+                _pb = today_str
+            effective_preserve = max(_pb, today_str)
+            today_str = effective_preserve
 
         try:
             # B95: pass today so the planner skips past days on regen
@@ -771,6 +782,9 @@ def get_week(
                 try:
                     week_plan = regenerate_preserving_completed(
                         source, week_plan, preserve_before=effective_preserve,
+                        # B369 review: Sunday→Monday finger gap for the
+                        # post-merge guard alerts.
+                        prev_days=((_prev_week_plan or {}).get("weeks") or [{}])[0].get("days"),
                     )
                 except Exception:
                     # B369/P2: a failed merge used to save the fresh plan over

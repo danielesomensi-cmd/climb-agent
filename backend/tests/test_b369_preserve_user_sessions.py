@@ -47,6 +47,12 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 REAL_STATE_PATH = REPO_ROOT / "backend" / "tests" / "fixtures" / "test_user_state.json"
 
 
+#: B369 review: the raw planner output of the last generation of each week,
+#: before the merge — so a "the removed session did not come back" check can
+#: first prove the planner did generate it there.
+RAW_GENERATED: dict = {}
+
+
 @pytest.fixture(autouse=True)
 def isolate_state(tmp_path, monkeypatch):
     tmp_state = tmp_path / "user_state.json"
@@ -54,6 +60,15 @@ def isolate_state(tmp_path, monkeypatch):
     from backend.engine import storage
     monkeypatch.setattr(storage, "STATE_PATH", tmp_state)
     monkeypatch.setattr(deps, "STATE_PATH", tmp_state)
+    RAW_GENERATED.clear()
+    real = week_router.generate_phase_week
+
+    def recording(*a, **k):
+        out = real(*a, **k)
+        RAW_GENERATED[out.get("start_date")] = deepcopy(out)
+        return out
+
+    monkeypatch.setattr(week_router, "generate_phase_week", recording)
     yield tmp_state
 
 
@@ -365,8 +380,10 @@ def _install_specimens():
     for i, factory in SPECIMEN_LAYOUT:
         s = factory()
         days[i]["sessions"] = [x for x in days[i]["sessions"] if x.get("slot") != s["slot"]] + [s]
-    # Remove the first engine session left on the week (if any) the way the
-    # app does it: gone from the day, logged as an event.
+    # Remove the first engine session left on the week the way the app does
+    # it: gone from the day, logged as an event. B369 review: whether the
+    # planner's next generation puts the same session there again is checked
+    # in _assert_survived (RAW_GENERATED), so the check cannot pass vacuously.
     removed = None
     for d in days:
         for s in list(d["sessions"]):
@@ -376,6 +393,7 @@ def _install_specimens():
                 break
         if removed:
             break
+    assert removed, "fixture week has no engine session to remove"
     nxt.setdefault("adaptations", []).append(
         {"type": "event", "event": {"event_type": "remove_session",
                                      "date": removed[0], "session_ref": removed[1]}})
@@ -399,12 +417,21 @@ def _assert_survived(removed, label):
             f"{label}: {expected['session_id']} ({expected['slot']}) lost on {days[i]['date']}: "
             f"{[s.get('session_id') for s in days[i]['sessions']]}")
     assert days[5].get("outdoor_plan") == {"pitches": [{"grade": "7c"}]}, label
-    if removed:
+    if removed and _monday(1) in RAW_GENERATED:
         rm_day = next(d for d in days if d["date"] == removed[0])
-        assert not any(s["session_id"] == removed[1] and not uo.is_preservable(s)
-                       for s in rm_day["sessions"]), f"{label}: removed session came back"
+        raw_day = next(d for d in RAW_GENERATED[_monday(1)]["weeks"][0]["days"]
+                       if d["date"] == removed[0])
+        if any(s["session_id"] == removed[1] for s in raw_day["sessions"]):
+            assert not any(s["session_id"] == removed[1] and not uo.is_preservable(s)
+                           for s in rm_day["sessions"]), f"{label}: removed session came back"
+            REMOVAL_CHECKED.add(label)
     cur_mon = state["week_plans"][_monday(0)]["weeks"][0]["days"][0]
     assert _done("evening") in cur_mon["sessions"], f"{label}: done Monday lost"
+
+
+#: Paths whose regeneration did put the removed session back on its date in
+#: the raw planner output — the removal check is meaningful there.
+REMOVAL_CHECKED: set = set()
 
 
 def _regen_both():
@@ -486,8 +513,23 @@ def _path_feedback_very_hard():
     _regen_both()
 
 
+def _path_start_new_cycle():
+    """POST /api/macrocycle/start-new-cycle: the new cycle starts next Monday —
+    the specimens' week becomes its week 1."""
+    from backend.tests.test_start_new_macrocycle import _valid_body
+
+    r = client.post("/api/macrocycle/start-new-cycle", json=_valid_body())
+    assert r.status_code == 200, r.text
+    assert r.json()["start_date"] == _monday(1)
+    for wn, monday in ((1, _monday(1)), (2, _monday(2))):
+        g = client.get(f"/api/week/{wn}")
+        assert g.status_code == 200, g.text
+        assert g.json()["week_plan"]["start_date"] == monday
+
+
 PATHS = {
     "force": _path_force,
+    "start_new_cycle": _path_start_new_cycle,
     "availability": _path_availability,
     "planning_prefs": _path_planning_prefs,
     "weekly_override": _path_weekly_override_put_delete,
@@ -506,9 +548,21 @@ def test_user_sessions_survive_every_regeneration_path(name):
     _assert_survived(removed, name)
 
 
+def test_removal_check_is_not_vacuous():
+    """B369 review: on the plain force path the planner does regenerate the
+    removed session on its date, so "it did not come back" proves the merge
+    honoured the removal."""
+    REMOVAL_CHECKED.clear()
+    removed = _install_specimens()
+    _path_force()
+    _assert_survived(removed, "force")
+    assert "force" in REMOVAL_CHECKED
+
+
 def test_all_paths_in_sequence():
     removed = _install_specimens()
-    for name in sorted(PATHS):
+    # The new cycle moves week 1 to next Monday: it goes last.
+    for name in sorted(PATHS, key=lambda n: (n == "start_new_cycle", n)):
         PATHS[name]()
         _assert_survived(removed, f"sequence:{name}")
 
@@ -634,3 +688,174 @@ def test_body_part_picker_writes_the_target_week_not_the_legacy_pointer():
     assert wk["start_date"] == key
     tday = next(d for d in wk["weeks"][0]["days"] if d["date"] == target)
     assert any("generated_add" in (s.get("constraints_applied") or []) for s in tday["sessions"])
+
+
+# ---------------------------------------------------------------------------
+# B369 review
+# ---------------------------------------------------------------------------
+
+def _ids(day):
+    return [(s["session_id"], s["slot"]) for s in day["sessions"]]
+
+
+def test_generated_add_next_to_an_engine_key_session_keeps_both():
+    """A session appended to an occupied slot (body-part picker / coach) does
+    not cost the engine's session of that slot on the next regeneration."""
+    old = _plan({3: [_generated("evening"), _engine("strength_long", "evening")]})
+    fresh = _plan({3: [_engine("strength_long", "evening")]})
+    out = regenerate_preserving_completed(old, fresh, preserve_before="2026-10-12")
+    assert sorted(_ids(_day(out, 3))) == [("generated_body_part_x", "evening"),
+                                          ("strength_long", "evening")]
+
+
+def test_a_user_session_that_took_the_slot_does_not_get_a_second_one():
+    """Skip stub / done / edit in a slot: the engine's session is not added
+    next to it."""
+    stub = {"slot": "evening", "session_id": "regeneration_easy", "status": "skipped",
+            "skipped_session_id": "strength_long", "tags": _tags()}
+    old = _plan({3: [stub]})
+    out = regenerate_preserving_completed(old, _plan({3: [_engine("strength_long")]}))
+    assert _day(out, 3)["sessions"] == [stub]
+
+
+def test_partial_override_of_the_lunch_is_honoured_on_regeneration():
+    thu = [_engine("complementary_conditioning", "lunch"), _engine("gym_technique_boulder", "evening")]
+    edited = apply_day_override(_plan({3: thu}), intent="recovery", location="home",
+                                reference_date="2026-10-14", target_date="2026-10-15",
+                                session_index=0)
+    # The override takes the replaced session's slot.
+    assert _ids(_day(edited, 3)) == [("yoga_recovery", "lunch"), ("gym_technique_boulder", "evening")]
+    ov = next(a for a in edited["adaptations"] if a["type"] == "day_override")
+    assert ov["whole_day"] is False
+    assert (ov["replaced_session_id"], ov["replaced_slot"]) == ("complementary_conditioning", "lunch")
+    out = regenerate_preserving_completed(edited, _plan({3: thu}))
+    assert _ids(_day(out, 3)) == [("yoga_recovery", "lunch"), ("gym_technique_boulder", "evening")]
+
+
+def test_partial_override_with_an_explicit_slot_keeps_it():
+    thu = [_engine("complementary_conditioning", "lunch"), _engine("gym_technique_boulder", "evening")]
+    edited = apply_day_override(_plan({3: thu}), intent="recovery", location="home",
+                                reference_date="2026-10-14", target_date="2026-10-15",
+                                session_index=0, slot="morning")
+    assert ("yoga_recovery", "morning") in _ids(_day(edited, 3))
+
+
+def test_whole_day_override_takes_only_the_slots_it_replaced():
+    """A slot the new structure adds later on that date gets the engine's
+    session; the slots the override replaced do not."""
+    base = _plan({2: [_engine("strength_long", "evening")]})
+    edited = apply_day_override(base, intent="technique", location="home",
+                                reference_date="2026-10-13", target_date="2026-10-14")
+    ov = next(a for a in edited["adaptations"] if a["type"] == "day_override")
+    assert ov["replaced_slots"] == ["evening"]
+    fresh = _plan({2: [_engine("prehab_maintenance", "lunch"), _engine("strength_long", "evening")]})
+    out = regenerate_preserving_completed(edited, fresh)
+    assert _ids(_day(out, 2)) == [("prehab_maintenance", "lunch"), ("technique_focus_gym", "evening")]
+
+
+def test_legacy_whole_day_override_still_takes_the_whole_date():
+    old = _plan({2: [_override("evening")]})
+    old["adaptations"] = [{"type": "day_override", "target_date": "2026-10-14", "whole_day": True}]
+    fresh = _plan({2: [_engine("prehab_maintenance", "lunch"), _engine("strength_long", "evening")]})
+    out = regenerate_preserving_completed(old, fresh)
+    assert _day(out, 2)["sessions"] == [_override("evening")]
+
+
+def test_move_over_an_engine_session_records_and_honours_the_replacement():
+    base = _plan({1: [_engine("strength_long", "evening")], 3: [_engine("yoga_recovery", "evening")]})
+    moved = apply_events(base, [{"event_type": "move_session", "from_date": "2026-10-13",
+                                 "from_slot": "evening", "to_date": "2026-10-15",
+                                 "to_slot": "evening"}])
+    ev = next(a["event"] for a in moved["adaptations"] if a.get("type") == "event")
+    assert ev["replaced_session_id"] == "yoga_recovery"
+    assert ("2026-10-15", "yoga_recovery", "evening") in uo.removed_refs(moved)
+    out = regenerate_preserving_completed(moved, deepcopy(base))
+    assert _ids(_day(out, 3)) == [("strength_long", "evening")]
+
+
+def test_regeneration_alerts_on_a_guard_conflict_without_rewriting():
+    """A forced finger session the merge puts back next to a finger session
+    the planner generated: an alert, nothing downshifted (A301)."""
+    old = _plan({1: [{**_forced("evening"), "session_id": "max_hang_5s"}]})
+    fresh = _plan({2: [{"slot": "evening", "session_id": "strength_long", "intensity": "max",
+                        "tags": _tags(True, True)}]})
+    out = regenerate_preserving_completed(old, fresh)
+    assert _ids(_day(out, 1)) == [("max_hang_5s", "evening")]
+    assert _ids(_day(out, 2)) == [("strength_long", "evening")]
+    alerts = [a for a in out["adaptations"] if a["type"] == "regeneration_guard_warnings"]
+    assert len(alerts) == 1
+    w = alerts[0]["warnings"]
+    assert w[0]["date"] == "2026-10-14" and w[0]["action"] == "guard_alert"
+    assert w[0]["reason"] == "finger_spacing_downshift"
+    # Recomputed, not piled up, on the next regeneration.
+    again = regenerate_preserving_completed(out, fresh)
+    assert len([a for a in again["adaptations"] if a["type"] == "regeneration_guard_warnings"]) == 1
+
+
+def test_engine_only_week_has_no_alert_and_fresh_load():
+    old = _plan({1: [_engine("strength_long")]}, weekly_load_summary={"planned_load": 520, "total_load": 520})
+    fresh = _plan({2: [_engine("strength_long")]}, weekly_load_summary={"planned_load": 310, "total_load": 310})
+    out = regenerate_preserving_completed(old, fresh)
+    assert "adaptations" not in out
+    assert out["weekly_load_summary"] == {"planned_load": 310, "total_load": 310}
+    assert out["weeks"] == fresh["weeks"]
+
+
+def test_moved_session_rewritten_by_a_ripple_survives_regeneration():
+    """Move Wed→Thu, then a hard override on Wed: the ripple eases Thu, the
+    session stays the user's and is still on Thu after a regeneration."""
+    hard = {"slot": "evening", "session_id": "power_contact_gym", "intensity": "high",
+            "tags": _tags(True, False)}
+    base = _plan({2: [hard]})
+    moved = apply_events(base, [{"event_type": "move_session", "from_date": "2026-10-14",
+                                 "from_slot": "evening", "to_date": "2026-10-15",
+                                 "to_slot": "evening"}])
+    ov = apply_day_override(moved, intent="strength", location="home",
+                            reference_date="2026-10-13", target_date="2026-10-14")
+    thu = _day(ov, 3)["sessions"]
+    assert len(thu) == 1 and "user_moved" in thu[0]["constraints_applied"]
+    out = regenerate_preserving_completed(ov, base)
+    assert _day(out, 3)["sessions"] == thu
+
+
+def test_locked_by_merge_covers_overrides_and_removals():
+    from backend.engine.retest_policy import _locked_by_merge
+
+    ws = date.fromisoformat(START)
+    plan = _plan({})
+    plan["adaptations"] = [
+        {"type": "day_override", "target_date": "2026-10-14", "whole_day": True},
+        {"type": "day_override", "target_date": "2026-10-15", "whole_day": True,
+         "replaced_slots": ["morning"]},
+        {"type": "event", "event": {"event_type": "remove_session", "date": "2026-10-16",
+                                     "session_ref": "test_max_hang_5s"}},
+        {"type": "event", "event": {"event_type": "remove_session", "date": "2026-10-11",
+                                     "slot": "evening"}},  # before today: ignored
+    ]
+    out = _locked_by_merge({"week_plans": {START: plan}}, ws, ws)
+    assert "2026-10-14" in out["locked_dates"]
+    assert {"date": "2026-10-15", "slot": "morning"} in out["locked_slots"]
+    assert "2026-10-16" in out["locked_dates"]
+    assert not any(x["date"] == "2026-10-11" for x in out["locked_slots"])
+
+
+def test_client_cannot_lower_the_frozen_floor(monkeypatch):
+    """preserve_before earlier than the client's today: the days in between
+    are past for the planner (skipped), so they are copied wholesale — a
+    planned, unticked session there is not deleted."""
+    _seed_macrocycle()
+    _week_nums()
+    mon = _monday(0)
+    wed = (date.fromisoformat(mon) + timedelta(days=2)).isoformat()
+    monkeypatch.setattr(week_router, "_client_today", lambda t: wed)
+    state = deps.load_state(None)
+    cur = state["week_plans"][mon]
+    cur["weeks"][0]["days"][0]["sessions"] = [_engine("strength_long", "evening")]
+    cur["weeks"][0]["days"][1]["sessions"] = [_engine("yoga_recovery", "evening")]
+    state["current_week_plan"] = deepcopy(cur)
+    deps.save_state(state, None)
+    before = deepcopy(cur["weeks"][0]["days"][:2])
+    r = client.get(f"/api/week/0?force=true&preserve_before={mon}&today={wed}")
+    assert r.status_code == 200, r.text
+    after = deps.load_state(None)["week_plans"][mon]["weeks"][0]["days"][:2]
+    assert after == before

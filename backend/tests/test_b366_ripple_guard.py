@@ -336,7 +336,7 @@ class TestProtectedSessionAfter:
         )
         tue = _day(updated, 1)["sessions"][0]
         assert tue["session_id"] == "regeneration_easy"
-        assert tue["constraints_applied"] == ["finger_spacing_downshift"]
+        assert tue["constraints_applied"] == ["finger_spacing_downshift", "quick_add"]  # B369 review: ownership marker carried
         assert _day(updated, 2)["sessions"] == [custom]
         # Same reason as the forward scan → A254 "Add hard anyway" confirm applies.
         assert adjustments == [{
@@ -395,7 +395,7 @@ class TestProtectedSessionAfter:
         )
         tue = _day(updated, 1)["sessions"][0]
         assert tue["session_id"] == "regeneration_easy"
-        assert tue["constraints_applied"] == ["finger_spacing_downshift"]
+        assert tue["constraints_applied"] == ["finger_spacing_downshift", "manual_override"]  # B369 review: ownership marker carried
         assert _day(updated, 2)["sessions"] == [custom]
         entry = next(a for a in updated["adaptations"] if a["type"] == "day_override")
         assert [a["reason"] for a in entry["adjustments"]] == ["finger_spacing_downshift"]

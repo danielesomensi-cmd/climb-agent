@@ -192,16 +192,22 @@ def _extract_session(day: Dict[str, Any], *, session_ref: Optional[str], slot: O
     raise ValueError(f"Session not found for day={day.get('date')} session_ref={session_ref} slot={slot}")
 
 
-def _insert_or_replace(day: Dict[str, Any], moved: Dict[str, Any], to_slot: str) -> None:
+def _insert_or_replace(day: Dict[str, Any], moved: Dict[str, Any], to_slot: str) -> Optional[Dict[str, Any]]:
+    """Put *moved* in *to_slot*, replacing the session there. Returns the
+    replaced session (B369 review: the move event records it, so a
+    regeneration does not bring it back), or None."""
     moved["slot"] = to_slot
     sessions = day.setdefault("sessions", [])
+    replaced = None
     for idx, existing in enumerate(sessions):
         if existing.get("slot") == to_slot:
+            replaced = existing
             sessions[idx] = moved
             break
     else:
         sessions.append(moved)
     sessions.sort(key=lambda s: (SLOTS.index(s.get("slot") if s.get("slot") in SLOTS else "evening"), s.get("priority", 99), s.get("session_id", "")))
+    return replaced
 
 
 def undo_target(day: Dict[str, Any], *, session_ref: Optional[str], slot: Optional[str]) -> Optional[Dict[str, Any]]:
@@ -636,10 +642,43 @@ def _session_sort_key(s: Dict[str, Any]) -> tuple:
     )
 
 
+#: Adaptation type of the guard alerts a regeneration raises (B369 review).
+REGEN_GUARD_WARNINGS = "regeneration_guard_warnings"
+
+
+def _skips_days(plan: Dict[str, Any], preserve_date: Any) -> bool:
+    """Does *preserve_date* fall after the Monday of *plan*'s week and within
+    it — i.e. did the planner skip some of its days?"""
+    try:
+        start = datetime.strptime(str(plan.get("start_date") or ""), "%Y-%m-%d").date()
+    except ValueError:
+        return False
+    return start < preserve_date <= start + timedelta(days=6)
+
+
+def _regen_guard_warnings(
+    plan: Dict[str, Any],
+    prev_days: Optional[Sequence[Dict[str, Any]]],
+    frozen_before: Optional[str],
+) -> List[Dict[str, Any]]:
+    """B369 review: what the guards (48h finger gap, weekly hard cap) would
+    downshift in the merged *plan* — computed on a copy, nothing rewritten.
+    Each entry is a reconcile adjustment (``action: "downgraded"`` would-be)
+    renamed ``action: "guard_alert"``."""
+    probe = deepcopy(plan)
+    try:
+        adjustments = _reconcile(probe, prev_days=prev_days, frozen_before=frozen_before)
+    except Exception:  # an alert must never break a regeneration
+        logger.warning("B369: guard check after merge failed", exc_info=True)
+        return []
+    return [{**a, "action": "guard_alert"} for a in adjustments]
+
+
 def _merge_user_content(
     old_plan: Dict[str, Any],
     new_plan: Dict[str, Any],
     preserve_before: Optional[str] = None,
+    prev_days: Optional[Sequence[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """B369: the one merge every regeneration goes through.
 
@@ -681,6 +720,7 @@ def _merge_user_content(
 
     new_days = (result.get("weeks") or [{}])[0].get("days", [])
     copied: set = set()  # indices copied wholesale: byte-identical, no recompute
+    user_reinserted = False  # a user-owned session went back over generated days
     for i, day in enumerate(new_days):
         date_key = day.get("date")
         if not date_key:
@@ -725,7 +765,22 @@ def _merge_user_content(
 
         kept = [deepcopy(s) for s in old_day.get("sessions", []) if _uo.is_preservable(s)]
         kept_slots = {s.get("slot") for s in kept}
-        merged = [s for s in engine if s.get("slot") not in kept_slots] + kept
+        if any(_uo.is_user_owned(s) for s in kept):
+            user_reinserted = True
+        # B369 review: an engine session leaves the day only through a recorded
+        # removal (above). A slot that holds a kept session gives the engine
+        # back only what the old day still had there next to it: a slot the
+        # engine shared with the user (generated_add / quick-add appended next
+        # to the planned session) keeps the engine's session; a slot where the
+        # user's session took the engine's place (skip stub, done, edit) does
+        # not get a second one.
+        engine_slots = {
+            s.get("slot") for s in old_day.get("sessions", []) if not _uo.is_preservable(s)
+        }
+        merged = [
+            s for s in engine
+            if s.get("slot") not in kept_slots or s.get("slot") in engine_slots
+        ] + kept
         if kept or len(engine) != len(day.get("sessions") or []):
             merged.sort(key=_session_sort_key)
             day["sessions"] = merged
@@ -740,16 +795,36 @@ def _merge_user_content(
         if i not in copied:
             _recompute_day_status(day)
 
-    # B164: restore planned_load from old plan (regen calculates only future days)
-    old_summary = old_plan.get("weekly_load_summary") or {}
-    old_planned = old_summary.get("planned_load") or old_summary.get("total_load")
-    if old_planned is not None:
-        result.setdefault("weekly_load_summary", {})["planned_load"] = old_planned
+    # B164: restore planned_load from old plan (regen calculates only future
+    # days). B369 review: only when this regeneration really skipped days of
+    # the week (preserve_before inside it) — a stale future week regenerated
+    # with a new structure keeps its fresh summary.
+    if preserve_date is not None and _skips_days(result, preserve_date):
+        old_summary = old_plan.get("weekly_load_summary") or {}
+        old_planned = old_summary.get("planned_load") or old_summary.get("total_load")
+        if old_planned is not None:
+            result.setdefault("weekly_load_summary", {})["planned_load"] = old_planned
 
     # B369: the user's removals stay on record for the next regeneration.
-    old_adaptations = old_plan.get("adaptations") or []
+    # The previous regeneration's guard alerts are recomputed below, not
+    # carried (they would pile up one copy per regeneration).
+    old_adaptations = [
+        a for a in old_plan.get("adaptations") or []
+        if not (isinstance(a, dict) and a.get("type") == REGEN_GUARD_WARNINGS)
+    ]
     if old_adaptations:
         result["adaptations"] = deepcopy(old_adaptations) + list(result.get("adaptations") or [])
+
+    # B369 review: the planner generated without knowing the user's sessions
+    # the merge put back — check the result against the guards. Alert only
+    # (A301: a user's session is the user's decision, and the engine's
+    # sessions next to it are not downshifted behind their back).
+    if user_reinserted:
+        warnings = _regen_guard_warnings(result, prev_days, preserve_before)
+        if warnings:
+            result.setdefault("adaptations", []).append(
+                {"type": REGEN_GUARD_WARNINGS, "warnings": warnings}
+            )
 
     # B369: monotonic across regenerations (it used to restart from the fresh
     # plan's 1 → always 2).
@@ -763,6 +838,7 @@ def merge_prev_week_sessions(
     prev_plan: Dict[str, Any],
     new_plan: Dict[str, Any],
     preserve_before: Optional[str] = None,
+    prev_days: Optional[Sequence[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """Merge the user's content of a stashed plan into a regenerated week.
 
@@ -778,7 +854,7 @@ def merge_prev_week_sessions(
                 prev_plan.get("start_date"), new_plan.get("start_date"),
             )
         return deepcopy(new_plan)
-    return _merge_user_content(prev_plan, new_plan, preserve_before)
+    return _merge_user_content(prev_plan, new_plan, preserve_before, prev_days)
 
 
 _DAY_LEVEL_FIELDS = (
@@ -803,6 +879,7 @@ def regenerate_preserving_completed(
     old_plan: Dict[str, Any],
     new_plan: Dict[str, Any],
     preserve_before: Optional[str] = None,
+    prev_days: Optional[Sequence[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """Merge the user's content of *old_plan* into *new_plan* (same week).
 
@@ -818,7 +895,7 @@ def regenerate_preserving_completed(
             f"regenerate_preserving_completed: old plan is week {old_plan.get('start_date')!r}, "
             f"new plan is week {new_plan.get('start_date')!r}"
         )
-    return _merge_user_content(old_plan, new_plan, preserve_before)
+    return _merge_user_content(old_plan, new_plan, preserve_before, prev_days)
 
 
 def _adjustment(day_date: str, session: Dict[str, Any], previous_id: str, reason: str) -> Dict[str, Any]:
@@ -970,7 +1047,7 @@ def _protected_neighbor_guard(
                     "session_id": "regeneration_easy",
                     "intensity": recovery_meta["intensity"],
                     "tags": {"hard": False, "finger": False},
-                    "constraints_applied": ["finger_spacing_downshift"],
+                    "constraints_applied": _uo.carry_user_markers(added, ["finger_spacing_downshift"]),
                     "explain": [
                         "no consecutive finger days",
                         "a finger session you set follows within the recovery gap",
@@ -1045,6 +1122,11 @@ def _apply_ripple_to_day(
         # status reads it to explain a lost key stimulus).
         if isinstance(replacement, dict) and session.get("session_id") != replacement.get("session_id"):
             replacement.setdefault("downshifted_from", session.get("session_id"))
+        if isinstance(replacement, dict):
+            # B369 review: a rewritten user session stays the user's.
+            replacement["constraints_applied"] = _uo.carry_user_markers(
+                session, list(replacement.get("constraints_applied") or [])
+            )
         next_sessions.append(replacement)
         adjustments.append(_adjustment(day_date, replacement, session.get("session_id"), reason))
     day["sessions"] = next_sessions
@@ -1261,7 +1343,8 @@ def _enforce_caps(plan: Dict[str, Any], frozen_before: Optional[str] = None) -> 
                             "session_id": "regeneration_easy",
                             "intensity": recovery_meta["intensity"],
                             "tags": {"hard": False, "finger": False},
-                            "constraints_applied": ["hard_cap_downshift"],
+                            # B369 review: a rewritten user session stays the user's.
+                            "constraints_applied": _uo.carry_user_markers(session, ["hard_cap_downshift"]),
                             "explain": ["hard cap exceeded after replanning", "deterministic downshift"],
                         }
                     )
@@ -1342,7 +1425,7 @@ def _enforce_no_consecutive_finger(
                         "session_id": "regeneration_easy",
                         "intensity": recovery_meta["intensity"],
                         "tags": {"hard": False, "finger": False},
-                        "constraints_applied": ["finger_spacing_downshift"],
+                        "constraints_applied": _uo.carry_user_markers(session, ["finger_spacing_downshift"]),
                         "explain": ["no consecutive finger days", "deterministic downshift"],
                     }
                 )
@@ -1440,7 +1523,11 @@ def apply_events(
             if "user_moved" not in _ca:
                 moved["constraints_applied"] = _ca + ["user_moved"]
             log_event = {**event, "moved_session_id": moved.get("session_id")}
-            _insert_or_replace(to_day, moved, to_slot)
+            replaced = _insert_or_replace(to_day, moved, to_slot)
+            if replaced is not None:
+                # B369 review: the move overwrote what sat in the target slot —
+                # a removal the next regeneration must honour too.
+                log_event["replaced_session_id"] = replaced.get("session_id")
 
             # B354: the slot the user vacated stays empty. It used to be refilled
             # with regeneration_easy (or complementary_conditioning next to a hard
@@ -2057,6 +2144,9 @@ def _compensate_finger(
         for idx, s in enumerate(day.get("sessions", [])):
             if s.get("status") in ("done", "skipped"):
                 continue
+            # B369 review: a session the user put there is never swapped out.
+            if _uo.is_user_owned(s):
+                continue
             if (s.get("tags") or {}).get("hard"):
                 continue
             sid = s.get("session_id", "")
@@ -2158,7 +2248,7 @@ def apply_day_override(
     intent: str,
     location: str,
     reference_date: str,
-    slot: str = "evening",
+    slot: Optional[str] = None,
     phase_id: Optional[str] = None,
     target_date: Optional[str] = None,
     gym_id: Optional[str] = None,
@@ -2314,6 +2404,21 @@ def apply_day_override(
             f"{len(completed_in_target)} session(s) already completed/skipped"
         )
 
+    # B48: if session_index is provided, replace only that session
+    whole_day = not (session_index is not None and len(original_sessions) > 1)
+    if not whole_day and (session_index < 0 or session_index >= len(original_sessions)):
+        raise ValueError(
+            f"session_index {session_index} out of range "
+            f"(day has {len(original_sessions)} sessions)"
+        )
+    # B369 review: an override of one session (session_index) takes that
+    # session's slot — the client does not send one; otherwise the evening.
+    if slot is None:
+        if session_index is not None and 0 <= session_index < len(original_sessions):
+            slot = original_sessions[session_index].get("slot") or "evening"
+        else:
+            slot = "evening"
+
     new_session = {
         "slot": slot,
         "session_id": session_id,
@@ -2327,14 +2432,7 @@ def apply_day_override(
         "explain": ["user day override applied", f"override_intent={intent}"],
     }
 
-    # B48: if session_index is provided, replace only that session
-    whole_day = not (session_index is not None and len(original_sessions) > 1)
     if not whole_day:
-        if session_index < 0 or session_index >= len(original_sessions):
-            raise ValueError(
-                f"session_index {session_index} out of range "
-                f"(day has {len(original_sessions)} sessions)"
-            )
         target_day["sessions"] = list(original_sessions)
         target_day["sessions"][session_index] = new_session
     else:
@@ -2386,14 +2484,32 @@ def apply_day_override(
     else:
         ripple_adjustments, reconcile_adjustments, override_warnings = _finish(updated, with_ripple=False)
 
+    # B369 review: what the override took off the day, so a regeneration does
+    # not bring it back — the one replaced session of a partial override, the
+    # slots the day held for a whole-day one (not the whole date: a slot added
+    # later by a new structure still gets the engine's session).
+    if whole_day:
+        replaced_info: Dict[str, Any] = {
+            "replaced_slots": sorted(
+                {s.get("slot") or "evening" for s in original_sessions},
+                key=lambda x: SLOTS.index(x) if x in SLOTS else len(SLOTS),
+            ),
+        }
+    else:
+        _replaced = original_sessions[session_index]
+        replaced_info = {
+            "replaced_session_id": _replaced.get("session_id"),
+            "replaced_slot": _replaced.get("slot") or "evening",
+        }
     updated.setdefault("adaptations", []).append(
         {
             "type": "day_override",
             "reference_date": reference_date,
             "target_date": target_key,
             # B369: the user replaced the whole day — a regeneration must not
-            # bring the engine's other sessions of that day back.
+            # bring the engine's other sessions of those slots back.
             "whole_day": whole_day,
+            **replaced_info,
             "ripple_days": [
                 (target + timedelta(days=1)).isoformat(),
                 (target + timedelta(days=2)).isoformat(),

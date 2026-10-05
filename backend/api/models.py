@@ -135,7 +135,9 @@ class OverrideRequest(BaseModel):
     intent: str
     location: str
     reference_date: str
-    slot: Literal["morning", "lunch", "evening"] = "evening"
+    # B369 review: None → the engine uses the replaced session's slot for a
+    # partial override (session_index), the evening for a whole day.
+    slot: Optional[Literal["morning", "lunch", "evening"]] = None
     phase_id: Optional[str] = None
     week_plan: Optional[Dict[str, Any]] = None
     target_date: Optional[str] = None
