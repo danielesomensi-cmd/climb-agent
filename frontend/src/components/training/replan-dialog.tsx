@@ -37,6 +37,9 @@ interface ReplanDialogProps {
     // finché non scegli): senza, il backend scriveva l'intent come falesia.
     spot_id?: string;
     spot_name?: string;
+    // A301 review — "Skip day" replaces every engine session of the day (the
+    // user's own sessions and the done ones stay).
+    whole_day?: boolean;
   }) => void;
 }
 
@@ -134,7 +137,7 @@ export function ReplanDialog({
   };
 
   const handleSkip = () => {
-    onApply({ intent: "rest", location: "home" });
+    onApply({ intent: "rest", location: "home", whole_day: true });
   };
 
   return (

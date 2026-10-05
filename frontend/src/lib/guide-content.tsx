@@ -335,7 +335,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     id: "replanning-your-week",
     title: "Replanning Your Week",
     searchText:
-      "replan dialog change location intent rest outdoor strength endurance technique projecting ripple effects skip session week view",
+      "replan dialog change location intent rest outdoor strength endurance technique projecting alerts guard warnings recovery skip session week view",
     body: (
       <>
         <P>The <B>Replan Dialog</B> lets you make changes to your weekly plan without regenerating everything. Access it from the <B>Week</B> view by tapping a day.</P>
@@ -347,7 +347,8 @@ export const GUIDE_SECTIONS: GuideSection[] = [
           <Li><B>Go outdoor</B>: Switch to an outdoor intent (easy outdoor, projecting, volume routes, boulder outdoor)</Li>
           <Li><B>Rest</B>: Set the intent to &ldquo;Rest&rdquo; to turn a training day into a rest day</Li>
         </Ul>
-        <P>The replanner handles <B>ripple effects</B> &mdash; when you change a day&apos;s intent, it adjusts surrounding days to maintain proper recovery spacing.</P>
+        <P><B>Your change is applied as you ask.</B> When you change a day, add a session or move one, nothing else in your week is rewritten or downgraded. If the change breaks a recovery rule (48 h between finger sessions, a hard session the day after another, too many hard days, HIIT next to a max day, hard work right before a trip or a finger test) you get an <B>alert</B>: a badge on the session and a line in the week&apos;s alert list. It&apos;s your call whether to keep it.</P>
+        <P>After a <B>very hard</B> or failed session the app may suggest lightening the next hard session or taking a recovery day &mdash; only a suggestion; if you want a lighter session, build it yourself as a custom.</P>
         <P><B>Skipping a session</B> is always OK. The system is designed for real life. Don&apos;t add make-up sessions to &ldquo;compensate&rdquo; &mdash; that leads to overtraining.</P>
       </>
     ),
@@ -390,7 +391,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     id: "next-weeks-availability",
     title: "Next Week's Availability",
     searchText:
-      "weekly override availability days location gym home outdoor settings temporary planner monday",
+      "weekly override availability days location gym home outdoor settings temporary planner monday primary complementary slot lunch rotation legs hiit zone 2 push arms max minutes",
     body: (
       <>
         <P>Your default availability is set in <B>Settings</B>. But real life changes week to week.</P>
@@ -401,6 +402,16 @@ export const GUIDE_SECTIONS: GuideSection[] = [
           <Li>Select which gym for each day</Li>
         </Ul>
         <P>Overrides are temporary &mdash; they only apply to that specific week. Your default settings remain unchanged.</P>
+        <H3>Primary and complementary slots</H3>
+        <P>In <B>Settings &rarr; Availability</B> every slot can have a <B>role</B>. <B>Primary</B> slots get the climbing sessions of your phase; <B>complementary</B> slots (typically a lunch break at a weights gym) get a short session from your <B>rotation</B>: legs, HIIT, zone 2 cardio, push + arms. <B>Any</B> (the default) works as before. A <B>max minutes</B> limit keeps longer sessions off a slot.</P>
+        <Ul>
+          <Li><B>Legs</B> &mdash; goblet squat + Romanian deadlift (loads progress from your feedback) and a short foot block (toe-flexor isometric, calf raise on an edge)</Li>
+          <Li><B>HIIT</B> &mdash; treadmill 4&times;4 (8&prime; warm-up, 4 &times; 4&prime; at 85&ndash;95% max heart rate, 3&prime; walks); needs a treadmill</Li>
+          <Li><B>Zone 2</B> &mdash; 25&prime; incline walk on the treadmill, optional hip opener flow</Li>
+          <Li><B>Push + arms</B> &mdash; bench press, cable triceps, biceps curls</Li>
+        </Ul>
+        <P>The planner pairs each complementary family with a day by itself, every week, from what your evenings hold: HIIT not on or before a max day (at most one a week, and it never counts as a hard day), biceps not in the 24 h before heavy pulling, heavy legs not in the 48 h before a limit or outdoor day, zone 2 anywhere. When no pairing respects everything you get an alert, and a slot that can&apos;t be filled is listed &mdash; nothing is dropped silently.</P>
+        <P>Saving availability regenerates the weeks ahead and <B>keeps your own sessions</B> (customs, quick-adds, moves, edits): the app tells you which ones it kept.</P>
         <P><B>Tip</B>: Set your overrides for next week before Monday. The planner generates the new week plan on Monday morning based on your availability at that point.</P>
       </>
     ),

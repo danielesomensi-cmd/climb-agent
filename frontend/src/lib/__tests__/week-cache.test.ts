@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { QueryClient } from "@tanstack/react-query";
 
 import { queryKeys } from "@/lib/query-keys";
-import { writeWeekCache, type WeekCacheEntry } from "@/lib/week-cache";
-import type { WeekPlan } from "@/lib/types";
+import { siblingsOf, writeWeekCache, type WeekCacheEntry } from "@/lib/week-cache";
+import type { GuardWarning, WeekPlan } from "@/lib/types";
 
 /**
  * A245 G-2 (F34) — the current week lives under two cache keys.
@@ -93,5 +93,49 @@ describe("writeWeekCache", () => {
     writeWeekCache(qc, 0, plan("NEW"));
 
     expect(qc.getQueryData<WeekCacheEntry>(queryKeys.week(0))?.phase_id).toBe("strength_power");
+  });
+});
+
+/**
+ * A301 — `guard_warnings` is a sibling of week_plan like `key_status`: fresh
+ * alerts replace the cached ones; a response without them keeps the cached
+ * alerts, pruned to the sessions that still exist (no stale badge on a
+ * removed or completed session).
+ */
+describe("writeWeekCache — guard_warnings (A301)", () => {
+  const gw = (date: string, sessionId = "s1"): GuardWarning => ({
+    code: "finger_gap", severity: "warning", date, slot: "evening", session_id: sessionId,
+    user_owned: true, with: [], message: "m",
+  });
+  const planWith = (sessions: Array<{ date: string; status?: string }>): WeekPlan =>
+    ({ weeks: [{ days: sessions.map((s) => ({ date: s.date, sessions: [{ session_id: "s1", slot: "evening", location: "gym", status: s.status ?? "planned" }] })) }] }) as unknown as WeekPlan;
+
+  it("replaces the cached alerts when the response carries them", () => {
+    qc.setQueryData(queryKeys.week(3), { week_num: 3, week_plan: plan("old"), guard_warnings: [gw("2026-10-06")] });
+    writeWeekCache(qc, 3, plan("NEW"), { guard_warnings: [] });
+    expect(qc.getQueryData<WeekCacheEntry>(queryKeys.week(3))?.guard_warnings).toEqual([]);
+  });
+
+  it("keeps + prunes them when the response has none", () => {
+    qc.setQueryData(queryKeys.week(3), {
+      week_num: 3, week_plan: plan("old"),
+      guard_warnings: [gw("2026-10-06"), gw("2026-10-07"), gw("2026-10-08")],
+    });
+    writeWeekCache(qc, 3, planWith([{ date: "2026-10-06" }, { date: "2026-10-07", status: "done" }]));
+    const e = qc.getQueryData<WeekCacheEntry>(queryKeys.week(3));
+    expect(e?.guard_warnings?.map((w) => w.date)).toEqual(["2026-10-06"]);
+  });
+
+  it("siblingsOf reads key_status and guard_warnings, leaves absent ones undefined", () => {
+    expect(siblingsOf({ week_plan: {} })).toEqual({});
+    expect(siblingsOf({ key_status: null })).toEqual({ key_status: null });
+    expect(siblingsOf({ guard_warnings: [gw("2026-10-06")] }).guard_warnings).toHaveLength(1);
+    expect(siblingsOf({ guard_warnings: "nope" })).toEqual({});
+  });
+
+  it("keeps the cached key_status when only guard_warnings arrive", () => {
+    qc.setQueryData(queryKeys.week(3), { week_num: 3, week_plan: plan("old"), key_status: { version: "x" } });
+    writeWeekCache(qc, 3, plan("NEW"), { guard_warnings: [] });
+    expect(qc.getQueryData<WeekCacheEntry>(queryKeys.week(3))?.key_status).toEqual({ version: "x" });
   });
 });

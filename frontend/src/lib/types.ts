@@ -118,6 +118,13 @@ export interface SessionSlot {
   session_mode?: string;
   exercises?: CustomSessionExercise[];
   target_duration_min?: number;
+  // A300 — set by the planner on a session it placed in a complementary slot.
+  slot_role?: SlotRole;
+  focus?: FocusFamily;
+  // B369 / A301 — markers of the sessions the user put, forced, moved or edited.
+  forced?: boolean;
+  _user_edited?: boolean;
+  constraints_applied?: string[];
 }
 
 export interface OtherActivity {
@@ -219,6 +226,91 @@ export interface WeekPlan {
     phase_id?: string;
     reason: string;
   }>;
+  /** A300 — complementary slots the engine could not fill (never dropped silently). */
+  unmet_secondary?: UnmetSecondary[];
+  /** A300 — lunch placement rules the week breaks (alerts only, nothing moved). */
+  secondary_warnings?: SecondaryWarning[];
+}
+
+// ── A300 — adaptive structure (slot roles + complementary rotation) ─────────
+export type SlotRole = "primary" | "complementary" | "any";
+export type FocusFamily = "legs" | "hiit" | "z2" | "upper_push_arms";
+
+export interface AvailabilitySlot {
+  available: boolean;
+  preferred_location: string;
+  gym_id?: string;
+  /** A300 — absent / "any" = the slot behaves as before. */
+  role?: SlotRole | null;
+  /** A300 — 10..240; sessions longer than this never land on the slot. */
+  max_minutes?: number | null;
+  /** A300 — a complementary slot may pin its own family. */
+  focus?: FocusFamily | null;
+}
+
+export type UnmetSecondaryReason =
+  | "rotation_overflow"
+  | "no_focus"
+  | "rotation_exhausted"
+  | "no_session_fits";
+
+export interface UnmetSecondary {
+  date: string | null;
+  slot: string | null;
+  focus: FocusFamily | null;
+  reason: UnmetSecondaryReason | string;
+  candidates?: string[];
+}
+
+export interface SecondaryWarning {
+  date: string;
+  slot: string;
+  session_id: string | null;
+  focus?: FocusFamily | null;
+  code: "hiit_near_max" | "biceps_before_heavy_pull" | "legs_before_limit" | "pretrip_no_hard" | "hiit_weekly_cap" | string;
+  /** "YYYY-MM-DD session_id" of the sessions the rule looks at. */
+  with: string[];
+}
+
+// ── A301 — recovery guards as alerts (sibling of week_plan, never persisted) ─
+export type GuardCode =
+  | "finger_gap"
+  | "finger_test_72h"
+  | "heavy_pull_7d"
+  | "hiit_near_max"
+  | "hard_cap"
+  | "pre_trip"
+  | "post_outdoor"
+  | "hard_back_to_back";
+
+export interface GuardRef {
+  date: string;
+  slot: string | null;
+  session_id: string | null;
+}
+
+export interface GuardWarning {
+  code: GuardCode | string;
+  severity: "warning";
+  date: string;
+  slot: string | null;
+  session_id: string | null;
+  name?: string | null;
+  user_owned: boolean;
+  with: GuardRef[];
+  message: string;
+}
+
+/** B369 — POST /api/feedback after a very_hard / fail: a suggestion, never a plan change. */
+export interface AdaptiveSuggestion {
+  kind: "lighten_next_hard" | "recovery_day";
+  target_date?: string;
+  reason?: string;
+  plan_changed: false;
+  session_id?: string;
+  session_name?: string;
+  user_owned?: boolean;
+  message: string;
 }
 
 export interface Exercise {
@@ -393,13 +485,13 @@ export interface OnboardingData {
     equipment_other?: string;
     gyms: Array<{ gym_id?: string; name: string; equipment: string[]; equipment_other?: string }>;
   };
-  availability: Record<
-    string,
-    Record<string, { available: boolean; preferred_location: string; gym_id?: string }>
-  >;
+  availability: Record<string, Record<string, AvailabilitySlot>>;
   planning_prefs: {
     target_training_days_per_week: number;
     hard_day_cap_per_week: number;
+    /** A300 — focus families of the complementary slots, in rotation order. */
+    complementary_rotation?: FocusFamily[] | null;
+    complementary_rotation_by_phase?: Record<string, FocusFamily[]> | null;
     /**
      * A283 — quante SESSIONI a settimana, che non è quanti giorni: chi si allena
      * spezzato (complementari a pranzo, arrampicata la sera) ne fa più dei

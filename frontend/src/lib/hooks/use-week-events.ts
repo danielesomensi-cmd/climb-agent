@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ApiError, NETWORK_ERROR_STATUS, applyEvents, type EventsResponse } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
-import { writeWeekCache } from "@/lib/week-cache";
+import { siblingsOf, writeWeekCache } from "@/lib/week-cache";
 import type { WeekPlan } from "@/lib/types";
 
 type WeekCacheEntry = {
@@ -60,7 +60,7 @@ export function useWeekEvents(weekNum: number) {
 
         // A245 G-2 (F34): mirrors onto the week(0) ⇄ week(N) alias so /today
         // and /week cannot disagree about the same seven days.
-        writeWeekCache(qc, weekNum, result.week_plan, result.key_status);
+        writeWeekCache(qc, weekNum, result.week_plan, siblingsOf(result));
         return result;
       });
       // La coda non deve morire su un errore del task precedente.

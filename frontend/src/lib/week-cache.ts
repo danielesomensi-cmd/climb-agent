@@ -2,7 +2,8 @@
 
 import type { QueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import type { KeyStatus, WeekPlan } from "@/lib/types";
+import { pruneGuardWarnings } from "@/lib/week-alerts";
+import type { GuardWarning, KeyStatus, WeekPlan } from "@/lib/types";
 
 export type WeekCacheEntry = {
   week_num?: number;
@@ -11,12 +12,35 @@ export type WeekCacheEntry = {
   past_week_unavailable?: boolean;
   /** A294 — sibling of week_plan; refreshed by every replanner response that carries it. */
   key_status?: KeyStatus | null;
+  /** A301 — guard alerts of the week; sibling of week_plan, never persisted. */
+  guard_warnings?: GuardWarning[];
+};
+
+/**
+ * What a mutation response carries next to `week_plan`. `undefined` on a field
+ * means "the response did not say": the cached value is kept (the guard alerts
+ * are then pruned to the sessions that still exist in the new plan).
+ */
+export type WeekSiblings = {
+  key_status?: KeyStatus | null;
+  guard_warnings?: GuardWarning[];
 };
 
 /** A294 — the key status a mutation response carries, if any (undefined = keep the cached one). */
 export function keyStatusOf(result: unknown): KeyStatus | null | undefined {
   if (!result || typeof result !== "object" || !("key_status" in result)) return undefined;
   return (result as { key_status?: KeyStatus | null }).key_status;
+}
+
+/** A294 + A301 — the siblings a mutation response carries (absent fields stay undefined). */
+export function siblingsOf(result: unknown): WeekSiblings {
+  const out: WeekSiblings = {};
+  const ks = keyStatusOf(result);
+  if (ks !== undefined) out.key_status = ks;
+  if (result && typeof result === "object" && Array.isArray((result as { guard_warnings?: unknown }).guard_warnings)) {
+    out.guard_warnings = (result as { guard_warnings: GuardWarning[] }).guard_warnings;
+  }
+  return out;
 }
 
 /**
@@ -36,15 +60,25 @@ export function writeWeekCache(
   qc: QueryClient,
   weekNum: number,
   weekPlan: WeekPlan,
-  keyStatus?: KeyStatus | null,
+  siblings: WeekSiblings = {},
 ): void {
-  // A294: `keyStatus === undefined` (a response without it) keeps the cached
+  // A294: `key_status === undefined` (a response without it) keeps the cached
   // status; a value (null included) replaces it.
-  const ks = keyStatus === undefined ? {} : { key_status: keyStatus };
+  const ks = siblings.key_status === undefined ? {} : { key_status: siblings.key_status };
   const apply = (key: readonly unknown[], fallbackNum: number) =>
-    qc.setQueryData(key, (old: WeekCacheEntry | undefined) =>
-      old ? { ...old, week_plan: weekPlan, ...ks } : { week_num: fallbackNum, week_plan: weekPlan, ...ks },
-    );
+    qc.setQueryData(key, (old: WeekCacheEntry | undefined) => {
+      // A301: fresh alerts replace the cached ones; without them, the cached
+      // alerts survive only for the sessions still in the plan (a removed or
+      // completed session must not keep its badge).
+      const gw = siblings.guard_warnings !== undefined
+        ? { guard_warnings: siblings.guard_warnings }
+        : old?.guard_warnings
+          ? { guard_warnings: pruneGuardWarnings(old.guard_warnings, weekPlan) }
+          : {};
+      return old
+        ? { ...old, week_plan: weekPlan, ...ks, ...gw }
+        : { week_num: fallbackNum, week_plan: weekPlan, ...ks, ...gw };
+    });
 
   apply(queryKeys.week(weekNum), weekNum);
 

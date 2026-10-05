@@ -10,7 +10,7 @@ import { anchoredLoadNotes } from "@/lib/anchored-load";
 import { asMeasure } from "@/lib/measured-feedback";
 import { asLadder } from "@/lib/bw-ladder";
 import { buildGuidedStateFromExercises, guidedStorageKey, hasSavedProgress } from "@/lib/guided-session-utils";
-import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, Search, RefreshCw, Mountain, Star } from "lucide-react";
+import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, Search, RefreshCw, Mountain, Star, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,7 @@ import { FEEDBACK_CHIP } from "@/components/training/feedback-colors";
 import { getExercises, addExerciseToSession, removeExerciseFromSession, setSessionSurface, apiErrorDetail } from "@/lib/api";
 import type { SessionSlot, GuidedSessionState, GuidedExercise, Exercise, WeekPlan, KeySessionRole } from "@/lib/types";
 import { formatSessionId, keyLabel } from "@/lib/key-sessions";
+import { focusLabel, type SessionAlert } from "@/lib/week-alerts";
 import { expandEquipment, isExerciseCompatible } from "@/lib/equipment-filter";
 import { walkResolvedBlocks } from "@/lib/session-blocks";
 import { formatSessionName } from "@/lib/format";
@@ -74,6 +75,12 @@ interface SessionCardProps {
   onSessionUpdated?: (updatedWeekPlan?: WeekPlan) => void;
   /** A294 — the session's role in the week's key stimuli (from key_status). */
   keyRole?: KeySessionRole | null;
+  /**
+   * A300 / A301 — the alerts that involve this session (recovery guards and
+   * lunch-rotation rules). Shown as a badge + one line each: a heads-up, the
+   * session stays exactly as planned.
+   */
+  alerts?: SessionAlert[];
 }
 
 
@@ -668,6 +675,7 @@ export function SessionCard({
   onReplan,
   onSessionUpdated,
   keyRole,
+  alerts,
 }: SessionCardProps) {
   const [expanded, setExpanded] = useState(false);
   // F6 — un secondo tap su Done/Skip prima che il primo abbia risposto partiva
@@ -922,6 +930,24 @@ export function SessionCard({
           <div className="flex flex-wrap items-center gap-1.5 mt-1">
             {/* A294 — key-session role */}
             <KeyRoleBadge role={keyRole} />
+            {/* A300 — a complementary (lunch) session placed by the rotation */}
+            {session.slot_role === "complementary" && (
+              <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                {focusLabel(session.focus)}
+              </Badge>
+            )}
+            {/* A301 — guards are alerts: the session is kept as planned */}
+            {alerts && alerts.length > 0 && (
+              <Badge
+                variant="outline"
+                className="text-[10px] gap-1 border-warning/40 bg-warning/15 text-warning"
+                title={alerts.map((a) => a.message).join("\n")}
+                data-testid="session-alert-badge"
+              >
+                <AlertTriangle className="size-2.5" aria-hidden="true" />
+                {alerts.length === 1 ? "1 alert" : `${alerts.length} alerts`}
+              </Badge>
+            )}
             <Badge variant="secondary" className="text-[10px]">
               {locationLabel}
             </Badge>
@@ -1000,6 +1026,18 @@ export function SessionCard({
               </Badge>
             )}
           </div>
+
+          {/* A301 — what the recovery / lunch rules flag on this session. */}
+          {alerts && alerts.length > 0 && (
+            <ul className="mt-1.5 space-y-0.5" aria-label="Alerts">
+              {alerts.map((a, i) => (
+                <li key={`${a.source}-${a.code}-${i}`} className="text-[11px] leading-snug text-warning">
+                  <span className="font-medium">{a.title}:</span>{" "}
+                  <span className="text-muted-foreground">{a.message}</span>
+                </li>
+              ))}
+            </ul>
+          )}
 
           {/* B136: Test results summary in header (visible without expanding) */}
           {isDone && session.actual_exercises && session.actual_exercises.length > 0 && (() => {

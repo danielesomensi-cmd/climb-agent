@@ -33,11 +33,14 @@ import type {
   RetestStatus,
   KeyStatus,
   KeyConflict,
+  GuardWarning,
+  AdaptiveSuggestion,
 } from "./types";
 import { localToday } from "./key-sessions";
 import { notifyLimitationSuggestions, type LimitationSuggestion } from "./limitation-suggestions";
 import { notifyLimitSummary, type LimitSummary } from "./limit-problems";
 import { notifyBwLadderUpdates, type BwLadderUpdate } from "./bw-ladder";
+import { notifyAdaptiveSuggestion } from "./adaptive-suggestion";
 import type { EvidenceStyle, GradeEvidence } from "./grade-evidence";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -399,6 +402,8 @@ export const getWeek = (weekNum: number, force?: boolean, preserveBefore?: strin
     retest_status?: RetestStatus;
     /** A294 — key sessions of the week (sibling of week_plan, never persisted). */
     key_status?: KeyStatus | null;
+    /** A301 — recovery guards as alerts (sibling of week_plan, never persisted). */
+    guard_warnings?: GuardWarning[];
   }>(`/api/week/${weekNum}${qs ? `?${qs}` : ""}`);
 };
 
@@ -488,10 +493,13 @@ export const applyOverride = (data: {
   // B360 — falesia scelta per un override outdoor
   spot_id?: string;
   spot_name?: string;
+  // A301 review — "Skip day": every engine session of the day.
+  whole_day?: boolean;
 }) =>
-  // B366: adjustments/warnings are additive — what the override rewrote
-  // (its own reconcile downshift + the day+1/day+2 recovery ripple).
-  request<{ week_plan: WeekPlan; adjustments?: QuickAddAdjustment[]; warnings?: string[]; key_status?: KeyStatus | null }>("/api/replanner/override", {
+  // A301: the override replaces one slot and rewrites nothing around it.
+  // `warnings` = its own notes + the alerts involving the overridden session;
+  // `guard_warnings` = the alerts of the whole week.
+  request<{ week_plan: WeekPlan; adjustments?: QuickAddAdjustment[]; warnings?: string[]; guard_warnings?: GuardWarning[]; key_status?: KeyStatus | null }>("/api/replanner/override", {
     method: "POST",
     // A294 review: client-local today for the key status (the server is UTC).
     body: JSON.stringify({ ...data, today: localToday() }),
@@ -499,8 +507,14 @@ export const applyOverride = (data: {
 
 export type EventsResponse = {
   week_plan: WeekPlan;
-  /** A294 — what the final reconcile rewrote in this call. */
+  /** A294 — what the final reconcile rewrote in this call (always empty since A301). */
   adjustments?: QuickAddAdjustment[];
+  /** A301 — notes of this call's events (e.g. a change of gym lost the finger session). */
+  warnings?: string[];
+  /** A301 — the alerts of the week after the events (never persisted). */
+  guard_warnings?: GuardWarning[];
+  /** A301 — dry run: the alerts the events would ADD. */
+  added_guard_warnings?: GuardWarning[];
   key_status?: KeyStatus | null;
   /** A294 — dry run only. */
   dry_run?: boolean;
@@ -581,12 +595,10 @@ export const getSuggestedSessions = (targetDate: string, location: string) =>
     }>;
   }>(`/api/replanner/suggest-sessions?target_date=${targetDate}&location=${location}`);
 
-// B287/R-5: quick-add runs _reconcile, so an added session can be eased
-// (downgraded) to respect the 48h finger gap or the weekly hard-session cap.
-// B366: the day+1 recovery ripple is reported here too (reason
-// "quick_add_ripple"): it eases the NEXT day's engine session, never a custom
-// or forced one, and only when the session the user added survived.
-// The backend describes each change here so the UI can explain it.
+// B287 → A301: `adjustments` stays in the replanner contract but is always
+// empty since A301 — after a user action nothing is downshifted or rippled;
+// what the recovery guards object to comes back as `guard_warnings` (alerts).
+// A legacy plan may still carry old records, so the type stays.
 export type QuickAddAdjustment = {
   date: string;
   slot?: string;
@@ -596,78 +608,6 @@ export type QuickAddAdjustment = {
   session_id?: string;
 };
 
-const QUICK_ADD_RIPPLE = "quick_add_ripple";
-
-// B-QUICKADD-ADJUSTMENTS: turn the machine-readable downshift reasons into one
-// plain-language line, so the user understands why the session they added came
-// back lighter than the one they picked (instead of silently getting a
-// different card). Returns null when nothing was adjusted.
-export function describeQuickAddAdjustments(adjustments: QuickAddAdjustment[] | undefined): string | null {
-  if (!adjustments || adjustments.length === 0) return null;
-  const enforced = adjustments.filter((a) => a.reason !== QUICK_ADD_RIPPLE);
-  const rippled = adjustments.length - enforced.length;
-  const sentences: string[] = [];
-  if (enforced.length > 0) {
-    const reasons = new Set(enforced.map((a) => a.reason));
-    const parts: string[] = [];
-    if (reasons.has("finger_spacing_downshift")) {
-      parts.push("to protect finger recovery (a hard finger session was within 48h)");
-    }
-    if (reasons.has("hard_cap_downshift")) {
-      parts.push("to stay within your weekly hard-session limit");
-    }
-    if (parts.length === 0) parts.push("to keep your week balanced"); // unknown reason fallback
-    sentences.push(`Eased to a lighter session ${parts.join(" and ")}.`);
-  }
-  if (rippled > 0) {
-    sentences.push("The next day was eased so you can recover from the session you added.");
-  }
-  return sentences.join(" ");
-}
-
-// A254: a finger downshift is injury protection (48h tendon/pulley recovery) —
-// forcing past it warrants an explicit confirm. A cap-only downshift is just
-// volume, so a one-tap toast action is enough.
-export function quickAddHasFingerRisk(adjustments: QuickAddAdjustment[] | undefined): boolean {
-  return !!adjustments?.some((a) => a.reason === "finger_spacing_downshift");
-}
-
-// B366: the hard day override eases day+1 (proportional) and day+2 (forced
-// recovery) — never a custom or forced session — and reconcile may ease the
-// override itself. Same shape as quick-add; returns null when nothing changed.
-const OVERRIDE_RIPPLES = new Set(["recovery_ripple_proportional", "recovery_ripple"]);
-export function describeOverrideAdjustments(adjustments: QuickAddAdjustment[] | undefined): string | null {
-  if (!adjustments || adjustments.length === 0) return null;
-  const enforced = adjustments.filter((a) => !OVERRIDE_RIPPLES.has(a.reason));
-  const rippled = adjustments.filter((a) => OVERRIDE_RIPPLES.has(a.reason));
-  const sentences: string[] = [];
-  if (enforced.length > 0) {
-    const reasons = new Set(enforced.map((a) => a.reason));
-    const parts: string[] = [];
-    if (reasons.has("finger_spacing_downshift")) {
-      parts.push("to protect finger recovery (a hard finger session was within 48h)");
-    }
-    if (reasons.has("hard_cap_downshift")) {
-      parts.push("to stay within your weekly hard-session limit");
-    }
-    if (parts.length === 0) parts.push("to keep your week balanced");
-    sentences.push(`A session was eased ${parts.join(" and ")}.`);
-  }
-  if (rippled.length > 0) {
-    const days = new Set(rippled.map((a) => a.date)).size;
-    sentences.push(days > 1
-      ? "The next two days were eased so you can recover from this session."
-      : "The following day was eased so you can recover from this session.");
-  }
-  return sentences.join(" ");
-}
-
-// B366: "Add hard anyway" pins the ADDED session. A ripple-only result means
-// the added session went in as picked — there is nothing to force.
-export function quickAddCanForce(adjustments: QuickAddAdjustment[] | undefined): boolean {
-  return !!adjustments?.some((a) => a.reason !== QUICK_ADD_RIPPLE);
-}
-
 export const quickAddSession = (data: {
   session_id: string;
   target_date: string;
@@ -676,9 +616,11 @@ export const quickAddSession = (data: {
   phase_id?: string;
   week_plan: WeekPlan;
   gym_id?: string;
-  force?: boolean; // A254: keep the hard session past the finger gap / hard cap
 }) =>
-  request<{ week_plan: WeekPlan; warnings: string[]; adjustments: QuickAddAdjustment[]; key_status?: KeyStatus | null }>(
+  // A301: every quick-add is applied as picked (the old `force` is a no-op on
+  // the server). `warnings` are the alert messages that involve the added
+  // session; `guard_warnings` the alerts of the whole week.
+  request<{ week_plan: WeekPlan; warnings: string[]; adjustments: QuickAddAdjustment[]; guard_warnings?: GuardWarning[]; key_status?: KeyStatus | null }>(
     "/api/replanner/quick-add",
     {
       method: "POST",
@@ -698,6 +640,8 @@ export const postFeedback = (data: {
     limitation_suggestions?: LimitationSuggestion[];
     limit_summary?: LimitSummary[];
     bw_ladder_updates?: BwLadderUpdate[];
+    /** B369 — after very_hard / fail: a suggestion only, the plan is unchanged. */
+    adaptive_suggestion?: AdaptiveSuggestion;
     warning?: string;
   }>("/api/feedback", {
     method: "POST",
@@ -711,6 +655,9 @@ export const postFeedback = (data: {
     notifyLimitSummary(res?.limit_summary);
     // A298: "Next time: 3x25 s" / "Promoted: …" per bodyweight ladder moved.
     notifyBwLadderUpdates(res?.bw_ladder_updates);
+    // B369 / A301: "that felt very hard — consider lightening …". Nothing was
+    // changed: lightening is the athlete's call (a custom session).
+    notifyAdaptiveSuggestion(res?.adaptive_suggestion);
     return res;
   });
 
@@ -1306,9 +1253,10 @@ export const startBodyPartSession = (data: {
   slot?: string;
   location?: string;
 }) =>
-  request<{ session: BodyPartSession; week_plan: WeekPlan }>(
+  // A301: client-local today for the guard alerts; they come back next to the plan.
+  request<{ session: BodyPartSession; week_plan: WeekPlan; guard_warnings?: GuardWarning[] }>(
     "/api/body-part-picker/start",
-    { method: "POST", body: JSON.stringify(data) }
+    { method: "POST", body: JSON.stringify({ ...data, today: localToday() }) }
   );
 
 export const getBodyPartEstimate = (bodyParts: string[], includeCooldown = true) => {

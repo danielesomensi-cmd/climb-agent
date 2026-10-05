@@ -11,6 +11,7 @@ import { SessionCard } from "@/components/training/session-card";
 import { FEEDBACK_CHIP } from "@/components/training/feedback-colors";
 import { PitchLadderCard } from "@/components/outdoor/pitch-ladder-card";
 import type {
+  GuardWarning,
   DayPlan,
   OtherActivity,
   OutdoorDayType,
@@ -20,6 +21,7 @@ import type {
   KeyStatus,
 } from "@/lib/types";
 import { keyRoleFor } from "@/lib/key-sessions";
+import { alertsForSession } from "@/lib/week-alerts";
 import { normalizeOtherActivities, hasOtherActivity } from "@/lib/other-activity";
 import { formatDateShort } from "@/lib/format";
 
@@ -33,6 +35,8 @@ interface DayCardProps {
   day: DayPlan;
   /** A294 — key-session status of the week (badges on the session cards). */
   keyStatus?: KeyStatus | null;
+  /** A301 — the week's guard alerts (badges + lines on the session cards). */
+  guardWarnings?: GuardWarning[] | null;
   gyms?: Gym[];
   homeEquipment?: string[];
   // F6 — restituiscono la promise della mutation: la SessionCard la attende per
@@ -373,6 +377,7 @@ function OtherActivityBlock({
 export function DayCard({
   day,
   keyStatus,
+  guardWarnings,
   gyms,
   homeEquipment,
   onMarkDone,
@@ -691,6 +696,7 @@ export function DayCard({
                   }
                   onSessionUpdated={onSessionUpdated}
                   keyRole={keyRoleFor(keyStatus, day.date, session.slot)}
+                  alerts={alertsForSession(guardWarnings, weekPlan, day.date, session)}
                 />
               ))}
 

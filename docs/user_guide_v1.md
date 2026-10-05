@@ -193,7 +193,11 @@ Which extra goes on which day is decided **every week from your actual climbing 
 
 Your own sessions count: a custom session you put on a lunch, a session you moved, an outdoor day you planned — the planner works around them and never refills a lunch you filled or emptied yourself. When you change the plan by hand (move a session next to the HIIT, for example) nothing is changed for you: the week just shows the new alert.
 
-These are preferences, never locks: if a week cannot satisfy all of them, the planner picks the least bad option and **tells you** which rule it had to bend; if a slot cannot be filled (for example the gym lacks the equipment), or one of the rotation's sessions has no slot left this week, it says so instead of leaving it out without a word. Complementary sessions do not change how many climbing days you get. *(Setting slot roles from the Settings screen is coming in a following update.)*
+These are preferences, never locks: if a week cannot satisfy all of them, the planner picks the least bad option and **tells you** which rule it had to bend; if a slot cannot be filled (for example the gym lacks the equipment), or one of the rotation's sessions has no slot left this week, it says so instead of leaving it out without a word. Complementary sessions do not change how many climbing days you get.
+
+**Setting it up (Settings → Availability → Edit).** Under the availability grid, the **Slot structure** card lists every slot you ticked. For each one pick **Any** (the default — the slot works as it always did), **Primary** (climbing sessions of your phase) or **Complementary**, and optionally a **Max minutes** limit (10–240; leave it empty for no limit). A complementary slot can also be pinned to one family (**Auto (rotation)** by default). As soon as one slot is complementary, the **Complementary rotation** list appears: add, remove and reorder legs, HIIT, Zone 2 and push + arms (all four by default; an empty rotation leaves the complementary slots free). Complementary slots don't count toward "Training days per week" or "Sessions per week" — they have their own budget, one session each. Before you save, the editor tells you which of your own sessions (customs, quick-adds, moved or edited sessions) planned from today on will be kept; after **Save & regenerate plan** a short note confirms what was kept. The weeks ahead follow the new structure; done and past sessions never change. If you never touch these settings, your plan is exactly what it was.
+
+On **This Week**, a complementary session carries its family (for example "HIIT (treadmill)"); the rules it had to bend and the complementary slots left free are listed in the week's **alerts** card.
 
 ### Key sessions
 
@@ -716,7 +720,13 @@ When you change the plan yourself — quick-add, replan a day, move a session, a
 - **Before a trip** — a hard session in the no-hard days before a trip.
 - **After a big outdoor day** — a hard or finger session the day after a heavy outdoor day.
 
+- **Back-to-back hard days** — a hard session the day after another hard day, when at least one of the two is a session you added or changed.
+
 Alerts are about what can still change: sessions already done, skipped or in the past are counted, never flagged. When the app builds a week on its own, it still follows every one of these rules.
+
+**Where you see them.** A session with an alert carries an orange **alert** badge with one line per rule it breaks; **This Week** opens with an alerts card listing every alert of the week (plus the lunch-rotation rules and any complementary slot left free), and **Today** shows the alerts of the day. Right after a quick-add, a replan or a custom session that trips a rule, a short note says so — the session is already in, as you picked it. There is no "Add hard anyway" step any more: nothing is ever eased, so there is nothing to force.
+
+**After a Very Hard or failed session** the app may suggest lightening your next hard session or taking a recovery day. It is only a note (with a shortcut to the session builder): nothing in your plan changes. If you want a lighter session, build it yourself as a custom.
 
 ---
 

@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { TopBar } from "@/components/layout/top-bar";
 import { useUserState } from "@/lib/hooks/use-state";
+import { useWeekPlan } from "@/lib/hooks/queries/use-week-plan";
 import { computeAssessment, generateMacrocycle, deleteState, putState, getWeek, getOutdoorSpots, addOutdoorSpot, deleteOutdoorSpot, exportUserState, importUserState, createBillingPortal } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
 import { useSubscription } from "@/lib/hooks/use-subscription";
@@ -15,8 +16,12 @@ import {
   optionToPreserveBefore,
   type RegenerateStartOption,
 } from "@/components/training/regenerate-plan-sheet";
-import type { OutdoorSpot } from "@/lib/types";
-import { AvailabilityEditor } from "@/components/settings/availability-editor";
+import type { FocusFamily, OutdoorSpot, SlotRole } from "@/lib/types";
+import { AvailabilityEditor, type EditorPlanningPrefs } from "@/components/settings/availability-editor";
+import { describeKeptSessions, keptUserSessions } from "@/lib/week-alerts";
+import { slotStructureLabel } from "@/lib/slot-structure";
+import { localToday } from "@/lib/key-sessions";
+import { toast } from "sonner";
 import { EquipmentEditor } from "@/components/settings/equipment-editor";
 import { GoalEditor } from "@/components/settings/goal-editor";
 import { LimitationsEditor, LimitationsSummary } from "@/components/settings/limitations-editor";
@@ -104,6 +109,9 @@ export default function SettingsPage() {
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [editingAvailability, setEditingAvailability] = useState(false);
+  // B369 / A300 — the current week, read only while editing availability, to
+  // say before saving which of the user's own sessions the regeneration keeps.
+  const currentWeek = useWeekPlan(0, editingAvailability && authReady);
   const [editingEquipment, setEditingEquipment] = useState(false);
   const [editingLimitations, setEditingLimitations] = useState(false);
   const [equipmentSavedOpen, setEquipmentSavedOpen] = useState(false);
@@ -194,17 +202,13 @@ export default function SettingsPage() {
   }
   const availability = (state?.availability ?? {}) as Record<
     string,
-    Record<string, { available: boolean; preferred_location?: string; gym_id?: string }>
+    Record<string, { available: boolean; preferred_location?: string; gym_id?: string; role?: SlotRole | null; max_minutes?: number | null }>
   >;
 
   /** Save updated availability and regenerate plan */
   async function handleSaveAvailability(
     newAvailability: Record<string, unknown>,
-    newPrefs: {
-      target_training_days_per_week: number;
-      hard_day_cap_per_week: number;
-      target_sessions_per_week?: number;
-    },
+    newPrefs: EditorPlanningPrefs,
   ) {
     setActionError(null);
     try {
@@ -216,10 +220,18 @@ export default function SettingsPage() {
         fullAvailability[day] = newAvailability[day] ?? null;
       }
       await putState({ availability: fullAvailability, planning_prefs: newPrefs });
-      await getWeek(0, true);
+      // B369: the regeneration keeps the user's own sessions (customs,
+      // quick-adds, moves, edits) and removals; A300 applies the new structure
+      // around them. Say what was kept, so the save is never a leap of faith.
+      const regenerated = await getWeek(0, true);
       await refresh();
       invalidateWeek();
       setEditingAvailability(false);
+      const kept = keptUserSessions(regenerated?.week_plan, localToday());
+      toast("Plan regenerated", {
+        description: `${describeKeptSessions(kept)} The weeks ahead follow the new structure.`,
+        duration: 10000,
+      });
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Failed to save availability");
     }
@@ -680,10 +692,13 @@ export default function SettingsPage() {
                   hard_day_cap_per_week: (state?.planning_prefs as Record<string, number>)?.hard_day_cap_per_week ?? 3,
                   // A283 — assente = una sessione al giorno, il comportamento di sempre.
                   target_sessions_per_week: (state?.planning_prefs as Record<string, number | undefined>)?.target_sessions_per_week,
+                  // A300 — absent = the engine's default (all four families).
+                  complementary_rotation: (state?.planning_prefs as { complementary_rotation?: FocusFamily[] | null } | undefined)?.complementary_rotation,
                 }}
                 gyms={equipment.gyms ?? []}
                 onSave={handleSaveAvailability}
                 onCancel={() => setEditingAvailability(false)}
+                keptPreview={currentWeek.data?.week_plan ? keptUserSessions(currentWeek.data.week_plan, localToday()) : undefined}
               />
             ) : (
               <Card>
@@ -709,16 +724,19 @@ export default function SettingsPage() {
                         const availableSlots = slotEntries
                           .filter(([, s]) => s?.available)
                           .map(([slotName, s]) => {
+                            // A300 — role / time limit, when set ("lunch (Work) compl. ≤45′").
+                            const extra = slotStructureLabel(s);
+                            const tail = extra ? ` ${extra}` : "";
                             const loc = s?.preferred_location;
-                            if (!loc) return slotName;
-                            if (loc === "home") return `${slotName} (home)`;
+                            if (!loc) return `${slotName}${tail}`;
+                            if (loc === "home") return `${slotName} (home)${tail}`;
                             if (s?.gym_id) {
                               const gym = equipment.gyms?.find(
                                 (g) => (g.gym_id || g.name) === s.gym_id
                               );
-                              return `${slotName} (${gym?.name || s.gym_id})`;
+                              return `${slotName} (${gym?.name || s.gym_id})${tail}`;
                             }
-                            return `${slotName} (gym)`;
+                            return `${slotName} (gym)${tail}`;
                           });
 
                         return (
