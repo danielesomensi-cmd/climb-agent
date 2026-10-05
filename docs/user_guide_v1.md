@@ -720,9 +720,11 @@ When you change the plan yourself — quick-add, replan a day, move a session, a
 - **HIIT next to a max day** — HIIT on the day of, or the day before, a max finger or pulling session.
 - **Hard-day cap** — more hard days in the week than your cap.
 - **Before a trip** — a hard session in the no-hard days before a trip.
-- **After a big outdoor day** — a hard or finger session the day after a heavy outdoor day.
+- **After an outdoor day** — a hard or finger session the day after a day at the crag.
 
 - **Back-to-back hard days** — a hard session the day after another hard day, when at least one of the two is a session you added or changed.
+
+**Outdoor days count.** A day at the crag is a hard, finger-loading day for every one of these rules: a finger session the day before it, or within the recovery gap around it, gets a *Finger gap* alert; the day after it, *After an outdoor day*; it counts toward the hard-day cap, toward the 72 hours before a finger test, and as a max day for HIIT. An outdoor day you planned counts before it happens (the app cannot know yet how hard it will be). Once it is done, your route log decides: a day with a route at or above your hard-climb grade (your redpoint minus two grades) counts, an easy day out — every route logged below that grade — does not. A completed outdoor day with no routes logged counts, to be safe. The outdoor day itself never carries the alert (it has no session to change): the alert sits on the session next to it and names the crag.
 
 Alerts are about what can still change: sessions already done, skipped or in the past are counted, never flagged. When the app builds a week on its own, it still follows every one of these rules.
 

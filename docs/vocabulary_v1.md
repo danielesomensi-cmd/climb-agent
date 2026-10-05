@@ -1489,11 +1489,28 @@ GuardWarning (backend/engine/guards_v1.py, computed at read, NEVER persisted):
        | hard_cap          hard days (done count, skipped not; HIIT is not hard) > plan cap, on the days
                            past the cap; + count, cap
        | pre_trip          hard session on a compute_taper_windows no_hard day (needs state.trips)
-       | post_outdoor      hard/finger session the day after a done outdoor day with load ≥ 65; + outdoor_load
+       | post_outdoor      hard/finger session the day after an outdoor day that counts (B372, below);
+                           + outdoor_load, outdoor
        | hard_back_to_back hard session (HIIT is not hard) the day after a hard day, when at least one of the two
                            is user-owned (a pair the planner made alone is not flagged); the later one is
                            flagged, the earlier when the later is done/past (A301 review)
   Only sessions that can still change are flagged (not done/skipped, not before `today`); history counts.
+
+  B372 — outdoor days (stimulus.outdoor_fatigue_days(state, days, load_threshold=OUTDOOR_RIPPLE_THRESHOLD,
+  outdoor_rows=, since=, until=) → {date: {date, status, reason, spot, load, grade, route}}). A day counts,
+  first rule that applies:
+    outdoor_hard      a logged route at/above the OUTDOOR-HARD threshold (also a logged day with no plan block)
+    outdoor_load      day outdoor_load_score / logged load_score ≥ 65
+    (not counted)     a log whose routes are all classifiable and none hard, load < 65: an easy day, measured
+    outdoor_unlogged  completed plan day (outdoor_session_status done) with no classifiable route log
+    outdoor_planned   plan outdoor day not completed (outdoor_slot, or block with status planned)
+  A counted day is hard + finger for: finger_gap (both ways; the day right after is post_outdoor's, one alert
+  per pair), finger_test_72h (flags the test), hiit_near_max (merged into one alert with a max session),
+  hard_cap (a hard day of the week), post_outdoor. Never flagged itself: in `with` as
+  {date, slot: null, session_id: null}; the warning carries `outdoor: {date, reason, spot, load}`.
+  evaluate(..., outdoor_rows=) — the outdoor_logs rows; build_guard_warnings(..., user_id=) reads them
+  (previous week + the week). athlete_context guards use the same days (finger_hard_today_sessions /
+  finger_hard_adjacent detail = the reason; hard_cap.hard_days; hiit_ok).
 ```
 
 Where they surface: `guard_warnings[]` sibling of `week_plan` (like `key_status`) on `GET /api/week/{n}`,

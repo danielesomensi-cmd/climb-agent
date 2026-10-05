@@ -894,7 +894,7 @@ def get_week(
     # outdoor day) — a sibling of week_plan like key_status, never persisted.
     from backend.api.guard_status import build_guard_warnings
 
-    result["guard_warnings"] = build_guard_warnings(state, week_plan, today)
+    result["guard_warnings"] = build_guard_warnings(state, week_plan, today, user_id=user_id)
 
     return result
 

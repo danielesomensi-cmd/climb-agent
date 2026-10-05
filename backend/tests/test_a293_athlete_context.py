@@ -405,7 +405,8 @@ class TestGuards:
 
     def test_hard_cap(self):
         hc = _ctx()["guards"]["hard_cap"]
-        assert hc["cap"] == 4 and hc["hard_days"] == ["2026-10-04"]
+        # B372: Saturday at Berdorf (logged hard) is one of the week's hard days.
+        assert hc["cap"] == 4 and hc["hard_days"] == ["2026-10-03", "2026-10-04"]
 
 
 # ---------------------------------------------------------------------------

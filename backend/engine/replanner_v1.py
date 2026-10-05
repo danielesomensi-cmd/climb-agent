@@ -840,6 +840,9 @@ def merge_prev_week_sessions(
 _DAY_LEVEL_FIELDS = (
     "outdoor_spot_name", "outdoor_spot_id", "outdoor_discipline",
     "outdoor_session_status",
+    # B372 (B-OUTDOOR-LOAD-FIELD-DROP): written by ``complete_outdoor``, read by
+    # the heatmap and by the guard alerts (``stimulus.outdoor_fatigue_days``).
+    "outdoor_load_score",
     # A265: the day's pitch ladder (grades / attempts / rests). Lives at day
     # level like the rest of the outdoor block, so it MUST be preserved here —
     # a field missing from this tuple is dropped on the next week regeneration,

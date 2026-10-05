@@ -171,8 +171,15 @@ class TestEvaluate:
         _day(plan, 0).update({"outdoor_spot_name": "Berdorf", "outdoor_session_status": "done",
                               "outdoor_load_score": 80})
         assert _codes(guards_v1.evaluate(plan)) == [("post_outdoor", _d(1), LIMIT)]
+        # B372: a low load says nothing (it never reached 65 in 37 real
+        # days): a completed day without a route log still counts...
         _day(plan, 0)["outdoor_load_score"] = 30
-        assert guards_v1.evaluate(plan) == []
+        assert _codes(guards_v1.evaluate(plan)) == [("post_outdoor", _d(1), LIMIT)]
+        # ...a measured easy day (routes logged, none hard) does not.
+        easy_log = {"outdoor_log": [{"date": _d(0), "discipline": "lead",
+                                     "routes": [{"name": "Easy", "grade": "6a"}]}],
+                    "performance": {"current_level": {"sport": {"worked": {"grade": "8a"}}}}}
+        assert guards_v1.evaluate(plan, None, None, easy_log) == []
 
     def test_deterministic_and_pure(self):
         plan = _plan({0: [_sess(FINGER)], 1: [_sess(LIMIT), _sess(HIIT, slot="lunch")],

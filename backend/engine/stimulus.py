@@ -534,11 +534,11 @@ def _normalise_archive(
     return out
 
 
-def iter_plan_sessions(
+def iter_plan_days(
     state: Mapping[str, Any],
     archived_weeks: Optional[Union[Mapping[str, Any], Sequence[Mapping[str, Any]]]] = None,
 ) -> Iterable[Tuple[str, Dict[str, Any], str]]:
-    """Yield ``(date_iso, session, source)`` over hot + archived week plans.
+    """Yield ``(date_iso, day, source)`` over hot + archived week plans.
 
     ``source`` is ``"week_plan"`` or ``"archive"``. A week present both hot and
     archived is read from the hot copy only. ``current_week_plan`` is read only
@@ -559,12 +559,24 @@ def iter_plan_sessions(
         plan, source = plans[key]
         for week in plan.get("weeks") or []:
             for day in week.get("days") or []:
+                if not isinstance(day, dict):
+                    continue
                 d = str(day.get("date") or "")[:10]
                 if not d:
                     continue
-                for session in day.get("sessions") or []:
-                    if isinstance(session, dict):
-                        yield d, session, source
+                yield d, day, source
+
+
+def iter_plan_sessions(
+    state: Mapping[str, Any],
+    archived_weeks: Optional[Union[Mapping[str, Any], Sequence[Mapping[str, Any]]]] = None,
+) -> Iterable[Tuple[str, Dict[str, Any], str]]:
+    """Yield ``(date_iso, session, source)`` over hot + archived week plans
+    (the days of ``iter_plan_days``, same order and sources)."""
+    for d, day, source in iter_plan_days(state, archived_weeks):
+        for session in day.get("sessions") or []:
+            if isinstance(session, dict):
+                yield d, session, source
 
 
 # ---------------------------------------------------------------------------
@@ -945,3 +957,129 @@ def finger_hard_days(
             rows.append({"date": d, "source": "free", "session_id": fs.get("id"),
                          "reason": "free_limit", "status": "done"})
     return sorted(rows, key=lambda r: (r["date"], r["source"], str(r["session_id"] or "")))
+
+
+# ---------------------------------------------------------------------------
+# B372 — outdoor days in the fatigue alerts
+# ---------------------------------------------------------------------------
+
+OUTDOOR_REASON_PLANNED = "outdoor_planned"
+OUTDOOR_REASON_HARD = "outdoor_hard"
+OUTDOOR_REASON_LOAD = "outdoor_load"
+OUTDOOR_REASON_UNLOGGED = "outdoor_unlogged"
+
+
+def is_outdoor_day(day: Mapping[str, Any]) -> bool:
+    """A plan day the athlete climbs outside: the planner's ``outdoor_slot``
+    (an outdoor-only availability day) or the day-level outdoor block a user
+    set on the plan (override / ``set_outdoor_plan`` / ``complete_outdoor``)."""
+    if not isinstance(day, Mapping):
+        return False
+    return bool(
+        day.get("outdoor_slot") or day.get("outdoor_spot_name") or day.get("outdoor_spot_id")
+        or day.get("outdoor_plan") or day.get("outdoor_session_status") in ("planned", "done")
+    )
+
+
+def _outdoor_logged_loads(
+    state: Mapping[str, Any], outdoor_rows: Optional[Sequence[Mapping[str, Any]]],
+) -> Dict[str, float]:
+    """Highest logged ``load_score`` per date (``outdoor_logs`` rows +
+    ``state.outdoor_log``)."""
+    out: Dict[str, float] = {}
+    for row in list(outdoor_rows or []) + list(state.get("outdoor_log") or []):
+        if not isinstance(row, Mapping):
+            continue
+        entry = row.get("entry") if isinstance(row.get("entry"), Mapping) else row
+        d = str(entry.get("date") or "")[:10]
+        v = _num(entry.get("load_score"))
+        if d and v is not None and v > out.get(d, float("-inf")):
+            out[d] = v
+    return out
+
+
+def outdoor_fatigue_days(
+    state: Mapping[str, Any],
+    days: Iterable[Mapping[str, Any]],
+    *,
+    load_threshold: float,
+    outdoor_rows: Optional[Sequence[Mapping[str, Any]]] = None,
+    since: Optional[DateLike] = None,
+    until: Optional[DateLike] = None,
+) -> Dict[str, Dict[str, Any]]:
+    """B372 — the outdoor days that count as a hard, finger-loading day for the
+    fatigue ALERTS (``guards_v1``, ``athlete_context`` guards). Never used to
+    rewrite a plan.
+
+    ``{date: {date, status, reason, spot, load, grade, route}}``, sorted by date.
+    A day counts when, first rule that applies:
+
+    - ``outdoor_hard``: the log (``outdoor_rows`` / ``state.outdoor_log``) has
+      a route at/above the OUTDOOR-HARD threshold (``outdoor_hard_days``) —
+      also a logged day with no outdoor block on the plan;
+    - ``outdoor_load``: its load (day ``outdoor_load_score`` or logged
+      ``load_score``) reaches ``load_threshold`` (the replanner's
+      ``OUTDOOR_RIPPLE_THRESHOLD``) — also a logged day with no block;
+    - a day whose log carries routes, none hard, below the load threshold, does
+      NOT count: an easy day out, measured;
+    - ``outdoor_unlogged``: a completed outdoor day of the plan whose routes are
+      unknown (not logged, or not passed in) — counts, conservatively: a day at
+      the crag loads the fingers until the log says otherwise;
+    - ``outdoor_planned``: an outdoor day of the plan not completed yet
+      (``outdoor_slot`` or a block with status planned): counts, its
+      intensity is not known before the day.
+
+    *days*: plan days (any iterable, later copies of a date win). Pure and
+    deterministic.
+    """
+    s_iso = _as_iso(since) if since is not None else None
+    u_iso = _as_iso(until) if until is not None else None
+    hard = {o["date"]: o for o in outdoor_hard_days(state, since=since, until=until, outdoor_rows=outdoor_rows)}
+    # A day is "measured" only when every route of its log can be classified
+    # (the athlete has a redpoint in that discipline): without a threshold an
+    # 8a is not "easy", it is unknown.
+    with_routes = {
+        str(e.get("date"))[:10] for e in _outdoor_entries(state, outdoor_rows)
+        if all(hard_climb_threshold(state, _route_discipline(r, str(e.get("discipline") or ""))) is not None
+               for r in e.get("routes") or [] if isinstance(r, Mapping))
+    }
+    logged_load = _outdoor_logged_loads(state, outdoor_rows)
+    by_date: Dict[str, Mapping[str, Any]] = {}
+    for day in days or []:
+        if not is_outdoor_day(day):
+            continue
+        d = str(day.get("date") or "")[:10]
+        if d and _in_window(d, s_iso, u_iso):
+            by_date[d] = day
+
+    out: Dict[str, Dict[str, Any]] = {}
+
+    def _row(d: str, status: str, reason: str, spot: Any, load: Optional[float]) -> Dict[str, Any]:
+        h = hard.get(d) or {}
+        return {"date": d, "status": status, "reason": reason, "spot": spot,
+                "load": int(load) if load is not None else None,
+                "grade": h.get("grade"), "route": h.get("route")}
+
+    for d in sorted(by_date):
+        day = by_date[d]
+        loads = [v for v in (_num(day.get("outdoor_load_score")), logged_load.get(d)) if v is not None]
+        load = max(loads) if loads else None
+        done = day.get("outdoor_session_status") == "done"
+        spot = day.get("outdoor_spot_name")
+        if d in hard:
+            out[d] = _row(d, "done", OUTDOOR_REASON_HARD, spot, load)
+        elif load is not None and load >= load_threshold and (done or d in logged_load):
+            out[d] = _row(d, "done", OUTDOOR_REASON_LOAD, spot, load)
+        elif d in with_routes:
+            continue  # logged, measured easy
+        elif done:
+            out[d] = _row(d, "done", OUTDOOR_REASON_UNLOGGED, spot, load)
+        else:
+            out[d] = _row(d, "planned", OUTDOOR_REASON_PLANNED, spot, load)
+    for d, h in hard.items():
+        if d not in out:
+            out[d] = _row(d, "done", OUTDOOR_REASON_HARD, None, logged_load.get(d))
+    for d, v in logged_load.items():
+        if d not in out and v >= load_threshold and _in_window(d, s_iso, u_iso):
+            out[d] = _row(d, "done", OUTDOOR_REASON_LOAD, None, v)
+    return {d: out[d] for d in sorted(out)}

@@ -38,15 +38,37 @@ def prev_week_days(state: Mapping[str, Any], start_date: Optional[str]) -> Optio
         return None
 
 
+_NO_USER = object()
+
+
+def outdoor_rows_for(user_id: Optional[str], start_date: Optional[str]) -> Optional[list]:
+    """B372: the ``outdoor_logs`` rows of the previous week + the week of
+    *start_date* — the route log that tells a hard crag day from an easy one.
+    ``None`` when unavailable (the guards then read ``state.outdoor_log``)."""
+    if not start_date:
+        return None
+    try:
+        ws = datetime.strptime(str(start_date)[:10], "%Y-%m-%d").date()
+    except ValueError:
+        return None
+    from backend.api.key_status import _outdoor_rows
+
+    return _outdoor_rows(user_id, ws - timedelta(days=7), ws + timedelta(days=6))
+
+
 def build_guard_warnings(
     state: Mapping[str, Any], plan: Optional[Mapping[str, Any]], today: Optional[str] = None,
+    *, user_id: Any = _NO_USER,
 ) -> List[Dict[str, Any]]:
-    """``guards_v1.evaluate`` of *plan* with storage inputs; ``[]`` on failure."""
+    """``guards_v1.evaluate`` of *plan* with storage inputs; ``[]`` on failure.
+    With *user_id* the outdoor route log of the window is read (B372)."""
     if not isinstance(plan, Mapping):
         return []
     try:
+        rows = None if user_id is _NO_USER else outdoor_rows_for(user_id, plan.get("start_date"))
         return guards_v1.evaluate(
             plan, prev_week_days(state or {}, plan.get("start_date")), resolve_today(today), state or {},
+            outdoor_rows=rows,
         )
     except Exception:
         logger.warning("A301: guard alerts failed", exc_info=True)

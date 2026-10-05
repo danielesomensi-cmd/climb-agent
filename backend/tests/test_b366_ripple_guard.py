@@ -190,8 +190,14 @@ class TestOutdoor:
             ("evening", "custom_cs_4abc6aed"),
         }
 
-    def test_low_load_no_alert(self):
+    def test_low_load_alert_depends_on_the_route_log(self):
+        # B372: the load alone no longer clears a crag day (it never reached
+        # the threshold in 37 real days) — the route log does.
         plan = _plan()
         _put(plan, 2, _catalog("limit_boulder_gym", "morning", hard=True, finger=True, intensity="max"))
         updated = self._complete(plan, load=30)
-        assert not [w for w in guards_v1.evaluate(updated) if w["code"] == "post_outdoor"]
+        assert [w for w in guards_v1.evaluate(updated) if w["code"] == "post_outdoor"]
+        easy = {"outdoor_log": [{"date": _d(1), "discipline": "lead",
+                                 "routes": [{"name": "Easy", "grade": "6a"}]}],
+                "performance": {"current_level": {"sport": {"worked": {"grade": "8a"}}}}}
+        assert not [w for w in guards_v1.evaluate(updated, None, None, easy) if w["code"] == "post_outdoor"]

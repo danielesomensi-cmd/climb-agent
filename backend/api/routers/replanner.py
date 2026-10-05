@@ -356,7 +356,7 @@ def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)
             target_date = a.get("target_date") or target_date
             target_slot = a.get("slot") or target_slot
             whole = bool(a.get("whole_day") or a.get("outdoor")) or whole
-    guard_warnings = build_guard_warnings(state, updated, req.today)
+    guard_warnings = build_guard_warnings(state, updated, req.today, user_id=user_id)
     # Only the alerts that involve the overridden session (its slot; the whole
     # day for a whole-day / outdoor override) — not the other slot's.
     warnings.extend(messages_for(guard_warnings, target_date, None if whole else target_slot))
@@ -463,7 +463,7 @@ def quick_add(req: QuickAddRequest, user_id: Optional[str] = Depends(get_user_id
     # A301: nothing is rewritten after a quick-add — `adjustments` is always
     # empty (kept for the contract); `guard_warnings` are the week's alerts.
     return {"week_plan": updated, "warnings": warnings, "adjustments": adjustments,
-            "guard_warnings": build_guard_warnings(state, updated, req.today),
+            "guard_warnings": build_guard_warnings(state, updated, req.today, user_id=user_id),
             "key_status": build_key_status(state, user_id, week_start=updated.get("start_date"),
                                            today=req.today)}
 
@@ -543,7 +543,7 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
             "key_conflicts": res["key_conflicts"],
             # A301: the alerts of the week after the events, and the ones the
             # events ADD to it.
-            "guard_warnings": build_guard_warnings(state, res["week_plan"], req.today),
+            "guard_warnings": build_guard_warnings(state, res["week_plan"], req.today, user_id=user_id),
             "added_guard_warnings": res.get("added_guard_warnings") or [],
         }
 
@@ -743,6 +743,6 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
         "week_plan": updated,
         "adjustments": adjustments,
         "warnings": warnings,
-        "guard_warnings": build_guard_warnings(state, updated, req.today),
+        "guard_warnings": build_guard_warnings(state, updated, req.today, user_id=user_id),
         "key_status": build_key_status(state, user_id, week_start=updated.get("start_date"), today=req.today),
     }

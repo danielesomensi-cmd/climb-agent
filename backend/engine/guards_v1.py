@@ -42,9 +42,11 @@ Codes (one warning per flagged session):
   past the cap, the ones ``_enforce_caps`` would downshift.
 - ``pre_trip`` — a hard session on a pre-trip no-hard day
   (``macrocycle_v1.compute_taper_windows``, A281).
-- ``post_outdoor`` — a hard or finger session the day after a completed
-  outdoor day whose load reached ``OUTDOOR_RIPPLE_THRESHOLD`` (the old outdoor
-  ripple, now an alert).
+- ``post_outdoor`` — a hard or finger session the day after an outdoor day
+  that counts (B372, ``stimulus.outdoor_fatigue_days``: planned, logged hard,
+  load at/above ``OUTDOOR_RIPPLE_THRESHOLD``, or completed with no route log).
+  Before B372 only a completed day whose load reached the threshold counted —
+  and in 37 real sessions the load never did.
 - ``hard_back_to_back`` — a hard session the day after a hard day, when at
   least one of the two is the user's (quick-add, override, custom, moved…):
   the old quick-add / override day+1 ripple and B366's "back-to-back hard
@@ -53,6 +55,17 @@ Codes (one warning per flagged session):
 
 HIIT is not hard (C274 / A300: it never consumes the hard-day or finger cap),
 so it never appears under ``hard_cap`` / ``pre_trip``.
+
+Outdoor days (B372). An outdoor day that counts (``stimulus.outdoor_fatigue_days``)
+is a hard, finger-loading day for every guard: ``finger_gap`` (both ways — the
+session before a crag day is flagged too, since the crag day itself carries no
+session to flag; the day right after is ``post_outdoor``'s), ``finger_test_72h``
+(a crag day within 72 h before a finger test flags the test), ``hiit_near_max``
+(HIIT on, or the day before, a crag day), ``hard_cap`` (the crag day is one of
+the week's hard days) and ``post_outdoor``. An outdoor day is never flagged
+itself — it has no session — it appears in ``with`` as
+``{date, slot: None, session_id: None}``, and the warning names it in
+``outdoor`` (``{date, reason, spot, load}``). Nothing is rewritten.
 """
 
 from __future__ import annotations
@@ -67,7 +80,7 @@ from backend.engine.stimulus import (
     session_flag,
 )
 
-VERSION = "a301.2"
+VERSION = "b372.1"
 
 CODE_FINGER_GAP = "finger_gap"
 CODE_FINGER_TEST = "finger_test_72h"
@@ -123,7 +136,10 @@ def _live(s: Mapping[str, Any]) -> bool:
 class _Timeline:
     """The previous week's trailing days + the plan's days, by date."""
 
-    def __init__(self, plan: Mapping[str, Any], prev_days: Optional[Sequence[Mapping[str, Any]]]):
+    def __init__(self, plan: Mapping[str, Any], prev_days: Optional[Sequence[Mapping[str, Any]]],
+                 state: Optional[Mapping[str, Any]] = None,
+                 outdoor_rows: Optional[Sequence[Mapping[str, Any]]] = None,
+                 outdoor_load_threshold: Optional[float] = None):
         self.by_date: Dict[str, List[Mapping[str, Any]]] = {}
         self.day_by_date: Dict[str, Mapping[str, Any]] = {}
         self.plan_dates: List[str] = []
@@ -141,6 +157,19 @@ class _Timeline:
             self.by_date[d] = [s for s in day.get("sessions") or [] if _live(s)]
             self.plan_dates.append(d)
         self.plan_dates = sorted(set(self.plan_dates))
+        # B372: the outdoor days that count as hard, finger-loading days.
+        self.outdoor: Dict[str, Dict[str, Any]] = {}
+        if outdoor_load_threshold is not None and self.day_by_date:
+            from backend.engine.stimulus import outdoor_fatigue_days
+
+            dates = sorted(self.day_by_date)
+            self.outdoor = outdoor_fatigue_days(
+                state or {}, [self.day_by_date[d] for d in dates],
+                load_threshold=outdoor_load_threshold, outdoor_rows=outdoor_rows,
+                since=dates[0], until=dates[-1])
+
+    def outdoor_on(self, d: date) -> Optional[Dict[str, Any]]:
+        return self.outdoor.get(d.isoformat())
 
     def on(self, d: date) -> List[Mapping[str, Any]]:
         return self.by_date.get(d.isoformat(), [])
@@ -191,6 +220,27 @@ def _label(s: Mapping[str, Any]) -> str:
     return str(s.get("name") or s.get("session_id") or "session")
 
 
+def _outdoor_ref(d: str) -> Dict[str, Any]:
+    return {"date": d, "slot": None, "session_id": None}
+
+
+def _outdoor_label(o: Mapping[str, Any], capital: bool = False) -> str:
+    where = f" at {o['spot']}" if o.get("spot") else ""
+    return f"{'The' if capital else 'the'} outdoor day{where} on {o['date']}"
+
+
+_OUTDOOR_WHY = {
+    "outdoor_planned": "planned",
+    "outdoor_hard": "logged hard",
+    "outdoor_load": "big load",
+    "outdoor_unlogged": "no route log",
+}
+
+
+def _outdoor_info(o: Mapping[str, Any]) -> Dict[str, Any]:
+    return {"date": o["date"], "reason": o.get("reason"), "spot": o.get("spot"), "load": o.get("load")}
+
+
 def _finger_gap(tl: _Timeline, em: _Emitter, gap: int) -> None:
     for d_iso in tl.plan_dates:
         d = _parse(d_iso)
@@ -201,16 +251,32 @@ def _finger_gap(tl: _Timeline, em: _Emitter, gap: int) -> None:
         for k in range(1, gap + 1):
             prev = d - timedelta(days=k)
             before.extend(_ref(prev.isoformat(), x) for x in tl.on(prev) if session_flag(x, "finger"))
-        if not before:
-            continue
-        for s in here:
-            if not em.flaggable(d_iso, s):
+        if before:
+            for s in here:
+                if not em.flaggable(d_iso, s):
+                    continue
+                em.emit(CODE_FINGER_GAP, d_iso, s, before,
+                        f"{_label(s)} on {d_iso} loads the fingers within {gap} day(s) of "
+                        f"{before[0]['session_id']} on {before[0]['date']}: the finger gap asks for "
+                        f"{24 * (gap + 1)} h between them.",
+                        gap_days=gap)
+        # B372: an outdoor day on either side. The day right after a crag day
+        # is ``post_outdoor``'s (one alert per pair, not two).
+        for k in range(-gap, gap + 1):
+            if k in (0, 1):
                 continue
-            em.emit(CODE_FINGER_GAP, d_iso, s, before,
-                    f"{_label(s)} on {d_iso} loads the fingers within {gap} day(s) of "
-                    f"{before[0]['session_id']} on {before[0]['date']}: the finger gap asks for "
-                    f"{24 * (gap + 1)} h between them.",
-                    gap_days=gap)
+            o = tl.outdoor_on(d - timedelta(days=k))
+            if o is None:
+                continue
+            for s in here:
+                if not em.flaggable(d_iso, s):
+                    continue
+                side = "before" if k < 0 else "of"
+                em.emit(CODE_FINGER_GAP, d_iso, s, [_outdoor_ref(o["date"])],
+                        f"{_label(s)} on {d_iso} loads the fingers within {gap} day(s) {side} "
+                        f"{_outdoor_label(o)} ({_OUTDOOR_WHY.get(o.get('reason'), 'outdoor')}): "
+                        f"the finger gap asks for {24 * (gap + 1)} h between them.",
+                        gap_days=gap, outdoor=_outdoor_info(o))
 
 
 def _is_finger_test(s: Mapping[str, Any]) -> bool:
@@ -238,6 +304,19 @@ def _finger_test(tl: _Timeline, em: _Emitter, block_days: int) -> None:
                         em.emit(CODE_FINGER_TEST, s_iso, s, [_ref(t_iso, t)], msg)
                     elif em.flaggable(t_iso, t):
                         em.emit(CODE_FINGER_TEST, t_iso, t, [_ref(s_iso, s)], msg)
+            # B372: a crag day within the block before the test (the same day
+            # included: the crag day starts in the morning). The crag day has
+            # no session to flag: the test is flagged.
+            if not em.flaggable(t_iso, t):
+                continue
+            for k in range(0, block_days + 1):
+                o = tl.outdoor_on(td - timedelta(days=k))
+                if o is None:
+                    continue
+                em.emit(CODE_FINGER_TEST, t_iso, t, [_outdoor_ref(o["date"])],
+                        f"{_outdoor_label(o, capital=True)} loads the fingers within {block_days * 24} h before the "
+                        f"{t.get('session_id')} on {t_iso}: the test would measure fatigue.",
+                        outdoor=_outdoor_info(o))
 
 
 def _heavy_pull(tl: _Timeline, em: _Emitter, state: Mapping[str, Any], max_per_7d: int) -> None:
@@ -278,12 +357,18 @@ def _hiit_near_max(tl: _Timeline, em: _Emitter) -> None:
                 continue
             maxes = [_ref(x.isoformat(), s) for x in (d, d + timedelta(days=1))
                      for s in tl.on(x) if s is not h and not is_hiit_like(s) and _is_max(s)]
-            if not maxes:
+            # B372: a crag day is a max day for HIIT (as in complementary_v1).
+            crag = [o for o in (tl.outdoor_on(x) for x in (d, d + timedelta(days=1))) if o]
+            if not maxes and not crag:
                 continue
-            msg = (f"{_label(h)} on {d_iso} is HIIT on the day of, or the day before, a max session "
-                   f"({maxes[0]['session_id']} on {maxes[0]['date']}).")
+            if maxes:
+                msg = (f"{_label(h)} on {d_iso} is HIIT on the day of, or the day before, a max session "
+                       f"({maxes[0]['session_id']} on {maxes[0]['date']}).")
+            else:
+                msg = f"{_label(h)} on {d_iso} is HIIT on the day of, or the day before, {_outdoor_label(crag[0])}."
+            extra = {"outdoor": _outdoor_info(crag[0])} if crag else {}
             if em.flaggable(d_iso, h):
-                em.emit(CODE_HIIT_NEAR_MAX, d_iso, h, maxes, msg)
+                em.emit(CODE_HIIT_NEAR_MAX, d_iso, h, maxes + [_outdoor_ref(o["date"]) for o in crag], msg, **extra)
             else:
                 for m in maxes:
                     ms = next((s for s in tl.by_date.get(m["date"], [])
@@ -292,17 +377,22 @@ def _hiit_near_max(tl: _Timeline, em: _Emitter) -> None:
                         em.emit(CODE_HIIT_NEAR_MAX, m["date"], ms, [_ref(d_iso, h)], msg)
 
 
-def _hard_cap(plan: Mapping[str, Any], em: _Emitter) -> None:
+def _hard_cap(plan: Mapping[str, Any], em: _Emitter, outdoor: Optional[Mapping[str, Any]] = None) -> None:
     from backend.engine.replanner_v1 import _counts_as_hard, _safe_hard_cap
 
+    outdoor = outdoor or {}
     snapshot = plan.get("profile_snapshot") or {}
     cap = _safe_hard_cap(snapshot)
+    # B372: a counted outdoor day is one of the week's hard days.
     hard_days = [day for day in _days_of(plan)
-                 if any(_counts_as_hard(s) for s in day.get("sessions") or [])]
+                 if any(_counts_as_hard(s) for s in day.get("sessions") or [])
+                 or str(day["date"])[:10] in outdoor]
     if len(hard_days) <= cap:
         return
     all_refs = [_ref(str(day["date"])[:10], s) for day in hard_days
                 for s in day.get("sessions") or [] if _counts_as_hard(s)]
+    all_refs += [_outdoor_ref(str(day["date"])[:10]) for day in hard_days
+                 if str(day["date"])[:10] in outdoor]
     for day in hard_days[cap:]:
         d_iso = str(day["date"])[:10]
         for s in day.get("sessions") or []:
@@ -337,23 +427,25 @@ def _pre_trip(plan: Mapping[str, Any], em: _Emitter, state: Mapping[str, Any]) -
                         f"{_label(s)} on {d_iso} is a hard session in the days before a trip.")
 
 
-def _post_outdoor(tl: _Timeline, em: _Emitter, threshold: int) -> None:
+def _post_outdoor(tl: _Timeline, em: _Emitter) -> None:
+    """B372: every outdoor day that counts (``tl.outdoor``), not only a
+    completed one past the load threshold."""
     for d_iso in tl.plan_dates:
-        prev = (_parse(d_iso) - timedelta(days=1)).isoformat()
-        pday = tl.day_by_date.get(prev) or {}
-        try:
-            load = float(pday.get("outdoor_load_score") or 0)
-        except (TypeError, ValueError):
-            load = 0.0
-        if pday.get("outdoor_session_status") != "done" or load < threshold:
+        o = tl.outdoor_on(_parse(d_iso) - timedelta(days=1))
+        if o is None:
             continue
+        prev = o["date"]
+        why = _OUTDOOR_WHY.get(o.get("reason"), "outdoor")
+        if o.get("reason") == "outdoor_load" and o.get("load") is not None:
+            why = f"load {o['load']}"
+        elif o.get("reason") == "outdoor_hard" and o.get("grade"):
+            why = f"logged hard, {o['grade']}"
         for s in tl.by_date.get(d_iso, []):
             if not (session_flag(s, "hard") or session_flag(s, "finger")) or not em.flaggable(d_iso, s):
                 continue
-            em.emit(CODE_POST_OUTDOOR, d_iso, s,
-                    [{"date": prev, "slot": None, "session_id": None}],
-                    f"{_label(s)} on {d_iso} follows a big outdoor day on {prev} (load {int(load)}).",
-                    outdoor_load=int(load))
+            em.emit(CODE_POST_OUTDOOR, d_iso, s, [_outdoor_ref(prev)],
+                    f"{_label(s)} on {d_iso} follows {_outdoor_label(o)} ({why}).",
+                    outdoor_load=o.get("load"), outdoor=_outdoor_info(o))
 
 
 def _is_hard(s: Mapping[str, Any]) -> bool:
@@ -391,6 +483,7 @@ def evaluate(
     prev_days: Optional[Sequence[Mapping[str, Any]]] = None,
     today: Optional[str] = None,
     state: Optional[Mapping[str, Any]] = None,
+    outdoor_rows: Optional[Sequence[Mapping[str, Any]]] = None,
 ) -> List[Dict[str, Any]]:
     """What the guards object to in *plan* — alerts only, see the module doc.
 
@@ -399,6 +492,9 @@ def evaluate(
     it are not flagged (``None`` flags every pending session). *state*: the
     user state, for the heavy-pull load reading (official 1RM, working loads)
     and the trips; ``None`` reads the labels only and skips ``pre_trip``.
+    *outdoor_rows*: the ``outdoor_logs`` rows of the window (B372) — the route
+    log that tells a hard crag day from an easy one; ``None`` reads
+    ``state.outdoor_log`` only (a completed day without routes then counts).
     """
     if not isinstance(plan, Mapping) or not _days_of(plan):
         return []
@@ -406,7 +502,7 @@ def evaluate(
     from backend.engine.replanner_v1 import OUTDOOR_RIPPLE_THRESHOLD, _recovery_gap
 
     st: Mapping[str, Any] = state if isinstance(state, Mapping) else {}
-    tl = _Timeline(plan, prev_days)
+    tl = _Timeline(plan, prev_days, st, outdoor_rows, OUTDOOR_RIPPLE_THRESHOLD)
     em = _Emitter(tl.plan_dates, today)
     gap = max(1, int(_recovery_gap(dict(plan))))
 
@@ -414,10 +510,10 @@ def evaluate(
     _finger_test(tl, em, RETEST_BLOCK_H // 24)
     _heavy_pull(tl, em, st, HEAVY_PULL_MAX_PER_7D)
     _hiit_near_max(tl, em)
-    _hard_cap(plan, em)
+    _hard_cap(plan, em, tl.outdoor)
     if st:
         _pre_trip(plan, em, st)
-    _post_outdoor(tl, em, OUTDOOR_RIPPLE_THRESHOLD)
+    _post_outdoor(tl, em)
     _hard_back_to_back(tl, em)
 
     order = {c: i for i, c in enumerate(CODES)}

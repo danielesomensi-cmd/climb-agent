@@ -238,11 +238,12 @@ def _family_incl_skip(session: Mapping[str, Any]) -> Optional[str]:
 
 def _is_outdoor_day(day: Mapping[str, Any]) -> bool:
     """A day the athlete climbs outside: the planner's ``outdoor_slot`` or the
-    day-level outdoor block a user set on the plan (override / set_outdoor_plan)."""
-    return bool(
-        day.get("outdoor_slot") or day.get("outdoor_spot_name") or day.get("outdoor_spot_id")
-        or day.get("outdoor_plan") or day.get("outdoor_session_status") in ("planned", "done")
-    )
+    day-level outdoor block a user set on the plan (override / set_outdoor_plan).
+    B372: the one definition lives in ``stimulus.is_outdoor_day`` (shared with
+    the guard alerts)."""
+    from backend.engine.stimulus import is_outdoor_day
+
+    return is_outdoor_day(day)
 
 
 def _session_kinds(s: Mapping[str, Any]) -> set:

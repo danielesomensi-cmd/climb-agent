@@ -817,11 +817,13 @@ def _heavy_pull_clash(state: Mapping[str, Any], days: Mapping[str, List[Mapping[
 
 
 def _guard_view(state: Mapping[str, Any], plan: Mapping[str, Any], ws: date,
-                archived_weeks: ArchivedWeeks, today: Optional[date]) -> List[Dict[str, Any]]:
+                archived_weeks: ArchivedWeeks, today: Optional[date],
+                outdoor_rows: Optional[Sequence[Mapping[str, Any]]] = None) -> List[Dict[str, Any]]:
     """A301: the guard alerts of ``plan`` (``guards_v1``), seeded with the
-    previous week like the click's path."""
+    previous week like the click's path. B372: with the outdoor route log, so
+    a proposal next to a crag day is judged like the click's path judges it."""
     return _guards_mod.evaluate(plan, _prev_days(state, ws, archived_weeks),
-                                today.isoformat() if today else None, state)
+                                today.isoformat() if today else None, state, outdoor_rows=outdoor_rows)
 
 
 def _added_present(after: Mapping[str, Any], d_iso: str, slot: str, session_id: str) -> bool:
@@ -985,8 +987,9 @@ def _propose_for(
             # maintenance, hard cap, HIIT before it…) is rejected — it used to
             # be accepted with the neighbour declared as a side effect.
             if guards_before is None:
-                guards_before = _guard_view(state, plan, ws, archived_weeks, today)
-            fresh = _guards_mod.new_warnings(guards_before, _guard_view(state, after, ws, archived_weeks, today))
+                guards_before = _guard_view(state, plan, ws, archived_weeks, today, outdoor_rows)
+            fresh = _guards_mod.new_warnings(guards_before,
+                                             _guard_view(state, after, ws, archived_weeks, today, outdoor_rows))
             if fresh:
                 rejections.append({"date": d_iso, "session_id": sid, "reason": "guard_alert",
                                    "codes": sorted({w["code"] for w in fresh}),

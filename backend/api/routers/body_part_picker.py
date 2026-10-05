@@ -222,7 +222,7 @@ def start(req: StartRequest, user_id: Optional[str] = Depends(get_user_id)):
     from backend.api.guard_status import build_guard_warnings
 
     return {"session": inserted, "week_plan": updated,
-            "guard_warnings": build_guard_warnings(state, updated, req.today)}
+            "guard_warnings": build_guard_warnings(state, updated, req.today, user_id=user_id)}
 
 
 @router.get("/estimate", dependencies=[Depends(require_active_subscription)])

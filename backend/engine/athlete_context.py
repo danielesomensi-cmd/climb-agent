@@ -71,7 +71,9 @@ from backend.engine.stimulus import (
     is_finger_hard_session,
     is_hiit_like,
     is_test_session,
+    iter_plan_days,
     iter_plan_sessions,
+    outdoor_fatigue_days,
     outdoor_hard_days,
     session_flag,
     session_stimuli,
@@ -80,7 +82,7 @@ from backend.engine.stimulus import (
 DateLike = Union[date, str]
 ArchivedWeeks = Optional[Union[Mapping[str, Any], Sequence[Mapping[str, Any]]]]
 
-VERSION = "a303.1"
+VERSION = "b372.1"
 
 # ---------------------------------------------------------------------------
 # Constants. Shared with the engine, never copied: the command and the docs
@@ -485,7 +487,13 @@ def _guards(
     tagged ``finger`` within ``ceil(recovery_multiplier)`` days — a max-hang
     custom next to a finger_maintenance would downgrade it. Heavy pulling: every
     rolling 7-day window that contains the day, past AND planned days. Both also
-    respect the week's hard cap (0 in deload) and the deload phase."""
+    respect the week's hard cap (0 in deload) and the deload phase.
+
+    B372: an outdoor day that counts (``stimulus.outdoor_fatigue_days`` —
+    planned, logged hard, big load, or completed without a route log) is a
+    finger-hard day, a hard day of its week and a max day for HIIT."""
+    from backend.engine.replanner_v1 import OUTDOOR_RIPPLE_THRESHOLD
+
     lo = today - timedelta(days=8)
     hi = today + timedelta(days=GUARD_DAYS + 7)
     fh_rows = finger_hard_days(state, since=lo, until=hi, archived_weeks=archived_weeks,
@@ -493,6 +501,12 @@ def _guards(
     fh: Dict[str, List[str]] = {}
     for r in fh_rows:
         fh.setdefault(r["date"], []).append(str(r.get("session_id") or r["reason"]))
+    outdoor = outdoor_fatigue_days(
+        state, [day for _d, day, _src in iter_plan_days(state, archived_weeks)],
+        load_threshold=OUTDOOR_RIPPLE_THRESHOLD, outdoor_rows=outdoor_rows, since=lo, until=hi)
+    for o_d, o in outdoor.items():
+        if o["reason"] not in fh.get(o_d, []):
+            fh.setdefault(o_d, []).append(o["reason"])
     days = _plan_days(state, archived_weeks)
 
     def sessions_on(d: date) -> List[Dict[str, Any]]:
@@ -512,8 +526,12 @@ def _guards(
                 heavy.setdefault(d.isoformat(), []).append(str(s.get("session_id")))
             if session_flag(s, "finger"):
                 finger_tagged.setdefault(d.isoformat(), []).append(str(s.get("session_id")))
+        if d.isoformat() in outdoor:
+            finger_tagged.setdefault(d.isoformat(), []).append(outdoor[d.isoformat()]["reason"])
 
     def max_day(d: date) -> bool:
+        if d.isoformat() in outdoor:
+            return True
         return any(is_finger_hard_session(s) or (session_flag(s, "pulling") and session_flag(s, "hard"))
                    for s in sessions_on(d))
 
@@ -534,7 +552,8 @@ def _guards(
 
     def hard_days_of_week(ws_: date) -> List[str]:
         return sorted({(ws_ + timedelta(days=j)).isoformat() for j in range(7)
-                       if any(session_flag(s, "hard") for s in sessions_on(ws_ + timedelta(days=j)))})
+                       if any(session_flag(s, "hard") for s in sessions_on(ws_ + timedelta(days=j)))
+                       or (ws_ + timedelta(days=j)).isoformat() in outdoor})
 
     def heavy_window(d: date) -> List[str]:
         """The fullest rolling 7-day window containing ``d`` (``d`` excluded)
