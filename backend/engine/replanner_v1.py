@@ -453,7 +453,8 @@ def apply_day_add(
         hard_cap = _safe_hard_cap(p.get("profile_snapshot"))
         hard_count = sum(
             1 for d in p["weeks"][0]["days"]
-            if any((s.get("tags") or {}).get("hard") and s.get("status") != "done" for s in d.get("sessions", []))
+            # B367: same counting as _enforce_caps (done counts, skipped not).
+            if any(_counts_as_hard(s) for s in d.get("sessions", []))
         )
         if hard_count > hard_cap:
             out.append(f"Hard session count ({hard_count}) exceeds weekly cap ({hard_cap})")
@@ -1218,12 +1219,32 @@ def _frozen(day: Dict[str, Any], frozen_before: Optional[str]) -> bool:
     return bool(frozen_before) and str(day.get("date") or "") < str(frozen_before)
 
 
+def _counts_as_hard(session: Dict[str, Any]) -> bool:
+    """B367: a session that occupies a hard day for the weekly cap.
+
+    Done sessions COUNT — the athlete really trained hard that day (the cap
+    used to skip them, so after two completed hard days the week had room for
+    two more). Skipped stubs never happened and never count (their tags are
+    already non-hard; the explicit check keeps that true for any skipped
+    session).
+    """
+    return bool((session.get("tags") or {}).get("hard")) and session.get("status") != "skipped"
+
+
 def _enforce_caps(plan: Dict[str, Any], frozen_before: Optional[str] = None) -> List[Dict[str, Any]]:
-    """Downshift hard sessions beyond the weekly cap. Returns what it changed."""
+    """Downshift hard sessions beyond the weekly cap. Returns what it changed.
+
+    B367: every hard day counts (``_counts_as_hard``) — done ones included. The
+    selection used to skip ``status == "done"``, so after two completed hard
+    days the week had room for two more. Which days are downshifted is
+    unchanged: the days past the cap position, latest first, and only their
+    rewritable sessions — a protected session there (done / custom / forced /
+    frozen) is kept, as A254 "add hard anyway" expects.
+    """
     adjustments: List[Dict[str, Any]] = []
     hard_cap = _safe_hard_cap(plan.get("profile_snapshot"))
     days = plan["weeks"][0]["days"]
-    hard_days = [d for d in days if any((s.get("tags") or {}).get("hard") and s.get("status") != "done" for s in d.get("sessions") or [])]
+    hard_days = [d for d in days if any(_counts_as_hard(s) for s in d.get("sessions") or [])]
     if len(hard_days) > hard_cap:
         for day in reversed(hard_days[hard_cap:]):
             if _frozen(day, frozen_before):
@@ -1232,8 +1253,8 @@ def _enforce_caps(plan: Dict[str, Any], frozen_before: Optional[str] = None) -> 
                 tags = session.get("tags") or {}
                 # B345: the exemptions (done/skipped per B287/R-8, forced per
                 # A254, custom per B345) now live in one place. All of them
-                # still COUNT as hard days in the selection above, so the cap is
-                # genuinely honoured for everything else.
+                # still COUNT as hard days in the selection above (B367: done
+                # included), so the cap is genuinely honoured for everything else.
                 if not _is_rewritable(session):
                     continue
                 if tags.get("hard"):
