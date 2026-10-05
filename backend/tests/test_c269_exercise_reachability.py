@@ -149,13 +149,31 @@ def test_the_sweep_actually_ran(reachable_ids):
     )
 
 
+def _session_pinned_ids() -> set:
+    """C274: exercise ids a catalog session names explicitly
+    (``selection.primary.exercise_id``). A pin is composition by hand, written
+    in the catalog — the only way a library-only entry may reach a session."""
+    pinned: set = set()
+    for path in glob.glob(os.path.join(REPO_ROOT, "backend/catalog/sessions/v1/*.json")):
+        doc = json.loads(open(path, encoding="utf-8").read())
+        for mod in doc.get("modules") or []:
+            eid = ((mod.get("selection") or {}).get("primary") or {}).get("exercise_id")
+            if eid:
+                pinned.add(str(eid))
+    return pinned
+
+
 def test_library_only_entries_are_never_selected(reachable_ids):
     """C272: the same sweep that proves every engine exercise is reachable
     proves the library-only ones are not — whatever the session, phase,
-    location, device or rotation."""
+    location, device or rotation. C274: except the ones a catalog session pins
+    by id (the foot-strength block of ``legs_maintenance_lunch``): no filter,
+    no pool, no rotation ever picks a library entry on its own."""
     library = {str(e["id"]) for e in _load_exercises() if is_library_only(e)}
     assert library, "C272 library entries missing from the catalog"
-    assert not (library & reachable_ids), sorted(library & reachable_ids)
+    pinned = _session_pinned_ids()
+    assert not ((library & reachable_ids) - pinned), sorted((library & reachable_ids) - pinned)
+    assert library & pinned == {"toe_flexor_isometric", "edge_calf_raise_bigtoe"}
 
 
 def test_approach_hike_is_reachable_indoors_too(reachable_ids):

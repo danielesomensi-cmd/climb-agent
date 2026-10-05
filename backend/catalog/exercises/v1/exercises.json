@@ -14438,6 +14438,60 @@
       ]
     },
     {
+      "id": "treadmill_hiit_4x4",
+      "name": "Treadmill 4x4 Intervals (VO2max)",
+      "category": "conditioning",
+      "time_min": 25,
+      "role": [
+        "conditioning"
+      ],
+      "domain": [
+        "aerobic_capacity"
+      ],
+      "pattern": "locomotion",
+      "intensity_level": "high",
+      "fatigue_cost": 6,
+      "recency_group": "conditioning_hiit",
+      "equipment_required": [
+        "treadmill"
+      ],
+      "location_allowed": [
+        "gym",
+        "home"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": null,
+        "work_seconds": 240,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 180,
+        "notes": "4 x 4 min at 85-95% of max heart rate, 3 min easy walk between intervals. Incline 4-8%: running uphill reaches the target heart rate at a lower speed and with less impact. Finish with 2-3 min of easy walking."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "medium",
+        "skin": "none"
+      },
+      "description": "The classic 4x4 interval protocol (Helgerud 2007) run on an inclined treadmill: four 4-minute bouts close to maximal aerobic power, separated by 3 minutes of active recovery. It is the most time-efficient way to raise VO2max, which supports recovery between redpoint attempts and long days at the crag. Zero finger and elbow load, but it is a genuinely hard systemic session: one per week is enough, never on the day of or the day before a maximal climbing session.",
+      "cues": [
+        "Intervals at 85-95% of max heart rate: hard but sustainable for the full 4 minutes, not a sprint",
+        "Set the incline at 4-8% and choose the speed that holds the target heart rate, not the other way round",
+        "Recovery is an easy walk, not a stop: keep moving for the full 3 minutes",
+        "Do not hold the handrails - it offloads the legs and voids the incline",
+        "If the last interval cannot be held at the target, the first ones were too fast"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "strength_power"
+      ],
+      "sources": [
+        "https://pubmed.ncbi.nlm.nih.gov/17414804/"
+      ]
+    },
+    {
       "id": "stationary_bike_zone2",
       "name": "Stationary Bike (Zone 2 Steady)",
       "category": "conditioning",

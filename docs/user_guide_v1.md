@@ -645,6 +645,15 @@ The Quick-Add dialog also offers supplementary sessions — non-climbing work yo
 - **Heavy Conditioning** — Full-body conditioning (gym)
 - **Pulling** — Dedicated pulling session (gym)
 
+Four of them are sized for a **lunch break** (about 35 minutes of work inside 45 minutes) at a weights gym:
+
+- **Treadmill HIIT 4x4** — 8 min warm-up, then 4 × 4 min at 85-95% of max heart rate with 3 min easy walking between. Needs a *Treadmill* in the gym's equipment. Zero finger load, but systemically hard: keep it to one a week and away from the day of (or before) a maximal or limit session.
+- **Treadmill Zone 2 + Hip Mobility** — 25 min steady incline walk at conversational pace, then optional hip mobility. Needs a *Treadmill*. Fits next to any climbing day.
+- **Upper Push + Arms** — bench press, triceps (cable pushdown when the gym has a cable machine) and a curl for the biceps. Keep it out of the 24 h before a heavy pulling session.
+- **Legs Maintenance + Foot Strength** — goblet squat, Romanian deadlift and a short (about 8 min) foot-strength block: toe flexor presses and big-toe calf raises on an edge. Keep heavy legs out of the 48 h before a limit or outdoor day.
+
+The two treadmill sessions need **Treadmill** ticked in the gym's equipment (Settings → Equipment); without it the 4x4 intervals are never prescribed. These four sessions are only offered for you to add: the planner does not schedule them on its own.
+
 Supplementary sessions count as an active training day for adherence and their load counts toward your weekly total. They do not trigger replanning or macrocycle adaptation.
 
 ### Free Session

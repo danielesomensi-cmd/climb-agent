@@ -506,6 +506,16 @@
     "forearm_stretches"
    ]
   },
+  "advanced|2026-10-07|legs_maintenance_lunch": {
+   "digest": "a04bbada0873903233a7b16b48d79946e650f709cb8711329f0cb9ac8e8586f7",
+   "exercise_ids": [
+    "general_pulse_raise",
+    "edge_calf_raise_bigtoe",
+    "goblet_squat",
+    "romanian_deadlift",
+    "toe_flexor_isometric"
+   ]
+  },
   "advanced|2026-10-07|legs_strength": {
    "digest": "148beb2add86deae245c5501c4abea06c000252a2dc60ebe984a8f69f2183175",
    "exercise_ids": [
@@ -706,6 +716,20 @@
     "forearm_stretches"
    ]
   },
+  "advanced|2026-10-07|treadmill_hiit_4x4": {
+   "digest": "75d9577fe9f548678079851e281a2d32a1e2154bcfff7bc14ebe5bf193e4cff9",
+   "exercise_ids": [
+    "general_pulse_raise",
+    "treadmill_incline_walk"
+   ]
+  },
+  "advanced|2026-10-07|treadmill_zone2_cardio": {
+   "digest": "1bb67824e0130667c82acdecb06e461eda4f5b42368b07aef4b0460997b0a37d",
+   "exercise_ids": [
+    "treadmill_incline_walk",
+    "hip_opener_flow"
+   ]
+  },
   "advanced|2026-10-07|upper_body_weights": {
    "digest": "9b5b795f4ca2d998d5901798a6667d4abc68580b0c4d3edb93a8701f9a597676",
    "exercise_ids": [
@@ -719,6 +743,15 @@
     "cooldown_forearm_wrist_stretch",
     "cooldown_hip_pigeon",
     "forearm_stretches"
+   ]
+  },
+  "advanced|2026-10-07|upper_push_arms_lunch": {
+   "digest": "ad8185faeaba87dafd6e38d4f340851e0656b2d3f35bbbf41fa550a29cd8f04e",
+   "exercise_ids": [
+    "general_pulse_raise",
+    "bench_press",
+    "bicep_curl",
+    "incline_pushup"
    ]
   },
   "advanced|2026-10-07|yoga_recovery": {
@@ -942,6 +975,16 @@
     "cooldown_shoulder_chest"
    ]
   },
+  "advanced|2026-10-21|legs_maintenance_lunch": {
+   "digest": "a2e955e3a36412712be394d3847382bc42365142621e00028df712a092baa664",
+   "exercise_ids": [
+    "general_pulse_raise",
+    "edge_calf_raise_bigtoe",
+    "goblet_squat",
+    "romanian_deadlift",
+    "toe_flexor_isometric"
+   ]
+  },
   "advanced|2026-10-21|legs_strength": {
    "digest": "be04a1e7343042574eceba5d84bedd35bda7da1085d4c1a5baf4c4e5143682c8",
    "exercise_ids": [
@@ -1138,6 +1181,20 @@
     "cooldown_shoulder_chest"
    ]
   },
+  "advanced|2026-10-21|treadmill_hiit_4x4": {
+   "digest": "07d173724eb5f1bcf8e01a25f6eadb98cda61db093f451cae6f59969cc9e0be3",
+   "exercise_ids": [
+    "general_pulse_raise",
+    "approach_hike_loaded"
+   ]
+  },
+  "advanced|2026-10-21|treadmill_zone2_cardio": {
+   "digest": "2f92c8a0a57136530933448eb884c54c4b1ffd4e0bbfdb3d950a2784f82bcaac",
+   "exercise_ids": [
+    "treadmill_incline_walk",
+    "hip_opener_flow"
+   ]
+  },
   "advanced|2026-10-21|upper_body_weights": {
    "digest": "7ff3d24dfa8ee479567e9553078e6b49f4b00d4b20141389a8ab2670e5a876b0",
    "exercise_ids": [
@@ -1151,6 +1208,15 @@
     "cooldown_forearm_wrist_stretch",
     "cooldown_hip_pigeon",
     "cooldown_shoulder_chest"
+   ]
+  },
+  "advanced|2026-10-21|upper_push_arms_lunch": {
+   "digest": "0fd9652ab69e84208d3cb512f887978291136f7e32a3da69b5cb39b258318029",
+   "exercise_ids": [
+    "general_pulse_raise",
+    "bench_press",
+    "incline_pushup",
+    "reverse_barbell_curl"
    ]
   },
   "advanced|2026-10-21|yoga_recovery": {
@@ -1375,6 +1441,16 @@
     "forearm_stretches"
    ]
   },
+  "intermediate|2026-10-07|legs_maintenance_lunch": {
+   "digest": "f6b5a888cd4642b0bde32e7dcd517e4b1524a337ea0a5ef71663b4f0b314fe37",
+   "exercise_ids": [
+    "general_pulse_raise",
+    "edge_calf_raise_bigtoe",
+    "goblet_squat",
+    "romanian_deadlift",
+    "toe_flexor_isometric"
+   ]
+  },
   "intermediate|2026-10-07|legs_strength": {
    "digest": "0bb8a337ccbeb54eeaf14b86c1cddb900d5e222107caf51be9ea39f99b3ee397",
    "exercise_ids": [
@@ -1575,6 +1651,20 @@
     "forearm_stretches"
    ]
   },
+  "intermediate|2026-10-07|treadmill_hiit_4x4": {
+   "digest": "75d9577fe9f548678079851e281a2d32a1e2154bcfff7bc14ebe5bf193e4cff9",
+   "exercise_ids": [
+    "general_pulse_raise",
+    "treadmill_incline_walk"
+   ]
+  },
+  "intermediate|2026-10-07|treadmill_zone2_cardio": {
+   "digest": "1bb67824e0130667c82acdecb06e461eda4f5b42368b07aef4b0460997b0a37d",
+   "exercise_ids": [
+    "treadmill_incline_walk",
+    "hip_opener_flow"
+   ]
+  },
   "intermediate|2026-10-07|upper_body_weights": {
    "digest": "3293408d60c2784520ee37167e63093452f33b26946c6c77f48801c4648bf4a6",
    "exercise_ids": [
@@ -1588,6 +1678,15 @@
     "cooldown_forearm_wrist_stretch",
     "cooldown_hip_pigeon",
     "forearm_stretches"
+   ]
+  },
+  "intermediate|2026-10-07|upper_push_arms_lunch": {
+   "digest": "a2ec0f4862babbb5777597dc5eca3c6518c78e8d2f740b44506d4f87b296f7af",
+   "exercise_ids": [
+    "general_pulse_raise",
+    "bench_press",
+    "bicep_curl",
+    "incline_pushup"
    ]
   },
   "intermediate|2026-10-07|yoga_recovery": {
@@ -1811,6 +1910,16 @@
     "cooldown_shoulder_chest"
    ]
   },
+  "intermediate|2026-10-21|legs_maintenance_lunch": {
+   "digest": "fe10014ce7c9962720a1584a2fdb472e2f9d17f4f6d09b4bac4eafe2ad75662c",
+   "exercise_ids": [
+    "general_pulse_raise",
+    "edge_calf_raise_bigtoe",
+    "goblet_squat",
+    "romanian_deadlift",
+    "toe_flexor_isometric"
+   ]
+  },
   "intermediate|2026-10-21|legs_strength": {
    "digest": "79519e10d4d1e9388d32a43f0e5d9814a1e6addc979bf1811a54e42278ca49df",
    "exercise_ids": [
@@ -2007,6 +2116,20 @@
     "cooldown_shoulder_chest"
    ]
   },
+  "intermediate|2026-10-21|treadmill_hiit_4x4": {
+   "digest": "07d173724eb5f1bcf8e01a25f6eadb98cda61db093f451cae6f59969cc9e0be3",
+   "exercise_ids": [
+    "general_pulse_raise",
+    "approach_hike_loaded"
+   ]
+  },
+  "intermediate|2026-10-21|treadmill_zone2_cardio": {
+   "digest": "2f92c8a0a57136530933448eb884c54c4b1ffd4e0bbfdb3d950a2784f82bcaac",
+   "exercise_ids": [
+    "treadmill_incline_walk",
+    "hip_opener_flow"
+   ]
+  },
   "intermediate|2026-10-21|upper_body_weights": {
    "digest": "ba68b2bdf97f2a70d7b6c9dc578ad81f3922531a09db7ea714d93459d12fa312",
    "exercise_ids": [
@@ -2020,6 +2143,15 @@
     "cooldown_forearm_wrist_stretch",
     "cooldown_hip_pigeon",
     "cooldown_shoulder_chest"
+   ]
+  },
+  "intermediate|2026-10-21|upper_push_arms_lunch": {
+   "digest": "645af0bc4766c0cd48c6493f66fc0b28b5d5eb7dbb0c0df047d520aa7f300a9c",
+   "exercise_ids": [
+    "general_pulse_raise",
+    "bench_press",
+    "incline_pushup",
+    "reverse_barbell_curl"
    ]
   },
   "intermediate|2026-10-21|yoga_recovery": {
@@ -2244,6 +2376,16 @@
     "forearm_stretches"
    ]
   },
+  "untested|2026-10-07|legs_maintenance_lunch": {
+   "digest": "f6b5a888cd4642b0bde32e7dcd517e4b1524a337ea0a5ef71663b4f0b314fe37",
+   "exercise_ids": [
+    "general_pulse_raise",
+    "edge_calf_raise_bigtoe",
+    "goblet_squat",
+    "romanian_deadlift",
+    "toe_flexor_isometric"
+   ]
+  },
   "untested|2026-10-07|legs_strength": {
    "digest": "0bb8a337ccbeb54eeaf14b86c1cddb900d5e222107caf51be9ea39f99b3ee397",
    "exercise_ids": [
@@ -2444,6 +2586,20 @@
     "forearm_stretches"
    ]
   },
+  "untested|2026-10-07|treadmill_hiit_4x4": {
+   "digest": "75d9577fe9f548678079851e281a2d32a1e2154bcfff7bc14ebe5bf193e4cff9",
+   "exercise_ids": [
+    "general_pulse_raise",
+    "treadmill_incline_walk"
+   ]
+  },
+  "untested|2026-10-07|treadmill_zone2_cardio": {
+   "digest": "1bb67824e0130667c82acdecb06e461eda4f5b42368b07aef4b0460997b0a37d",
+   "exercise_ids": [
+    "treadmill_incline_walk",
+    "hip_opener_flow"
+   ]
+  },
   "untested|2026-10-07|upper_body_weights": {
    "digest": "c2a8737be07ba384cc42d5d547bc5ee0d3703217801a5696d254de34c672bfa3",
    "exercise_ids": [
@@ -2457,6 +2613,15 @@
     "cooldown_forearm_wrist_stretch",
     "cooldown_hip_pigeon",
     "forearm_stretches"
+   ]
+  },
+  "untested|2026-10-07|upper_push_arms_lunch": {
+   "digest": "a2ec0f4862babbb5777597dc5eca3c6518c78e8d2f740b44506d4f87b296f7af",
+   "exercise_ids": [
+    "general_pulse_raise",
+    "bench_press",
+    "bicep_curl",
+    "incline_pushup"
    ]
   },
   "untested|2026-10-07|yoga_recovery": {
@@ -2680,6 +2845,16 @@
     "cooldown_shoulder_chest"
    ]
   },
+  "untested|2026-10-21|legs_maintenance_lunch": {
+   "digest": "fe10014ce7c9962720a1584a2fdb472e2f9d17f4f6d09b4bac4eafe2ad75662c",
+   "exercise_ids": [
+    "general_pulse_raise",
+    "edge_calf_raise_bigtoe",
+    "goblet_squat",
+    "romanian_deadlift",
+    "toe_flexor_isometric"
+   ]
+  },
   "untested|2026-10-21|legs_strength": {
    "digest": "79519e10d4d1e9388d32a43f0e5d9814a1e6addc979bf1811a54e42278ca49df",
    "exercise_ids": [
@@ -2876,6 +3051,20 @@
     "cooldown_shoulder_chest"
    ]
   },
+  "untested|2026-10-21|treadmill_hiit_4x4": {
+   "digest": "07d173724eb5f1bcf8e01a25f6eadb98cda61db093f451cae6f59969cc9e0be3",
+   "exercise_ids": [
+    "general_pulse_raise",
+    "approach_hike_loaded"
+   ]
+  },
+  "untested|2026-10-21|treadmill_zone2_cardio": {
+   "digest": "2f92c8a0a57136530933448eb884c54c4b1ffd4e0bbfdb3d950a2784f82bcaac",
+   "exercise_ids": [
+    "treadmill_incline_walk",
+    "hip_opener_flow"
+   ]
+  },
   "untested|2026-10-21|upper_body_weights": {
    "digest": "cf3d96f4853728e4ace1c60cfb5808e3c766db4a0dea71a878a08dd292a633e2",
    "exercise_ids": [
@@ -2889,6 +3078,15 @@
     "cooldown_forearm_wrist_stretch",
     "cooldown_hip_pigeon",
     "cooldown_shoulder_chest"
+   ]
+  },
+  "untested|2026-10-21|upper_push_arms_lunch": {
+   "digest": "645af0bc4766c0cd48c6493f66fc0b28b5d5eb7dbb0c0df047d520aa7f300a9c",
+   "exercise_ids": [
+    "general_pulse_raise",
+    "bench_press",
+    "incline_pushup",
+    "reverse_barbell_curl"
    ]
   },
   "untested|2026-10-21|yoga_recovery": {

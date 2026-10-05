@@ -1,0 +1,87 @@
+{
+  "id": "treadmill_hiit_4x4",
+  "name": "Treadmill HIIT 4x4 (VO2max)",
+  "version": "1.0",
+  "supplementary": true,
+  "intent": {
+    "primary_goal": "conditioning",
+    "secondary_goals": [
+      "aerobic_capacity"
+    ],
+    "notes": "Lunch-break VO2max session on a treadmill: 8 min warm-up, then 4 x 4 min hard with 3 min easy walking between. About 35 min. Zero finger load, but systemically hard: at most one per week, never on the day of or the day before a maximal or limit climbing session."
+  },
+  "compatibility": {
+    "slot": [
+      "lunch_short",
+      "short"
+    ],
+    "sports": [
+      "climbing"
+    ]
+  },
+  "required_equipment": [
+    "treadmill"
+  ],
+  "time_budget": {
+    "target_duration_min": 35,
+    "hard_cap_min": 45
+  },
+  "tags": {
+    "hard": false,
+    "finger": false,
+    "hiit": true
+  },
+  "modules": [
+    {
+      "block_id": "treadmill_warmup",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup",
+      "notes": "Progressive warm-up on the same treadmill: brisk incline walk building to an easy jog.",
+      "selection": {
+        "primary": {
+          "exercise_id": "general_pulse_raise",
+          "prescription_overrides": {
+            "work_seconds": 480,
+            "notes": "Warm-up on the treadmill: 8 min, start as a brisk incline walk and build to an easy jog for the last 2 min."
+          },
+          "filters": {
+            "role": [
+              "warmup"
+            ],
+            "domain": [
+              "aerobic_capacity"
+            ],
+            "intensity_max": "low"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "hiit_intervals",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary",
+      "notes": "The 4x4 VO2max intervals.",
+      "selection": {
+        "primary": {
+          "exercise_id": "treadmill_hiit_4x4",
+          "filters": {
+            "role": [
+              "conditioning"
+            ],
+            "domain": [
+              "aerobic_capacity"
+            ],
+            "pattern": [
+              "locomotion"
+            ],
+            "equipment": [
+              "treadmill"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

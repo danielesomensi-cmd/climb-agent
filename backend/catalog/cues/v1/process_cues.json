@@ -20,7 +20,7 @@
   {
     "id": "cue_004",
     "text": "Quality over quantity \u2014 stop the set when form breaks down. A sloppy rep teaches bad patterns.",
-    "session_types": ["complementary_conditioning", "core_training", "heavy_conditioning_gym", "pulling_strength_gym", "upper_body_weights", "legs_strength", "lower_body_gym"],
+    "session_types": ["complementary_conditioning", "core_training", "heavy_conditioning_gym", "pulling_strength_gym", "upper_body_weights", "legs_strength", "lower_body_gym", "upper_push_arms_lunch", "legs_maintenance_lunch"],
     "source": "D78"
   },
   {
@@ -317,12 +317,12 @@
   {
     "id": "cue_056",
     "text": "Drop the weight before you drop form. The strength that transfers to climbing is the strength produced cleanly.",
-    "session_types": ["pulling_strength_gym", "upper_body_weights", "heavy_conditioning_gym", "complementary_conditioning"]
+    "session_types": ["pulling_strength_gym", "upper_body_weights", "heavy_conditioning_gym", "complementary_conditioning", "upper_push_arms_lunch"]
   },
   {
     "id": "cue_057",
     "text": "Brace before each set \u2014 exhale, lock the pelvis, then move. A loose core under load leaks the tension your hardest moves need.",
-    "session_types": ["core_training", "legs_strength", "lower_body_gym"]
+    "session_types": ["core_training", "legs_strength", "lower_body_gym", "legs_maintenance_lunch"]
   },
   {
     "id": "cue_058",
@@ -339,5 +339,17 @@
     "id": "cue_060",
     "text": "During deload, walk and move easy daily \u2014 sedentary rest slows the blood flow that delivers adaptation. Easy is not stop.",
     "session_types": ["deload_recovery", "easy_climbing_deload"]
+  },
+  {
+    "id": "cue_061",
+    "text": "Intervals are paced by heart rate, not by speed. If the fourth interval cannot hold the target, the first ones were too fast.",
+    "session_types": ["treadmill_hiit_4x4"],
+    "source": "C274 (Helgerud 2007)"
+  },
+  {
+    "id": "cue_062",
+    "text": "Zone 2 means you can still speak a full sentence. If the breath breaks, slow down or lower the incline: easy is the point.",
+    "session_types": ["treadmill_zone2_cardio"],
+    "source": "C274"
   }
 ]

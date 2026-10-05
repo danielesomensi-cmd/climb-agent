@@ -120,6 +120,8 @@ EQUIPMENT_GYM = [
     {"id": "bench", "label": "Bench", "description": "Bench for press and support exercises"},
     {"id": "cable_machine", "label": "Cable machine", "description": "Cable pulley machine for pulling and pushing exercises"},
     {"id": "leg_press", "label": "Leg press", "description": "Machine for lower body pressing exercises"},
+    # --- Cardio (C274) ---
+    {"id": "treadmill", "label": "Treadmill", "description": "Treadmill for Zone 2 and interval cardio (incline walk, runs)"},
     # --- Accessories ---
     {"id": "resistance_band", "label": "Resistance band", "description": "Elastic band for activation and prehab exercises"},
     {"id": "rings", "label": "Rings", "description": "Gymnastic rings for suspension exercises"},

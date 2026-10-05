@@ -25,7 +25,7 @@ The engine filters sessions by `required_equipment`, not by `location_type` (CLA
 
 CLAUDE.md is explicit: the engine selects sessions by `required_equipment` availability, not by the user's location label. A "gym" session that requires only `pullup_bar` + `band` is valid at home if the user has both. An "outdoor" trip with a portable lifting edge supports finger work the same way a home garage with a hangboard does. **The location is not the gate; the equipment is.** This unlocks most fallback questions: "what's available right now?" rather than "where am I right now?"
 
-The canonical equipment IDs (vocabulary_v1.md §1.2) form the substitution vocabulary: `hangboard`, `hangboard_20mm`, `pullup_bar`, `band`, `weight`, `dumbbell`, `kettlebell`, `campus_board`, `foam_roller`, `resistance_band`, `bench`, `rings`, `pinch_block`, `spraywall`, `board_kilter`, `board_moonboard`, `board_other`, `homewall`, `gym_boulder`, `gym_routes`, `cable_machine`, `leg_press`, `loading_pin`. Substitution operates on this vocabulary — the matrix in §3 maps the most common "missing" cases to functional alternatives.
+The canonical equipment IDs (vocabulary_v1.md §1.2) form the substitution vocabulary: `hangboard`, `hangboard_20mm`, `pullup_bar`, `band`, `weight`, `dumbbell`, `kettlebell`, `campus_board`, `foam_roller`, `resistance_band`, `bench`, `rings`, `pinch_block`, `spraywall`, `board_kilter`, `board_moonboard`, `board_other`, `homewall`, `gym_boulder`, `gym_routes`, `cable_machine`, `leg_press`, `treadmill`, `loading_pin`. Substitution operates on this vocabulary — the matrix in §3 maps the most common "missing" cases to functional alternatives.
 
 ### 2. The two valid moves when something is missing
 

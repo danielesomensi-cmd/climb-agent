@@ -71,6 +71,14 @@ _SESSION_META: Dict[str, Dict[str, Any]] = {
     "upper_body_weights": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym", "home"), "required_equipment": [], "max_per_week": 2},
     "legs_strength": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym", "home"), "required_equipment": [], "max_per_week": 2},
     "core_training": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym", "home"), "required_equipment": [], "max_per_week": 3},
+    # C274 — lunch complementary sessions (supplementary: quick-add only, in no
+    # phase pool, so no generated week changes). The HIIT flag lives in the
+    # catalog (`tags.hiit`), not here: one source. hard=False on purpose — HIIT
+    # does not consume the hard / finger cap (decision 2026-10-05).
+    "treadmill_hiit_4x4": {"hard": False, "finger": False, "intensity": "high", "climbing": False, "location": ("gym",), "required_equipment": ["treadmill"], "max_per_week": 1},
+    "treadmill_zone2_cardio": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("gym",), "required_equipment": ["treadmill"], "max_per_week": 3},
+    "upper_push_arms_lunch": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym",), "required_equipment": ["dumbbell"], "max_per_week": 2},
+    "legs_maintenance_lunch": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym",), "required_equipment": ["dumbbell"], "max_per_week": 2},
 }
 
 

@@ -47,6 +47,12 @@ note were regenerated after diffing the raw resolver output (both week_plan
 modes) against origin/main @ 155f4f6 with the same text substitutions applied:
 zero other differences, exercise_ids unchanged.
 
+C274 added one exercise (``treadmill_hiit_4x4``, equipment ``treadmill``) and
+four lunch sessions. All 22 digests were regenerated after diffing the raw
+resolver output (both week_plan modes, ``p0_trace`` / ``filter_trace``
+stripped) against a clean export of origin/main @ 69f8b9f: zero differences —
+only the catalog candidate counts in the traces moved.
+
 Pure data + one function, importable by the generator without pytest.
 """
 

@@ -11,7 +11,9 @@ Two exercise roles mark a catalog entry the engine must never pick on its own:
 
 ``resolve_session`` already ignores them: every template block filters on a
 role and no block asks for these two (pinned by test_catalog_validation and the
-C272 golden). The other deterministic consumers build pools by domain or
+C272 golden). C274: the one way in is an explicit ``exercise_id`` pin written
+in a catalog session (the foot-strength block of ``legs_maintenance_lunch``) —
+composition by hand, in the catalog; no filter or pool ever picks them. The other deterministic consumers build pools by domain or
 category instead, so they call :func:`is_library_only` explicitly — the
 body-part picker, the ad-hoc builder and the coach composer's pool.
 """

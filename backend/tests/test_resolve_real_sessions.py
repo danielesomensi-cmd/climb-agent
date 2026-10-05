@@ -41,7 +41,9 @@ def _resolve(session_id, user_state):
 
 
 # Sessions that are intentionally short (< 3 exercises is acceptable)
-_SHORT_SESSIONS = {"yoga_recovery", "flexibility_full"}
+# C274: the two lunch cardio sessions are single-modality by design — a warm-up
+# plus the 4x4 intervals, the Zone 2 walk plus optional hip mobility.
+_SHORT_SESSIONS = {"yoga_recovery", "flexibility_full", "treadmill_hiit_4x4", "treadmill_zone2_cardio"}
 
 # Minimum exercises for normal vs short sessions
 _MIN_EXERCISES_NORMAL = 3

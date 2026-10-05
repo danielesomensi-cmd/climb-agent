@@ -15,6 +15,11 @@ SUPPLEMENTARY_IDS = {
     "lower_body_gym",
     "heavy_conditioning_gym",
     "pulling_strength_gym",
+    # C274: lunch complementary sessions (gym-only in _SESSION_META)
+    "treadmill_hiit_4x4",
+    "treadmill_zone2_cardio",
+    "upper_push_arms_lunch",
+    "legs_maintenance_lunch",
 }
 
 # B206: location viability now reflects _SESSION_META (single source of truth):
@@ -27,6 +32,10 @@ GYM_SUPPLEMENTARY = {
     "pulling_strength_gym",
     "upper_body_weights",
     "legs_strength",
+    "treadmill_hiit_4x4",
+    "treadmill_zone2_cardio",
+    "upper_push_arms_lunch",
+    "legs_maintenance_lunch",
 }
 
 
@@ -34,7 +43,7 @@ GYM_SUPPLEMENTARY = {
 
 
 def test_all_supplementary_sessions_have_flag():
-    """All 5 supplementary sessions must have supplementary: true."""
+    """All supplementary sessions must have supplementary: true."""
     for sid in SUPPLEMENTARY_IDS:
         path = SESSIONS_DIR / f"{sid}.json"
         assert path.exists(), f"Session file missing: {sid}"

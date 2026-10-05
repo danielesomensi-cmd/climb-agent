@@ -54,6 +54,7 @@ Allowed `equipment` values:
 - `gym_routes` *(gym has route walls / rope climbing terrain)*
 - `cable_machine` *(cable pulley machine for antagonist and general strength work)*
 - `leg_press` *(machine for lower-body pressing; useful for antagonist/conditioning)*
+- `treadmill` *(C274: gym treadmill for Zone 2 and interval cardio; required by the lunch cardio sessions `treadmill_hiit_4x4` and `treadmill_zone2_cardio`)*
 - `loading_pin` *(alternative to hangboard for finger strength training; unilateral (one hand at a time); treated as hangboard alias in v1)*
 
 Rules:
@@ -927,7 +928,7 @@ Session templates define complete training sessions. Module templates define reu
 
 Verify with: `python _archive/scripts/audit_templates.py`
 
-### 3.0 Canonical session template_ids (35)
+### 3.0 Canonical session template_ids (39)
 
 Sessions live in `backend/catalog/sessions/v1/`. Each produces a full resolved session.
 
@@ -945,6 +946,7 @@ Sessions live in `backend/catalog/sessions/v1/`. Each produces a full resolved s
 - `flexibility_full` *(flexibility, home)*
 - `handstand_practice` *(handstand_skill, home)*
 - `heavy_conditioning_gym` *(strength_general, gym)*
+- `legs_maintenance_lunch` *(strength_general, gym — C274 lunch: goblet squat, RDL, foot-strength block)*
 - `legs_strength` *(strength_general, home)*
 - `limit_boulder_gym` *(limit_projecting, gym)*
 - `lower_body_gym` *(strength_general, gym)*
@@ -957,6 +959,8 @@ Sessions live in `backend/catalog/sessions/v1/`. Each produces a full resolved s
 - `route_projecting_gym` *(route_projecting, gym)*
 - `strength_long` *(finger_max_strength, gym)*
 - `technique_focus_gym` *(technique_footwork, gym)*
+- `treadmill_hiit_4x4` *(conditioning, gym — C274 lunch: 4x4 VO2max intervals, `tags.hiit`)*
+- `treadmill_zone2_cardio` *(conditioning, gym — C274 lunch: Zone 2 incline walk + hip mobility)*
 - `test_lp_max_5s` *(finger_max_strength, test)*
 - `test_lp_repeater` *(finger_strength_endurance, test)*
 - `test_max_hang_5s` *(finger_max_strength, test — legacy 5s)*
@@ -965,10 +969,16 @@ Sessions live in `backend/catalog/sessions/v1/`. Each produces a full resolved s
 - `test_pullup_bw` *(pulling_strength, test)*
 - `test_repeater_7_3` *(finger_strength_endurance, test)*
 - `upper_body_weights` *(strength_general, home)*
+- `upper_push_arms_lunch` *(strength_general, gym — C274 lunch: chest press, triceps, biceps)*
 - `yoga_recovery` *(flexibility, home)*
 
 #### Session-level optional fields
 
+- `supplementary`: `bool` (default `false`). Non-climbing session offered in the Quick-Add "supplementary" list (`_get_supplementary_sessions`), filtered by `_SESSION_META.location`. In no phase pool: the planner never places it on its own.
+- `tags`: `object` (default `{}`). Planner-facing flags of the catalog session, copied onto the resolved session: `test` (a test session), `hard`, `finger`, and **`hiit`** (C274) — a systemically hard interval session with no finger load. `hiit` lives **only** in the catalog (not in `_SESSION_META`), so every reader has one source; it does **not** count toward the hard / finger cap. Only `treadmill_hiit_4x4` carries it.
+- `intent.primary_goal: "conditioning"` (C274): general cardio (treadmill Zone 2 / HIIT). Not in the A291 map, so its closed-loop category is `complementaries` — treadmill cardio is not climbing endurance.
+- `compatibility.slot`: `lunch_short` marks a session that fits a 45-minute gross lunch break (`time_budget.target_duration_min` ≤ 35, `hard_cap_min` 45 for the C274 sessions).
+- **Pinning a library entry** (C274): a library-only exercise (role `library`, C272) may enter a catalog session only through an explicit `selection.primary.exercise_id` pin — never through a role / domain / pattern filter. Today: `toe_flexor_isometric` and `edge_calf_raise_bigtoe` in `legs_maintenance_lunch` (pinned by `test_c269_exercise_reachability`).
 - `boulder_fallback`: `string | null` (default `null`). Session_id of a boulder-discipline equivalent session, used when the user triggers the ephemeral "Boulder only" override (A210) on a rope-dependent session. Allowed values: any valid session_id in the boulder pool, or `null`. Only non-null for sessions whose core block requires `gym_routes` (currently: `endurance_aerobic_gym` → `boulder_circuit_gym`, `route_endurance_gym` → `boulder_circuit_gym`, `route_projecting_gym` → `limit_boulder_gym`).
 
 ### Canonical module template_ids (19)
