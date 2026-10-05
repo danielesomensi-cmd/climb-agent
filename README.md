@@ -9,9 +9,9 @@ Methodology: Hörst 4-3-2-1 adaptive periodization with DUP (Daily Undulating Pe
 <!-- STATUS_TABLE_START -->
 | Metric | Count |
 |--------|-------|
-| Tests (passing) | 4604 |
-| Exercises | 336 |
-| Sessions (active) | 35 |
+| Tests (passing) | 4696 |
+| Exercises | 337 |
+| Sessions (active) | 39 |
 | Templates | 19 |
 | API endpoints | 98 |
 | Frontend pages | 46 |
