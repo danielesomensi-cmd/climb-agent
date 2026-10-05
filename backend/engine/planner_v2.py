@@ -798,6 +798,8 @@ def generate_phase_week(
     taper_volume: Optional[Dict[str, float]] = None,
     retest_decisions: Optional[Dict[str, Any]] = None,
     existing_week_plan: Optional[Dict[str, Any]] = None,
+    trip_start_dates: Optional[List[str]] = None,
+    next_week_plan: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Generate a single week plan within a macrocycle phase.
 
@@ -838,9 +840,18 @@ def generate_phase_week(
             Ignored for placement when ``inject_tests`` (explicit request wins).
         existing_week_plan: A300 — the plan of this same week being
             regenerated (force / stale). Read only by the complementary pass,
-            and only for the days before ``today``: what already happened at
-            the complementary slots counts toward this week's rotation and HIIT
-            cap. Ignored when no slot is complementary.
+            the way the B369 merge will put it back: lived days count what
+            happened, the user's own sessions and removals on the other days
+            are respected (a complementary slot the user filled or emptied is
+            never refilled) and count toward the rotation and the HIIT cap.
+            Ignored when no slot is complementary.
+        trip_start_dates: A300 — trip departures from this Monday to the
+            Tuesday after (``complementary_v1.trip_start_dates``): outdoor
+            events for the legs / HIIT rules, also across the week boundary.
+            Ignored when no slot is complementary.
+        next_week_plan: A300 — the cached plan of the following week, if any:
+            its first two days are seen by the lunch rules of this week.
+            Ignored when no slot is complementary.
 
     Returns:
         Week plan dict compatible with planner.v1 format.
@@ -2499,6 +2510,9 @@ def generate_phase_week(
             default_gym_id=default_gym_id,
             today=today_date,
             existing_week_plan=existing_week_plan,
+            pretrip_dates=pretrip_dates,
+            trip_start_dates=trip_start_dates,
+            next_week_plan=next_week_plan,
         )
 
     return week_plan

@@ -151,6 +151,12 @@ def persist_week_plan(updated: dict, state: dict, user_id) -> None:
     # preserving merge, on the next read.
     if ((state["week_plans"].get(start_key) or {}).get("_stale")) and not updated.get("_stale"):
         updated["_stale"] = True
+    # A300: an edit (move, quick-add, key re-schedule, feedback…) changes
+    # what the lunch rules see — the week's alerts are recomputed. No-op for
+    # a week planned without complementary slots.
+    from backend.engine.complementary_v1 import refresh_secondary_warnings
+
+    refresh_secondary_warnings(updated, state)
     state["week_plans"][start_key] = updated
 
     # Also update legacy current_week_plan if this IS the current week.

@@ -185,12 +185,15 @@ If you train twice on some days — say climbing in the evening and a short gym 
 
 Which extra goes on which day is decided **every week from your actual climbing days**, not fixed in advance:
 
-- HIIT never on the day of, or the day before, a max / limit / test session — and at most one HIIT a week (it does not count as one of your hard days). In a deload week HIIT becomes easy cardio.
+- HIIT never on the day of, or the day before, a max / limit / test session or a day climbing outdoors — and at most one HIIT a week (it does not count as one of your hard days). In a deload week HIIT becomes easy cardio.
 - Biceps work not in the 24 hours before a heavy pulling session.
-- Legs not in the 48 hours before a limit session or an outdoor day.
+- Legs not in the 48 hours before a limit session, an outdoor day or a trip departure (also when the trip starts early next week).
+- No HIIT and no legs in the last days before a trip.
 - Easy cardio can go anywhere.
 
-These are preferences, never locks: if a week cannot satisfy all of them, the planner picks the least bad option and **tells you** which rule it had to bend; if a slot cannot be filled (for example the gym lacks the equipment), it says so instead of leaving it empty without a word. Complementary sessions do not change how many climbing days you get. *(Setting slot roles from the Settings screen is coming in a following update.)*
+Your own sessions count: a custom session you put on a lunch, a session you moved, an outdoor day you planned — the planner works around them and never refills a lunch you filled or emptied yourself. When you change the plan by hand (move a session next to the HIIT, for example) nothing is changed for you: the week just shows the new alert.
+
+These are preferences, never locks: if a week cannot satisfy all of them, the planner picks the least bad option and **tells you** which rule it had to bend; if a slot cannot be filled (for example the gym lacks the equipment), or one of the rotation's sessions has no slot left this week, it says so instead of leaving it out without a word. Complementary sessions do not change how many climbing days you get. *(Setting slot roles from the Settings screen is coming in a following update.)*
 
 ### Key sessions
 

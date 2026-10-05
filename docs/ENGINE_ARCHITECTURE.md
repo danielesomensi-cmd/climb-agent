@@ -274,8 +274,12 @@ Runs **last**, after the deload transform. A slot with `role: "complementary"` i
 (`legs`, `hiit`, `z2`, `upper_push_arms` → C274 catalog sessions), own budget outside target days, pruning,
 hard cap and deload cap. The family ↔ slot pairing is the minimum-penalty permutation over the week's real
 primaries (HIIT not on/before a max day and ≤ 1/week, biceps not ≤ 24 h before a heavy pull, legs not ≤ 48 h
-before a limit/outdoor day), ties broken by rotation order. Violations → `secondary_warnings`, unfillable slots
-→ `unmet_secondary`. No complementary slot → no-op, plan byte-identical. See vocabulary §5.7.3.
+before a limit/outdoor day or a trip departure; HIIT also not before an outdoor day; HIIT/legs not on pre-trip
+no-hard days), ties broken by rotation order. The week is read as the B369 merge will return it (the user's
+sessions, removals and outdoor days count; a lunch the user filled or emptied is never refilled). Violations →
+`secondary_warnings` (recomputed after the merge and on every `persist_week_plan` by
+`refresh_secondary_warnings`), unfillable slots / leftover families → `unmet_secondary`. No complementary slot →
+no-op, plan byte-identical. See vocabulary §5.7.3.
 
 ### Availability normalization
 

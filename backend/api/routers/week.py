@@ -30,6 +30,7 @@ from backend.engine.planner_v2 import (
     should_show_test_reminder,
 )
 from backend.engine.replanner_v1 import regenerate_preserving_completed
+from backend.engine import complementary_v1 as _complementary
 from backend.engine.resolve_session import resolve_session
 from backend.engine.target_refresh import refresh_edited_session_targets
 from backend.engine.weekly_override import merge_override_into_availability
@@ -765,9 +766,16 @@ def get_week(
                 test_queue=state.get("test_queue"),
                 taper_volume=taper_volume if taper_volume else None,
                 retest_decisions=_retest_decisions,
-                # A300: the days before today already happened — the
-                # complementary rotation and the weekly HIIT cap count them.
+                # A300: the user's plan of this week — what already happened,
+                # the user's own sessions and removals — counts toward the
+                # complementary rotation and the weekly HIIT cap.
                 existing_week_plan=old_plan,
+                # A300: departures (also early next week) and the cached next
+                # week, for the lunch rules across the week boundary.
+                trip_start_dates=_complementary.trip_start_dates(state.get("trips"), ctx["start_date"]),
+                next_week_plan=week_plans.get(
+                    (datetime.strptime(ctx["start_date"], "%Y-%m-%d") + timedelta(weeks=1)).strftime("%Y-%m-%d")
+                ),
             )
         except Exception as e:
             logger.error("Week generation failed: %s", e, exc_info=True)
@@ -796,6 +804,9 @@ def get_week(
                         # post-merge guard alerts.
                         prev_days=((_prev_week_plan or {}).get("weeks") or [{}])[0].get("days"),
                     )
+                    # A300: the lunch alerts of the week as merged (the user's
+                    # sessions are back); no-op for a week without the key.
+                    _complementary.refresh_secondary_warnings(week_plan, state)
                 except Exception:
                     # B369/P2: a failed merge used to save the fresh plan over
                     # the user's — customs, forced and moved sessions gone.

@@ -1561,20 +1561,35 @@ Phase variant (default): deload → hiit becomes z2.
   `complementary_v1.place_complementary`, one session per slot, with their own budget — outside
   `target_training_days_per_week`, the target-days pruning, the hard cap and the deload 5-session cap.
   `primary` / `any` slots are used by the primary passes exactly as before; the complementary pass never uses them.
-- **Adaptive pairing** family ↔ slot, by minimum penalty over the week's actual primaries (ties → rotation
-  order, deterministic): HIIT not the same day as / the day before a max day (finger-hard, pulling-hard, test,
-  `intensity: max`); at most **1 HIIT/week** (`stimulus.is_hiit_like`; HIIT is `hard: false`, never consumes
+- **Adaptive pairing** family ↔ slot, by minimum penalty over the week's actual primaries **and the user's own
+  sessions** (ties → rotation order, deterministic; the catalog `max_per_week` is counted along each pairing):
+  HIIT not the same day as / the day before a max day (finger-hard, pulling-hard, test, `intensity: max`) or an
+  outdoor day (outdoor slot, day-level `outdoor_spot_*` / `outdoor_plan` / `outdoor_session_status`, trip
+  departure); HIIT and legs not on a pre-trip no-hard day; at most **1 HIIT/week** (`stimulus.is_hiit_like`; HIIT is `hard: false`, never consumes
   the hard-day cap); biceps not within 24 h before a heavy pull (`is_pulling_hard_session`); legs not within
   48 h before a limit session (`limit_power` or max-intensity climbing on a wall) or an outdoor day; Z2
   anywhere. Time model: morning 08:00, lunch 13:00, evening 19:00, outdoor day from 08:00.
 - **Penalties, never blocks.** Generated session fields: `slot_role: "complementary"`, `focus`, explain
   `pass_complementary:a300`. Week plan fields (only when a complementary slot exists):
   `secondary_warnings: [{date, slot, session_id, focus, code, with}]` with
-  `code ∈ hiit_near_max | biceps_before_heavy_pull | legs_before_limit | hiit_weekly_cap`, and
+  `code ∈ hiit_near_max | biceps_before_heavy_pull | legs_before_limit | hiit_weekly_cap | pretrip_no_hard`, and
   `unmet_secondary: [{date, slot, focus, reason, candidates?}]` with
-  `reason ∈ no_focus | rotation_exhausted | no_session_fits`.
-- **Regeneration mid-week**: `generate_phase_week(existing_week_plan=…)` (GET `/api/week` passes the cached plan
-  on force / stale) — the families and HIITs already on the days before `today` count toward the week.
+  `reason ∈ no_focus | rotation_exhausted | no_session_fits | rotation_overflow` (`rotation_overflow`: a family
+  of the week's rotation with no slot left, `date`/`slot` null). Warnings cover the engine lunches and every
+  user-owned session of a family (custom "Work — HIIT", forced, moved) — alerts only; done/skipped are history.
+  A pinned `focus` ignores the catalog `max_per_week` (user decision → `hiit_weekly_cap` alert).
+- **Regeneration** (`generate_phase_week(existing_week_plan=…)`, GET `/api/week` passes the cached plan on
+  force / stale): the week is read as the B369 merge will put it back. Lived days (before `today`, or `today`
+  with a done session) count what is there; on the other days every preservable session (`is_preservable`)
+  stays, and a complementary slot holding one, or emptied by the user (`user_owned.removal_records`:
+  `removed` / `replaced` consume the family, `moved` is counted where it landed; a whole-day override), is
+  **never refilled**. A skip stub counts as the session it replaced (`skipped_original` /
+  `skipped_session_id`) — consumed, not a HIIT done. Families and HIITs found there count toward the week.
+- **Beyond the week**: `trip_start_dates` (`complementary_v1.trip_start_dates(trips, week_start)`, departures up
+  to the Tuesday after) and `next_week_plan` (its first two days) feed the rules.
+- **Alerts after edits**: `complementary_v1.refresh_secondary_warnings(week_plan, state)` recomputes
+  `secondary_warnings` on the stored week — after the B369 merge in GET `/api/week` and in
+  `persist_week_plan` (move, quick-add, key re-schedule, feedback…). No-op for a week without the key.
 - **HIIT single source** (`stimulus.is_hiit_like`): catalog `tags.hiit` / `conditioning_hiit` exercises
   (`is_hiit_session`), the `HIIT|VO2` name regex only for legacy customs without an explicit `tags.hiit`.
   Used by the complementary pass and by `athlete_context` (`hiit` of a session view, `HIIT_ON_GUARD_DAY`).

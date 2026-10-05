@@ -62,6 +62,49 @@ def is_preservable(session: Mapping[str, Any]) -> bool:
     return is_user_owned(session)
 
 
+def removal_records(plan: Mapping[str, Any]) -> List[dict]:
+    """Every removal of :func:`removed_refs`, with what kind of action it was.
+
+    ``kind`` is ``"removed"`` (``remove_session``), ``"replaced"`` (a day
+    override, or the session a move overwrote at its target) or ``"moved"``
+    (the source side of ``move_session`` — the session still exists, on
+    another day/slot). A300 needs the kind: a removed or replaced lunch
+    consumes its family for the week, a moved one is counted where it landed.
+    """
+    out: List[dict] = []
+    for a in (plan or {}).get("adaptations") or []:
+        if not isinstance(a, Mapping):
+            continue
+        if a.get("type") == "day_override" and not a.get("outdoor") and a.get("target_date"):
+            date = str(a["target_date"])
+            if a.get("replaced_session_id") or a.get("replaced_slot"):
+                out.append({"date": date, "ref": a.get("replaced_session_id"),
+                            "slot": a.get("replaced_slot"), "kind": "replaced"})
+            for slot in a.get("replaced_slots") or []:
+                if slot:
+                    out.append({"date": date, "ref": None, "slot": slot, "kind": "replaced"})
+            continue
+        if a.get("type") != "event" or not isinstance(a.get("event"), Mapping):
+            continue
+        ev = a["event"]
+        et = ev.get("event_type")
+        if et == "remove_session":
+            date, ref, slot, kind = ev.get("date"), ev.get("session_ref"), ev.get("slot"), "removed"
+        elif et == "move_session":
+            date = ev.get("from_date")
+            ref = ev.get("session_ref") or ev.get("moved_session_id")
+            slot = ev.get("from_slot")
+            kind = "moved"
+            if ev.get("to_date") and ev.get("replaced_session_id"):
+                out.append({"date": str(ev["to_date"]), "ref": ev["replaced_session_id"],
+                            "slot": ev.get("to_slot"), "kind": "replaced"})
+        else:
+            continue
+        if date and (ref or slot):
+            out.append({"date": str(date), "ref": ref, "slot": slot, "kind": kind})
+    return out
+
+
 def removed_refs(plan: Mapping[str, Any]) -> List[Tuple[str, Optional[str], Optional[str]]]:
     """``(date, session_ref, slot)`` of every session the user took off a day.
 
@@ -74,37 +117,10 @@ def removed_refs(plan: Mapping[str, Any]) -> List[Tuple[str, Optional[str], Opti
       slot that did not exist at override time is not taken away.
 
     A reference with neither a session id nor a slot is ignored (it would
-    match every session of the day).
+    match every session of the day). Same records as :func:`removal_records`,
+    without the kind.
     """
-    out: List[Tuple[str, Optional[str], Optional[str]]] = []
-    for a in (plan or {}).get("adaptations") or []:
-        if not isinstance(a, Mapping):
-            continue
-        if a.get("type") == "day_override" and not a.get("outdoor") and a.get("target_date"):
-            date = str(a["target_date"])
-            if a.get("replaced_session_id") or a.get("replaced_slot"):
-                out.append((date, a.get("replaced_session_id"), a.get("replaced_slot")))
-            for slot in a.get("replaced_slots") or []:
-                if slot:
-                    out.append((date, None, slot))
-            continue
-        if a.get("type") != "event" or not isinstance(a.get("event"), Mapping):
-            continue
-        ev = a["event"]
-        et = ev.get("event_type")
-        if et == "remove_session":
-            date, ref, slot = ev.get("date"), ev.get("session_ref"), ev.get("slot")
-        elif et == "move_session":
-            date = ev.get("from_date")
-            ref = ev.get("session_ref") or ev.get("moved_session_id")
-            slot = ev.get("from_slot")
-            if ev.get("to_date") and ev.get("replaced_session_id"):
-                out.append((str(ev["to_date"]), ev["replaced_session_id"], ev.get("to_slot")))
-        else:
-            continue
-        if date and (ref or slot):
-            out.append((str(date), ref, slot))
-    return out
+    return [(r["date"], r["ref"], r["slot"]) for r in removal_records(plan)]
 
 
 def whole_day_override_dates(plan: Mapping[str, Any]) -> List[str]:
