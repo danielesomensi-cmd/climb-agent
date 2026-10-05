@@ -179,6 +179,16 @@ RETEST_HANG_OVERHOLD_S = 5.0
 RETEST_HANG_OVERHOLD_CAP_S = 6.0
 RETEST_HANG_MIN_PCT = 0.90
 
+#: A302: a MEASURED session (hang margin / timed hold, pull-up last set) shows
+#: what the athlete can do now. The structural ceiling is computed on
+#: max(official max, the max implied by the latest measure) — the official max
+#: itself never moves. A measure counts for EVIDENCE_MAX_AGE_D days, only
+#: against the current test, only with every set done, no pain on the axis and
+#: no hard label. A label alone never lifts the ceiling (decision 2026-10-05).
+EVIDENCE_MAX_AGE_D = 28
+#: Lower bound of each hang-margin band, in seconds (conservative read).
+HANG_MARGIN_EVIDENCE_S: Dict[str, float] = {">5": 5.0, "3-5": 3.0, "0-2": 0.0}
+
 #: R3 §8: a hang tested less than this many days ago is not "stale": an
 #: assisted (negative external) hang shows the assistance, not "re-test".
 TESTED_NO_WARNING_D = 30
@@ -406,6 +416,64 @@ def working_entry(
     return entry
 
 
+def measured_evidence(
+    item: Mapping[str, Any], axis: str, used_total: float, *, work_seconds: Optional[float] = None,
+) -> Optional[Dict[str, Any]]:
+    """A302: the max implied by a measured set, or None without a measure.
+
+    Hang: holding ``used_total`` for ``work_seconds`` + m seconds → the load
+    holdable for exactly ``work_seconds`` is ``used × (1 + HANG_PCT_PER_S × m)``
+    (timed hold capped at +RETEST_HANG_OVERHOLD_CAP_S, band read at its lower
+    bound, a failed hang implies nothing). Pull: the last set stops one rep
+    before failure → e1RM = used × rep_factor(last + 1) (the early-retest read).
+    """
+    if axis == AXIS_PULLING:
+        last = _num(item.get("last_set_reps"))
+        if last is None or last < 1:
+            return None
+        return {"one_rm_kg": round(used_total * rep_factor(last + 1), 1)}
+    t = float(work_seconds or 0.0)
+    if t <= 0:
+        return None
+    held = _num(item.get("hang_held_s"))
+    if held is not None:
+        over = min(held - t, RETEST_HANG_OVERHOLD_CAP_S)
+    else:
+        over = HANG_MARGIN_EVIDENCE_S.get(str(item.get("hang_margin") or ""))
+    if over is None or over < 0:
+        return None
+    return {"total_kg": round(used_total * (1 + rp.HANG_PCT_PER_S * over), 1), "work_seconds": t}
+
+
+def evidence_max(
+    entry: Optional[Mapping[str, Any]], axis: str, on: Optional[date], official_date: Any,
+    *, work_seconds: Optional[float] = None,
+) -> Optional[Dict[str, Any]]:
+    """A302: the valid evidence of ``entry`` on ``on`` — measured against the
+    current test, not in the future, ≤ EVIDENCE_MAX_AGE_D days old — as
+    ``{value, date}``: a 1RM for pulls, the max at ``work_seconds`` for hangs."""
+    if not entry or on is None:
+        return None
+    ev = entry.get("evidence")
+    if not isinstance(ev, Mapping):
+        return None
+    if str(ev.get("official_date") or "")[:10] != str(official_date or "")[:10]:
+        return None
+    ev_d = _parse(ev.get("date"))
+    if ev_d is None or ev_d > on or (on - ev_d).days > EVIDENCE_MAX_AGE_D:
+        return None
+    if axis == AXIS_PULLING:
+        value = _num(ev.get("one_rm_kg"))
+    else:
+        value = _num(ev.get("total_kg"))
+        ev_t = _num(ev.get("work_seconds"))
+        if value is not None and ev_t and work_seconds and float(ev_t) != float(work_seconds):
+            value = rp.convert_hang_seconds(value, int(ev_t), float(work_seconds))
+    if value is None:
+        return None
+    return {"value": float(value), "date": ev_d.isoformat()}
+
+
 def pain_for(state: Mapping[str, Any], axis: str, on: Optional[date]) -> Optional[Dict[str, Any]]:
     """Active pain block for the axis on ``on`` (R4 writes them; read-only here)."""
     if on is None:
@@ -509,6 +577,7 @@ def anchored_load(
     entry = working_entry(state, exercise_id, on, om.get("date"), setup)
     guards: List[Dict[str, Any]] = []
     n_sets = int(sets or CATALOG_SETS[exercise_id])
+    evidence_out: Optional[Dict[str, Any]] = None
 
     official_out: Dict[str, Any] = {
         "protocol": om.get("protocol"),
@@ -526,7 +595,13 @@ def anchored_load(
         one_rm = float(om["one_rm_kg"]) * ratio
         official_out["one_rm"] = round(one_rm, 1)
         ref = one_rm
-        cap = min(prilepin_cap(n_sets, r) * one_rm, one_rm / rep_factor(r + 2))
+        # A302: the ceiling follows a measured 1RM above the official one.
+        ev = evidence_max(entry, axis, on, om.get("date"))
+        cap_rm = one_rm
+        if ev is not None and ev["value"] > one_rm:
+            cap_rm = ev["value"]
+            evidence_out = {"one_rm": round(cap_rm, 1), "date": ev["date"]}
+        cap = min(prilepin_cap(n_sets, r) * cap_rm, cap_rm / rep_factor(r + 2))
         floor = _pulling_pct(phase, "easy") * one_rm
         if entry is not None:
             last_r = _num(entry.get("last_reps")) or CATALOG_REPS[exercise_id]
@@ -549,8 +624,14 @@ def anchored_load(
             official_t = rp.convert_hang_seconds(official_t, proto_s, t)
         official_out["total_at_duration"] = round(official_t, 1)
         ref = official_t
-        hold_cap = official_t / (1 + rp.HANG_PCT_PER_S * RESERVE_S)
-        cap = min(hold_cap, HANG_PHASE_CAP.get(phase, HANG_PHASE_DEFAULT_CAP) * official_t)
+        # A302: the ceiling follows a measured max above the official one.
+        ev = evidence_max(entry, axis, on, om.get("date"), work_seconds=t)
+        cap_t = official_t
+        if ev is not None and ev["value"] > official_t:
+            cap_t = ev["value"]
+            evidence_out = {"total_at_duration": round(cap_t, 1), "date": ev["date"]}
+        hold_cap = cap_t / (1 + rp.HANG_PCT_PER_S * RESERVE_S)
+        cap = min(hold_cap, HANG_PHASE_CAP.get(phase, HANG_PHASE_DEFAULT_CAP) * cap_t)
         floor = HANG_PHASE_FLOOR.get(phase, HANG_PHASE_DEFAULT_FLOOR) * official_t
         if entry is not None:
             last_t = _num(entry.get("last_work_seconds")) or float(HANG_SECONDS[exercise_id])
@@ -653,9 +734,12 @@ def anchored_load(
         out["pain"] = pain
     if fatigue is not None:
         out["fatigue"] = fatigue
+    if evidence_out is not None:
+        out["evidence"] = evidence_out
     if clamped == "cap" and entry is not None and str(entry.get("last_feedback_label") or "") in ("easy", "very_easy"):
+        measure = "the last-set reps" if axis == AXIS_PULLING else "the hang margin"
         out["ceiling_note"] = (
-            "You are at the ceiling of your tested max — the next scheduled retest will raise it."
+            f"You are at the ceiling of your max — log {measure} when it feels easy and the ceiling follows."
         )
     return out
 
@@ -686,7 +770,7 @@ def anchored_suggested_fields(anch: Mapping[str, Any]) -> Dict[str, Any]:
 def anchor_summary(anch: Mapping[str, Any]) -> Dict[str, Any]:
     """Compact, UI/coach-safe description of an anchored prescription."""
     keys = ("source", "phase_id", "intensity", "floor", "cap", "clamped", "pct_of_official",
-            "ramp", "official", "guards", "pain", "fatigue", "no_date")
+            "ramp", "official", "evidence", "guards", "pain", "fatigue", "no_date")
     return {k: anch[k] for k in keys if k in anch}
 
 
@@ -705,6 +789,53 @@ def effective_load_mode(exercise: Mapping[str, Any]) -> Optional[str]:
     return mode if mode in LOAD_MODES else "anchored"
 
 
+#: A302: catalog load models whose custom rows follow the working load.
+FOLLOWED_LOAD_MODELS = ("external_load", "total_load")
+
+
+def custom_working_load(
+    state: Mapping[str, Any], exercise: Mapping[str, Any], on: Any,
+) -> Optional[Dict[str, float]]:
+    """A302: the working load a NON-anchored custom row carries on ``on``.
+
+    Same read as a planned session (``inject_targets``): the working entry of
+    the exercise (external_load: wide B288 window; total_load: 60 days), its
+    ``next_external_load_kg`` (or ``next_total_load_kg`` − bodyweight). None —
+    the stored kg stays — for a row in mode 'fixed', a ladder row (A298 sets its
+    dose), a loading-pin exercise (per-hand loads), a model that carries no kg,
+    or no working entry yet.
+    """
+    eid = str(exercise.get("exercise_id") or "")
+    if not eid or eid in ANCHORED_EXERCISES or exercise.get("load_mode") == "fixed":
+        return None
+    if exercise.get("progress_mode") == "ladder" or exercise.get("progress_source") == "bw_ladder":
+        return None
+    day = _parse(on)
+    if day is None:
+        return None
+    from backend.engine.progression_v1 import (
+        EXTERNAL_LOAD_FRESHNESS_DAYS,
+        _best_entry,
+        _load_catalog_cache,
+    )
+
+    cat = _load_catalog_cache().get(eid, {})
+    model = cat.get("load_model") or exercise.get("load_model")
+    if model not in FOLLOWED_LOAD_MODELS or cat.get("loading_pin"):
+        return None
+    fresh = EXTERNAL_LOAD_FRESHNESS_DAYS if model == "external_load" else WORKING_ENTRY_MAX_AGE_D
+    entry = _best_entry(dict(state), eid, {}, day.isoformat(), freshness_days=fresh)
+    if not entry:
+        return None
+    if _num(entry.get("next_external_load_kg")) is not None:
+        external = round_half(float(entry["next_external_load_kg"]))
+    elif _num(entry.get("next_total_load_kg")) is not None:
+        external = round_half(float(entry["next_total_load_kg"]) - _bodyweight(state))
+    else:
+        return None
+    return {"external": external, "updated_at": str(entry.get("updated_at") or "")[:10]}
+
+
 def resolve_custom_exercises(
     state: Mapping[str, Any], exercises: Sequence[Mapping[str, Any]], on: Any,
 ) -> List[Dict[str, Any]]:
@@ -716,7 +847,11 @@ def resolve_custom_exercises(
       ``stored_load_kg``; when the re-entry ramp caps the sets (max hangs, 5),
       ``sets`` is lowered too and the stored count moves to ``stored_sets``;
     - mode 'fixed' → the user's kg, untouched, ``load_source: 'user_fixed'``;
-    - untested athlete → stored kg untouched (pre-B364 behaviour).
+    - untested athlete → stored kg untouched (pre-B364 behaviour);
+    - A302: any other loaded row (curl, RDL, wrist curl…) carries the working
+      load of ``on`` (``custom_working_load``), the stored kg in
+      ``stored_load_kg``, ``load_source: 'working_load'`` — the feedback moves
+      the custom like it moves a planned session. Mode 'fixed' keeps the kg.
     Never mutates the input.
     """
     out: List[Dict[str, Any]] = []
@@ -726,6 +861,16 @@ def resolve_custom_exercises(
         copy = dict(ex)
         mode = effective_load_mode(copy)
         if mode is None:
+            if copy.get("load_mode") == "fixed":
+                copy["load_source"] = "user_fixed"
+            else:
+                wl = custom_working_load(state, copy, on)
+                if wl is not None:
+                    copy["stored_load_kg"] = ex.get("load_kg")
+                    copy["load_kg"] = max(0.0, wl["external"])
+                    copy["suggested_external_load_kg"] = wl["external"]
+                    copy["load_source"] = "working_load"
+                    copy["working_load_from"] = wl["updated_at"]
             out.append(copy)
             continue
         copy["load_mode"] = mode
@@ -903,6 +1048,8 @@ def apply_anchored_feedback(
     intensity = _intensity_label(dict(planned_session)) if planned_session else CUSTOM_INTENSITY
     counters = updated.setdefault("progression_counters", {})
     fields: Dict[str, Any] = {}
+    # A302: this session's measure becomes the evidence only when it is clean.
+    evidence_ok = completed and all_sets and pain_now is None and feedback_label not in ("hard", "very_hard")
 
     if axis == AXIS_PULLING:
         reps_raw = (item.get("reps") if item.get("reps") is not None else
@@ -922,8 +1069,14 @@ def apply_anchored_feedback(
         next_total = round_half(used_total + step)
         ratio = CHINUP_TO_PULLUP_RATIO if exercise_id == "weighted_chinup" else 1.0
         one_rm = float(om["one_rm_kg"]) * ratio
-        # Structural clamp at write: never above the (r+2)RM of the 1RM.
-        next_total = min(next_total, floor_half(one_rm / rep_factor(reps + 2)))
+        new_ev = measured_evidence(item, axis, used_total) if evidence_ok else None
+        if new_ev is not None:
+            fields["evidence"] = {**new_ev, "date": date_value, "official_date": str(om["date"])[:10]}
+        ev = evidence_max(fields if new_ev is not None else existing, axis, on, om["date"])
+        cap_rm = max(one_rm, ev["value"]) if ev is not None else one_rm
+        # Structural clamp at write: never above the (r+2)RM of the 1RM
+        # (A302: of the measured 1RM when it is higher).
+        next_total = min(next_total, floor_half(cap_rm / rep_factor(reps + 2)))
         fields["last_reps"] = reps
         last_set = _num(item.get("last_set_reps"))
         if last_set is not None:
@@ -951,8 +1104,14 @@ def apply_anchored_feedback(
             anchor = {"date": date_value, "total_kg": round_half(used_total)}
         rise_cap = floor_half(float(anchor["total_kg"]) + FINGER_MAX_RISE_PCT * official_t)
         next_total = min(next_total, rise_cap)
-        # Structural clamp at write: never above the 3-s-reserve load.
-        next_total = min(next_total, floor_half(official_t / (1 + rp.HANG_PCT_PER_S * RESERVE_S)))
+        new_ev = measured_evidence(item, axis, used_total, work_seconds=t) if evidence_ok else None
+        if new_ev is not None:
+            fields["evidence"] = {**new_ev, "date": date_value, "official_date": str(om["date"])[:10]}
+        ev = evidence_max(fields if new_ev is not None else existing, axis, on, om["date"], work_seconds=t)
+        cap_t = max(official_t, ev["value"]) if ev is not None else official_t
+        # Structural clamp at write: never above the 3-s-reserve load
+        # (A302: of the measured max when it is higher).
+        next_total = min(next_total, floor_half(cap_t / (1 + rp.HANG_PCT_PER_S * RESERVE_S)))
         fields["last_work_seconds"] = t
         fields["escalation_anchor"] = anchor
         held = _num(item.get("hang_held_s"))
@@ -988,9 +1147,9 @@ def apply_anchored_feedback(
             reference_before=(unpained or {}).get("total"), reference_cut=(pained or {}).get("total"),
         )
         if axis == AXIS_PULLING:
-            held_next = min(held_next, floor_half(one_rm / rep_factor(reps + 2)))
+            held_next = min(held_next, floor_half(cap_rm / rep_factor(reps + 2)))
         else:
-            held_next = min(held_next, floor_half(official_t / (1 + rp.HANG_PCT_PER_S * RESERVE_S)))
+            held_next = min(held_next, floor_half(cap_t / (1 + rp.HANG_PCT_PER_S * RESERVE_S)))
             if fields["escalation_anchor"].get("date") == date_value:
                 # A reset anchor must not sit on the pain-reduced load either.
                 fields["escalation_anchor"] = {"date": date_value, "total_kg": round_half(max(held_next, used_total))}
@@ -1030,7 +1189,8 @@ def hang_write_cap(state: Mapping[str, Any], work_seconds: float, date_value: An
     """A295 review — write-side cap of a measured or labelled finger hang
     OUTSIDE the anchored four (max_hang_10s, horst_7_53): the same structural
     ceiling as the anchored hang (3 s of reserve, phase cap) on the official
-    7 s max converted to ``work_seconds``. ``None`` for an untested athlete
+    7 s max converted to ``work_seconds`` (A302: or on the measured max of the
+    7 s hang when it is higher). ``None`` for an untested athlete
     (no official max → pre-B364 behaviour, only the 7-day rise limit)."""
     on = _parse(date_value)
     if on is None:
@@ -1042,6 +1202,11 @@ def hang_write_cap(state: Mapping[str, Any], work_seconds: float, date_value: An
     t = float(work_seconds or _PROTOCOL_SECONDS[rp.PROTOCOL_HANG_7S])
     if t != _PROTOCOL_SECONDS[rp.PROTOCOL_HANG_7S]:
         official_t = rp.convert_hang_seconds(official_t, _PROTOCOL_SECONDS[rp.PROTOCOL_HANG_7S], t)
+    # A302: a measured 7 s max hang above the official max lifts this ceiling too.
+    ev = evidence_max(working_entry(state, "max_hang_7s", on, om.get("date")), AXIS_FINGER, on,
+                      om.get("date"), work_seconds=t)
+    if ev is not None and ev["value"] > official_t:
+        official_t = ev["value"]
     phase = phase_on(state, on)
     return floor_half(min(official_t / (1 + rp.HANG_PCT_PER_S * RESERVE_S),
                           HANG_PHASE_CAP.get(phase, HANG_PHASE_DEFAULT_CAP) * official_t))

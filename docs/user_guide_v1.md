@@ -385,8 +385,16 @@ a session.
 **Three hard sessions in two weeks** on the same exercise family bring the load
 down to the bottom of the phase range — the app does not lower your max for it.
 
-When you rate a session "Easy" but you are already at the ceiling of your tested
-max, the load stays where it is: the next scheduled retest is what raises it.
+**The ceiling follows what you measure.** The ceiling is set by your tested max,
+but a clean measured set raises it: a hang held with a margin (">5 s", "3-5 s")
+or the reps of your last pull-up set show what you can do today, and the ceiling
+is computed on that when it is higher than your test. It counts for 4 weeks,
+only with every set done, no pain reported and no "Hard" rating. A rating alone
+("Easy") moves the load up to the ceiling but never lifts it. Your tested max
+itself never changes until your next test.
+
+When you rate a session "Easy" but you are already at the ceiling, the load stays
+where it is: log the hang margin (or the last-set reps) and the ceiling follows.
 
 These notes — fatigue, ceiling, a reported pain, the comeback cap — are shown
 under the suggested load, in the exercise details and in the guided session.
@@ -398,6 +406,13 @@ the same weight a planned session would give you that day (the session view
 shows today's numbers). Choose **Fixed kg** in the builder when you want your own
 weight every time; on Auto, the kg you type is used only if you have no recent
 test. During a comeback, max hangs are also capped at 5 sets.
+
+**Every other weighted exercise of a custom session follows your feedback too**
+(curls, RDL, wrist curls…): it carries your current training load for that
+exercise — the same weight a planned session would give you — so rating it
+"Easy" makes the next one heavier. The kg you typed is used until you have
+logged the exercise once. For now Fixed kg is available in the builder only for
+weighted pull-ups, chin-ups and max hangs.
 
 If you haven't tested yet (or your test is older than 90 days), nothing changes
 for you: loads are worked out exactly as before. A max you typed in during

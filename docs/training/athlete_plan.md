@@ -50,6 +50,7 @@ Un'etichetta di feedback non tocca mai il massimale e non programma mai un test.
   - base 0,85;
   - deload 0,70.
   Il 100% compare solo nei test.
+- **Tetto da misura (A302):** i tetti si calcolano sul più alto fra il massimale ufficiale e quello implicito nell'ultima misura pulita. Sospensione: tenuta L con margine m secondi → L × (1 + 1,5% × m), con «>5» letto come 5", «3-5» come 3" e un tempo cronometrato fino a +6". Trazione: ultima serie lasciando una ripetizione → e1RM = L × f(ripetizioni + 1). La misura conta 28 giorni, solo contro il test in vigore, con tutte le serie fatte, senza dolore e senza etichetta hard. Il solo voto non alza mai il tetto. Il massimale ufficiale non si muove.
 
 **Rampa di rientro:** dopo uno stacco di 14 giorni o più, fattore sul tetto:
 - 1ª esposizione 0,90;
@@ -67,7 +68,8 @@ Il test conta come esposizione. Durante il rientro, max hang al massimo 5 serie.
 | Accessori senza misura | +10% | +5% | — | — | — |
 
 - **Limiti di escalation:** trazione ≤ +5 kg a seduta; dita ≤ +5% del massimale ufficiale in 7 giorni.
-- **Tetto raggiunto + easy:** «sei al tetto del massimale testato, il prossimo retest lo alzerà».
+- **Tetto raggiunto + easy:** «sei al tetto: registra il margine (o le ripetizioni dell'ultima serie) e il tetto lo segue» (A302).
+- **Custom (A302):** ogni riga con carico che non è una delle quattro ancorate (curl, RDL, wrist curl…) porta il carico di lavoro del giorno, come una sessione del motore; il kg salvato resta come riferimento. Una riga in modalità fissa tiene il kg scritto.
 
 **Retest:** solo la retest policy programma i test (A289).
 - **Retest anticipato:** solo verso l'alto, misurato e due volte. Ultima serie di trazione con e1RM sopra il 1RM ufficiale, oppure sospensione tenuta oltre target+5 s al ≥90%.

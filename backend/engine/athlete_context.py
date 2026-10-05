@@ -303,6 +303,8 @@ def _anchors(state: Mapping[str, Any], today: date) -> Dict[str, Any]:
             "pain": bool(anch.get("pain")),
             "fatigue": bool(anch.get("fatigue")),
             "ceiling_note": anch.get("ceiling_note"),
+            # A302: the measure that lifted the ceiling above the official max.
+            "evidence": anch.get("evidence"),
         }
     return {
         "bodyweight_kg": _bodyweight(state),
@@ -1022,6 +1024,9 @@ def _anchor_line(ex: str, a: Mapping[str, Any]) -> str:
     parts = [f"  {ex}: {a.get('rep_scheme')} a {ext_s} kg (totale {_fmt_kg(a.get('total'))})",
              f"= {round(pct * 100) if pct else '—'}% di {_fmt_kg(ref)} kg {ref_lbl} (test {a.get('official_date')})",
              f"| tetto {_fmt_kg(a.get('cap'))} / pavimento {_fmt_kg(a.get('floor'))} | {ramp_s}"]
+    ev = a.get("evidence") or {}
+    if ev:
+        parts.append(f"| tetto da misura {_fmt_kg(ev.get('one_rm') or ev.get('total_at_duration'))} kg ({ev.get('date')})")
     if a.get("clamped"):
         parts.append(f"| clamp: {a['clamped']}")
     if a.get("guards"):
@@ -1439,8 +1444,12 @@ def _anchor_line_en(ex: str, a: Mapping[str, Any]) -> str:
         line += "; pain flag → reduced"
     if a.get("fatigue"):
         line += "; fatigue flag → at the phase floor"
+    ev = a.get("evidence") or {}
+    if ev:
+        line += (f"; ceiling lifted by a measured {_fmt_kg(ev.get('one_rm') or ev.get('total_at_duration'))} kg"
+                 f" ({ev.get('date')})")
     if a.get("ceiling_note"):
-        line += "; at the ceiling of the tested max (the next retest raises it)"
+        line += "; at the ceiling (a logged hang margin / last-set reps lifts it)"
     return line
 
 

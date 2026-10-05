@@ -373,8 +373,11 @@ def test_measured_last_set_reps_take_precedence_over_the_label():
     assert same["next_total_load_kg"] == 108.0  # measured: exactly the reps → hold
     more_state = apply_feedback(_pull("ok", last_set_reps=6), _daniele())
     more = _entry(more_state, "weighted_pullup")
-    assert more["next_total_load_kg"] == 112.0  # +5 measured → 113, stored ≤ 1RM/f(5) = 112.0
-    assert _al(more_state, "weighted_pullup", "2026-10-13")["total"] == 109.5  # the 4x3 cap binds at read
+    # +5 measured → 113. A302: 6 reps at 108 imply e1RM 131.4 > 128.9 official,
+    # so the write ceiling is 131.4/f(5) = 114.5 and 113 passes.
+    assert more["next_total_load_kg"] == 113.0
+    # The 4x3 cap still binds at read, on the measured 1RM: 0.85 × 131.4 → 111.5.
+    assert _al(more_state, "weighted_pullup", "2026-10-13")["total"] == 111.5
     fail = _entry(apply_feedback(_pull("easy", last_set_reps=2), _daniele()), "weighted_pullup")
     assert fail["next_total_load_kg"] < 108.0
 

@@ -134,8 +134,9 @@ def test_pull_untouched_holds_the_load_used():
 
 def test_pull_measured_reps_move_the_load():
     assert _entry(_pull("2026-10-09", last=4), "weighted_pullup")["next_external_load_kg"] == 32.5
-    # +5 kg asked, clamped at the (r+2)RM of the official 1RM: 128.9 / f(5) → 112 total.
-    assert _entry(_pull("2026-10-09", last=6), "weighted_pullup")["next_external_load_kg"] == 34.0
+    # +5 kg asked. A302: 6 reps at 108 kg imply an e1RM of 131.4 > the official
+    # 128.9, so the (r+2)RM ceiling is 131.4 / f(5) → 114.5 and the full step passes.
+    assert _entry(_pull("2026-10-09", last=6), "weighted_pullup")["next_external_load_kg"] == 35.0
     assert _entry(_pull("2026-10-09", last=2), "weighted_pullup")["next_external_load_kg"] < 30.0
 
 
