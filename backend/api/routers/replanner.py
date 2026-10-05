@@ -22,6 +22,7 @@ from backend.engine.replanner_v1 import (
     apply_day_override,
     apply_events,
     suggest_sessions,
+    undo_target,
 )
 from backend.engine.closed_loop_v1 import apply_day_result_to_user_state
 from backend.engine.resolve_session import resolve_session
@@ -519,6 +520,18 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
                 ev["outdoor_load_score"] = sum(compute_outdoor_load_score(s) for s in matching)
 
     _n_adapt_before = len(week_plan.get("adaptations") or [])
+    # B367: what each undo (mark_planned) un-skips, read on the plan BEFORE the
+    # events — the UI sends the stub's id (regeneration_easy), while the skip
+    # was logged under the id of the session that was skipped.
+    _undo_skipped_ids: dict = {}
+    for _i, _ev in enumerate(req.events):
+        if _ev.get("event_type") != "mark_planned" or not _ev.get("date"):
+            continue
+        _day = next((d for w in week_plan.get("weeks") or [] for d in w.get("days") or []
+                     if d.get("date") == _ev.get("date")), None)
+        _t = undo_target(_day, session_ref=_ev.get("session_ref"), slot=_ev.get("slot")) if _day else None
+        if _t is not None and _t.get("status") == "skipped" and _t.get("skipped_session_id"):
+            _undo_skipped_ids[_i] = _t["skipped_session_id"]
     try:
         updated = apply_events(
             week_plan,
@@ -638,7 +651,7 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
                 return s.get("session_id") or ""
         return ""
 
-    for ev in req.events:
+    for _ev_i, ev in enumerate(req.events):
         evt = ev.get("event_type")
         ev_date = ev.get("date")
         if evt == "mark_done" and ev_date:
@@ -658,9 +671,15 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
         elif evt == "mark_planned" and ev_date:
             # Undo: remove matching entry
             ref = ev.get("session_ref", "")
+            # B367: undoing a skip also drops the "skipped" entry logged under
+            # the skipped session's id (it used to stay, orphaned).
+            unskipped = _undo_skipped_ids.get(_ev_i)
             state["session_completion_log"] = [
                 e for e in completion_log
-                if not (e.get("date") == ev_date and e.get("session_id") == ref)
+                if not (e.get("date") == ev_date and (
+                    e.get("session_id") == ref
+                    or (unskipped and e.get("session_id") == unskipped and e.get("status") == "skipped")
+                ))
             ]
             completion_log = state["session_completion_log"]
 

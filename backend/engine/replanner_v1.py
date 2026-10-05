@@ -196,6 +196,52 @@ def _insert_or_replace(day: Dict[str, Any], moved: Dict[str, Any], to_slot: str)
     sessions.sort(key=lambda s: (SLOTS.index(s.get("slot") if s.get("slot") in SLOTS else "evening"), s.get("priority", 99), s.get("session_id", "")))
 
 
+def undo_target(day: Dict[str, Any], *, session_ref: Optional[str], slot: Optional[str]) -> Optional[Dict[str, Any]]:
+    """B367: the session a ``mark_planned`` (undo) applies to.
+
+    Among the sessions matching ``session_ref`` / ``slot``, the first one that
+    is actually done or skipped wins — the UI sends the stub's id
+    (``regeneration_easy``) to undo a skip, and a planned regeneration_easy
+    earlier in the same day used to swallow the undo. Falls back to the first
+    match (the old behaviour) when none is done/skipped.
+    """
+    matches = [s for s in day.get("sessions") or []
+               if _session_matches(s, session_ref=session_ref, slot=slot)]
+    for s in matches:
+        if s.get("status") in ("done", "skipped"):
+            return s
+    return matches[0] if matches else None
+
+
+def _restore_skipped(plan: Dict[str, Any], stub: Dict[str, Any]) -> Dict[str, Any]:
+    """B367: the session a skip stub stood in for, back to planned.
+
+    ``skipped_original`` (written by ``mark_skipped`` since B367) is restored
+    byte-identical to the session before the skip. A stub from before B367 carries only ``skipped_session_id`` /
+    ``skipped_tags`` (A294): a catalog session is rebuilt from its metadata, in
+    the stub's slot and location. Callers check that one of the two exists.
+    """
+    original = stub.get("skipped_original")
+    if original:
+        # Exactly as it was before the skip (a custom keeps its "planned").
+        return deepcopy(original)
+    sid = stub["skipped_session_id"]
+    meta = _meta_for(sid)
+    tags = dict(stub.get("skipped_tags") or {"hard": meta["hard"], "finger": meta["finger"]})
+    return {
+        "slot": stub.get("slot", "evening"),
+        "session_id": sid,
+        "location": stub.get("location", "home"),
+        "gym_id": stub.get("gym_id"),
+        "phase_id": (plan.get("profile_snapshot") or {}).get("phase_id", "base"),
+        "intensity": meta["intensity"],
+        "estimated_load_score": _INTENSITY_TO_LOAD.get(meta["intensity"], 40),
+        "constraints_applied": ["undo_skip"],
+        "tags": tags,
+        "explain": ["skip undone", f"restored_session={sid}"],
+    }
+
+
 def _slots_from_day(day: Dict[str, Any]) -> set[str]:
     return {s.get("slot") for s in (day.get("sessions") or []) if s.get("slot") in SLOTS}
 
@@ -1475,6 +1521,10 @@ def apply_events(
             if removed.get("session_id"):
                 recovery["skipped_session_id"] = removed.get("session_id")
                 recovery["skipped_tags"] = dict(removed.get("tags") or {})
+            # B367: the session itself travels with the stub, so undoing the
+            # skip restores it (custom exercises, resolved prescription and all)
+            # instead of leaving a planned regeneration_easy behind.
+            recovery["skipped_original"] = deepcopy(removed)
             day.setdefault("sessions", []).append(recovery)
             _recompute_day_status(day)
 
@@ -1498,19 +1548,31 @@ def apply_events(
             # Append-only logs (feedback_log) also stay intact.
             day = _find_day(updated, event["date"])
             matched = False
-            for s in day.get("sessions") or []:
-                if _session_matches(s, session_ref=event.get("session_ref"), slot=event.get("slot")):
-                    s.pop("status", None)
-                    for _k in (
-                        "actual_exercises",
-                        "feedback_summary",
-                        "exercise_feedback",
-                        "session_duration_seconds",
-                        "session_load_actual",  # B312: also feedback-derived
-                    ):
-                        s.pop(_k, None)
-                    matched = True
-                    break
+            s = undo_target(day, session_ref=event.get("session_ref"), slot=event.get("slot"))
+            if s is not None and s.get("status") == "skipped" and (
+                s.get("skipped_original") or s.get("skipped_session_id") in _SESSION_META
+            ):
+                # B367: undoing a skip puts back the session that was skipped,
+                # not the regeneration_easy stub that stood in for it.
+                sessions = day["sessions"]
+                sessions[sessions.index(s)] = _restore_skipped(updated, s)
+                sessions.sort(key=lambda x: (SLOTS.index(x.get("slot") if x.get("slot") in SLOTS else "evening"),
+                                             x.get("priority", 99), x.get("session_id", "")))
+                matched = True
+            elif s is not None:
+                s.pop("status", None)
+                # B367: a legacy stub (no original to restore) stops claiming a skip.
+                for _k in ("skipped_session_id", "skipped_tags", "skipped_original"):
+                    s.pop(_k, None)
+                for _k in (
+                    "actual_exercises",
+                    "feedback_summary",
+                    "exercise_feedback",
+                    "session_duration_seconds",
+                    "session_load_actual",  # B312: also feedback-derived
+                ):
+                    s.pop(_k, None)
+                matched = True
             if not matched:
                 logger.warning(
                     "mark_planned no-op: session not found (date=%r, session_ref=%r, slot=%r)",
