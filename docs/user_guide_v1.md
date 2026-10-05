@@ -165,7 +165,7 @@ Your daily workflow:
 4. When done, tap **Done** and give feedback
 5. If you can't train, tap **Skip** — the system adapts
 
-**Done** and **Skip** are always reversible — tap **Undo completion** (to reverse Done) or **Undo skip** (to reverse Skip) — don't worry about misclicks.
+**Done** and **Skip** are always reversible — tap **Undo completion** (to reverse Done) or **Undo skip** (to reverse Skip) — don't worry about misclicks. Undoing a skip brings back the exact session you skipped, your own custom sessions included, and the usual recovery rules still apply to it.
 
 ### Same main exercise for the whole phase (once you have tested)
 
