@@ -576,7 +576,7 @@ export const applyEvents = (data: {
   return send(data).catch(async (e: unknown) => {
     if (!(e instanceof StalePlanError)) throw e;
     // B371: re-send by itself only what is idempotent on the fresh plan.
-    if (e.currentPlan && isRetrySafeEvents(data.events, e.currentPlan)) {
+    if (e.currentPlan && isRetrySafeEvents(data.events, e.currentPlan, data.week_plan)) {
       try {
         const res = await send({ ...data, week_plan: e.currentPlan });
         emitStalePlan({ retried: true, weekStart: e.weekStart });
@@ -747,7 +747,7 @@ export const deleteOutdoorSpot = (spotId: string) =>
   });
 
 export const postOutdoorLog = (session: Omit<OutdoorSession, "log_version">) =>
-  request<{ status: string; log_path: string }>("/api/outdoor/log", {
+  request<{ status: string; log_path: string; plan_synced?: boolean }>("/api/outdoor/log", {
     method: "POST",
     body: JSON.stringify(session),
   });
@@ -756,7 +756,7 @@ export const getOutdoorLogByDate = (date: string) =>
   request<{ session: OutdoorSession & { load_score: number } }>(`/api/outdoor/log/${date}`);
 
 export const putOutdoorLog = (session: Omit<OutdoorSession, "log_version">) =>
-  request<{ status: string; load_score: number }>("/api/outdoor/log", {
+  request<{ status: string; load_score: number; plan_synced?: boolean }>("/api/outdoor/log", {
     method: "PUT",
     body: JSON.stringify(session),
   });

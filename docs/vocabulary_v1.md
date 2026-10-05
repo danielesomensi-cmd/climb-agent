@@ -1618,6 +1618,17 @@ is_preservable(session)   = status ∈ {done, skipped} | is_user_owned(session)
 - **Read-time fields** (B371, `plan_revision.strip_derived`): response siblings (`guard_warnings`, `key_status`, …),
   `_stale`, `process_cue` on unplayed sessions and the `exercises` of unplayed custom sessions (anchored loads, B364)
   are replaced by / dropped in favour of the stored plan before a client plan is applied. Played sessions untouched.
+- **Write responses = read view** (B371 review, `plan_revision.read_view`): every write endpoint that returns a
+  `week_plan` (events, override, quick-add, session/*, feedback) returns the same view GET serves (custom rows with
+  anchored loads, ladder doses, measures, limit targets, rest default); the stored plan stays raw.
+- **Played custom = what was shown** (B371 review, `plan_revision.freeze_played_customs`): a custom session marked
+  done/skipped (`/events` or `/feedback`) stores the read-time view of that moment, never re-derived afterwards.
+- **Feedback revision** (B371 review): `/feedback` saves (and bumps) only a week whose content it changed; the inline
+  mark_done is skipped when the session is already done.
+- **Per-user write lock** (B371 review, `plan_revision.serialized_by_user`): events, override, quick-add, session/*,
+  feedback, outdoor log POST/PUT and outdoor finish run under one per-user lock in the process — the revision check
+  and the save are atomic. Residual: more than one worker/replica, or the unlocked writers (GET regeneration,
+  `PUT /api/state`).
 
 ### 5.7.3 Slot roles and complementary rotation (A300)
 

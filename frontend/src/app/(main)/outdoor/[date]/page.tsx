@@ -28,6 +28,8 @@ import type {
 } from "@/lib/types";
 import { useUserState } from "@/lib/hooks/use-state";
 import { enqueue } from "@/lib/outbox";
+import { useQueryClient } from "@tanstack/react-query";
+import { invalidateOutdoor } from "@/lib/invalidation";
 import {
   clearLiveSession,
   isLocalSessionId,
@@ -83,6 +85,7 @@ function mapLiveRoutes(routes: unknown): LiveRoute[] {
 }
 
 export default function OutdoorDayPage() {
+  const qc = useQueryClient();
   const params = useParams();
   const search = useSearchParams();
   const router = useRouter();
@@ -609,6 +612,10 @@ export default function OutdoorDayPage() {
             submitLabel={sessionId ? "Finish & save" : undefined}
             onSuccess={() => {
               clearLiveSession();
+              // B371: finish / log synced the plan server side (B273) and
+              // moved the week's revision — refresh the weeks (and the outdoor
+              // lists) so the next write from /today or /week is not a 409.
+              invalidateOutdoor(qc);
               router.push("/outdoor");
             }}
           />

@@ -25,19 +25,39 @@ Three pieces, one module:
   alerts) must not come back in a client plan and be saved as if it were the
   plan. The stored version wins.
 
+Two response-side helpers close the loop:
+
+- :func:`read_view` — every write endpoint that returns a plan returns the
+  same read-time view ``GET /api/week`` serves (the stored plan stays raw, the
+  client's cache never loses the anchored loads of its customs after a tap);
+- :func:`freeze_played_customs` — when a custom session goes done/skipped, the
+  prescription the athlete actually saw (the read-time view of that moment) is
+  what the history keeps, exactly as before B371 when the client sent it back.
+
+Concurrency: :func:`serialized_by_user` serialises the write endpoints of one
+user inside the process (one lock per user), so two writes in flight cannot
+both pass the revision check against N and both save N+1. **Residual race**:
+the lock is per process — with more than one uvicorn worker / replica, or for
+writers that do not take it (``GET /api/week`` regeneration, ``PUT
+/api/state``), a lost update is still possible in a narrow window. Production
+runs one process today (``Procfile``); a conditional save on the stored
+revision is the follow-up if that ever changes (B369-P6-residui).
+
 Deterministic: no clock, no randomness — the revision is a counter.
 """
 from __future__ import annotations
 
+import functools
 import logging
+import threading
 from copy import deepcopy
-from typing import Any, Dict, Mapping, Optional
+from typing import Any, Callable, Dict, Mapping, Optional
 
 logger = logging.getLogger(__name__)
 
 REVISION_KEY = "plan_revision"
 
-STALE_PLAN_DETAIL = "The plan changed on another device — reload it and try again."
+STALE_PLAN_DETAIL = "The plan was updated since you loaded it — reload it and try again."
 
 #: Response siblings of ``week_plan`` (GET /api/week, replanner responses). A
 #: client that spread a response into its plan would send them back — they are
@@ -233,3 +253,110 @@ def guard_client_plan(
     if isinstance(client_plan, dict):
         strip_derived(client_plan, stored_plan_for(state, client_plan.get("start_date")))
     return client_plan
+
+
+# --------------------------------------------------------------------------- #
+# Response side
+# --------------------------------------------------------------------------- #
+
+def read_view(plan: Optional[Dict[str, Any]], state: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
+    """The plan as ``GET /api/week`` serves it: a COPY where every not-yet-played
+    custom session carries the read-time values of its day (B364 anchored
+    loads, A298 ladder doses, A295 measures, A299 limit targets, B370 rest
+    default), plus a ``plan_revision`` the client can send back. The stored
+    plan is untouched. Done/skipped sessions are returned as stored."""
+    if not isinstance(plan, dict):
+        return plan
+    from backend.api.routers.week import _with_custom_anchored_loads
+
+    try:
+        out = _with_custom_anchored_loads(plan, dict(state))
+    except Exception:
+        # A read-time view must never fail a write that already succeeded.
+        logger.warning("B371: read_view failed — returning the stored plan", exc_info=True)
+        out = deepcopy(plan)
+    out.setdefault(REVISION_KEY, 1)
+    return out
+
+
+def freeze_played_customs(
+    after: Optional[Dict[str, Any]],
+    before: Optional[Mapping[str, Any]],
+    state: Mapping[str, Any],
+) -> int:
+    """Custom sessions pending in *before* and done/skipped in *after* keep, in
+    *after*, the exercises of the read-time view of *before* — the prescription
+    the athlete saw when they played it (GET never re-derives a played
+    session, so this is the only moment to record it). Matched on (date, slot,
+    session_id); a session moved and marked in the same call keeps its raw
+    rows. Returns how many were frozen."""
+    if not isinstance(after, dict) or not isinstance(before, Mapping):
+        return 0
+    pending: Dict[tuple, int] = {}
+    for wb in before.get("weeks") or []:
+        for d in wb.get("days") or []:
+            for s in d.get("sessions") or []:
+                if isinstance(s, Mapping) and _is_custom(s) and s.get("status") not in _PLAYED and s.get("exercises"):
+                    k = _session_key(d.get("date"), s)
+                    pending[k] = pending.get(k, 0) + 1
+    if not pending:
+        return 0
+    targets = []
+    for wb in after.get("weeks") or []:
+        for d in wb.get("days") or []:
+            for s in d.get("sessions") or []:
+                if not (isinstance(s, dict) and _is_custom(s) and s.get("status") in _PLAYED):
+                    continue
+                k = _session_key(d.get("date"), s)
+                if pending.get(k):
+                    targets.append((k, s))
+    if not targets:
+        return 0
+    view = read_view(dict(before), state) or {}
+    shown: Dict[tuple, list] = {}
+    for wb in view.get("weeks") or []:
+        for d in wb.get("days") or []:
+            for s in d.get("sessions") or []:
+                if isinstance(s, Mapping) and _is_custom(s) and s.get("status") not in _PLAYED and s.get("exercises"):
+                    shown.setdefault(_session_key(d.get("date"), s), []).append(s)
+    n = 0
+    for k, s in targets:
+        twins = shown.get(k)
+        if not twins:
+            continue
+        s["exercises"] = deepcopy(twins.pop(0)["exercises"])
+        n += 1
+    return n
+
+
+# --------------------------------------------------------------------------- #
+# Per-user serialisation of the write endpoints
+# --------------------------------------------------------------------------- #
+
+_LOCKS_GUARD = threading.Lock()
+_USER_LOCKS: Dict[str, threading.RLock] = {}
+
+
+def user_write_lock(user_id: Optional[str]) -> threading.RLock:
+    """The (re-entrant) lock of *user_id*'s writes in this process."""
+    key = str(user_id or "")
+    with _LOCKS_GUARD:
+        lock = _USER_LOCKS.get(key)
+        if lock is None:
+            lock = threading.RLock()
+            _USER_LOCKS[key] = lock
+        return lock
+
+
+def serialized_by_user(fn: Callable) -> Callable:
+    """Decorator for a sync endpoint taking ``user_id`` as a keyword (FastAPI
+    always passes dependencies by keyword): load → check revision → apply →
+    save runs under the user's lock, so the check and the save are atomic with
+    respect to the other locked writers of that user in this process."""
+
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        with user_write_lock(kwargs.get("user_id")):
+            return fn(*args, **kwargs)
+
+    return wrapper

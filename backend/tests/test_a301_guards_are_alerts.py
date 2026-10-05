@@ -455,8 +455,14 @@ class TestApi:
         })
         assert r.status_code == 200, r.text
         body = r.json()
+        # B371 review: the response is the read view (anchored loads on the
+        # custom's rows); the STORED custom is the one the user put there.
         wed = {s["slot"]: s for s in body["week_plan"]["weeks"][0]["days"][2]["sessions"]}
-        assert wed["lunch"] == _custom("lunch")
+        assert [e["exercise_id"] for e in wed["lunch"]["exercises"]] == [
+            e["exercise_id"] for e in _custom("lunch")["exercises"]]
+        saved = deps.load_state(None)["week_plans"][mon]
+        swed = {s["slot"]: s for s in saved["weeks"][0]["days"][2]["sessions"]}
+        assert swed["lunch"] == _custom("lunch")
         assert body["adjustments"] == [] and isinstance(body["guard_warnings"], list)
 
     def test_move_onto_done_is_422(self, isolated_state):

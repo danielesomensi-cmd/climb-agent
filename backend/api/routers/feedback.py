@@ -20,6 +20,7 @@ sessions continue through the legacy flow.
 from __future__ import annotations
 
 import logging
+from copy import deepcopy
 from datetime import date as date_type, datetime, timedelta, timezone
 from typing import Optional
 
@@ -38,6 +39,9 @@ from backend.api.deps import (
 from backend.api.rate_limit import limiter
 from backend.api.models import FeedbackRequest
 from backend.api.key_status import resolve_today
+from backend.api.plan_revision import (
+    REVISION_KEY, freeze_played_customs, read_view, revision_of, serialized_by_user,
+)
 from backend.api.routers.replanner import _event_floor, _prev_week_days, persist_week_plan
 from backend.engine.adaptive_replan import (
     append_feedback_log,
@@ -184,14 +188,53 @@ def _limit_summary_for(state: dict, target_date, target_sid) -> list:
     return out
 
 
+def _without_revision(plan: dict) -> dict:
+    out = deepcopy(plan)
+    out.pop(REVISION_KEY, None)
+    return out
+
+
+def _week_objects(state: dict, key: str) -> list:
+    """Every stored object of week *key* (the cache entry and, when it is that
+    week, the legacy current_week_plan — often the same dict)."""
+    objs: list = []
+    for p in ((state.get("week_plans") or {}).get(key), state.get("current_week_plan")):
+        if isinstance(p, dict) and p.get("start_date") == key and all(p is not o for o in objs):
+            objs.append(p)
+    return objs
+
+
+def _snapshot_weeks(state: dict, target_date) -> dict:
+    """B371 review: the weeks this request may write, as loaded —
+    ``{week_start: (revision, content without revision)}``. Only a week whose
+    content changed is saved with a new revision (an idempotent mark_done, a
+    feedback outside the plan or a mark_done that landed on another week must
+    not bump a week nobody changed: a client holding it would get a 409)."""
+    keys = []
+    cwp = state.get("current_week_plan")
+    if isinstance(cwp, dict) and cwp.get("start_date"):
+        keys.append(cwp["start_date"])
+    monday = _monday_for_date(target_date) if target_date else None
+    if monday and monday not in keys:
+        keys.append(monday)
+    snap: dict = {}
+    for k in keys:
+        objs = _week_objects(state, k)
+        if objs:
+            snap[k] = (revision_of(objs[0]), _without_revision(objs[0]))
+    return snap
+
+
 @router.post("", dependencies=[Depends(require_active_subscription)])
 @limiter.limit("30/minute")
+@serialized_by_user
 def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str] = Depends(get_user_id)):
     """Apply session feedback atomically: mark_done + progression + closed-loop + persist."""
     state = load_state(user_id)
 
     target_date = req.log_entry.get("date")
     target_sid = req.log_entry.get("session_id")
+    _week_snap = _snapshot_weeks(state, target_date)
 
     # 1. A194: Apply mark_done inline to current_week_plan (idempotent — safe if
     # frontend already called applyEvents separately, e.g. from /today).
@@ -199,8 +242,29 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
     planning_prefs = state.get("planning_prefs")
     gyms = (state.get("equipment") or {}).get("gyms")
     week_plan = state.get("current_week_plan")
-    if week_plan and target_date and target_sid:
+
+    def _already_done(plan) -> bool:
+        # B371 review: the inline mark_done is skipped when the session is
+        # already done (the /today flow marks it through /events first) —
+        # apply_events would still log an adaptation and move the revision of
+        # a week nobody changed.
+        for _w in (plan or {}).get("weeks") or []:
+            for _d in _w.get("days") or []:
+                if _d.get("date") != target_date:
+                    continue
+                for _s in _d.get("sessions") or []:
+                    if _s.get("session_id") == target_sid and _s.get("status") == "done":
+                        return True
+        return False
+
+    if week_plan and target_date and target_sid and (
+        _already_done(week_plan)
+        or _already_done((state.get("week_plans") or {}).get(_monday_for_date(target_date) or ""))
+    ):
+        pass
+    elif week_plan and target_date and target_sid:
         try:
+            _before_mark = week_plan
             week_plan = apply_events(
                 week_plan,
                 [{
@@ -215,6 +279,9 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
                 prev_days=_prev_week_days(state, week_plan.get("start_date")),
                 today=_event_floor(target_date),
             )
+            # B371 review: a custom played here keeps the prescription of the
+            # read-time view (the athlete saw it, GET never re-derives it).
+            freeze_played_customs(week_plan, _before_mark, state)
             state["current_week_plan"] = week_plan
             # Sync to per-week cache so subsequent operations in this request
             # mutate the same object (B136b).
@@ -231,6 +298,7 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
             alt_plan = (state.get("week_plans") or {}).get(target_monday) if target_monday else None
             if alt_plan:
                 try:
+                    _before_alt = alt_plan
                     alt_plan = apply_events(
                         alt_plan,
                         [{
@@ -244,6 +312,7 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
                         prev_days=_prev_week_days(state, alt_plan.get("start_date")),  # B367
                         today=_event_floor(target_date),  # B367
                     )
+                    freeze_played_customs(alt_plan, _before_alt, state)
                     state.setdefault("week_plans", {})[target_monday] = alt_plan
                     # If target_monday is the current macrocycle week, also
                     # refresh legacy current_week_plan so downstream readers
@@ -553,15 +622,31 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
     # 8. A194: Persist via persist_week_plan when we have a current plan —
     # this handles both state["current_week_plan"] and week_plans[start_key]
     # plus save_state in one call. Otherwise, just save_state directly.
+    #
+    # B371 review: only the weeks whose content this request changed are saved
+    # through persist_week_plan, each exactly one revision above the loaded one
+    # (apply_events bumps by itself; that in-memory bump is undone first so the
+    # stamp is +1, not +2). An unchanged week keeps its revision.
     final_plan = state.get("current_week_plan")
-    if final_plan:
-        persist_week_plan(final_plan, state, user_id)
-    else:
+    _persisted = False
+    for _key, (_rev0, _content0) in _week_snap.items():
+        _objs = _week_objects(state, _key)
+        if not _objs:
+            continue
+        for _o in _objs:
+            _o[REVISION_KEY] = _rev0
+        if _without_revision(_objs[0]) == _content0:
+            continue
+        persist_week_plan(_objs[0], state, user_id)
+        _persisted = True
+    if not _persisted:
         save_state(state, user_id)
+    final_plan = state.get("current_week_plan")
 
     response: dict = {"status": "ok"}
     if final_plan:
-        response["week_plan"] = final_plan
+        # Same read-time view GET serves (the stored plan stays raw).
+        response["week_plan"] = read_view(final_plan, state)
     # A296: what the limit log made of this session (target step, the
     # hard-attempts warning, a send above the boulder RP to confirm).
     _limit_summary = _limit_summary_for(state, target_date, target_sid)

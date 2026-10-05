@@ -685,9 +685,16 @@ export default function WeekPage() {
   }
 
   /** After outdoor log, verify data persisted, then mark complete (D134) */
-  async function handleOutdoorLogSuccess() {
+  async function handleOutdoorLogSuccess(info?: { planSynced?: boolean }) {
     if (!weekPlan || !outdoorLogDate) return;
     try {
+      // B371: the log already marked the day done server side (B273) and
+      // moved the week's revision — sending complete_outdoor on the copy held
+      // here would be a false stale-plan 409. Just reload.
+      if (info?.planSynced) {
+        await qc.invalidateQueries({ queryKey: queryKeys.weekAll });
+        return;
+      }
       // D134: read-after-write — verify outdoor log was persisted before marking complete
       try {
         await getOutdoorLogByDate(outdoorLogDate);
@@ -695,9 +702,12 @@ export default function WeekPage() {
         setError("Outdoor session data was not saved. Please try again.");
         return;
       }
+      // B371: not synced (paused / no plan day / queued offline) — the log
+      // may still have touched the week, so edit the fresh copy.
+      const fresh = (await weekQuery.refetch()).data?.week_plan ?? weekPlan;
       const result = await applyEvents({
         events: [{ event_type: "complete_outdoor", date: outdoorLogDate }],
-        week_plan: weekPlan,
+        week_plan: fresh,
       });
       updateWeekCache(result.week_plan, siblingsOf(result));
     } catch (e) {

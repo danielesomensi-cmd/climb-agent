@@ -61,7 +61,9 @@ interface Props {
   defaultGrade?: string;
   defaultDuration?: number;
   initialData?: OutdoorSession;
-  onSuccess?: () => void;
+  /** B371: `planSynced` — the server already marked the plan day done (B273);
+   * the caller must not resend complete_outdoor on its pre-log copy. */
+  onSuccess?: (info?: { planSynced?: boolean }) => void;
   // A226 — guided finish flow: carry day_type/route_profile/conditions and
   // submit through a custom handler (finishOutdoorSession) instead of post/put.
   dayType?: OutdoorDayType;
@@ -193,17 +195,18 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
       if (routeProfile && Object.keys(routeProfile).length > 0) payload.route_profile = routeProfile;
       if (conditions) payload.conditions = conditions;
 
+      let planSynced: boolean | undefined;
       if (onSubmit) {
         await onSubmit(payload);
       } else if (isEdit) {
-        await putOutdoorLog(payload as unknown as Omit<OutdoorSession, "log_version">);
+        planSynced = (await putOutdoorLog(payload as unknown as Omit<OutdoorSession, "log_version">))?.plan_synced;
       } else {
         // A245 B-4 (F5) — a new outdoor log is append-only and self-contained,
         // so it can safely wait in the outbox. An EDIT (putOutdoorLog) cannot:
         // replaying it hours later would clobber whatever changed in between.
         // The active-session finish path (onSubmit) needs a live server id.
         try {
-          await postOutdoorLog(payload as unknown as Omit<OutdoorSession, "log_version">);
+          planSynced = (await postOutdoorLog(payload as unknown as Omit<OutdoorSession, "log_version">))?.plan_synced;
         } catch (err) {
           const queued = enqueue("outdoor_log", payload);
           if (!queued) throw err;
@@ -212,7 +215,7 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
           });
         }
       }
-      onSuccess?.();
+      onSuccess?.({ planSynced });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to log session");
     }

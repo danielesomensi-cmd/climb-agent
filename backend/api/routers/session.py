@@ -10,7 +10,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 
 from backend.api.deps import REPO_ROOT, get_user_id, load_state, require_active_subscription, save_state
-from backend.api.plan_revision import guard_client_plan
+from backend.api.plan_revision import guard_client_plan, read_view, serialized_by_user
 from backend.api.models import (
     AddExerciseRequest,
     RemoveExerciseRequest,
@@ -88,6 +88,7 @@ def resolve(req: SessionResolveRequest, user_id: Optional[str] = Depends(get_use
 
 
 @router.post("/add-exercise", dependencies=[Depends(require_active_subscription)])
+@serialized_by_user
 def add_exercise(req: AddExerciseRequest, user_id: Optional[str] = Depends(get_user_id)):
     """Add an exercise to an already-resolved session in the week plan."""
     state = load_state(user_id)
@@ -171,7 +172,7 @@ def add_exercise(req: AddExerciseRequest, user_id: Optional[str] = Depends(get_u
     session["_user_edited"] = True
     _persist_week_plan(week_plan, state, user_id)
 
-    return {"week_plan": week_plan}
+    return {"week_plan": read_view(week_plan, state)}
 
 
 def _find_session(week_plan: dict, date: str, session_index: int):
@@ -213,6 +214,7 @@ def _recalc_load_score(resolved: dict, exercise_instances: list) -> None:
 
 
 @router.post("/remove-exercise", dependencies=[Depends(require_active_subscription)])
+@serialized_by_user
 def remove_exercise(req: RemoveExerciseRequest, user_id: Optional[str] = Depends(get_user_id)):
     """Remove an exercise from a resolved session."""
     state = load_state(user_id)
@@ -243,7 +245,7 @@ def remove_exercise(req: RemoveExerciseRequest, user_id: Optional[str] = Depends
     session["_user_edited"] = True
     _persist_week_plan(week_plan, state, user_id)
 
-    return {"week_plan": week_plan}
+    return {"week_plan": read_view(week_plan, state)}
 
 
 # --------------------------------------------------------------------------- #
@@ -388,6 +390,7 @@ def _primary_block_survived(resolved: dict) -> bool:
 
 
 @router.post("/surface-override", dependencies=[Depends(require_active_subscription)])
+@serialized_by_user
 def surface_override(req: SurfaceOverrideRequest, user_id: Optional[str] = Depends(get_user_id)):
     """Adapt a rope-dependent session to the boulder wall for this day only (B313).
 
@@ -427,7 +430,7 @@ def surface_override(req: SurfaceOverrideRequest, user_id: Optional[str] = Depen
         planned_id = session.get("surface_override_from")
         if not planned_id:
             # Nothing to revert — idempotent, mirrors mark_planned's no-op.
-            return {"week_plan": week_plan}
+            return {"week_plan": read_view(week_plan, state)}
         session["session_id"] = planned_id
         session["resolved"] = _resolve_for_slot(
             planned_id, session, req.date, state, user_id
@@ -436,11 +439,11 @@ def surface_override(req: SurfaceOverrideRequest, user_id: Optional[str] = Depen
         for key in ("surface_override", "surface_override_from", "_user_edited"):
             session.pop(key, None)
         _persist_week_plan(week_plan, state, user_id)
-        return {"week_plan": week_plan}
+        return {"week_plan": read_view(week_plan, state)}
 
     if session.get("surface_override"):
         # Already adapted — applying twice must not lose the planned session_id.
-        return {"week_plan": week_plan}
+        return {"week_plan": read_view(week_plan, state)}
 
     planned_id = session.get("session_id")
     fallback_id = ((resolved or {}).get("session") or {}).get("boulder_fallback")
@@ -489,6 +492,6 @@ def surface_override(req: SurfaceOverrideRequest, user_id: Optional[str] = Depen
     session["_user_edited"] = True
     _persist_week_plan(week_plan, state, user_id)
 
-    return {"week_plan": week_plan}
+    return {"week_plan": read_view(week_plan, state)}
 
 

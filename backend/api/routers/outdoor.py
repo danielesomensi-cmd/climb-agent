@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+from backend.api.plan_revision import serialized_by_user
 from backend.api.deps import get_user_id, load_state, require_active_subscription, save_state
 from backend.api.models import (
     OutdoorSpotCreate,
@@ -263,6 +264,7 @@ def delete_outdoor_spot(spot_id: str, user_id: Optional[str] = Depends(get_user_
 # ── Session logging ─────────────────────────────────────────────────────
 
 @router.post("/log", dependencies=[Depends(require_active_subscription)])
+@serialized_by_user
 def post_outdoor_log(req: OutdoorSessionLog, user_id: Optional[str] = Depends(get_user_id)):
     """Validate and append an outdoor session to the log."""
     entry = req.model_dump(exclude_none=True)
@@ -324,6 +326,7 @@ def get_outdoor_log_by_date(date: str, user_id: Optional[str] = Depends(get_user
 
 
 @router.put("/log")
+@serialized_by_user
 def put_outdoor_log(req: OutdoorSessionLog, user_id: Optional[str] = Depends(get_user_id)):
     """Update an existing outdoor session (replace entry for the same date)."""
     entry = req.model_dump(exclude_none=True)
@@ -642,6 +645,7 @@ def replace_outdoor_routes(
 
 
 @router.post("/session/{session_id}/finish", dependencies=[Depends(require_active_subscription)])
+@serialized_by_user
 def finish_outdoor_session(
     session_id: str,
     req: OutdoorSessionFinishRequest,

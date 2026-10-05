@@ -13,7 +13,9 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from backend.api.deps import REPO_ROOT, assert_plan_not_paused, current_phase_and_week, get_user_id, is_past_week, load_state, require_active_subscription, save_state, week_num_to_phase_context
 from backend.api.models import EventsRequest, OverrideRequest, QuickAddRequest
-from backend.api.plan_revision import guard_client_plan, stamp_revision, stored_plan_for
+from backend.api.plan_revision import (
+    freeze_played_customs, guard_client_plan, read_view, serialized_by_user, stamp_revision, stored_plan_for,
+)
 from backend.api.guard_status import build_guard_warnings, messages_for
 from backend.api.key_status import build_key_conflicts, build_key_status, resolve_today
 from backend.engine.outdoor_log import compute_outdoor_load_score, load_outdoor_sessions, remove_outdoor_session
@@ -283,6 +285,7 @@ def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None) -
 
 
 @router.post("/override", dependencies=[Depends(require_active_subscription)])
+@serialized_by_user
 def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)):
     """Apply a day override (change a day's session by intent)."""
     state = load_state(user_id)
@@ -314,7 +317,6 @@ def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)
 
     # B366: only the adaptations THIS call appends are reported back.
     _n_adapt_before = len(week_plan.get("adaptations") or [])
-
     try:
         updated = apply_day_override(
             week_plan,
@@ -368,7 +370,9 @@ def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)
     # day for a whole-day / outdoor override) — not the other slot's.
     warnings.extend(messages_for(guard_warnings, target_date, None if whole else target_slot))
 
-    return {"week_plan": updated, "adjustments": adjustments, "warnings": warnings,
+    # B371 review: the response is the same read-time view GET serves (the
+    # stored plan stays raw).
+    return {"week_plan": read_view(updated, state), "adjustments": adjustments, "warnings": warnings,
             "guard_warnings": guard_warnings,
             # A294: sibling, never inside week_plan (nothing can persist it).
             "key_status": build_key_status(state, user_id, week_start=updated.get("start_date"),
@@ -426,6 +430,7 @@ def get_suggestions(target_date: str, location: str = "gym", user_id: Optional[s
 
 
 @router.post("/quick-add", dependencies=[Depends(require_active_subscription)])
+@serialized_by_user
 def quick_add(req: QuickAddRequest, user_id: Optional[str] = Depends(get_user_id)):
     """Add an extra session to a day without replacing existing ones."""
     state = load_state(user_id)
@@ -471,13 +476,14 @@ def quick_add(req: QuickAddRequest, user_id: Optional[str] = Depends(get_user_id
 
     # A301: nothing is rewritten after a quick-add — `adjustments` is always
     # empty (kept for the contract); `guard_warnings` are the week's alerts.
-    return {"week_plan": updated, "warnings": warnings, "adjustments": adjustments,
+    return {"week_plan": read_view(updated, state), "warnings": warnings, "adjustments": adjustments,
             "guard_warnings": build_guard_warnings(state, updated, req.today, user_id=user_id),
             "key_status": build_key_status(state, user_id, week_start=updated.get("start_date"),
                                            today=req.today)}
 
 
 @router.post("/events", dependencies=[Depends(require_active_subscription)])
+@serialized_by_user
 def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
     """Apply a list of events (move, mark_done, mark_skipped, etc.) to a week plan."""
     state = load_state(user_id)
@@ -579,6 +585,9 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
                 ev["outdoor_load_score"] = sum(compute_outdoor_load_score(s) for s in matching)
 
     _n_adapt_before = len(week_plan.get("adaptations") or [])
+    # B371 review: the plan as the client saw it (raw rows after the guard) —
+    # a custom marked done/skipped below keeps the prescription of that view.
+    _before_events = deepcopy(week_plan)
     # B367: what each undo (mark_planned) un-skips, read on the plan BEFORE the
     # events — the UI sends the stub's id (regeneration_easy), while the skip
     # was logged under the id of the session that was skipped.
@@ -740,6 +749,7 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
             ]
             completion_log = state["session_completion_log"]
 
+    freeze_played_customs(updated, _before_events, state)
     persist_week_plan(updated, state, user_id)
 
     # Auto-resolve all sessions so the frontend gets exercises inline
@@ -759,7 +769,7 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
         elif a.get("type") == "change_gym":
             warnings.extend(a.get("warnings") or [])
     return {
-        "week_plan": updated,
+        "week_plan": read_view(updated, state),
         "adjustments": adjustments,
         "warnings": warnings,
         "guard_warnings": build_guard_warnings(state, updated, req.today, user_id=user_id),

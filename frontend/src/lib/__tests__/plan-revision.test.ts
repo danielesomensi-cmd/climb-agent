@@ -73,9 +73,21 @@ describe("isRetrySafeEvents", () => {
   });
   it("set_outdoor_plan only on a still-open outdoor day", () => {
     const ev = [{ event_type: "set_outdoor_plan", date: "2026-10-13", plan: null }];
-    expect(isRetrySafeEvents(ev, plan(3, [], { outdoor_spot_name: "Arco" }))).toBe(true);
-    expect(isRetrySafeEvents(ev, plan(3, [], { outdoor_spot_name: "Arco", outdoor_session_status: "done" }))).toBe(false);
-    expect(isRetrySafeEvents(ev, plan(3, []))).toBe(false);
+    const staleCopy = plan(2, [], { outdoor_spot_name: "Arco" });
+    expect(isRetrySafeEvents(ev, plan(3, [], { outdoor_spot_name: "Arco" }), staleCopy)).toBe(true);
+    expect(isRetrySafeEvents(ev, plan(3, [], { outdoor_spot_name: "Arco", outdoor_session_status: "done" }), staleCopy)).toBe(false);
+    expect(isRetrySafeEvents(ev, plan(3, []), staleCopy)).toBe(false);
+  });
+  it("set_outdoor_plan is not retried when the fresh outdoor_plan differs (the other device wrote one)", () => {
+    const ev = [{ event_type: "set_outdoor_plan", date: "2026-10-13", plan: { pitches: [{ grade: "7a" }] } }];
+    const L1 = { pitches: [{ grade: "6c" }] };
+    const staleCopy = plan(2, [], { outdoor_spot_name: "Arco" });
+    expect(isRetrySafeEvents(ev, plan(3, [], { outdoor_spot_name: "Arco", outdoor_plan: L1 }), staleCopy)).toBe(false);
+    // Same ladder on both copies (the conflict came from another day) → safe.
+    const staleSame = plan(2, [], { outdoor_spot_name: "Arco", outdoor_plan: { pitches: [{ grade: "6c" }] } });
+    expect(isRetrySafeEvents(ev, plan(3, [], { outdoor_spot_name: "Arco", outdoor_plan: L1 }), staleSame)).toBe(true);
+    // No stale copy → never resent blind.
+    expect(isRetrySafeEvents(ev, plan(3, [], { outdoor_spot_name: "Arco" }))).toBe(false);
   });
   it("anything that depends on the plan it was decided on is never retried", () => {
     for (const t of ["move_session", "remove_session", "mark_planned", "add_custom_session", "change_gym"]) {

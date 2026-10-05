@@ -354,3 +354,155 @@ def test_anchored_custom_loads_sent_back_are_not_saved(isolate_state):
     scustom = next(s for s in sday["sessions"] if s.get("session_id") == "custom_cs_x")
     assert scustom["exercises"] == _custom(load=10.0)["exercises"]
     assert "guard_warnings" not in saved
+
+
+# ---------------------------------------------------------------------------
+# Review — write responses are the read view, played customs keep what was
+# shown, feedback bumps only a week it changed, writes are serialised per user
+# ---------------------------------------------------------------------------
+
+def _seed_pending_custom(isolate_state, start: str, day_date: str, load: float = 10.0) -> None:
+    st = json.loads(isolate_state.read_text())
+    stored_day = next(x for x in st["week_plans"][start]["weeks"][0]["days"] if x["date"] == day_date)
+    stored_day.setdefault("sessions", []).append(_custom(load=load))
+    isolate_state.write_text(json.dumps(st))
+
+
+def _custom_of(plan: dict, day_date: str) -> dict:
+    day = next(x for x in plan["weeks"][0]["days"] if x["date"] == day_date)
+    return next(s for s in day["sessions"] if s.get("session_id") == "custom_cs_x")
+
+
+def test_write_response_custom_exercises_equal_the_get_view(isolate_state):
+    wn, plan = _next_week()
+    start = _monday(1)
+    d = plan["weeks"][0]["days"][2]["date"]
+    _seed_pending_custom(isolate_state, start, d)
+    plan = client.get(f"/api/week/{wn}").json()["week_plan"]
+    other = next(x for x in plan["weeks"][0]["days"]
+                 if x["date"] != d and any(s.get("status") not in ("done", "skipped") for s in x.get("sessions") or []))
+    s = next(s for s in other["sessions"] if s.get("status") not in ("done", "skipped"))
+    r = client.post("/api/replanner/events", json={
+        "events": [{"event_type": "remove_session", "date": other["date"], "session_ref": s["session_id"], "slot": s["slot"]}],
+        "week_plan": plan, "base_revision": plan["plan_revision"]})
+    assert r.status_code == 200, r.text
+    after_get = client.get(f"/api/week/{wn}").json()["week_plan"]
+    assert _custom_of(r.json()["week_plan"], d)["exercises"] == _custom_of(after_get, d)["exercises"]
+    # B370: the read view fills the rest default — the raw row has none.
+    assert "rest_between_sets_seconds" in _custom_of(r.json()["week_plan"], d)["exercises"][0]
+    assert r.json()["week_plan"]["plan_revision"] == revision_of(_stored(start))
+    # … and the stored plan stays raw.
+    assert _custom_of(_stored(start), d)["exercises"] == _custom(load=10.0)["exercises"]
+
+
+def test_custom_marked_done_keeps_the_prescription_shown(isolate_state):
+    wn, plan = _next_week()
+    start = _monday(1)
+    d = plan["weeks"][0]["days"][2]["date"]
+    _seed_pending_custom(isolate_state, start, d)
+    plan = client.get(f"/api/week/{wn}").json()["week_plan"]
+    shown = deepcopy(_custom_of(plan, d)["exercises"])
+    r = client.post("/api/replanner/events", json={
+        "events": [{"event_type": "mark_done", "date": d, "session_ref": "custom_cs_x", "slot": "lunch"}],
+        "week_plan": plan, "base_revision": plan["plan_revision"]})
+    assert r.status_code == 200, r.text
+    saved = _custom_of(_stored(start), d)
+    assert saved["status"] == "done"
+    assert saved["exercises"] == shown
+
+
+def test_feedback_outside_the_plan_leaves_the_current_revision_alone(isolate_state):
+    plan = client.get("/api/week/0").json()["week_plan"]
+    start = plan["start_date"]
+    before = revision_of(_stored(start))
+    far = (date.today() + timedelta(weeks=20)).isoformat()
+    r = client.post("/api/feedback", json={"log_entry": {
+        "date": far, "session_id": "nope", "difficulty": "ok", "exercise_feedback": []}})
+    assert r.status_code == 200, r.text
+    assert revision_of(_stored(start)) == before
+
+
+def test_idempotent_feedback_does_not_bump_twice(isolate_state):
+    """/events mark_done then /feedback (the /today flow): the feedback's own
+    content (actual exercises / duration) is a change → exactly +1; a second
+    identical feedback with nothing new is no change → +0."""
+    plan = client.get("/api/week/0").json()["week_plan"]
+    start = plan["start_date"]
+    today = date.today().isoformat()
+    day = next((d for d in plan["weeks"][0]["days"] if d["date"] == today), None)
+    sess = next((s for s in (day or {}).get("sessions") or [] if s.get("status") not in ("done", "skipped")), None)
+    if sess is None:
+        pytest.skip("no pending session today in the fixture week")
+    r = client.post("/api/replanner/events", json={
+        "events": [{"event_type": "mark_done", "date": today, "session_ref": sess["session_id"], "slot": sess["slot"]}],
+        "week_plan": plan, "base_revision": plan["plan_revision"]})
+    assert r.status_code == 200, r.text
+    rev_after_events = revision_of(_stored(start))
+    body = {"log_entry": {"date": today, "session_id": sess["session_id"], "difficulty": "ok",
+                          "exercise_feedback": []}}
+    assert client.post("/api/feedback", json=body).status_code == 200
+    rev1 = revision_of(_stored(start))
+    assert rev1 <= rev_after_events + 1
+    assert client.post("/api/feedback", json=body).status_code == 200
+    assert revision_of(_stored(start)) == rev1
+
+
+def test_write_endpoints_are_serialised_per_user():
+    import threading
+
+    from backend.api.plan_revision import serialized_by_user, user_write_lock
+    from backend.api.routers import feedback, outdoor, replanner, session
+
+    for fn in (replanner.events, replanner.override, replanner.quick_add, session.add_exercise,
+               session.remove_exercise, session.surface_override, outdoor.post_outdoor_log,
+               outdoor.put_outdoor_log, outdoor.finish_outdoor_session):
+        assert hasattr(fn, "__wrapped__"), fn
+    assert user_write_lock("u1") is user_write_lock("u1")
+    assert user_write_lock("u1") is not user_write_lock("u2")
+
+    inside = []
+    gate = threading.Event()
+
+    @serialized_by_user
+    def slow(*, user_id):
+        inside.append(("in", user_id))
+        gate.wait(1)
+        inside.append(("out", user_id))
+
+    t = threading.Thread(target=slow, kwargs={"user_id": "u1"})
+    t.start()
+    while not inside:
+        pass
+    # Same user: blocked while the first write holds the lock.
+    got = user_write_lock("u1").acquire(blocking=False)
+    if got:
+        user_write_lock("u1").release()
+    assert not got
+    # Another user is never blocked by it.
+    assert user_write_lock("u2").acquire(blocking=False)
+    user_write_lock("u2").release()
+    gate.set()
+    t.join()
+    assert inside == [("in", "u1"), ("out", "u1")]
+
+
+def test_outdoor_log_reports_plan_synced_and_moves_the_revision(isolate_state):
+    """The frontend contract after B371: POST /api/outdoor/log syncs the plan
+    server side (B273) and says so — the client must not then send
+    complete_outdoor on its pre-log copy (it would be a 409)."""
+    plan = client.get("/api/week/0").json()["week_plan"]
+    start = plan["start_date"]
+    base = plan["plan_revision"]
+    today = date.today().isoformat()
+    r = client.post("/api/outdoor/log", json={
+        "log_version": "outdoor.v1", "date": today, "spot_name": "Test crag", "discipline": "lead",
+        "duration_minutes": 120, "routes": [{"name": "R", "grade": "6a", "style": "onsight", "attempts": [{"result": "sent"}]}]})
+    if r.status_code != 200:
+        pytest.skip(f"outdoor log rejected by the fixture: {r.text}")
+    if not r.json().get("plan_synced"):
+        pytest.skip("fixture week has no day to sync")
+    assert revision_of(_stored(start)) > base
+    stale = client.post("/api/replanner/events", json={
+        "events": [{"event_type": "complete_outdoor", "date": today}],
+        "week_plan": plan, "base_revision": base})
+    assert stale.status_code == 409

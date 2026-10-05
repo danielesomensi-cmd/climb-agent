@@ -33,6 +33,8 @@ import { blockingConflicts } from "@/lib/key-sessions";
 import { boulderGradeSystemOf } from "@/lib/gradeUtils";
 import { previewLimitTarget } from "@/lib/adhoc-preview";
 import { useUserState } from "@/lib/hooks/queries/use-user-state";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 
 const PAGE_SIZE = 50;
 
@@ -190,6 +192,7 @@ function ThinkingIndicator() {
 
 export default function CoachPage() {
   const router = useRouter();
+  const qc = useQueryClient();
   const [messages, setMessages] = useState<CoachMessage[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
@@ -364,6 +367,10 @@ export default function CoachPage() {
           await deleteCustomSession(created.id).catch(() => {});
           throw e;
         }
+        // B371: the week moved on the server (the GET above may have
+        // regenerated it, the add moved its revision) — a cached copy left
+        // behind would make the next write from /today or /week a false 409.
+        void qc.invalidateQueries({ queryKey: queryKeys.weekAll });
         // A299: play what the read of TODAY says — anchored loads, ladder
         // doses, measures and the limit target recomputed by the same
         // functions as /week and the custom player (the create response is
@@ -391,7 +398,7 @@ export default function CoachPage() {
         setAddingAdhoc(false);
       }
     },
-    [addingAdhoc, router]
+    [addingAdhoc, router, qc]
   );
 
   return (

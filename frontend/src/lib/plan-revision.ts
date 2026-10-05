@@ -14,7 +14,9 @@
  */
 import type { WeekPlan } from "@/lib/types";
 
-export const STALE_PLAN_MESSAGE = "The plan changed on another device — reloaded";
+// Neutral on purpose (B371 review): the newer copy is usually another device,
+// but can also be a regeneration or a write from another screen.
+export const STALE_PLAN_MESSAGE = "The plan was updated — reloaded";
 
 /** The 409 body of a stale write, or null when the body is something else. */
 export type StalePlanBody = {
@@ -52,6 +54,22 @@ export function withBaseRevision<T extends { week_plan?: WeekPlan | null }>(
 
 const PLAYED = new Set(["done", "skipped"]);
 
+/** Structural equality of JSON values (key order ignored). */
+export function deepEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (a === null || b === null || typeof a !== "object" || typeof b !== "object") return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  if (Array.isArray(a)) {
+    const bb = b as unknown[];
+    return a.length === bb.length && a.every((v, i) => deepEqual(v, bb[i]));
+  }
+  const ao = a as Record<string, unknown>;
+  const bo = b as Record<string, unknown>;
+  const ak = Object.keys(ao).filter((k) => ao[k] !== undefined);
+  const bk = Object.keys(bo).filter((k) => bo[k] !== undefined);
+  return ak.length === bk.length && ak.every((k) => deepEqual(ao[k], bo[k]));
+}
+
 function findDay(plan: WeekPlan, date: unknown) {
   if (typeof date !== "string") return undefined;
   for (const w of plan.weeks ?? []) {
@@ -71,13 +89,17 @@ function findDay(plan: WeekPlan, date: unknown) {
  *    log; marking a session the other device moved or removed would hit the
  *    wrong one);
  *  - `set_outdoor_plan` on a day that is still an outdoor day not yet done
- *    (it sets a value — applying it twice is applying it once).
+ *    AND whose `outdoor_plan` on the fresh plan is still the one the user
+ *    edited (`stale`): the conflict came from elsewhere in the week. If the
+ *    other device wrote a different ladder, resending ours would overwrite it
+ *    without a word — the user redoes it on the reloaded week.
  * Anything else — moves, overrides, adds, removes, undo — depends on the plan
  * it was decided on, so the user redoes it on the reloaded week.
  */
 export function isRetrySafeEvents(
   events: Array<Record<string, unknown>>,
   fresh: WeekPlan | null | undefined,
+  stale?: WeekPlan | null,
 ): boolean {
   if (!fresh || !events.length) return false;
   for (const ev of events) {
@@ -92,8 +114,11 @@ export function isRetrySafeEvents(
       );
       if (!target || PLAYED.has(String(target.status ?? ""))) return false;
     } else if (type === "set_outdoor_plan") {
-      const d = day as unknown as { outdoor_spot_name?: string; outdoor_session_status?: string };
+      const d = day as unknown as { outdoor_spot_name?: string; outdoor_session_status?: string; outdoor_plan?: unknown };
       if (!d.outdoor_spot_name || d.outdoor_session_status === "done") return false;
+      // Without the copy the user edited we cannot tell — never resend blind.
+      const old = stale ? (findDay(stale, ev.date) as unknown as { outdoor_plan?: unknown } | undefined) : undefined;
+      if (!old || !deepEqual(old.outdoor_plan ?? null, d.outdoor_plan ?? null)) return false;
     } else {
       return false;
     }
