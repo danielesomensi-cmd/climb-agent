@@ -411,8 +411,8 @@ test. During a comeback, max hangs are also capped at 5 sets.
 (curls, RDL, wrist curls…): it carries your current training load for that
 exercise — the same weight a planned session would give you — so rating it
 "Easy" makes the next one heavier. The kg you typed is used until you have
-logged the exercise once. For now Fixed kg is available in the builder only for
-weighted pull-ups, chin-ups and max hangs.
+logged the exercise once. Choose **Fixed kg** in the builder on any of them to keep
+your own weight every time; the card shows **Auto load** while it follows you.
 
 If you haven't tested yet (or your test is older than 90 days), nothing changes
 for you: loads are worked out exactly as before. A max you typed in during
