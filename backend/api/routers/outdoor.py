@@ -73,7 +73,7 @@ def _sync_plan_after_outdoor_log(
     exactly as they are today.
     """
     from backend.api.deps import ensure_monday, is_past_week, is_plan_paused, read_archived_week
-    from backend.api.routers.replanner import _auto_resolve, persist_week_plan
+    from backend.api.routers.replanner import _auto_resolve, _event_floor, _prev_week_days, persist_week_plan
     from backend.engine import storage as engine_storage
     from backend.engine.replanner_v1 import apply_events
     from backend.engine.subscription_guard import check_subscription
@@ -172,6 +172,10 @@ def _sync_plan_after_outdoor_log(
         planning_prefs=state.get("planning_prefs"),
         gyms=(state.get("equipment") or {}).get("gyms"),
         custom_sessions=state.get("custom_sessions") or [],
+        # B367: same reconcile inputs as /events — cross-week finger seed, and
+        # the days before the outdoor day being logged are past (frozen).
+        prev_days=_prev_week_days(state, plan.get("start_date")),
+        today=_event_floor(date),
     )
 
     # B116 bookkeeping — same shape the replanner events endpoint writes.

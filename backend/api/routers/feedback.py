@@ -37,7 +37,7 @@ from backend.api.deps import (
 )
 from backend.api.rate_limit import limiter
 from backend.api.models import FeedbackRequest
-from backend.api.routers.replanner import persist_week_plan
+from backend.api.routers.replanner import _event_floor, _prev_week_days, persist_week_plan
 from backend.engine.adaptive_replan import (
     append_feedback_log,
     apply_adaptive_replan,
@@ -210,6 +210,10 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
                 availability=availability,
                 planning_prefs=planning_prefs,
                 gyms=gyms,
+                # B367: same reconcile inputs as /events — cross-week finger
+                # seed, and the days before the session being logged are past.
+                prev_days=_prev_week_days(state, week_plan.get("start_date")),
+                today=_event_floor(target_date),
             )
             state["current_week_plan"] = week_plan
             # Sync to per-week cache so subsequent operations in this request
@@ -237,6 +241,8 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
                         availability=availability,
                         planning_prefs=planning_prefs,
                         gyms=gyms,
+                        prev_days=_prev_week_days(state, alt_plan.get("start_date")),  # B367
+                        today=_event_floor(target_date),  # B367
                     )
                     state.setdefault("week_plans", {})[target_monday] = alt_plan
                     # If target_monday is the current macrocycle week, also

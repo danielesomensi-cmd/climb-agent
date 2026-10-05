@@ -34,6 +34,7 @@ from backend.engine.body_part_picker import (
     resolve_equipment_mode,
 )
 from backend.engine.replanner_v1 import apply_events
+from backend.api.routers.replanner import _event_floor, _prev_week_days
 
 logger = logging.getLogger(__name__)
 
@@ -188,6 +189,10 @@ def start(req: StartRequest, user_id: Optional[str] = Depends(get_user_id)):
             availability=state.get("availability"),
             planning_prefs=state.get("planning_prefs"),
             gyms=(state.get("equipment") or {}).get("gyms"),
+            # B367: same reconcile inputs as /events (cross-week finger seed,
+            # frozen past). Never later than the server's today.
+            prev_days=_prev_week_days(state, week_plan.get("start_date")),
+            today=_event_floor(req.target_date),
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))

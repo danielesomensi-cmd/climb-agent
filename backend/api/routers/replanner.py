@@ -112,6 +112,25 @@ def _prev_week_days(state: dict, start_date: Optional[str]) -> Optional[list]:
         return None
 
 
+def _event_floor(event_date: Optional[str]) -> Optional[str]:
+    """B367: the frozen-past floor for server-side callers that have no client today.
+
+    /feedback, the outdoor-log sync and the body-part picker apply events on
+    behalf of the athlete without a client-local ``today``. The day the event
+    is about (``event_date``) is a safe floor: every day before a session the
+    athlete just logged is past. Capped at the server's today so a future
+    target (body-part picker) never freezes more than the clock allows.
+    ``None`` when the date is unusable → the old, unfrozen behaviour.
+    """
+    if not event_date:
+        return None
+    try:
+        d = datetime.strptime(str(event_date)[:10], "%Y-%m-%d").date().isoformat()
+    except ValueError:
+        return None
+    return min(d, resolve_today(None))
+
+
 def persist_week_plan(updated: dict, state: dict, user_id) -> None:
     """Save modified plan to per-week cache and (if current) to legacy cache.
 
@@ -288,6 +307,10 @@ def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)
             # B360 — la falesia scelta nel dialog, non l'intent
             spot_id=req.spot_id,
             spot_name=req.spot_name,
+            # B367: the override's reconcile gets the same inputs as /events —
+            # Sunday→Monday finger seed and the frozen past (client-local today).
+            prev_days=_prev_week_days(state, week_plan.get("start_date")),
+            today=resolve_today(req.today),
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
@@ -392,6 +415,9 @@ def quick_add(req: QuickAddRequest, user_id: Optional[str] = Depends(get_user_id
             # B287/R-5: trailing days of the preceding week, so the Sunday→Monday
             # finger gap is checked instead of the scan starting blind at Monday.
             prev_days=_prev_week_days(state, week_plan.get("start_date")),
+            # B367: days before the athlete's today are frozen (A294 review fix,
+            # until now applied to /events only).
+            today=resolve_today(req.today),
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))

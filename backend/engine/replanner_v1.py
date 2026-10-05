@@ -377,6 +377,7 @@ def apply_day_add(
     gym_id: Optional[str] = None,
     force: bool = False,
     prev_days: Optional[Sequence[Dict[str, Any]]] = None,
+    today: Optional[str] = None,
 ) -> tuple:
     """Append a session to an existing day (quick-add).
 
@@ -394,6 +395,11 @@ def apply_day_add(
     runs, and every downshift it makes is returned in *adjustments* so the
     caller can tell the user what happened: enforcement must never be silent on
     a session the user explicitly added.
+
+    B367: *today* (ISO, the athlete's local day) freezes every day before it for
+    the reconcile, exactly like ``apply_events`` since the A294 review — a past
+    session the athlete did but has not ticked yet is counted, never
+    downshifted. ``None`` keeps the old behaviour.
     """
     # --- Input validation ---
     if not session_id:
@@ -465,7 +471,7 @@ def apply_day_add(
     def _settle(p: Dict[str, Any]) -> tuple:
         # Reconcile, then check the added session against a protected session
         # that FOLLOWS it (the forward scan cannot downshift backwards).
-        adj = _reconcile(p, prev_days=prev_days)
+        adj = _reconcile(p, prev_days=prev_days, frozen_before=today)
         guard_adj, guard_warn = _protected_neighbor_guard(p, target_date, slot, session_id, "quick_add")
         return adj + guard_adj, guard_warn
 
@@ -2182,6 +2188,12 @@ def apply_day_override(
     # ⇒ i call site esistenti non cambiano.
     spot_id: Optional[str] = None,
     spot_name: Optional[str] = None,
+    # B367: same reconcile inputs as apply_events / apply_day_add — the trailing
+    # days of the previous week (Sunday→Monday finger gap) and the athlete's
+    # today (days before it are frozen: counted, never rewritten). Default None
+    # ⇒ old behaviour.
+    prev_days: Optional[Sequence[Dict[str, Any]]] = None,
+    today: Optional[str] = None,
 ) -> Dict[str, Any]:
     updated = deepcopy(plan)
 
@@ -2369,7 +2381,7 @@ def apply_day_override(
         )
         if needs_compensation:
             _compensate_finger(p, target_key, effective_phase, location, effective_gym_id)
-        reconcile_adj = _reconcile(p)
+        reconcile_adj = _reconcile(p, prev_days=prev_days, frozen_before=today)
         # B366 review: a protected finger session AFTER the override is not
         # caught by the forward scan — check the override against it.
         guard_adj, guard_warn = _protected_neighbor_guard(
