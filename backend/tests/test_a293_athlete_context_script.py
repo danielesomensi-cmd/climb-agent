@@ -146,17 +146,19 @@ class TestSimulate:
                        "--target-date", "2026-10-06", "--slot", "evening"])
         out = capsys.readouterr().out
         assert rc == 0
-        assert "2026-10-07 evening: power_contact_gym → regeneration_easy — CHIAVE limit_power" in out
-        assert "una sessione CHIAVE verrebbe declassata" in out
+        # A301: nothing is declassed — the guard alert on the key session is said.
+        assert "ALERT [finger_gap] 2026-10-07 evening: power_contact_gym — CHIAVE limit_power" in out
+        assert "una guardia scatterebbe su una sessione CHIAVE" in out
+        assert "verrebbe declassata" not in out
         assert _sha(files["state"]) == before
 
     def test_simulate_payload(self):
         sim = cli.simulate(_state(), DRAFT, "2026-10-06", "evening")
         assert sim["ok"] is True
         assert sim["custom_tags"] == {"hard": True, "finger": True}
-        dg = sim["downgrades"]
-        assert dg == [{"date": "2026-10-07", "slot": "evening", "from": "power_contact_gym",
-                       "to": "regeneration_easy", "key": ["limit_power"]}]
+        assert sim["downgrades"] == []  # A301
+        ga = [(a["code"], a["date"], a["slot"], a["session_id"], a["key"]) for a in sim["guard_alerts"]]
+        assert ("finger_gap", "2026-10-07", "evening", "power_contact_gym", ["limit_power"]) in ga
         # The player would get the anchored load of that day, not the draft's 20 kg.
         hang = next(e for e in sim["resolved_exercises"] if e["exercise_id"] == "max_hang_7s")
         assert hang["load_source"] == "anchored" and hang["stored_load_kg"] == 20

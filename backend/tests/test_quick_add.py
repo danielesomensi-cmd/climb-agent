@@ -200,7 +200,8 @@ def test_add_slot_conflict_raises():
 
 
 def test_add_hard_ripple_day1():
-    """Day+1 hard sessions should be downgraded after adding a hard session."""
+    """A301: day+1 is NOT eased after a hard quick-add any more — it stays
+    byte-identical (guards are alerts)."""
     plan = _v2_plan_snapshot("strength_power")
     days = plan["weeks"][0]["days"]
 
@@ -221,14 +222,8 @@ def test_add_hard_ripple_day1():
             updated_next = next(d for d in updated["weeks"][0]["days"] if d["date"] == next_day["date"])
             updated_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == day["date"])
             added = next(s for s in updated_day["sessions"] if s["slot"] == free_slots[0])
-            if added["session_id"] == "strength_long":
-                for s in updated_next["sessions"]:
-                    assert not (s.get("tags") or {}).get("hard"), \
-                        f"Day+1 should have no hard sessions after hard quick-add"
-            else:
-                # B366: reconcile downshifted the added session itself → the
-                # ripple must not ease day+1 for a load that is not on the plan.
-                assert updated_next["sessions"] == next_day["sessions"]
+            assert added["session_id"] == "strength_long"
+            assert updated_next["sessions"] == next_day["sessions"]
             return
 
     # If no suitable combination found, test with a synthetic setup

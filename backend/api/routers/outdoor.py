@@ -160,8 +160,7 @@ def _sync_plan_after_outdoor_log(
         "event_type": "complete_outdoor",
         "date": date,
         "outdoor_load_score": day_load_score,
-        # B343: never ripple a downshift onto the next day of an already-closed
-        # week — that day's real outcome (or lack of one) is already history.
+        # B343 flag; A301: there is no ripple any more (accepted and ignored).
         "allow_ripple": not is_past,
     })
 
@@ -172,8 +171,7 @@ def _sync_plan_after_outdoor_log(
         planning_prefs=state.get("planning_prefs"),
         gyms=(state.get("equipment") or {}).get("gyms"),
         custom_sessions=state.get("custom_sessions") or [],
-        # B367: same reconcile inputs as /events — cross-week finger seed, and
-        # the days before the outdoor day being logged are past (frozen).
+        # B367 inputs; A301: accepted, they no longer change the plan.
         prev_days=_prev_week_days(state, plan.get("start_date")),
         today=_event_floor(date),
     )

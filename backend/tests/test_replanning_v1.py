@@ -181,8 +181,16 @@ def test_day_override_with_phase_id():
     assert override_session["phase_id"] == "strength_power"
 
 
+def _others_untouched(before, after, target_date):
+    """A301: after an override only the target day changes."""
+    for b, a in zip(before["weeks"][0]["days"], after["weeks"][0]["days"]):
+        if b["date"] != target_date:
+            assert a == b, f"{b['date']} was rewritten by an override on {target_date}"
+
+
 def test_day_override_target_date_ripple():
-    """Override Wednesday with explicit target_date, verify Thursday gets downgraded via ripple."""
+    """A301: override Wednesday with explicit target_date — no ripple, Thursday
+    and Friday stay exactly as planned (the guards only raise alerts)."""
     plan = _v2_plan_snapshot("strength_power")
     updated = apply_day_override(
         plan,
@@ -192,20 +200,11 @@ def test_day_override_target_date_ripple():
         target_date="2026-01-07",
         phase_id="strength_power",
     )
-    # Wednesday should have the override session
     wed = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-07")
-    assert wed["sessions"][0]["session_id"] == INTENT_TO_SESSION["strength"]
-    assert wed["sessions"][0]["phase_id"] == "strength_power"
-
-    # Thursday (ripple day +1) should have no hard sessions
-    thu = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-08")
-    for s in thu["sessions"]:
-        assert not s["tags"]["hard"], f"Hard session still present on ripple day 2026-01-08"
-
-    # Friday (ripple day +2) should also have no hard sessions
-    fri = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-09")
-    for s in fri["sessions"]:
-        assert not s["tags"]["hard"], f"Hard session still present on ripple day 2026-01-09"
+    ov = next(s for s in wed["sessions"] if "manual_override" in s["constraints_applied"])
+    assert ov["session_id"] == INTENT_TO_SESSION["strength"]
+    assert ov["phase_id"] == "strength_power"
+    _others_untouched(plan, updated, "2026-01-07")
 
 
 def test_mark_done_keeps_session_with_status():
@@ -279,7 +278,8 @@ def test_undo_done_restores_session_status():
 
 
 def test_day_override_recovery_ripple():
-    """Hard override should downgrade following days to regeneration_easy."""
+    """A301: a hard override next to a finger day stays as asked (no reconcile
+    downshift of the override, no ripple on the following days)."""
     plan = _v2_plan_snapshot("strength_power")
     updated = apply_day_override(
         plan,
@@ -288,42 +288,19 @@ def test_day_override_recovery_ripple():
         reference_date="2026-01-05",
         phase_id="strength_power",
     )
-    # B366: in this snapshot 01-05 holds a finger session, so reconcile
-    # downshifts the 01-06 override (48h gap) — and the ripple must then leave
-    # 01-07/01-08 alone instead of easing them for a load that is not there.
     target = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-06")
-    assert target["sessions"][0]["session_id"] == "regeneration_easy"
-    for ripple_date in ("2026-01-07", "2026-01-08"):
-        before = next(d for d in plan["weeks"][0]["days"] if d["date"] == ripple_date)
-        after = next(d for d in updated["weeks"][0]["days"] if d["date"] == ripple_date)
-        assert after["sessions"] == before["sessions"]
-
-    # Without the conflicting finger day the override survives, and the ripple
-    # eases the two following days.
-    clean = _v2_plan_snapshot("strength_power")
-    next(d for d in clean["weeks"][0]["days"] if d["date"] == "2026-01-05")["sessions"] = []
-    updated = apply_day_override(
-        clean,
-        intent="strength",
-        location="home",
-        reference_date="2026-01-05",
-        phase_id="strength_power",
-    )
-    target = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-06")
-    assert "manual_override" in target["sessions"][0]["constraints_applied"]
-    for ripple_date in ("2026-01-07", "2026-01-08"):
-        ripple_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == ripple_date)
-        for s in ripple_day["sessions"]:
-            assert not s["tags"]["hard"], f"Hard session on ripple day {ripple_date}"
-    entry = next(a for a in updated["adaptations"] if a["type"] == "day_override")
-    assert {a["date"] for a in entry["adjustments"]} == {"2026-01-07"}
+    ov = next(s for s in target["sessions"] if "manual_override" in s["constraints_applied"])
+    assert ov["session_id"] == INTENT_TO_SESSION["strength"]
+    _others_untouched(plan, updated, "2026-01-06")
+    from backend.engine import guards_v1
+    alerts = guards_v1.evaluate(updated)
+    assert any(w["code"] == "finger_gap" and w["date"] == "2026-01-06" for w in alerts)
 
 
 def test_day_override_enforces_finger_spacing():
-    """Override with finger_max intent should enforce no consecutive finger days via _reconcile."""
+    """A301: two finger overrides on consecutive days both stay finger — the
+    48h gap is an alert (guards_v1 finger_gap), not a downshift."""
     plan = _v2_plan_snapshot("strength_power")
-
-    # Place a finger session on Monday by overriding Sunday→Monday
     plan_with_finger_mon = apply_day_override(
         plan,
         intent="finger_max",
@@ -332,12 +309,9 @@ def test_day_override_enforces_finger_spacing():
         target_date="2026-01-05",     # Monday
         phase_id="strength_power",
     )
-
-    # Verify Monday has a finger session
     mon = next(d for d in plan_with_finger_mon["weeks"][0]["days"] if d["date"] == "2026-01-05")
     assert any((s.get("tags") or {}).get("finger") for s in mon["sessions"]), "Monday should have a finger session"
 
-    # Now override Tuesday with another finger intent
     plan_with_finger_tue = apply_day_override(
         plan_with_finger_mon,
         intent="finger_max",
@@ -346,12 +320,13 @@ def test_day_override_enforces_finger_spacing():
         target_date="2026-01-06",     # Tuesday
         phase_id="strength_power",
     )
-
-    # _reconcile should have downgraded Tuesday's finger session due to spacing constraint
     tue = next(d for d in plan_with_finger_tue["weeks"][0]["days"] if d["date"] == "2026-01-06")
-    for s in tue["sessions"]:
-        assert not (s.get("tags") or {}).get("finger"), \
-            "Tuesday finger session should be downgraded by _reconcile (consecutive finger days)"
+    ov = next(s for s in tue["sessions"] if "manual_override" in s["constraints_applied"])
+    assert ov["tags"]["finger"] is True
+    _others_untouched(plan_with_finger_mon, plan_with_finger_tue, "2026-01-06")
+    from backend.engine import guards_v1
+    alerts = guards_v1.evaluate(plan_with_finger_tue)
+    assert any(w["code"] == "finger_gap" and w["date"] == "2026-01-06" for w in alerts)
 
 
 # ---------- F6-partial: projecting intent ----------
@@ -388,10 +363,10 @@ def test_day_override_with_projecting_intent():
 
 # ---------- NEW-F4: proportional ripple effect ----------
 
-def test_day_override_hard_ripple_day1_proportional():
-    """After hard override, day+1 hard sessions become medium (complementary_conditioning)."""
+def test_day_override_hard_no_ripple_on_following_days():
+    """A301: a hard override on Monday leaves Tuesday and Wednesday exactly as
+    planned — the old proportional day+1 / forced day+2 recovery ripple is gone."""
     plan = _v2_plan_snapshot("strength_power")
-    # Override Monday with a hard session
     updated = apply_day_override(
         plan,
         intent="strength",
@@ -400,59 +375,13 @@ def test_day_override_hard_ripple_day1_proportional():
         target_date="2026-01-05",
         phase_id="strength_power",
     )
-    # Tuesday (day+1) — hard sessions should be downgraded to medium, not recovery
-    tue = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-06")
-    for s in tue["sessions"]:
-        assert not s["tags"]["hard"], "Day+1 should have no hard sessions"
-        # If it was downgraded from hard, it should be complementary_conditioning (medium)
-        if "recovery_ripple_proportional" in s.get("constraints_applied", []):
-            assert s["intensity"] in ("medium", "low"), \
-                f"Day+1 downgraded session should be medium or low, got {s['intensity']}"
+    _others_untouched(plan, updated, "2026-01-05")
+    for a in updated.get("adaptations", []):
+        if a.get("type") == "day_override":
+            assert a["adjustments"] == []
+            assert "ripple_days" not in a
 
 
-def test_day_override_hard_ripple_day2_forces_recovery():
-    """After hard override, day+2 non-low sessions become regeneration_easy."""
-    plan = _v2_plan_snapshot("strength_power")
-    updated = apply_day_override(
-        plan,
-        intent="power",
-        location="gym",
-        reference_date="2026-01-05",
-        target_date="2026-01-07",  # Wednesday
-        phase_id="strength_power",
-    )
-    # Friday (day+2 from Wednesday = 2026-01-09)
-    fri = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-09")
-    for s in fri["sessions"]:
-        assert not s["tags"]["hard"], "Day+2 should have no hard sessions"
-        if "recovery_ripple" in s.get("constraints_applied", []):
-            assert s["session_id"] == "regeneration_easy", \
-                f"Day+2 downgraded session should be regeneration_easy, got {s['session_id']}"
-            assert s["intensity"] == "low"
-
-
-def test_day_override_ripple_keeps_low_sessions():
-    """Low-intensity sessions on both day+1 and day+2 should be kept unchanged."""
-    plan = _v2_plan_snapshot("base")
-    # Find a day that has a low-intensity session, then override the day before
-    days = plan["weeks"][0]["days"]
-    # Override Monday with hard session
-    updated = apply_day_override(
-        plan,
-        intent="finger_max",
-        location="home",
-        reference_date="2026-01-04",
-        target_date="2026-01-05",
-        phase_id="base",
-    )
-    # Check that low-intensity sessions on day+1 and day+2 are preserved
-    for ripple_date in ("2026-01-06", "2026-01-07"):
-        ripple_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == ripple_date)
-        for s in ripple_day["sessions"]:
-            if s.get("intensity") == "low" and "recovery_ripple" not in s.get("constraints_applied", []) \
-                    and "recovery_ripple_proportional" not in s.get("constraints_applied", []):
-                # This was an original low session — should be unchanged
-                assert s["intensity"] == "low"
 
 
 # ---------- NEW-F6: phase mismatch warning ----------
@@ -492,7 +421,9 @@ def test_no_phase_mismatch_warning_when_matching():
 
 
 def test_finger_compensation_after_override():
-    """Override that removes finger session should compensate on a later day."""
+    """A301: an override that removes a finger session is NOT compensated on
+    another day (that rewrote a day the user did not touch) — it is said in the
+    override's warnings instead."""
     plan = _v2_plan_snapshot("base")
     days = plan["weeks"][0]["days"]
     finger_day = next(
@@ -503,20 +434,20 @@ def test_finger_compensation_after_override():
         pytest.skip("No finger day in base plan")
 
     finger_date = finger_day["date"]
+    finger_session = next(s for s in finger_day["sessions"] if (s.get("tags") or {}).get("finger"))
     updated = apply_day_override(
         plan,
         intent="technique",  # non-finger
         location="gym",
         reference_date=(datetime.strptime(finger_date, "%Y-%m-%d") - timedelta(days=1)).strftime("%Y-%m-%d"),
         target_date=finger_date,
+        slot=finger_session["slot"],
         phase_id="base",
     )
-
-    # Check: finger_compensation or finger_compensation_warning should be logged
-    compensations = [a for a in updated.get("adaptations", []) if a.get("type") == "finger_compensation"]
-    finger_warnings = [a for a in updated.get("adaptations", []) if a.get("type") == "finger_compensation_warning"]
-    assert len(compensations) + len(finger_warnings) >= 1, \
-        "Should either compensate finger or warn about inability to compensate"
+    assert not [a for a in updated.get("adaptations", []) if a.get("type") == "finger_compensation"]
+    _others_untouched(plan, updated, finger_date)
+    ov = next(a for a in updated["adaptations"] if a.get("type") == "day_override")
+    assert any("not compensated" in w for w in ov["warnings"])
 
 
 def test_finger_no_compensation_when_finger_kept():
@@ -1055,16 +986,15 @@ def test_change_gym_skips_done_sessions():
 
 
 def test_change_gym_finger_compensation():
-    """Losing a finger session to gym change should trigger finger compensation."""
+    """A301: losing a finger session to a gym change is said, not compensated —
+    the other days of the week are byte-identical."""
     plan = _gym_plan()
-    # Force a finger session on day 1 and a replaceable session on day 3+
     days = plan["weeks"][0]["days"]
     days[0]["sessions"] = [{
         "slot": "evening", "session_id": "finger_maintenance_gym",
         "location": "gym", "gym_id": "gym_a", "intensity": "medium",
         "tags": {"hard": False, "finger": True},
     }]
-    # Ensure day 3 has a replaceable complementary session
     if len(days) > 2:
         days[2]["sessions"] = [{
             "slot": "evening", "session_id": "complementary_conditioning",
@@ -1076,14 +1006,13 @@ def test_change_gym_finger_compensation():
         plan,
         [{"event_type": "change_gym", "date": days[0]["date"], "location": "home"}],
     )
-
-    # Check finger compensation was attempted
     adaptations = updated.get("adaptations", [])
-    has_compensation = any(
-        a.get("type") in ("finger_compensation", "finger_compensation_warning")
-        for a in adaptations
-    )
-    assert has_compensation
+    assert not any(a.get("type") in ("finger_compensation", "finger_compensation_warning") for a in adaptations)
+    cg = next(a for a in adaptations if a.get("type") == "change_gym")
+    if cg.get("lost_finger"):
+        assert any("finger session lost" in w for w in cg["warnings"])
+    for b, a in zip(plan["weeks"][0]["days"][1:], updated["weeks"][0]["days"][1:]):
+        assert a == b
 
 
 # ── Outdoor events ─────────────────────────────────────────────────────
@@ -1464,8 +1393,10 @@ def test_b48_override_session_1_keeps_session_0():
 
 
 def test_b48_no_index_replaces_all_sessions():
-    """B48: Without session_index, all sessions are replaced (backward compat)."""
+    """A301: without session_index the override replaces only the targeted slot
+    (the evening by default) — the other sessions of the day stay."""
     plan, date = _make_multi_session_plan()
+    before_day = next(d for d in plan["weeks"][0]["days"] if d["date"] == date)
     updated = apply_day_override(
         plan,
         intent="technique",
@@ -1474,8 +1405,10 @@ def test_b48_no_index_replaces_all_sessions():
         target_date=date,
     )
     target_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == date)
-    assert len(target_day["sessions"]) == 1, "Without index, should replace all"
-    assert target_day["sessions"][0]["session_id"] == "technique_focus_gym"
+    evening = [s for s in target_day["sessions"] if s["slot"] == "evening"]
+    assert len(evening) == 1 and evening[0]["session_id"] == "technique_focus_gym"
+    assert [s for s in target_day["sessions"] if s["slot"] != "evening"] == \
+        [s for s in before_day["sessions"] if s["slot"] != "evening"]
 
 
 def test_b48_session_index_out_of_range():

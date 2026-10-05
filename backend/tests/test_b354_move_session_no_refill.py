@@ -86,7 +86,8 @@ def test_moved_test_keeps_its_identity_and_tags():
 
 
 def test_finger_gap_still_enforced_after_a_move():
-    """Removing the refill must not remove the guard: _reconcile still runs."""
+    """Removing the refill must not remove the guard. A301: the guard is an
+    alert — the moved session stays as moved, the gap is said."""
     plan = _plan([
         _day("2026-09-14", [_session("strength_long", hard=True, finger=True)]),
         _day("2026-09-15", []),
@@ -95,7 +96,11 @@ def test_finger_gap_still_enforced_after_a_move():
 
     days = _days_of(_move(plan, "2026-09-17", "evening", "2026-09-15", "evening"))
 
+    from backend.engine import guards_v1
+
     tue = days["2026-09-15"]["sessions"][0]
-    assert tue["session_id"] == "regeneration_easy"
-    assert "finger_spacing_downshift" in tue.get("constraints_applied", [])
+    assert tue["session_id"] == "power_contact_gym"
+    assert "user_moved" in tue.get("constraints_applied", [])
     assert days["2026-09-17"]["sessions"] == []
+    moved = _move(plan, "2026-09-17", "evening", "2026-09-15", "evening")
+    assert any(w["code"] == "finger_gap" and w["date"] == "2026-09-15" for w in guards_v1.evaluate(moved))

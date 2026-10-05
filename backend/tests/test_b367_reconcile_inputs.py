@@ -11,6 +11,10 @@ The other paths that reconcile did not get them:
     past, unmarked finger Monday was downshifted by a Thursday quick-add.
 Same class: /feedback, the outdoor-log sync and the body-part picker called
 ``apply_events`` with neither.
+
+A301 (guards are alerts): no user action downshifts anything any more. The
+same inputs now feed the ALERTS (``guards_v1``): the Sunday→Monday gap is
+still seen, and nothing before today is flagged or rewritten.
 """
 from __future__ import annotations
 
@@ -26,6 +30,7 @@ from fastapi.testclient import TestClient
 from backend.api import deps
 from backend.api.main import app
 from backend.engine.planner_v2 import _SESSION_META
+from backend.engine import guards_v1
 from backend.engine.replanner_v1 import apply_day_add, apply_day_override
 
 client = TestClient(app)
@@ -75,39 +80,49 @@ class TestQuickAddToday:
         assert _day(out, 0) == before_mon, "a past (frozen) day was rewritten"
         assert adj == []
 
-    def test_without_today_the_old_behaviour_is_unchanged(self):
-        plan = _plan({0: [_sess(FINGER)]})
-        _out, _w, adj = apply_day_add(plan, session_id="regeneration_easy", target_date="2026-10-08",
-                                      location="gym", prev_days=_prev_sunday_finger())
-        assert [a["date"] for a in adj] == [MON]
-
-    def test_frozen_past_still_constrains_today(self):
-        """A past finger day counts: a finger quick-add the day after is downshifted."""
+    def test_without_today_nothing_is_rewritten_either(self):
+        """A301: the Sunday→Monday gap is an alert on Monday, never a downshift."""
         plan = _plan({0: [_sess(FINGER)]})
         before_mon = copy.deepcopy(_day(plan, 0))
-        out, _w, adj = apply_day_add(plan, session_id=FINGER, target_date="2026-10-06",
-                                     location="gym", today="2026-10-06")
+        out, _w, adj = apply_day_add(plan, session_id="regeneration_easy", target_date="2026-10-08",
+                                     location="gym", prev_days=_prev_sunday_finger())
+        assert adj == [] and _day(out, 0) == before_mon
+        alerts = guards_v1.evaluate(out, _prev_sunday_finger())
+        assert [(w["code"], w["date"]) for w in alerts] == [("finger_gap", MON)]
+        # with today after Monday, Monday is history: counted, not flagged
+        assert guards_v1.evaluate(out, _prev_sunday_finger(), "2026-10-08") == []
+
+    def test_frozen_past_still_constrains_today(self):
+        """A past finger day counts: a finger quick-add the day after is kept,
+        and the gap is said."""
+        plan = _plan({0: [_sess(FINGER)]})
+        before_mon = copy.deepcopy(_day(plan, 0))
+        out, warnings, adj = apply_day_add(plan, session_id=FINGER, target_date="2026-10-06",
+                                           location="gym", today="2026-10-06")
         assert _day(out, 0) == before_mon
-        assert [(a["date"], a["reason"]) for a in adj] == [("2026-10-06", "finger_spacing_downshift")]
+        assert adj == []
+        assert _day(out, 1)["sessions"][0]["session_id"] == FINGER
+        assert any("2026-10-06" in w and "finger" in w.lower() for w in warnings)
 
 
 # ── #5: override sees the previous week and the frozen past ──────────────────
 
 class TestOverrideInputs:
-    def test_monday_override_after_finger_sunday_is_downshifted(self):
+    def test_monday_override_after_finger_sunday_is_an_alert(self):
         out = apply_day_override(_plan({}), intent="strength", location="gym",
                                  reference_date="2026-10-04", target_date=MON,
                                  prev_days=_prev_sunday_finger(), today=MON)
         mon = _day(out, 0)["sessions"][0]
-        assert mon["session_id"] == "regeneration_easy"
-        assert mon["downshifted_from"] == FINGER
-        adj = out["adaptations"][-1]["adjustments"]
-        assert any(a["reason"] == "finger_spacing_downshift" and a["date"] == MON for a in adj)
+        assert mon["session_id"] == FINGER and "downshifted_from" not in mon
+        assert out["adaptations"][-1]["adjustments"] == []
+        alerts = guards_v1.evaluate(out, _prev_sunday_finger(), MON)
+        assert any(w["code"] == "finger_gap" and w["date"] == MON for w in alerts)
 
-    def test_without_prev_days_the_old_behaviour_is_unchanged(self):
+    def test_without_prev_days_no_alert(self):
         out = apply_day_override(_plan({}), intent="strength", location="gym",
                                  reference_date="2026-10-04", target_date=MON)
         assert _day(out, 0)["sessions"][0]["session_id"] == FINGER
+        assert guards_v1.evaluate(out) == []
 
     def test_override_never_rewrites_a_past_unmarked_day(self):
         plan = _plan({0: [_sess(FINGER)], 1: [_sess(FINGER, slot="morning")]})
@@ -127,8 +142,10 @@ class TestOverrideInputs:
                                  reference_date="2026-10-06", target_date="2026-10-07",
                                  prev_days=_prev_sunday_finger(), today="2026-10-07")
         assert _day(out, 1) == before
-        # and the override itself, the day after a done finger day, is downshifted
-        assert _day(out, 2)["sessions"][0]["session_id"] == "regeneration_easy"
+        # and the override itself, the day after a done finger day, stays — said
+        assert _day(out, 2)["sessions"][0]["session_id"] == FINGER
+        alerts = guards_v1.evaluate(out, _prev_sunday_finger(), "2026-10-07")
+        assert any(w["code"] == "finger_gap" and w["date"] == "2026-10-07" for w in alerts)
 
 
 # ── server-side floor for callers without a client today ────────────────────
@@ -187,8 +204,13 @@ class TestRoutersPassInputs:
             "target_date": monday, "week_plan": _plan({}, start=monday), "today": monday,
         })
         assert r.status_code == 200, r.text
-        mon = r.json()["week_plan"]["weeks"][0]["days"][0]["sessions"][0]
-        assert mon["session_id"] == "regeneration_easy"
+        body = r.json()
+        mon = body["week_plan"]["weeks"][0]["days"][0]["sessions"][0]
+        assert mon["session_id"] == FINGER
+        assert body["adjustments"] == []
+        # A301: the previous week seeds the alerts of the response.
+        assert any(w["code"] == "finger_gap" and w["date"] == monday for w in body["guard_warnings"])
+        assert any("finger" in w.lower() for w in body["warnings"])
 
     def test_quick_add_endpoint_freezes_the_past(self, isolated_state):
         monday = _current_monday()

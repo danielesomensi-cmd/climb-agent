@@ -213,14 +213,14 @@ The **Key sessions this week** card lists every key stimulus with its status. A 
 
 When a key session is missed, the card tells you what to do:
 
-- **Re-schedule** — the app found a safe day this week (finger recovery gap, hard-day cap, upcoming tests, next week's key sessions and the heavy-pulling rules — no weighted pull-ups the day before a limit or long strength session, at most two heavy pulling sessions in 7 days — all checked). Tap **Add to my week**. When the card shows more than one proposal, each was checked with the earlier ones already in your week, so they never take the same slot. If the change eases another session (for example Sunday's finger maintenance becomes recovery), the card says so *before* you tap.
+- **Re-schedule** — the app found a safe day this week (finger recovery gap, hard-day cap, upcoming tests, next week's key sessions and the heavy-pulling rules — no weighted pull-ups the day before a limit or long strength session, at most two heavy pulling sessions in 7 days — all checked). Tap **Add to my week**. When the card shows more than one proposal, each was checked with the earlier ones already in your week, so they never take the same slot. A proposal never needs another session to change: a day where the catch-up would sit inside the recovery gap of another finger session (even an easy finger maintenance) or push the week over its hard-day cap is not proposed.
 - **Next key session on …** — catching up would sit too close to next week's key session: skip the catch-up, the plan already has the next one.
 - **No catch-up** — you logged a very hard session in the last 3 days: recovery comes first.
 - **Let it go** — no safe day left this week. A stimulus missed in a past week is gone, not a debt.
 
 At most one finger catch-up is proposed per week. On **Today** the card appears only when something is owed. You can hide a row for the week with ✕.
 
-**Adding a custom session** (from This Week, Today, the Coach or the body-part picker) first checks the key sessions: if it would turn a key session into recovery, land within 72 hours of a max test, or put finger-hard work inside the recovery gap of another finger-hard day (a key session you already did included), you get a warning with **Add anyway** / **Pick another day**. When the custom trains the same stimulus (for example your own max-hang session the day before the long strength session), the warning says it **replaces** the key session. It never blocks you.
+**Adding a custom session** (from This Week, Today, the Coach or the body-part picker) first checks the key sessions: if it would land within 72 hours of a max test, or put finger-hard work inside the recovery gap of another finger-hard day (a key session you already did included), you get a warning with **Add anyway** / **Pick another day**. It never blocks you, and adding it never changes the key session or any other session of the week: the two stay as they are and the week carries the alert.
 
 **Coach.** When you ask the coach for a session close to a finger key session — one you already did, one still to come, or one later the same day — (or within 72 hours of a max test), it leaves out the finger-hard exercises (and heavy pulls before a pull-up test) and tells you why on the session card. The coach's answers also know which sessions are key this week.
 
@@ -607,7 +607,7 @@ From the **Today** or **Week** page, tap a session card's menu to add exercises.
 
 ### Moving a Session
 
-On **Week** or **Today**, move a planned session to another day or slot. The slot you leave stays empty — it simply becomes rest; nothing is added in its place. The usual safety rules still apply where the session lands: if the move puts two finger-heavy days back to back, or goes over your weekly limit of hard days, the later session is swapped for an easy recovery session. Completed or skipped sessions cannot be moved.
+On **Week** or **Today**, move a planned session to another day or slot. The slot you leave stays empty — it simply becomes rest; nothing is added in its place. A planned session already in the slot you move to is replaced; a completed or skipped one is not — that move is refused. Nothing else changes: if the move puts two finger-heavy days back to back, or goes over your weekly limit of hard days, the week shows a recovery alert and both sessions stay as they are. Completed or skipped sessions cannot be moved.
 
 ### Removing an Exercise
 
@@ -645,11 +645,7 @@ From the **Today** or **Week** view, tap the **+** button to open the Quick-Add 
 
 These are full engine sessions — they get resolved with exercises, loads, and prescriptions just like planned sessions. Their load counts toward your weekly total.
 
-**Recovery rules still apply.** A quick-added session is checked against the same safety constraints as a planned one: the minimum recovery gap between finger-intensive sessions (including one you did at the end of the previous week) and your weekly cap on hard days. If the session you add would break one of them, it is automatically downshifted to an easy regeneration session rather than being scheduled as-is, and a short note tells you why. The slot you chose is still filled.
-
-**Forcing it anyway.** When a session is eased, the note has an **"Add hard anyway"** action — you can keep the hard session you picked, at your own risk. If it was eased only for your weekly hard-day cap, one tap adds it. If it was eased for **finger recovery** (a hard finger session within 48h), you'll get an explicit confirm first — finger overreach (tendons/pulleys) is the most common climbing injury, so only force it if you're sure your fingers are ready. Forcing keeps *that* session hard but still protects the days around it.
-
-**The next day may be eased.** When the session you add is hard, the planned session on the following day is eased (hard → moderate, moderate → easy) so you can recover, and a short note tells you. This only happens if the session you added actually stays hard — if it was itself eased by the recovery rules, the next day is left alone. Sessions you built yourself (custom or coach sessions), sessions you forced, and anything already done or skipped are never touched. Because of that, if the day after (or two days after, with slower recovery) holds a hard finger session of your own, the session you are adding is the one that gets eased — with the usual "Add hard anyway" option. If the next day holds one of your own hard (non-finger) sessions, you get a warning about two hard days in a row.
+**What you add is what you get — the recovery rules become alerts.** The session you pick goes into the slot you chose exactly as it is, and nothing else in your week changes: the app does not ease it, does not ease the next day, and does not touch any other session. If the session breaks one of the recovery rules, a short note tells you which — see **Recovery alerts** below. Training through an alert is your decision.
 
 ### Supplementary Training
 
@@ -687,11 +683,25 @@ The **Replan Dialog** lets you make changes to your weekly plan without regenera
 - **Change location**: Switch a day from home to gym, gym to outdoor, etc.
 - **Change intent**: Override what kind of session you want (e.g., strength, endurance, technique, projecting, rest, recovery, power endurance, or "hard" for auto-select)
 - **Go outdoor**: Switch to an outdoor intent (easy outdoor, projecting, volume routes, boulder outdoor). The dialog asks **where**: pick one of your saved spots, or add a new one inline. Apply stays disabled until you choose — the crag name is what the Coach geocodes to give you the weather for that day, so it can't be guessed from the intent.
-- **Rest**: Set the intent to "Rest" to turn a training day into a rest day
+- **Rest**: Set the intent to "Rest" to replace a session with rest (the other sessions of the day stay — remove them too for a full rest day)
 
-The replanner handles **ripple effects** — when you change a day's intent, it adjusts surrounding days to maintain proper recovery spacing. It uses 8 indoor intents and 4 outdoor intents to handle all scenarios. Ripple effects never rewrite your own custom sessions, sessions you forced, or anything already done or skipped; and if the new hard session is itself eased by the recovery rules, the following days are left as they were. A hard finger session of your own right after the changed day eases the new session instead. Whatever the replanner changed is shown in a short "Plan adjusted" note.
+Changing a day's intent replaces **one session**: the one you opened the dialog from, or — when you replan a whole day — the evening session (or the day's only session when the app planned it). The other sessions of that day stay, and so does every other day of the week: the replanner no longer eases the following days, and a finger session you lose this way is not moved to another day. If the new session breaks a recovery rule, you get a recovery alert instead. Going outdoor clears the app's sessions of that day but keeps the ones you added yourself. It uses 8 indoor intents and 4 outdoor intents to handle all scenarios.
 
 **Skipping a session** is always OK. The system is designed for real life. Skipping doesn't break anything — the plan adapts. Don't add make-up sessions to "compensate" — that leads to overtraining.
+
+### Recovery alerts
+
+When you change the plan yourself — quick-add, replan a day, move a session, add a custom or coach session, change gym, log an outdoor day — the app never rewrites anything you did not touch, not even its own sessions next to yours. It checks the week instead and tells you what the recovery rules object to:
+
+- **Finger gap** — two finger sessions closer than the recovery gap (48 hours, more with slower recovery), Sunday of the previous week included.
+- **Before a finger test** — finger-hard work in the 72 hours before a max hang test.
+- **Heavy pulling** — more than two heavy pulling days (weighted pull-ups at 85 % of your max or more) in 7 days.
+- **HIIT next to a max day** — HIIT on the day of, or the day before, a max finger or pulling session.
+- **Hard-day cap** — more hard days in the week than your cap.
+- **Before a trip** — a hard session in the no-hard days before a trip.
+- **After a big outdoor day** — a hard or finger session the day after a heavy outdoor day.
+
+Alerts are about what can still change: sessions already done, skipped or in the past are counted, never flagged. When the app builds a week on its own, it still follows every one of these rules.
 
 ---
 

@@ -5,6 +5,10 @@
 more, and a quick-add of a 4th hard session after 3 done ones went through with
 no warning and no downshift. Done sessions now count; they are still never
 rewritten, and skipped sessions still never count.
+
+A301: after a user action the cap is an ALERT (quick-add warning, guards_v1
+``hard_cap``), never a downshift; ``_enforce_caps`` survives as the probe of the
+post-merge alert and keeps its counting rule.
 """
 from __future__ import annotations
 
@@ -12,6 +16,7 @@ import copy
 from datetime import date, timedelta
 
 from backend.engine.planner_v2 import _SESSION_META
+from backend.engine import guards_v1
 from backend.engine.replanner_v1 import _enforce_caps, apply_day_add, apply_events
 
 HARD = "power_endurance_gym"  # hard, not finger: isolates the cap from the 48h gap
@@ -62,18 +67,21 @@ def test_skipped_sessions_do_not_count():
     assert plan == before
 
 
-def test_quick_add_fourth_hard_after_three_done_is_downshifted_and_warned():
+def test_quick_add_fourth_hard_after_three_done_is_kept_and_warned():
     plan = _plan({0: [_sess(HARD, status="done")], 1: [_sess(HARD, status="done")],
                   2: [_sess(HARD, status="done")]})
     done_before = [copy.deepcopy(_day(plan, i)) for i in (0, 1, 2)]
     out, warnings, adj = apply_day_add(plan, session_id=HARD, target_date="2026-10-10", location="gym")
     assert any("exceeds weekly cap" in w for w in warnings)
-    assert [(a["date"], a["reason"]) for a in adj] == [("2026-10-10", "hard_cap_downshift")]
+    assert adj == []
+    assert _day(out, 5)["sessions"][0]["session_id"] == HARD
     assert [_day(out, i) for i in (0, 1, 2)] == done_before
+    alerts = guards_v1.evaluate(out)
+    assert [(w["code"], w["date"], w["count"], w["cap"]) for w in alerts] == [("hard_cap", "2026-10-10", 4, 3)]
 
 
 def test_forced_quick_add_still_kept_past_the_cap():
-    """A254 unchanged: 'add hard anyway' keeps the session even with done days counting."""
+    """A301: force is a no-op — kept with or without it."""
     plan = _plan({0: [_sess(HARD, status="done")], 1: [_sess(HARD, status="done")],
                   2: [_sess(HARD, status="done")]})
     out, _w, adj = apply_day_add(plan, session_id=HARD, target_date="2026-10-10",
@@ -87,7 +95,10 @@ def test_frozen_past_hard_days_count_and_stay_byte_identical():
     past_before = [copy.deepcopy(_day(plan, i)) for i in (0, 1, 2)]
     out = apply_events(plan, [], today="2026-10-09")
     assert [_day(out, i) for i in (0, 1, 2)] == past_before
-    assert _day(out, 5)["sessions"][0]["session_id"] == "regeneration_easy"
+    # A301: events never downshift; the 4th hard day is an alert.
+    assert _day(out, 5)["sessions"][0]["session_id"] == HARD
+    alerts = guards_v1.evaluate(out, None, "2026-10-09")
+    assert [(w["code"], w["date"]) for w in alerts] == [("hard_cap", "2026-10-10")]
 
 
 def test_deterministic():

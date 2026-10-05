@@ -81,7 +81,12 @@ def test_replanner_override_updates_tomorrow_and_ripple():
     )
 
     tomorrow = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-06")
-    assert tomorrow["sessions"][0]["session_id"] == "technique_focus_gym"
+    before = next(d for d in plan["weeks"][0]["days"] if d["date"] == "2026-01-06")
+    # A301: only the targeted slot (the evening) is replaced.
+    evening = [s for s in tomorrow["sessions"] if s["slot"] == "evening"]
+    assert [s["session_id"] for s in evening] == ["technique_focus_gym"]
+    assert sorted((s["slot"], s["session_id"]) for s in tomorrow["sessions"] if s["slot"] != "evening") == \
+        sorted((s["slot"], s["session_id"]) for s in before["sessions"] if s["slot"] != "evening")
 
     day2 = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-07")
     day3 = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-08")

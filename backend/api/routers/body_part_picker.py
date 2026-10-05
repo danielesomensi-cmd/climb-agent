@@ -202,8 +202,7 @@ def start(req: StartRequest, user_id: Optional[str] = Depends(get_user_id)):
             availability=state.get("availability"),
             planning_prefs=state.get("planning_prefs"),
             gyms=(state.get("equipment") or {}).get("gyms"),
-            # B367: same reconcile inputs as /events (cross-week finger seed,
-            # frozen past). Never later than the server's today.
+            # B367 inputs; A301: accepted, no longer change the plan.
             prev_days=_prev_week_days(state, week_plan.get("start_date")),
             today=_event_floor(req.target_date),
         )
@@ -215,7 +214,12 @@ def start(req: StartRequest, user_id: Optional[str] = Depends(get_user_id)):
     persist_week_plan(updated, state, user_id)
 
     inserted = _find_session(updated, req.target_date, req.slot)
-    return {"session": inserted, "week_plan": updated}
+    # A301: nothing around the insert is rewritten; the week's guard alerts
+    # travel next to the plan (never inside it).
+    from backend.api.guard_status import build_guard_warnings
+
+    return {"session": inserted, "week_plan": updated,
+            "guard_warnings": build_guard_warnings(state, updated, None)}
 
 
 @router.get("/estimate", dependencies=[Depends(require_active_subscription)])

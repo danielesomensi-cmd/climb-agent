@@ -288,15 +288,19 @@ def test_stash_of_another_week_is_discarded():
 
 
 def test_whole_day_override_keeps_engine_sessions_off_that_day():
+    """A301: an override without session_index replaces only the targeted slot
+    (the evening); the engine's lunch stays, and the regeneration does not bring
+    the replaced evening session back."""
     base = _plan({2: [_engine("strength_long", "evening"), _engine("prehab_maintenance", "lunch")]})
     edited = apply_day_override(base, intent="technique", location="home",
                                 reference_date="2026-10-13", target_date="2026-10-14")
-    assert edited["adaptations"][0]["whole_day"] is True
+    ov = edited["adaptations"][0]
+    assert ov["whole_day"] is False
+    assert (ov["replaced_session_id"], ov["replaced_slot"]) == ("strength_long", "evening")
+    assert _ids(_day(edited, 2)) == [("prehab_maintenance", "lunch"), ("technique_focus_gym", "evening")]
     fresh = _plan({2: [_engine("strength_long", "evening"), _engine("prehab_maintenance", "lunch")]})
     out = regenerate_preserving_completed(edited, fresh)
-    sessions = _day(out, 2)["sessions"]
-    assert all(uo.is_user_owned(s) for s in sessions), sessions
-    assert _day(edited, 2)["sessions"] == sessions
+    assert _ids(_day(out, 2)) == _ids(_day(edited, 2))
 
 
 def test_moved_session_stays_where_the_user_put_it():
@@ -747,7 +751,8 @@ def test_whole_day_override_takes_only_the_slots_it_replaced():
     edited = apply_day_override(base, intent="technique", location="home",
                                 reference_date="2026-10-13", target_date="2026-10-14")
     ov = next(a for a in edited["adaptations"] if a["type"] == "day_override")
-    assert ov["replaced_slots"] == ["evening"]
+    # A301: one targeted session replaced → named by id + slot.
+    assert (ov["replaced_session_id"], ov["replaced_slot"]) == ("strength_long", "evening")
     fresh = _plan({2: [_engine("prehab_maintenance", "lunch"), _engine("strength_long", "evening")]})
     out = regenerate_preserving_completed(edited, fresh)
     assert _ids(_day(out, 2)) == [("prehab_maintenance", "lunch"), ("technique_focus_gym", "evening")]

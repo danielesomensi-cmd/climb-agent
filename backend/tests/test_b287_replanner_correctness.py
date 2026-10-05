@@ -102,10 +102,11 @@ def _session_on(plan: dict, index: int, slot: str = "evening") -> dict | None:
 # ── R-5a: _reconcile actually runs on the quick-add path ────────────────────
 
 class TestR5ReconcileRuns:
-    def test_finger_gap_enforced_not_just_warned(self):
-        """Tuesday finger quick-add next to a Monday finger session is downshifted."""
+    def test_finger_gap_warned_not_enforced(self):
+        """A301 (reverses B287/R-5): a Tuesday finger quick-add next to a Monday
+        finger session is KEPT — the user decides — and the gap is said."""
         plan = _plan(_monday(), finger_on=(0,))
-        updated, _warnings, adjustments = apply_day_add(
+        updated, warnings, adjustments = apply_day_add(
             plan,
             session_id=FINGER_SESSION,
             target_date=plan["weeks"][0]["days"][1]["date"],
@@ -113,25 +114,25 @@ class TestR5ReconcileRuns:
             location="home",
         )
         tue = _session_on(updated, 1)
-        assert tue is not None, "quick-add must still fill the slot"
-        assert tue["session_id"] == EASY_SESSION, \
-            "48h finger gap must be enforced, not merely warned"
-        assert adjustments, "the downshift must be reported"
+        assert tue is not None and tue["session_id"] == FINGER_SESSION
+        assert adjustments == []
+        assert warnings, "the gap must be said"
 
-    def test_adjustment_payload_is_machine_readable(self):
-        """No silent mutation: the reason must be inspectable by the client."""
+    def test_alert_payload_is_machine_readable(self):
+        """No silent decision either way: the alert is inspectable by the client."""
+        from backend.engine import guards_v1
+
         plan = _plan(_monday(), finger_on=(0,))
         target = plan["weeks"][0]["days"][1]["date"]
-        _updated, _warnings, adjustments = apply_day_add(
+        updated, _warnings, _adjustments = apply_day_add(
             plan, session_id=FINGER_SESSION, target_date=target,
             slot="evening", location="home",
         )
-        entry = next(a for a in adjustments if a["date"] == target)
-        assert entry["action"] == "downgraded"
-        assert entry["reason"] == "finger_spacing_downshift"
-        assert entry["previous_session_id"] == FINGER_SESSION
-        assert entry["session_id"] == EASY_SESSION
+        entry = next(w for w in guards_v1.evaluate(updated) if w["date"] == target)
+        assert entry["code"] == "finger_gap"
+        assert entry["session_id"] == FINGER_SESSION
         assert entry["slot"] == "evening"
+        assert entry["with"][0]["date"] == plan["weeks"][0]["days"][0]["date"]
 
     def test_no_adjustments_when_nothing_violated(self):
         """A legal quick-add must report an empty list, not a phantom entry."""
@@ -299,8 +300,12 @@ class TestR8DoneSessionsAreConstraints:
             target_date=plan["weeks"][0]["days"][1]["date"],
             slot="evening", location="home",
         )
-        assert _session_on(updated, 1)["session_id"] == EASY_SESSION
-        assert adjustments[0]["reason"] == "finger_spacing_downshift"
+        # A301: kept, and the done Monday still counts for the alert.
+        from backend.engine import guards_v1
+
+        assert _session_on(updated, 1)["session_id"] == FINGER_SESSION
+        assert adjustments == []
+        assert [w["code"] for w in guards_v1.evaluate(updated)] == ["finger_gap"]
 
 
 # ── R-6: pause-aware current-week anchor ────────────────────────────────────

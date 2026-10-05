@@ -179,8 +179,8 @@ class QuickAddRequest(BaseModel):
     phase_id: Optional[str] = None
     week_plan: Optional[Dict[str, Any]] = None
     gym_id: Optional[str] = None
-    # A254: user explicitly keeps the hard session they picked, at their own risk
-    # (skips the 48h finger gap / weekly hard-cap downshift for THIS session only).
+    # A254 → A301: compatibility no-op. Every quick-add is applied as asked and
+    # nothing is downshifted (guards are alerts, returned as guard_warnings).
     force: bool = False
     # A294 review: client-local date (YYYY-MM-DD) for the key-session status.
     today: Optional[str] = None

@@ -25,8 +25,11 @@ Usage:
 (``{"name": ..., "exercises": [{"exercise_id": ..., "sets": ..., ...}]}``).
 The simulation runs ``replanner_v1.apply_events`` on a COPY of the week plan,
 exactly like POST /api/replanner/events (same availability / planning_prefs /
-gyms kwargs), and diffs before/after, because ``apply_events`` does not report
-what ``_reconcile`` downgraded. Nothing is written.
+gyms kwargs), and diffs before/after. Since A301 the replanner rewrites nothing
+around a user's insertion (``downgrades`` stays empty unless something is really
+replaced): what the guards object to is listed as ``guard_alerts`` (the alerts
+the insertion ADDS, ``guards_v1``), each marked when it touches a KEY session.
+Nothing is written.
 
 Exit codes: 0 ok, 1 bad arguments / fetch error, 3 no state for the user.
 """
@@ -326,11 +329,27 @@ def simulate(state: Dict[str, Any], draft: Dict[str, Any], target_date: str, slo
         chk = check_insertion(state, today or target_date, plan=plan, events=events, custom_sessions=pool,
                               archived_weeks=archived_weeks, outdoor_rows=outdoor_rows)
         result["key_conflicts"] = chk["key_conflicts"]
+        # A301: the guards are alerts — what the insertion adds to them, with
+        # the key sessions they touch (flagged session or the other side).
+        alerts = []
+        for w in chk.get("added_guard_warnings") or []:
+            # The key sessions it touches — never the inserted draft itself.
+            refs = [(w.get("date"), w.get("slot"))] + [(x.get("date"), x.get("slot")) for x in w.get("with") or []]
+            keys = sorted({k for r in refs if r != (target_date, slot)
+                           for k in ac.key_matches(after.get(r) or {}, phase_id)})
+            alerts.append({**w, "key": keys})
+        result["guard_alerts"] = alerts
     except Exception as exc:  # pragma: no cover - the simulation must still print
         result["key_conflicts"] = []
+        result["guard_alerts"] = []
         result["warnings"].append(f"controllo sessioni chiave non riuscito: {exc}")
     if any(dg["key"] for dg in result["downgrades"]):
         result["warnings"].append("una sessione CHIAVE verrebbe declassata: cambia giorno o contenuto")
+    if any(a["key"] for a in result.get("guard_alerts") or []):
+        result["warnings"].append(
+            "una guardia scatterebbe su una sessione CHIAVE (solo alert, nulla viene declassato): "
+            "cambia giorno o contenuto"
+        )
     if any(r["key"] for r in result["removed"]):
         result["warnings"].append("--replace toglierebbe una sessione CHIAVE")
     result["warnings"].append(
@@ -370,12 +389,16 @@ def render_simulation(sim: Dict[str, Any]) -> str:
             L.append(f"  rimossa (--replace): {r['date']} {r['slot']} {r['session_id']}"
                      + (f" — CHIAVE {','.join(r['key'])}" if r["key"] else ""))
         if not sim.get("downgrades"):
-            L.append("  nessuna altra sessione cambiata dal reconcile")
+            L.append("  nessuna altra sessione cambiata (A301: le guardie sono solo alert)")
         for dg in sim.get("downgrades") or []:
             L.append(f"  {dg['date']} {dg['slot']}: {dg['from']} → {dg['to'] or 'rimossa'}"
                      + (f" — CHIAVE {','.join(dg['key'])}" if dg["key"] else ""))
         for c in sim.get("key_conflicts") or []:
             L.append(f"  CHIAVE [{c.get('code')}] {c.get('message')}")
+        for a in sim.get("guard_alerts") or []:
+            L.append(f"  ALERT [{a.get('code')}] {a.get('date')} {a.get('slot')}: {a.get('session_id')}"
+                     + (f" — CHIAVE {','.join(a['key'])}" if a.get("key") else "")
+                     + f" — {a.get('message')}")
         for e in sim.get("resolved_exercises") or []:
             if e.get("load_source"):
                 L.append(_play_line(e))

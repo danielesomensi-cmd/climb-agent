@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from backend.api.deps import REPO_ROOT, assert_plan_not_paused, current_phase_and_week, get_user_id, is_past_week, load_state, require_active_subscription, save_state, week_num_to_phase_context
 from backend.api.models import EventsRequest, OverrideRequest, QuickAddRequest
+from backend.api.guard_status import build_guard_warnings, messages_for
 from backend.api.key_status import build_key_conflicts, build_key_status, resolve_today
 from backend.engine.outdoor_log import compute_outdoor_load_score, load_outdoor_sessions, remove_outdoor_session
 from backend.engine.planner_v2 import _SESSION_META
@@ -322,8 +323,8 @@ def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)
             # B360 — la falesia scelta nel dialog, non l'intent
             spot_id=req.spot_id,
             spot_name=req.spot_name,
-            # B367: the override's reconcile gets the same inputs as /events —
-            # Sunday→Monday finger seed and the frozen past (client-local today).
+            # B367 inputs; A301: accepted, no longer change the plan (alerts
+            # are computed below by build_guard_warnings).
             prev_days=_prev_week_days(state, week_plan.get("start_date")),
             today=resolve_today(req.today),
         )
@@ -338,17 +339,23 @@ def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)
     # Auto-resolve all sessions so the frontend gets exercises inline
     _auto_resolve(updated, state, user_id)
 
-    # B366: what the override rewrote (its own reconcile downshift, the
-    # day+1/day+2 recovery ripple) and its warnings, so the UI can say so —
-    # the same contract quick-add has had since B287. Additive fields.
+    # A301: the override rewrites nothing around it — ``adjustments`` stays
+    # in the contract and is always empty. ``guard_warnings`` are the alerts
+    # of the week as it now stands; ``warnings`` (legacy strings) are the
+    # override's own notes plus the alerts that involve the overridden day.
     adjustments: list = []
     warnings: list = []
+    target_date = None
     for a in (updated.get("adaptations") or [])[_n_adapt_before:]:
         if a.get("type") == "day_override":
             adjustments.extend(a.get("adjustments") or [])
             warnings.extend(a.get("warnings") or [])
+            target_date = a.get("target_date") or target_date
+    guard_warnings = build_guard_warnings(state, updated, req.today)
+    warnings.extend(messages_for(guard_warnings, target_date))
 
     return {"week_plan": updated, "adjustments": adjustments, "warnings": warnings,
+            "guard_warnings": guard_warnings,
             # A294: sibling, never inside week_plan (nothing can persist it).
             "key_status": build_key_status(state, user_id, week_start=updated.get("start_date"),
                                            today=req.today)}
@@ -426,7 +433,7 @@ def quick_add(req: QuickAddRequest, user_id: Optional[str] = Depends(get_user_id
             location=req.location,
             phase_id=req.phase_id,
             gym_id=req.gym_id,
-            force=req.force,  # A254: keep the hard session, at the user's own risk
+            force=req.force,  # A301: compatibility no-op — every quick-add is applied
             # B287/R-5: trailing days of the preceding week, so the Sunday→Monday
             # finger gap is checked instead of the scan starting blind at Monday.
             prev_days=_prev_week_days(state, week_plan.get("start_date")),
@@ -444,9 +451,10 @@ def quick_add(req: QuickAddRequest, user_id: Optional[str] = Depends(get_user_id
 
     _auto_resolve(updated, state, user_id)
 
-    # B287/R-5: `adjustments` tells the client exactly what reconciliation changed
-    # about the session it just added (empty list = nothing was touched).
+    # A301: nothing is rewritten after a quick-add — `adjustments` is always
+    # empty (kept for the contract); `guard_warnings` are the week's alerts.
     return {"week_plan": updated, "warnings": warnings, "adjustments": adjustments,
+            "guard_warnings": build_guard_warnings(state, updated, req.today),
             "key_status": build_key_status(state, user_id, week_start=updated.get("start_date"),
                                            today=req.today)}
 
@@ -524,6 +532,10 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
             "adjustments": res["adjustments"],
             "key_status": res["key_status"],
             "key_conflicts": res["key_conflicts"],
+            # A301: the alerts of the week after the events, and the ones the
+            # events ADD to it.
+            "guard_warnings": build_guard_warnings(state, res["week_plan"], req.today),
+            "added_guard_warnings": res.get("added_guard_warnings") or [],
         }
 
     # For complete_outdoor events, compute the day's outdoor load score from
@@ -559,11 +571,9 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
             planning_prefs=planning_prefs,
             gyms=gyms,
             custom_sessions=custom_sessions,
-            # A294: the Sunday→Monday finger gap is checked on /events too
-            # (quick-add has done it since B287/R-5).
+            # A294 inputs; A301: accepted, they no longer change the plan
+            # (the guard alerts are computed below by build_guard_warnings).
             prev_days=_prev_week_days(state, week_plan.get("start_date")),
-            # A294 review: days before the athlete's today are immutable for
-            # that reconcile — a past session not ticked yet is never rewritten.
             today=resolve_today(req.today),
         )
     except ValueError as e:
@@ -707,8 +717,10 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
     # Auto-resolve all sessions so the frontend gets exercises inline
     _auto_resolve(updated, state, user_id)
 
-    # A294: what the final reconcile rewrote in THIS call (it used to be
-    # computed and discarded) and the key status, both siblings of week_plan.
+    # A294: what a reconcile rewrote in THIS call — A301: nothing any more, so
+    # always empty (kept for the contract; a legacy plan may still carry old
+    # "reconcile" records). The guard alerts and the key status are siblings
+    # of week_plan.
     adjustments: list = []
     for a in (updated.get("adaptations") or [])[_n_adapt_before:]:
         if a.get("type") == "reconcile":
@@ -716,5 +728,6 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
     return {
         "week_plan": updated,
         "adjustments": adjustments,
+        "guard_warnings": build_guard_warnings(state, updated, req.today),
         "key_status": build_key_status(state, user_id, week_start=updated.get("start_date"), today=req.today),
     }

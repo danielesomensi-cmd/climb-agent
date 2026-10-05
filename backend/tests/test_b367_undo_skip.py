@@ -126,14 +126,18 @@ def test_undo_never_touches_done_or_other_days():
 
 
 def test_restored_finger_session_is_still_reconciled():
-    """Undo is an explicit edit, not an exemption: the 48h gap still applies."""
+    """Undo is an explicit edit: A301 — the restored session comes back as it
+    was, and the 48h gap with the done Monday is an alert, not a downshift."""
+    from backend.engine import guards_v1
+
     plan = _plan({0: [_sess(FINGER, status="done")], 1: [_sess(FINGER)]})
     skipped = apply_events(plan, [{"event_type": "mark_skipped", "date": "2026-10-06", "session_ref": FINGER}])
     undone = apply_events(skipped, [{"event_type": "mark_planned", "date": "2026-10-06",
                                      "session_ref": "regeneration_easy"}])
     tue = undone["weeks"][0]["days"][1]["sessions"][0]
-    assert tue["session_id"] == "regeneration_easy" and tue.get("downshifted_from") == FINGER
+    assert tue == plan["weeks"][0]["days"][1]["sessions"][0]
     assert undone["weeks"][0]["days"][0]["sessions"][0]["status"] == "done"
+    assert any(w["code"] == "finger_gap" and w["date"] == "2026-10-06" for w in guards_v1.evaluate(undone))
 
 
 # ── API: the completion log entry of the skip goes away ─────────────────────

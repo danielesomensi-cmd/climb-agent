@@ -211,8 +211,7 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
                 availability=availability,
                 planning_prefs=planning_prefs,
                 gyms=gyms,
-                # B367: same reconcile inputs as /events — cross-week finger
-                # seed, and the days before the session being logged are past.
+                # B367 inputs; A301: accepted, they no longer change the plan.
                 prev_days=_prev_week_days(state, week_plan.get("start_date")),
                 today=_event_floor(target_date),
             )

@@ -443,24 +443,17 @@ def apply_day_add(
 
     Returns ``(updated_plan, warnings, adjustments)``.
 
-    A254: when *force* is true the added session is pinned — the reconcile
-    enforcers skip downshifting THIS session (the user keeps the hard session at
-    their own risk). Everything else the user did not force still reconciles
-    normally, and a forced finger session still anchors the following days'
-    spacing (the injury clock runs whether or not the session was forced).
-
-    B287/R-5: this path used to skip ``_reconcile`` entirely — the 48h finger
-    gap and the weekly hard cap were reported as warnings but never enforced, so
-    a quick-add could put two finger sessions back to back. Reconciliation now
-    runs, and every downshift it makes is returned in *adjustments* so the
-    caller can tell the user what happened: enforcement must never be silent on
-    a session the user explicitly added.
-
-    B367: *today* (ISO, the athlete's local day) freezes every day before it for
-    the reconcile, exactly like ``apply_events`` since the A294 review — a past
-    session the athlete did but has not ticked yet is counted, never
-    downshifted. ``None`` keeps the old behaviour.
+    A301 (guards are alerts): the session is added as asked and NOTHING else
+    in the week moves — no day+1 ripple, no reconcile downshift of the engine's
+    sessions nearby, no neighbour guard on the added session itself (B287 /
+    B366 / A254 used to rewrite one or the other). ``adjustments`` is always
+    empty (kept for the response contract); ``warnings`` carries the guard
+    alerts that involve the added session (``guards_v1``), plus the weekly hard
+    cap message. *force* is a no-op compatibility flag: every quick-add is
+    applied, so there is nothing left to force. *prev_days* / *today* only
+    feed the alerts (Sunday→Monday gap; nothing before today is flagged).
     """
+    del force  # A301: compatibility only — the add always goes through.
     # --- Input validation ---
     if not session_id:
         raise ValueError("apply_day_add: session_id must be a non-empty string")
@@ -494,82 +487,65 @@ def apply_day_add(
         "phase_id": effective_phase,
         "intensity": meta["intensity"],
         "estimated_load_score": _INTENSITY_TO_LOAD.get(meta["intensity"], 40),
-        "constraints_applied": ["quick_add"] + (["user_forced"] if force else []),
+        "constraints_applied": ["quick_add"],
         "tags": {"hard": meta["hard"], "finger": meta["finger"], **({"test": True} if meta.get("test") else {})},
         "explain": ["user quick-add session", f"added_session={session_id}"],
-        # A254: persisted so later reconciles (e.g. a second quick-add) keep the pin.
-        **({"forced": True} if force else {}),
     }
 
     target_day.setdefault("sessions", []).append(new_session)
-    target_day["sessions"].sort(
-        key=lambda s: (SLOTS.index(s.get("slot") if s.get("slot") in SLOTS else "evening"), s.get("priority", 99), s.get("session_id", ""))
+    target_day["sessions"].sort(key=_session_sort_key)
+
+    warnings = _hard_cap_warnings(updated) + _guard_messages(
+        updated, prev_days, today, target_date, slot, skip_codes=("hard_cap",),
     )
-
-    def _hard_cap_warnings(p: Dict[str, Any]) -> List[str]:
-        # Warnings (don't block) — computed BEFORE reconciliation so the cap
-        # warning still reflects what the user asked for, not the corrected plan.
-        out: List[str] = []
-        hard_cap = _safe_hard_cap(p.get("profile_snapshot"))
-        hard_count = sum(
-            1 for d in p["weeks"][0]["days"]
-            # B367: same counting as _enforce_caps (done counts, skipped not).
-            if any(_counts_as_hard(s) for s in d.get("sessions", []))
-        )
-        if hard_count > hard_cap:
-            out.append(f"Hard session count ({hard_count}) exceeds weekly cap ({hard_cap})")
-        return out
-
-    # B366: the day+1 ripple is decided on the OUTCOME of reconciliation. It
-    # used to run unconditionally before _reconcile, so a session that
-    # reconcile then downshifted (finger gap / hard cap) still eased the next
-    # day for a load the athlete was never going to do. Now the ripple is tried
-    # on a copy, in the same order as before (ripple → reconcile, so a hard
-    # day+1 it eases still relieves the weekly cap instead of costing a second
-    # downshift elsewhere), and the copy is kept only if the added session
-    # survived. Otherwise the plan is reconciled without any ripple.
-    # B287/R-5: enforce spacing + caps (with cross-week seeding), never silently.
-    def _settle(p: Dict[str, Any]) -> tuple:
-        # Reconcile, then check the added session against a protected session
-        # that FOLLOWS it (the forward scan cannot downshift backwards).
-        adj = _reconcile(p, prev_days=prev_days, frozen_before=today)
-        guard_adj, guard_warn = _protected_neighbor_guard(p, target_date, slot, session_id, "quick_add")
-        return adj + guard_adj, guard_warn
-
-    ripple_adjustments: List[Dict[str, Any]] = []
-    if meta["hard"] or meta["finger"]:
-        trial = deepcopy(updated)
-        trial_ripple = _quick_add_ripple(
-            trial, target_date=target_date, location=location,
-            gym_id=effective_gym_id, phase_id=effective_phase,
-        )
-        trial_warnings = _hard_cap_warnings(trial)
-        trial_adjustments, trial_guard_warnings = _settle(trial)
-        if _added_session_survived(trial, target_date, slot, session_id, "quick_add"):
-            updated = trial
-            warnings = trial_warnings + trial_guard_warnings
-            ripple_adjustments = trial_ripple
-            adjustments = trial_adjustments
-        else:
-            warnings = _hard_cap_warnings(updated)
-            adjustments, guard_warnings = _settle(updated)
-            warnings += guard_warnings
-    else:
-        warnings = _hard_cap_warnings(updated)
-        adjustments, guard_warnings = _settle(updated)
-        warnings += guard_warnings
-    # B366: the ripple is reported like every other rewrite — never silent.
-    adjustments = adjustments + ripple_adjustments
 
     updated["adaptations"].append({
         "type": "quick_add",
         "target_date": target_date,
         "session_id": session_id,
         "slot": slot,
-        "adjustments": adjustments,
+        "adjustments": [],
     })
 
-    return (updated, warnings, adjustments)
+    return (updated, warnings, [])
+
+
+def _hard_cap_warnings(p: Dict[str, Any]) -> List[str]:
+    """The weekly hard-cap message of quick-add (a warning, never a block)."""
+    out: List[str] = []
+    hard_cap = _safe_hard_cap(p.get("profile_snapshot"))
+    hard_count = sum(
+        1 for d in p["weeks"][0]["days"]
+        # B367: same counting as _enforce_caps (done counts, skipped not).
+        if any(_counts_as_hard(s) for s in d.get("sessions", []))
+    )
+    if hard_count > hard_cap:
+        out.append(f"Hard session count ({hard_count}) exceeds weekly cap ({hard_cap})")
+    return out
+
+
+def _guard_messages(
+    plan: Dict[str, Any],
+    prev_days: Optional[Sequence[Dict[str, Any]]],
+    today: Optional[str],
+    date_iso: str,
+    slot: Optional[str],
+    *,
+    skip_codes: Sequence[str] = (),
+) -> List[str]:
+    """A301: the messages of the guard alerts that involve the session the
+    user just placed at *date_iso* / *slot* (flagged, or the other side)."""
+    from backend.engine import guards_v1
+
+    try:
+        alerts = guards_v1.evaluate(plan, prev_days, today)
+    except Exception:  # an alert never breaks a user action
+        logger.warning("A301: guard alerts failed", exc_info=True)
+        return []
+    return [
+        w["message"] for w in alerts
+        if w.get("code") not in skip_codes and guards_v1.involves(w, date_iso, slot)
+    ]
 
 
 def _recompute_day_status(day: Dict[str, Any]) -> None:
@@ -949,343 +925,6 @@ def _is_rewritable(session: Dict[str, Any]) -> bool:
     return True
 
 
-def _added_session_survived(
-    plan: Dict[str, Any], day_date: str, slot: str, session_id: str, marker: str,
-) -> bool:
-    """B366: is the session the user just placed still there after reconcile?
-
-    Reconciliation rewrites in place (``session_id`` → ``regeneration_easy``,
-    ``constraints_applied`` → the downshift reason), so the added session is
-    recognised by slot + session_id + the *marker* its path stamped
-    (``quick_add`` / ``manual_override``).
-    """
-    try:
-        day = _find_day(plan, day_date)
-    except ValueError:
-        return False
-    for s in day.get("sessions") or []:
-        if (
-            s.get("slot") == slot
-            and s.get("session_id") == session_id
-            and marker in (s.get("constraints_applied") or [])
-        ):
-            return True
-    return False
-
-
-def _protected_neighbor_guard(
-    plan: Dict[str, Any], day_date: str, slot: str, session_id: str, marker: str,
-) -> tuple:
-    """B366 review: the ripple spares a protected session after the added one —
-    so check the added one against it instead.
-
-    ``_enforce_no_consecutive_finger`` scans forward: when it reaches a finger
-    session the guard may not rewrite (custom / forced / done) sitting right
-    after the session the user just added, it has nothing to downshift there and
-    never goes back. Before B366 the ripple papered over this by flattening
-    day+1 (destroying the custom session); once the ripple spares it, a
-    finger-hard quick-add or override on D followed by a finger custom on D+1
-    stayed finger-hard on both days with no word to anyone. The protection must
-    not depend on which of the two sessions comes first in the scan.
-
-    So, after reconcile, for the session just placed on *day_date* (found by
-    slot + session_id + *marker*, as in ``_added_session_survived``):
-
-    * finger, and a non-skipped finger session ``_is_rewritable`` protects lies
-      within ``_recovery_gap`` days AFTER it → the added session is downshifted
-      with ``finger_spacing_downshift`` (same rewrite and same reason as the
-      forward scan, so the A254 "Add hard anyway" confirm still applies);
-    * hard, and day+1 holds a protected non-skipped hard session → no rule
-      forbids back-to-back hard days, so nothing is rewritten, but a warning is
-      returned: before B366 the ripple eased that day, now it cannot.
-
-    A session the user forced (A254) is left alone — they already accepted the
-    risk. Returns ``(adjustments, warnings)``.
-    """
-    try:
-        day = _find_day(plan, day_date)
-    except ValueError:
-        return [], []
-    added = next(
-        (
-            s for s in day.get("sessions") or []
-            if s.get("slot") == slot
-            and s.get("session_id") == session_id
-            and marker in (s.get("constraints_applied") or [])
-        ),
-        None,
-    )
-    if added is None or not _is_rewritable(added):
-        return [], []
-    tags = added.get("tags") or {}
-    base = _parse_date(day_date)
-
-    def _protected(offset: int, tag: str) -> Optional[Dict[str, Any]]:
-        try:
-            d = _find_day(plan, (base + timedelta(days=offset)).isoformat())
-        except ValueError:
-            return None
-        for s in d.get("sessions") or []:
-            if (
-                (s.get("tags") or {}).get(tag)
-                and s.get("status") != "skipped"
-                and not _is_rewritable(s)
-            ):
-                return s
-        return None
-
-    if tags.get("finger"):
-        for offset in range(1, _recovery_gap(plan) + 1):
-            if _protected(offset, "finger") is None:
-                continue
-            recovery_meta = _meta_for("regeneration_easy")
-            previous_id = added.get("session_id")
-            added.update(
-                {
-                    # A294: the key-session status reads what was lost.
-                    "downshifted_from": previous_id,
-                    "session_id": "regeneration_easy",
-                    "intensity": recovery_meta["intensity"],
-                    "tags": {"hard": False, "finger": False},
-                    "constraints_applied": _uo.carry_user_markers(added, ["finger_spacing_downshift"]),
-                    "explain": [
-                        "no consecutive finger days",
-                        "a finger session you set follows within the recovery gap",
-                    ],
-                }
-            )
-            return [_adjustment(day_date, added, previous_id, "finger_spacing_downshift")], []
-
-    if tags.get("hard"):
-        nxt = _protected(1, "hard")
-        if nxt is not None:
-            next_date = (base + timedelta(days=1)).isoformat()
-            return [], [
-                f"Back-to-back hard days: {next_date} keeps a session you set "
-                f"({nxt.get('session_id')}), which the plan does not change"
-            ]
-    return [], []
-
-
-def _protected_hard_after(plan: Dict[str, Any], day_date: str) -> List[Dict[str, Any]]:
-    """B366 review: hard/finger sessions on day+1 that no ripple may rewrite.
-
-    Used by the outdoor ripple to record what it had to leave in place.
-    """
-    try:
-        nxt_date = (_parse_date(day_date) + timedelta(days=1)).isoformat()
-        nxt = _find_day(plan, nxt_date)
-    except ValueError:
-        return []
-    out = []
-    for s in nxt.get("sessions") or []:
-        tags = s.get("tags") or {}
-        if (tags.get("hard") or tags.get("finger")) and s.get("status") not in ("done", "skipped") and not _is_rewritable(s):
-            out.append({"date": nxt_date, "slot": s.get("slot"), "session_id": s.get("session_id")})
-    return out
-
-
-def _apply_ripple_to_day(
-    plan: Dict[str, Any],
-    day_date: str,
-    rewrite: Any,
-) -> List[Dict[str, Any]]:
-    """B366: shared skeleton of the three recovery ripples.
-
-    *rewrite(session)* returns ``(replacement, reason)`` to rewrite a session or
-    ``None`` to keep it. Whatever *rewrite* says, a session that
-    ``_is_rewritable`` protects — done/skipped (B120, immutability), forced
-    (A254) or user-authored custom (B345) — is kept byte-identical. The ripples
-    used to check only done/skipped, so a quick-add or a hard override next to
-    a custom session silently replaced the user's own work with
-    complementary_conditioning / regeneration_easy, ``is_custom`` and all.
-
-    Returns one ``_adjustment`` per rewritten session: a ripple is a rewrite
-    like any reconcile downshift and must be just as visible.
-    """
-    try:
-        day = _find_day(plan, day_date)
-    except ValueError:
-        logger.debug("Ripple target day %s not found in plan — skipping", day_date)
-        return []
-    if not day.get("sessions"):
-        return []
-    adjustments: List[Dict[str, Any]] = []
-    next_sessions = []
-    for session in day["sessions"]:
-        result = rewrite(session) if _is_rewritable(session) else None
-        if result is None:
-            next_sessions.append(session)
-            continue
-        replacement, reason = result
-        # A294: stamp what the ripple replaced (additive; the key-session
-        # status reads it to explain a lost key stimulus).
-        if isinstance(replacement, dict) and session.get("session_id") != replacement.get("session_id"):
-            replacement.setdefault("downshifted_from", session.get("session_id"))
-        if isinstance(replacement, dict):
-            # B369 review: a rewritten user session stays the user's.
-            replacement["constraints_applied"] = _uo.carry_user_markers(
-                session, list(replacement.get("constraints_applied") or [])
-            )
-        next_sessions.append(replacement)
-        adjustments.append(_adjustment(day_date, replacement, session.get("session_id"), reason))
-    day["sessions"] = next_sessions
-    return adjustments
-
-
-def _quick_add_ripple(
-    plan: Dict[str, Any],
-    *,
-    target_date: str,
-    location: str,
-    gym_id: Optional[str],
-    phase_id: str,
-) -> List[Dict[str, Any]]:
-    """Ease day+1 after a hard/finger quick-add (hard→medium, medium→low)."""
-    recovery_meta = _meta_for("regeneration_easy")
-    comp_meta = _meta_for("complementary_conditioning")
-    ripple_key = (_parse_date(target_date) + timedelta(days=1)).isoformat()
-
-    def rewrite(session: Dict[str, Any]):
-        is_hard = (session.get("tags") or {}).get("hard")
-        is_low = session.get("intensity") == "low"
-        if is_hard:
-            return ({
-                "slot": session.get("slot", "evening"),
-                "session_id": "complementary_conditioning",
-                "location": session.get("location", location),
-                "gym_id": session.get("gym_id", gym_id),
-                "phase_id": phase_id,
-                "intensity": comp_meta["intensity"],
-                "constraints_applied": ["quick_add_ripple"],
-                "tags": {"hard": False, "finger": False},
-                "explain": ["hard→medium after quick-add", f"source_day={target_date}"],
-            }, "quick_add_ripple")
-        if not is_low:
-            return ({
-                "slot": session.get("slot", "evening"),
-                "session_id": "regeneration_easy",
-                "location": session.get("location", location),
-                "gym_id": session.get("gym_id", gym_id),
-                "phase_id": phase_id,
-                "intensity": recovery_meta["intensity"],
-                "constraints_applied": ["quick_add_ripple"],
-                "tags": {"hard": False, "finger": False},
-                "explain": ["medium→low after quick-add", f"source_day={target_date}"],
-            }, "quick_add_ripple")
-        return None
-
-    return _apply_ripple_to_day(plan, ripple_key, rewrite)
-
-
-def _outdoor_ripple(plan: Dict[str, Any], *, date: str, outdoor_load: Any) -> List[Dict[str, Any]]:
-    """Ease day+1 after a high-load outdoor day (hard/finger→medium, medium→low)."""
-    recovery_meta = _meta_for("regeneration_easy")
-    comp_meta = _meta_for("complementary_conditioning")
-    ripple_key = (_parse_date(date) + timedelta(days=1)).isoformat()
-
-    def rewrite(session: Dict[str, Any]):
-        sid = session.get("session_id", "")
-        smeta = _SESSION_META.get(sid, {})
-        is_hard = smeta.get("hard") or (session.get("tags") or {}).get("hard")
-        is_finger = smeta.get("finger") or (session.get("tags") or {}).get("finger")
-        intensity = smeta.get("intensity") or session.get("intensity")
-        if is_hard or is_finger:
-            return ({
-                "session_id": "complementary_conditioning",
-                "slot": session.get("slot", "evening"),
-                "location": session.get("location", "gym"),
-                "status": "planned",
-                "estimated_load_score": _INTENSITY_TO_LOAD.get(comp_meta["intensity"], 40),
-                "gym_id": session.get("gym_id"),
-                "intensity": comp_meta["intensity"],
-                "constraints_applied": ["outdoor_ripple"],
-                "tags": {"hard": False, "finger": False},
-                "explain": [f"hard→medium after outdoor load={outdoor_load}"],
-            }, "outdoor_ripple")
-        if intensity == "medium":
-            return ({
-                "session_id": "deload_recovery",
-                "slot": session.get("slot", "evening"),
-                "location": session.get("location", "gym"),
-                "status": "planned",
-                "estimated_load_score": _INTENSITY_TO_LOAD.get(recovery_meta["intensity"], 20),
-                "gym_id": session.get("gym_id"),
-                "intensity": recovery_meta["intensity"],
-                "constraints_applied": ["outdoor_ripple"],
-                "tags": {"hard": False, "finger": False},
-                "explain": [f"medium→low after outdoor load={outdoor_load}"],
-            }, "outdoor_ripple")
-        return None
-
-    return _apply_ripple_to_day(plan, ripple_key, rewrite)
-
-
-def _override_ripple(
-    plan: Dict[str, Any],
-    *,
-    target: Any,
-    location: str,
-    gym_id: Optional[str],
-    phase_id: str,
-) -> List[Dict[str, Any]]:
-    """Ease the two days after a hard/finger override.
-
-    Day+1 is proportional (hard→medium, medium→low, low kept); day+2 forces
-    recovery on anything non-low.
-    """
-    recovery_meta = _meta_for("regeneration_easy")
-    comp_meta = _meta_for("complementary_conditioning")
-    target_key = target.isoformat()
-    adjustments: List[Dict[str, Any]] = []
-
-    def _recovery(session: Dict[str, Any], reason: str, explain: str) -> Dict[str, Any]:
-        return {
-            "slot": session.get("slot", "evening"),
-            "session_id": "regeneration_easy",
-            "location": session.get("location", location),
-            "gym_id": session.get("gym_id", gym_id),
-            "phase_id": phase_id,
-            "intensity": recovery_meta["intensity"],
-            "estimated_load_score": _INTENSITY_TO_LOAD.get(recovery_meta["intensity"], 20),
-            "constraints_applied": [reason],
-            "tags": {"hard": False, "finger": False},
-            "explain": [explain, f"source_day={target_key}"],
-        }
-
-    def rewrite_day1(session: Dict[str, Any]):
-        is_hard = session.get("tags", {}).get("hard")
-        is_low = session.get("intensity") == "low"
-        reason = "recovery_ripple_proportional"
-        if is_hard:
-            return ({
-                "slot": session.get("slot", "evening"),
-                "session_id": "complementary_conditioning",
-                "location": session.get("location", location),
-                "gym_id": session.get("gym_id", gym_id),
-                "phase_id": phase_id,
-                "intensity": comp_meta["intensity"],
-                "estimated_load_score": _INTENSITY_TO_LOAD.get(comp_meta["intensity"], 40),
-                "constraints_applied": [reason],
-                "tags": {"hard": False, "finger": False},
-                "explain": ["hard→medium after hard override", f"source_day={target_key}"],
-            }, reason)
-        if not is_low:
-            return (_recovery(session, reason, "medium→low after hard override"), reason)
-        return None
-
-    def rewrite_day2(session: Dict[str, Any]):
-        is_hard = session.get("tags", {}).get("hard")
-        is_low = session.get("intensity") == "low"
-        if is_hard or not is_low:
-            return (_recovery(session, "recovery_ripple", "forced recovery after hard override"), "recovery_ripple")
-        return None
-
-    adjustments.extend(_apply_ripple_to_day(plan, (target + timedelta(days=1)).isoformat(), rewrite_day1))
-    adjustments.extend(_apply_ripple_to_day(plan, (target + timedelta(days=2)).isoformat(), rewrite_day2))
-    return adjustments
-
-
 def _frozen(day: Dict[str, Any], frozen_before: Optional[str]) -> bool:
     """A294 review: a day before *frozen_before* (the athlete's today) is past.
 
@@ -1452,9 +1091,12 @@ def _reconcile(
 ) -> List[Dict[str, Any]]:
     """Run both enforcers. Returns the aggregated list of downshifts.
 
-    Existing callers ignore the return value — behaviour is unchanged for them.
     A294 review: *frozen_before* (ISO today) makes every day before it
     immutable for both enforcers — it counts, it is never rewritten.
+
+    A301: no user action calls this on the real plan any more (guards are
+    alerts — ``guards_v1``). It survives as a PROBE on a copy: the post-merge
+    alert of a regeneration (``_regen_guard_warnings``).
     """
     adjustments = _enforce_no_consecutive_finger(plan, prev_days=prev_days, frozen_before=frozen_before)
     adjustments.extend(_enforce_caps(plan, frozen_before=frozen_before))
@@ -1474,18 +1116,15 @@ def apply_events(
 ) -> Dict[str, Any]:
     """Apply *events* to a copy of *plan*.
 
-    A294: *prev_days* (the trailing days of the preceding week) seeds the final
-    reconcile so the Sunday→Monday finger gap is checked here too, and every
-    downshift that reconcile makes is recorded as a ``{"type": "reconcile",
-    "adjustments": [...]}`` adaptation (only when non-empty) — it used to be
-    computed and thrown away.
-
-    A294 review: *today* (ISO, the athlete's local day) freezes every day before
-    it for that final reconcile — a past session the athlete did but has not
-    ticked yet (status ``planned``) must never be downshifted by an event
-    elsewhere in the week, nor by the Sunday→Monday seed. ``None`` = old
-    behaviour.
+    A301 (guards are alerts): every event is a user action, and after it
+    NOTHING the user did not touch is rewritten — no final reconcile (finger
+    gap / hard cap downshifts), no outdoor ripple on the next day, no finger
+    compensation after a change of gym. What the guards object to is computed
+    at read time by ``guards_v1.evaluate`` and returned next to the plan.
+    *prev_days* and *today* are kept in the signature for the callers (they
+    feed those alerts on the router side); they no longer change the plan.
     """
+    del prev_days, today  # A301: alerts only, computed by the caller.
     updated = deepcopy(plan)
     updated.setdefault("adaptations", [])
 
@@ -1515,6 +1154,14 @@ def apply_events(
                         )
                     break
             to_day = _find_day(updated, to_date)
+            # A301: the destination slot is the target of the move, so a
+            # planned session there (engine or the user's) is replaced — but
+            # never a done/skipped one (immutability pillar).
+            for s in to_day.get("sessions") or []:
+                if s.get("slot") == to_slot and s.get("status") in ("done", "skipped"):
+                    raise ValueError(
+                        f"Cannot move onto {to_date} {to_slot}: the session there is '{s['status']}'"
+                    )
             moved = _extract_session(from_day, session_ref=ref, slot=from_slot)
             # B369: a moved session is the user's — a regeneration keeps it
             # where it was put, and the log names what left the source slot so
@@ -1533,8 +1180,8 @@ def apply_events(
             # with regeneration_easy (or complementary_conditioning next to a hard
             # session) — a session nobody asked for, which read as the app
             # rearranging the week behind the user's back. Moving a session is an
-            # explicit edit: what is left behind is rest. Hard-day caps and the
-            # 48h finger gap still run on the result (_reconcile, below).
+            # explicit edit: what is left behind is rest. A301: the 48h finger
+            # gap and the hard cap only raise alerts (guards_v1).
             if not from_day.get("sessions"):
                 from_day.pop("status", None)
 
@@ -1742,26 +1389,11 @@ def apply_events(
                 raise ValueError(f"Date {event['date']} has no outdoor session to complete")
             day["outdoor_session_status"] = "done"
 
-            # Store outdoor load score on the day and apply ripple if high
-            outdoor_load = event.get("outdoor_load_score", 0)
-            day["outdoor_load_score"] = outdoor_load
-            # B343: callers syncing a log onto an already-past week set this
-            # False — the ripple exists to protect a plan still being built
-            # day by day, not to retroactively alter a week that already closed.
-            if outdoor_load >= OUTDOOR_RIPPLE_THRESHOLD and event.get("allow_ripple", True):
-                # B366: _is_rewritable guard + reported (custom/forced kept).
-                ripple_adj = _outdoor_ripple(updated, date=event["date"], outdoor_load=outdoor_load)
-                # B366 review: a hard/finger session the ripple had to spare
-                # (custom / forced) is named, so the load right after a big
-                # outdoor day is on record instead of silently kept.
-                kept = _protected_hard_after(updated, event["date"])
-                if ripple_adj or kept:
-                    updated["adaptations"].append({
-                        "type": "outdoor_ripple",
-                        "date": event["date"],
-                        "adjustments": ripple_adj,
-                        **({"kept_protected": kept} if kept else {}),
-                    })
+            # Store the outdoor load score on the day. A301: no ripple any
+            # more — a hard/finger session the day after a big outdoor day stays
+            # as planned and guards_v1 raises ``post_outdoor`` instead.
+            # ``allow_ripple`` (B343) is accepted and ignored.
+            day["outdoor_load_score"] = event.get("outdoor_load_score", 0)
 
             _recompute_day_status(day)
 
@@ -1863,10 +1495,14 @@ def apply_events(
                     s["gym_id"] = new_gym_id if new_location == "gym" else None
                     s.pop("resolved", None)
 
-            # Finger compensation if we lost a finger session
+            # A301: a finger session lost to the gym change is NOT compensated
+            # by swapping another day's session (that rewrote a day the user
+            # did not touch). It is said instead.
             if lost_finger:
-                snap_phase = (updated.get("profile_snapshot") or {}).get("phase_id", "base")
-                _compensate_finger(updated, event["date"], snap_phase, new_location, new_gym_id)
+                change_warnings.append(
+                    f"finger session lost on {event['date']} (the new location has no equipment "
+                    "for it) — nothing else in the week was changed"
+                )
 
             updated.setdefault("adaptations", []).append({
                 "type": "change_gym",
@@ -1874,6 +1510,7 @@ def apply_events(
                 "new_location": new_location,
                 "new_gym_id": new_gym_id,
                 "warnings": change_warnings,
+                **({"lost_finger": True} if lost_finger else {}),
             })
 
         elif event_type == "set_availability":
@@ -1964,9 +1601,9 @@ def apply_events(
             # have placed it — the re-schedule proposal of a missed key
             # session. Unlike quick-add there is no day+1 ripple (the proposal
             # validator already checked the neighbours, and a ripple would
-            # rewrite sessions the user was shown as untouched); the final
-            # _reconcile below still enforces the finger gap and the hard cap,
-            # and its downshifts are reported. Unlike add_generated_session the
+            # rewrite sessions the user was shown as untouched); A301: nothing
+            # downshifts afterwards either — the guards only raise alerts.
+            # Unlike add_generated_session the
             # session is NOT custom: it feeds the closed loop like any planned
             # catalog session.
             session_id = event.get("session_id")
@@ -2087,104 +1724,8 @@ def apply_events(
 
         updated["adaptations"].append({"type": "event", "event": log_event})
 
-    _adj = _reconcile(updated, prev_days=prev_days, frozen_before=today)
-    if _adj:
-        updated["adaptations"].append({"type": "reconcile", "adjustments": _adj})
     updated["plan_revision"] = int(updated.get("plan_revision") or 1) + 1
     return updated
-
-
-def _compensate_finger(
-    plan: Dict[str, Any],
-    excluded_date: str,
-    phase_id: str,
-    location: str,
-    gym_id: Optional[str],
-) -> None:
-    """Try to place a finger_maintenance session on a suitable day after losing one to override.
-
-    Looks for future days (excluded_date+2 onwards) that have no finger session,
-    have >= 48h gap from the nearest existing finger day, and have a replaceable
-    complementary/recovery session. Mutates *plan* in place.
-    """
-    days = plan["weeks"][0]["days"]
-    excluded_d = _parse_date(excluded_date)
-
-    # Collect existing finger dates (after override has been applied)
-    finger_dates: set = set()
-    for day in days:
-        if any((s.get("tags") or {}).get("finger") for s in day.get("sessions", [])):
-            finger_dates.add(_parse_date(day["date"]))
-
-    # Search from excluded_date onwards, respecting recovery gap (B165b)
-    comp_session_id = "finger_maintenance_home"
-    comp_meta = _meta_for(comp_session_id)
-    gap = _recovery_gap(plan)
-
-    for day in days:
-        day_d = _parse_date(day["date"])
-        if (day_d - excluded_d).days < gap + 1:
-            continue
-
-        # Check gap from ALL existing finger days (B165b: recovery_multiplier aware)
-        too_close = False
-        for fd in finger_dates:
-            if abs((day_d - fd).days) <= gap:
-                too_close = True
-                break
-        if too_close:
-            continue
-
-        # Already has finger — skip
-        if any((s.get("tags") or {}).get("finger") for s in day.get("sessions", [])):
-            continue
-
-        # Find a replaceable session (complementary/recovery, non-hard, non-done)
-        replaceable_idx = None
-        for idx, s in enumerate(day.get("sessions", [])):
-            if s.get("status") in ("done", "skipped"):
-                continue
-            # B369 review: a session the user put there is never swapped out.
-            if _uo.is_user_owned(s):
-                continue
-            if (s.get("tags") or {}).get("hard"):
-                continue
-            sid = s.get("session_id", "")
-            if sid in ("complementary_conditioning", "regeneration_easy", "yoga_recovery",
-                       "flexibility_full", "prehab_maintenance"):
-                replaceable_idx = idx
-                break
-
-        if replaceable_idx is None:
-            continue
-
-        # Replace with finger_maintenance_home
-        old = day["sessions"][replaceable_idx]
-        day["sessions"][replaceable_idx] = {
-            "slot": old.get("slot", "evening"),
-            "session_id": comp_session_id,
-            "location": "home",
-            "gym_id": None,
-            "phase_id": phase_id,
-            "intensity": comp_meta["intensity"],
-            "constraints_applied": ["finger_compensation"],
-            "tags": {"hard": comp_meta["hard"], "finger": comp_meta["finger"], **({"test": True} if comp_meta.get("test") else {})},
-            "explain": ["finger compensation after override", f"lost_date={excluded_date}"],
-        }
-
-        plan.setdefault("adaptations", []).append({
-            "type": "finger_compensation",
-            "compensated_date": day["date"],
-            "lost_date": excluded_date,
-        })
-        return  # compensated — done
-
-    # No suitable day found — emit warning
-    plan.setdefault("adaptations", []).append({
-        "type": "finger_compensation_warning",
-        "lost_date": excluded_date,
-        "message": "Could not find a suitable day to compensate lost finger session",
-    })
 
 
 def _resolve_intent_for_equipment(
@@ -2265,6 +1806,29 @@ def apply_day_override(
     prev_days: Optional[Sequence[Dict[str, Any]]] = None,
     today: Optional[str] = None,
 ) -> Dict[str, Any]:
+    """Replace the session of one slot of a day by intent (or make the day
+    outdoor).
+
+    A301 (guards are alerts):
+
+    - the override replaces only the TARGETED slot: ``session_index``'s slot,
+      else *slot*, else the only session of the day when it is the engine's,
+      else the evening. Every
+      other session of the day stays — a user-owned one is replaced only when
+      its slot is the target. (It used to replace the whole day when no
+      ``session_index`` was sent, the user's custom sessions included.)
+    - nothing else in the week moves: no day+1/day+2 recovery ripple, no
+      finger compensation on another day, no reconcile downshift, no neighbour
+      guard downshifting the override itself. ``adjustments`` / ``warnings``
+      of the ``day_override`` adaptation stay empty lists (response contract);
+      the alerts are ``guards_v1`` warnings computed by the caller.
+    - an outdoor override keeps the user's own sessions of the day and drops
+      the engine's.
+
+    *prev_days* / *today* are accepted for the callers and no longer change the
+    plan.
+    """
+    del prev_days, today  # A301: alerts only, computed by the caller.
     updated = deepcopy(plan)
 
     # Resolve target day: explicit target_date or reference_date + 1
@@ -2292,7 +1856,11 @@ def apply_day_override(
                 f"Cannot override day {target_key} with outdoor: "
                 f"{len(completed_in_target)} session(s) already completed/skipped"
             )
-        target_day["sessions"] = []
+        # A301: the user's own sessions of the day stay (an outdoor day is not
+        # a slot target); the engine's make room for the crag.
+        target_day["sessions"] = [
+            s for s in target_day.get("sessions") or [] if _uo.is_user_owned(s)
+        ]
         # B360 — la falesia arriva dall'utente, non dall'intent. Prima qui
         # finiva intent.replace("outdoor_", "") → "projecting"/"volume"/"easy":
         # nomi che il geocoder del coach non risolve (niente meteo).
@@ -2381,43 +1949,42 @@ def apply_day_override(
     target_day = _find_day(updated, target_key)
     effective_gym_id = gym_id or (_default_gym_id_from_plan(updated) if location == "gym" else None)
 
-    # NEW-F7: save original sessions before overwriting
     original_sessions = list(target_day.get("sessions") or [])
 
-    # B120: refuse to overwrite completed/skipped sessions (immutability pillar)
-    completed_in_target = [
-        s for s in original_sessions
-        if s.get("status") in ("done", "skipped")
-    ]
+    # A301: the slot this override targets — the session_index's slot, else
+    # the slot asked for, else the day's only (engine) session's, else the
+    # evening.
     if session_index is not None:
-        # Replacing a specific session — block only if THAT session is done/skipped
-        if 0 <= session_index < len(original_sessions):
-            s = original_sessions[session_index]
-            if s.get("status") in ("done", "skipped"):
-                raise ValueError(
-                    f"Cannot override session at index {session_index}: "
-                    f"status is '{s['status']}'"
-                )
-    elif completed_in_target:
-        raise ValueError(
-            f"Cannot override day {target_key}: "
-            f"{len(completed_in_target)} session(s) already completed/skipped"
-        )
-
-    # B48: if session_index is provided, replace only that session
-    whole_day = not (session_index is not None and len(original_sessions) > 1)
-    if not whole_day and (session_index < 0 or session_index >= len(original_sessions)):
-        raise ValueError(
-            f"session_index {session_index} out of range "
-            f"(day has {len(original_sessions)} sessions)"
-        )
-    # B369 review: an override of one session (session_index) takes that
-    # session's slot — the client does not send one; otherwise the evening.
-    if slot is None:
-        if session_index is not None and 0 <= session_index < len(original_sessions):
-            slot = original_sessions[session_index].get("slot") or "evening"
-        else:
-            slot = "evening"
+        if not (0 <= session_index < len(original_sessions)):
+            raise ValueError(
+                f"session_index {session_index} out of range "
+                f"(day has {len(original_sessions)} sessions)"
+            )
+        indexed = original_sessions[session_index]
+        if indexed.get("status") in ("done", "skipped"):
+            # B120: immutability pillar.
+            raise ValueError(
+                f"Cannot override session at index {session_index}: "
+                f"status is '{indexed['status']}'"
+            )
+        if slot is None:
+            slot = indexed.get("slot") or "evening"
+        replaced = [indexed]
+    else:
+        if slot is None:
+            # The day's only session is the target when it is the engine's;
+            # a session the user owns is replaced only through its own slot
+            # (session_index / slot), never by inference.
+            only = original_sessions[0] if len(original_sessions) == 1 else None
+            slot = (only.get("slot") or "evening") if only is not None and not _uo.is_user_owned(only) else "evening"
+        replaced = [s for s in original_sessions if (s.get("slot") or "evening") == slot]
+        done_there = [s for s in replaced if s.get("status") in ("done", "skipped")]
+        if done_there:
+            # B120: immutability pillar — only the targeted slot is checked.
+            raise ValueError(
+                f"Cannot override {target_key} {slot}: "
+                f"{len(done_there)} session(s) already completed/skipped"
+            )
 
     new_session = {
         "slot": slot,
@@ -2432,93 +1999,42 @@ def apply_day_override(
         "explain": ["user day override applied", f"override_intent={intent}"],
     }
 
-    if not whole_day:
+    replaced_ids = {id(s) for s in replaced}
+    kept = [s for s in original_sessions if id(s) not in replaced_ids]
+    if session_index is not None:
+        # In place of the indexed session (its position in the day).
         target_day["sessions"] = list(original_sessions)
         target_day["sessions"][session_index] = new_session
     else:
-        target_day["sessions"] = [new_session]
-
-    # NEW-F7: finger compensation — if override removed a finger session, try to place it elsewhere
-    if session_index is not None and len(original_sessions) > 1:
-        # B48: only check the replaced session, not all originals
-        replaced = original_sessions[session_index]
-        original_had_finger = (replaced.get("tags") or {}).get("finger", False)
-    else:
-        original_had_finger = any(
-            (s.get("tags") or {}).get("finger") for s in original_sessions
-        )
-    needs_compensation = original_had_finger and not meta["finger"]
-
-    def _finish(p: Dict[str, Any], with_ripple: bool) -> tuple:
-        # Order unchanged from before B366: ripple → finger compensation →
-        # reconcile (compensation may use a day the ripple just eased).
-        # Returns (ripple_adjustments, reconcile+guard adjustments, warnings).
-        ripple_adj = (
-            _override_ripple(p, target=target, location=location,
-                             gym_id=effective_gym_id, phase_id=effective_phase)
-            if with_ripple else []
-        )
-        if needs_compensation:
-            _compensate_finger(p, target_key, effective_phase, location, effective_gym_id)
-        reconcile_adj = _reconcile(p, prev_days=prev_days, frozen_before=today)
-        # B366 review: a protected finger session AFTER the override is not
-        # caught by the forward scan — check the override against it.
-        guard_adj, guard_warn = _protected_neighbor_guard(
-            p, target_key, slot, session_id, "manual_override",
-        )
-        return ripple_adj, reconcile_adj + guard_adj, guard_warn
-
-    # B366: the ripple guards custom/forced sessions (_is_rewritable) and is
-    # kept only if the overriding session itself survived reconciliation —
-    # otherwise the two following days would be eased for a load that is no
-    # longer on the plan. Tried on a copy so the order of operations is the
-    # same as before when it does survive.
-    if meta["hard"] or meta["finger"]:
-        trial = deepcopy(updated)
-        trial_result = _finish(trial, with_ripple=True)
-        if _added_session_survived(trial, target_key, slot, session_id, "manual_override"):
-            updated = trial
-            ripple_adjustments, reconcile_adjustments, override_warnings = trial_result
-        else:
-            ripple_adjustments, reconcile_adjustments, override_warnings = _finish(updated, with_ripple=False)
-    else:
-        ripple_adjustments, reconcile_adjustments, override_warnings = _finish(updated, with_ripple=False)
+        target_day["sessions"] = sorted(kept + [new_session], key=_session_sort_key)
+    _recompute_day_status(target_day)
 
     # B369 review: what the override took off the day, so a regeneration does
-    # not bring it back — the one replaced session of a partial override, the
-    # slots the day held for a whole-day one (not the whole date: a slot added
-    # later by a new structure still gets the engine's session).
-    if whole_day:
-        replaced_info: Dict[str, Any] = {
-            "replaced_slots": sorted(
-                {s.get("slot") or "evening" for s in original_sessions},
-                key=lambda x: SLOTS.index(x) if x in SLOTS else len(SLOTS),
-            ),
-        }
-    else:
-        _replaced = original_sessions[session_index]
+    # not bring it back. A301: always the targeted slot only.
+    replaced_info: Dict[str, Any] = {}
+    if len(replaced) == 1:
         replaced_info = {
-            "replaced_session_id": _replaced.get("session_id"),
-            "replaced_slot": _replaced.get("slot") or "evening",
+            "replaced_session_id": replaced[0].get("session_id"),
+            "replaced_slot": replaced[0].get("slot") or "evening",
         }
+    elif replaced:
+        replaced_info = {"replaced_slots": [slot]}
+    lost_finger = any((s.get("tags") or {}).get("finger") for s in replaced) and not meta["finger"]
     updated.setdefault("adaptations", []).append(
         {
             "type": "day_override",
             "reference_date": reference_date,
             "target_date": target_key,
-            # B369: the user replaced the whole day — a regeneration must not
-            # bring the engine's other sessions of those slots back.
-            "whole_day": whole_day,
+            # A301: never the whole day any more — only the targeted slot.
+            "whole_day": False,
             **replaced_info,
-            "ripple_days": [
-                (target + timedelta(days=1)).isoformat(),
-                (target + timedelta(days=2)).isoformat(),
-            ],
-            # B366: everything this override rewrote — reconcile downshifts
-            # (including the override itself) first, then the ripple — plus
-            # the warnings, so /api/replanner/override can surface them.
-            "adjustments": reconcile_adjustments + ripple_adjustments,
-            "warnings": override_warnings,
+            # A301: nothing rewritten around the override (alerts are computed
+            # at read time by guards_v1). Kept as empty lists for the contract.
+            "adjustments": [],
+            "warnings": (
+                [f"finger session replaced on {target_key} — not compensated elsewhere"]
+                if lost_finger else []
+            ),
         }
     )
 

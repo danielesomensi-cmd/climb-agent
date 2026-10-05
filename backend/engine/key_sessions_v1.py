@@ -53,6 +53,7 @@ from datetime import date, datetime, timedelta
 from functools import lru_cache
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
+from backend.engine import guards_v1 as _guards_mod
 from backend.engine.stimulus import (
     FAMILY_FINGER_MAX,
     FAMILY_LIMIT_POWER,
@@ -815,6 +816,14 @@ def _heavy_pull_clash(state: Mapping[str, Any], days: Mapping[str, List[Mapping[
     return None
 
 
+def _guard_view(state: Mapping[str, Any], plan: Mapping[str, Any], ws: date,
+                archived_weeks: ArchivedWeeks, today: Optional[date]) -> List[Dict[str, Any]]:
+    """A301: the guard alerts of ``plan`` (``guards_v1``), seeded with the
+    previous week like the click's path."""
+    return _guards_mod.evaluate(plan, _prev_days(state, ws, archived_weeks),
+                                today.isoformat() if today else None, state)
+
+
 def _added_present(after: Mapping[str, Any], d_iso: str, slot: str, session_id: str) -> bool:
     for w in after.get("weeks") or []:
         for day in w.get("days") or []:
@@ -901,6 +910,7 @@ def _propose_for(
                     if s.get("status") == "skipped" and s.get("skipped_session_id")
                     and any(s["skipped_session_id"] in (r.get("propose") or []) + (r.get("session_ids") or [])
                             for r in reqs)}
+    guards_before: Optional[List[Dict[str, Any]]] = None
     start = max(today, ws)
     d = start
     while d <= we:
@@ -967,6 +977,20 @@ def _propose_for(
                 continue
             if not _added_present(after, d_iso, slot, sid):
                 rejections.append({"date": d_iso, "session_id": sid, "reason": "downshifted_by_reconcile"})
+                continue
+            # A301: applying the proposal rewrites nothing around it any more
+            # (guards are alerts after a user action), so the ENGINE's
+            # proposal must not need it: a candidate that would raise a guard
+            # alert the week did not already have (finger gap with a finger
+            # maintenance, hard cap, HIIT before it…) is rejected — it used to
+            # be accepted with the neighbour declared as a side effect.
+            if guards_before is None:
+                guards_before = _guard_view(state, plan, ws, archived_weeks, today)
+            fresh = _guards_mod.new_warnings(guards_before, _guard_view(state, after, ws, archived_weeks, today))
+            if fresh:
+                rejections.append({"date": d_iso, "session_id": sid, "reason": "guard_alert",
+                                   "codes": sorted({w["code"] for w in fresh}),
+                                   "with": sorted({f"{w['date']} {w.get('session_id')}" for w in fresh})})
                 continue
             bad = []
             side = []
@@ -1521,7 +1545,14 @@ def check_insertion(
     Runs the events through ``apply_events`` on a deep copy (prev_days seeded),
     then compares the key status before and after. Returns::
 
-        {week_plan, adjustments, key_status, key_conflicts: [...]}
+        {week_plan, adjustments, key_status, key_conflicts: [...], added_guard_warnings: [...]}
+
+    A301: ``apply_events`` no longer downshifts anything after a user action,
+    so ``adjustments`` is empty and the ``key_removed`` / ``key_replaced`` /
+    ``test_downgraded`` codes (all born from a reconcile downshift) no longer
+    arise from an insertion; the clash is reported as ``finger_gap`` /
+    ``pre_test_fatigue`` and in ``added_guard_warnings`` (the alerts the insertion
+    ADDS to the week, ``guards_v1``).
 
     ``key_conflicts`` codes: ``key_removed`` (high — a key session was
     downgraded or replaced; ``replace_key: true`` when the inserted session
@@ -1651,8 +1682,17 @@ def check_insertion(
                                   "message": f"Finger-hard session on {d} within {gap} day(s) of another "
                                              f"finger-hard day ({clash[0]}): the fingers need that gap to "
                                              "recover."})
+    # A301: what the insertion adds to the guard alerts of the week (finger
+    # gap, 72 h before a finger test, heavy pulls, HIIT next to a max, hard
+    # cap, pre-trip) — the insertion itself rewrites nothing any more.
+    prev = _prev_days(st, ws, archived_weeks)
+    td_iso = _as_date(today).isoformat()
+    guard_warnings = _guards_mod.new_warnings(
+        _guards_mod.evaluate(before_plan, prev, td_iso, st),
+        _guards_mod.evaluate(after_plan, prev, td_iso, st_after),
+    )
     return {"week_plan": after_plan, "adjustments": adjustments, "key_status": after,
-            "key_conflicts": conflicts}
+            "key_conflicts": conflicts, "added_guard_warnings": guard_warnings}
 
 
 # ---------------------------------------------------------------------------

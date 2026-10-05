@@ -343,11 +343,13 @@ class TestProposals:
         p = s["proposals"][0]
         assert set(p["keys"]) == {"finger_max", "pulling_max"} and p["session_id"] == "strength_long"
         # 06 (after limit 05), 08 (before... after power_contact 07), 09 (skipped that day) are out.
-        assert p["date"] == "2026-10-10"
+        # A301: 10 is out too — applying it would leave Sunday's finger
+        # maintenance inside the finger gap, and nothing downshifts it any
+        # more: the engine's proposal must not raise a guard alert.
+        assert p["date"] == "2026-10-11"
         assert p["gym_id"] == "g1" and p["location"] == "gym"
         assert p["apply"]["event"]["event_type"] == "add_planned_session"
-        # Sunday's finger maintenance becomes recovery: declared, not hidden.
-        assert any(x["date"] == "2026-10-11" and x["from"] == "finger_maintenance_gym" for x in p["side_effects"])
+        assert p["side_effects"] == []
         assert _req(s, "finger_max")["resolution"] == "proposal"
         assert _req(s, "pulling_max")["resolution"] == "proposal"
 
@@ -469,11 +471,14 @@ class TestInsertion:
                                           "target_date": "2026-10-08", "slot": "evening", "location": "home"}],
                                  custom_sessions=[self._hang_custom()])
         codes = {(c["code"], c.get("key")) for c in res["key_conflicts"]}
-        assert ("key_replaced", "finger_max") in codes
-        assert ("key_removed", "pulling_max") in codes
-        rep = next(c for c in res["key_conflicts"] if c["code"] == "key_replaced")
-        assert rep["replace_key"] is True
-        assert res["adjustments"][0]["previous_session_id"] == "strength_long"
+        # A301: the key session the day after is no longer downshifted, so
+        # the key is not lost — the clash is the finger gap, said loud.
+        assert ("finger_gap", None) in codes
+        assert res["adjustments"] == []
+        thu = res["week_plan"]["weeks"][0]["days"][4]["sessions"][0]
+        assert thu["session_id"] == "strength_long"
+        added = res["added_guard_warnings"]
+        assert any(w["code"] == "finger_gap" and w["date"] == "2026-10-09" for w in added)
         # Nothing persisted: the input plan is untouched.
         assert st["week_plans"]["2026-10-05"]["weeks"][0]["days"][4]["sessions"][0]["session_id"] == "strength_long"
 
@@ -496,8 +501,11 @@ class TestInsertion:
                                  custom_sessions=[self._hang_custom()])
         codes = {c["code"] for c in res["key_conflicts"]}
         assert "pre_test_fatigue" in codes
-        # The finger custom the day before also pushes the test itself to recovery.
-        assert "test_downgraded" in codes
+        # A301: the test itself is no longer pushed to recovery — it stays, and
+        # the alerts say the custom sits inside its 72 h and its finger gap.
+        assert "test_downgraded" not in codes
+        added = {w["code"] for w in res["added_guard_warnings"]}
+        assert {"finger_test_72h", "finger_gap"} <= added
 
 
 # ---------------------------------------------------------------------------
@@ -577,14 +585,19 @@ class TestReplannerAdditive:
         assert stub["skipped_tags"] == {"hard": True, "finger": True}
 
     def test_reconcile_adaptation_and_downshift_stamp(self):
+        """A301: a custom next to a key session rewrites nothing — no reconcile
+        adaptation, no downshift stamp; the gap is an alert."""
+        from backend.engine import guards_v1
+
         plan = _state()["week_plans"]["2026-10-05"]
         out = apply_events(plan, [{"event_type": "add_custom_session", "custom_session_id": "cs_h",
                                    "target_date": "2026-10-08", "slot": "lunch", "location": "home"}],
                            custom_sessions=[{"id": "cs_h", "name": "H",
                                              "exercises": [{"exercise_id": "max_hang_7s", "sets": 5}]}])
-        rec = [a for a in out["adaptations"] if a.get("type") == "reconcile"]
-        assert rec and rec[0]["adjustments"][0]["previous_session_id"] == "strength_long"
-        assert out["weeks"][0]["days"][4]["sessions"][0]["downshifted_from"] == "strength_long"
+        assert not [a for a in out["adaptations"] if a.get("type") == "reconcile"]
+        fri = out["weeks"][0]["days"][4]["sessions"][0]
+        assert fri["session_id"] == "strength_long" and "downshifted_from" not in fri
+        assert any(w["code"] == "finger_gap" and w["date"] == "2026-10-09" for w in guards_v1.evaluate(out))
 
     def test_no_reconcile_adaptation_when_nothing_changes(self):
         plan = _state()["week_plans"]["2026-10-05"]
@@ -596,9 +609,13 @@ class TestReplannerAdditive:
         plan = st["week_plans"]["2026-10-05"]
         prev = copy.deepcopy(st["week_plans"]["2026-09-28"]["weeks"][0]["days"])
         prev[6]["sessions"] = [_sess("evening", "finger_strength_home", "done")]
+        # A301: the seed feeds the alert, the plan is not rewritten.
+        from backend.engine import guards_v1
+
         out = apply_events(plan, [], prev_days=prev)
-        assert out["weeks"][0]["days"][0]["sessions"][0]["session_id"] == "regeneration_easy"
-        assert apply_events(plan, [])["weeks"][0]["days"][0]["sessions"][0]["session_id"] == "limit_boulder_gym"
+        assert out["weeks"][0]["days"][0]["sessions"][0]["session_id"] == "limit_boulder_gym"
+        assert any(w["code"] == "finger_gap" and w["date"] == "2026-10-05" for w in guards_v1.evaluate(out, prev))
+        assert not any(w["date"] == "2026-10-05" for w in guards_v1.evaluate(out))
 
     def test_done_sessions_never_rewritten(self):
         st = _state()
@@ -656,9 +673,9 @@ class TestReviewFixes:
         out = apply_events(plan, ev, prev_days=prev, today="2026-09-30")
         mon = out["weeks"][0]["days"][0]["sessions"][0]
         assert mon["session_id"] == "finger_strength_home" and "downshifted_from" not in mon
-        # Without a today the pre-A294 behaviour is unchanged (the guard runs).
+        # A301: without a today nothing is rewritten either.
         legacy = apply_events(plan, ev, prev_days=prev)
-        assert legacy["weeks"][0]["days"][0]["sessions"][0]["session_id"] == "regeneration_easy"
+        assert legacy["weeks"][0]["days"][0]["sessions"][0]["session_id"] == "finger_strength_home"
 
     def test_frozen_past_day_still_constrains(self):
         st = _state()
@@ -669,7 +686,12 @@ class TestReviewFixes:
         out = apply_events(plan, [], today="2026-09-29")
         days = out["weeks"][0]["days"]
         assert days[0]["sessions"][0]["session_id"] == "finger_strength_home"
-        assert days[1]["sessions"][0]["session_id"] == "regeneration_easy"  # today, after a past finger day
+        # A301: today after a past finger day — kept, and flagged (the past counts).
+        from backend.engine import guards_v1
+
+        assert days[1]["sessions"][0]["session_id"] == "strength_long"
+        alerts = guards_v1.evaluate(out, None, "2026-09-29")
+        assert [(w["code"], w["date"]) for w in alerts] == [("finger_gap", "2026-09-29")]
 
     def test_untested_catalog_session_with_logged_load_is_full(self):
         """Finding 2: untested athletes who did the catalog session owe nothing."""

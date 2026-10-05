@@ -221,7 +221,7 @@ class TestRipple(_Base):
         "status": "planned", "intensity": "high", "tags": {"hard": True, "finger": True},
     }
 
-    def test_high_load_ripples_next_day(self):
+    def test_high_load_alerts_next_day_without_rewriting(self):
         target = THIS_MONDAY.isoformat()
         plan = _mk_plan(THIS_MONDAY, {
             "mon": {"outdoor_spot_name": "Berdorf", "outdoor_discipline": "lead",
@@ -236,5 +236,10 @@ class TestRipple(_Base):
         tue = self._plan_day(
             self._read_state(), THIS_MONDAY, (THIS_MONDAY + timedelta(days=1)).isoformat(),
         )
-        assert tue["sessions"][0]["session_id"] == "complementary_conditioning"
-        assert "outdoor_ripple" in tue["sessions"][0]["constraints_applied"]
+        # A301: no ripple — the next day stays as planned; guards_v1 raises
+        # ``post_outdoor`` at read time instead.
+        assert tue["sessions"] == [self.HARD_TUE_SESSION]
+        from backend.engine import guards_v1
+        plan_after = self._read_state()["week_plans"][THIS_MONDAY.isoformat()]
+        assert any(w["code"] == "post_outdoor" and w["date"] == tue["date"]
+                   for w in guards_v1.evaluate(plan_after))

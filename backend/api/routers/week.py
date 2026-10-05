@@ -889,6 +889,13 @@ def get_week(
     if key_status:
         result["key_status"] = key_status
 
+    # A301: the guard alerts of this week as it stands (finger gap, finger
+    # test 72 h, heavy pulls, HIIT next to a max, hard cap, pre-trip, big
+    # outdoor day) — a sibling of week_plan like key_status, never persisted.
+    from backend.api.guard_status import build_guard_warnings
+
+    result["guard_warnings"] = build_guard_warnings(state, week_plan, today)
+
     return result
 
 

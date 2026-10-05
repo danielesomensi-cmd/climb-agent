@@ -1457,28 +1457,64 @@ The override is a **temporary layer** — it never modifies `state.availability`
 The planner merges the override into availability before planning (in `week.py`).
 Past-week overrides are kept for history but are never read by the planner.
 
-### 5.7.1 Replanner adjustments (B287/R-5, B366)
+### 5.7.1 Replanner adjustments (B287/R-5, B366) → guard alerts (A301)
+
+**A301 (2026-10-05): after a user action nothing is downshifted.** Quick-add, override, move, custom / generated /
+planned session, change of gym, outdoor day, mark done/skipped, feedback: the reconcile (finger gap + hard cap),
+the three ripples (quick-add day+1, override day+1/day+2, outdoor day+1), the finger compensation and the
+protected-neighbour guard no longer rewrite anything. `adjustments[]` stays in every response and in the
+`quick_add` / `day_override` adaptations for the contract, always empty. Legacy plans may still carry the old
+records (`{type: "reconcile"}`, `{type: "outdoor_ripple"}`, `finger_compensation*`) and the old reasons on
+rewritten sessions:
 
 ```
-Adjustment: { date, slot, action: "downgraded", reason, previous_session_id, session_id }
-  reason ∈ finger_spacing_downshift | hard_cap_downshift        (reconcile, B287)
-         | quick_add_ripple                                     (quick-add day+1, B366)
-         | recovery_ripple_proportional | recovery_ripple       (hard override day+1 / day+2, B366)
-         | outdoor_ripple                                       (completed outdoor ≥ 65 load, day+1, B366)
-  reason always equals the constraints_applied value stamped on the rewritten session.
+Adjustment (legacy): { date, slot, action: "downgraded", reason, previous_session_id, session_id }
+  reason ∈ finger_spacing_downshift | hard_cap_downshift | quick_add_ripple
+         | recovery_ripple_proportional | recovery_ripple | outdoor_ripple
 ```
 
-Where they surface: `POST /api/replanner/quick-add` → `adjustments[]` + `warnings[]` (reconcile first, ripple last);
-`POST /api/replanner/override` → `adjustments[]` + `warnings[]` (additive, B366 review: the override's own
-reconcile downshifts first, then the ripple); `week_plan.adaptations[]` → `{type: "quick_add", adjustments}`,
-`{type: "day_override", …, adjustments, warnings}`, `{type: "outdoor_ripple", date, adjustments, kept_protected?}`
-(only when something was rewritten or kept). `kept_protected: [{date, slot, session_id}]` names the hard/finger
-custom or forced sessions on day+1 the outdoor ripple had to leave in place.
-A ripple never rewrites done/skipped, `forced` or `is_custom` sessions (`_is_rewritable`). Since it spares
-them, `_protected_neighbor_guard` checks the added/overriding session against them instead: a non-skipped
-protected finger session within `_recovery_gap` days AFTER it downshifts the added session
-(`finger_spacing_downshift`, unless it was forced); a protected hard session on day+1 adds the warning
-"Back-to-back hard days: …" (no rewrite — no rule forbids back-to-back hard days).
+`_reconcile` survives only as a PROBE on a copy (`regeneration_guard_warnings`, §5.7.2).
+
+```
+GuardWarning (backend/engine/guards_v1.py, computed at read, NEVER persisted):
+  { code, severity: "warning", date, slot, session_id, name, user_owned,
+    with: [{date, slot, session_id}], message, …code-specific }
+  code ∈ finger_gap        session tagged finger within ceil(recovery_multiplier) days of an earlier finger
+                           day (prev week seeded); + gap_days
+       | finger_test_72h   finger-hard session ≤ 72 h before a finger max test (RETEST_BLOCK_H)
+       | heavy_pull_7d     > 2 heavy-pull days (≥ 85 % 1RM, key_sessions_v1._is_heavy_pull) in 7 days;
+                           + count, limit
+       | hiit_near_max     HIIT (stimulus.is_hiit_like) on the day of / day before a max day
+                           (finger-hard, or pulling + hard)
+       | hard_cap          hard days (done count, skipped not; HIIT is not hard) > plan cap, on the days
+                           past the cap; + count, cap
+       | pre_trip          hard session on a compute_taper_windows no_hard day (needs state.trips)
+       | post_outdoor      hard/finger session the day after a done outdoor day with load ≥ 65; + outdoor_load
+  Only sessions that can still change are flagged (not done/skipped, not before `today`); history counts.
+```
+
+Where they surface: `guard_warnings[]` sibling of `week_plan` (like `key_status`) on `GET /api/week/{n}`,
+`POST /api/replanner/override`, `/quick-add`, `/events` (dry run too, plus `added_guard_warnings[]` = the alerts
+the events ADD, from `key_sessions_v1.check_insertion`) and `POST /api/body-part-picker/start`. The legacy
+`warnings[]` strings of quick-add / override carry the messages of the alerts that involve the touched day.
+
+Other A301 semantics:
+- **Override = one slot.** `session_index`'s slot, else `slot`, else the day's only session when it is an engine
+  session, else `evening`. Other sessions of the day stay (a user-owned one is replaced only through its own
+  slot); done/skipped blocks only the targeted slot. `day_override.whole_day` is always `false`; the adaptation
+  names `replaced_session_id` + `replaced_slot` (one session) or `replaced_slots: [slot]` (several in that slot),
+  and `warnings: ["finger session replaced on … — not compensated elsewhere"]` when a finger session was lost.
+  An outdoor override keeps the day's user-owned sessions and drops the engine's.
+- **`move_session`** onto a done/skipped session → `ValueError` → 422. A planned session there (engine or the
+  user's) is replaced, as before.
+- **Quick-add `force`**: compatibility no-op (no `forced`, no `user_forced` stamp); every quick-add is applied.
+- **`change_gym`** losing a finger session: no compensation; the `change_gym` adaptation gets
+  `lost_finger: true` + a warning string.
+- **`complete_outdoor`**: stores `outdoor_load_score`, no ripple (`allow_ripple` accepted and ignored).
+- **A294 proposals** (`_propose_for`) reject a candidate that would ADD a guard alert to the week
+  (rejection `reason: "guard_alert"`, `codes[]`, `with[]`) — the engine's proposal never needs a neighbour to
+  move, so `side_effects` is empty in practice. `check_insertion` no longer produces `key_removed` /
+  `key_replaced` / `test_downgraded` from an insertion (they came from reconcile downshifts).
 
 ### 5.7.2 User-owned sessions and stale weeks (B369)
 
@@ -1512,9 +1548,9 @@ is_preservable(session)   = status ∈ {done, skipped} | is_user_owned(session)
   what the guards would downshift in a regenerated week once the merge put the user's sessions back. Alert
   only, nothing rewritten; recomputed at each regeneration (never piled up); absent for a week without user
   sessions.
-- **Ownership markers survive guard rewrites** (B369 review): reconcile / ripple / protected-neighbour rewrites
-  keep the user markers in `constraints_applied` (`user_owned.carry_user_markers`), so a rewritten user session
-  is still kept by the next regeneration; finger compensation never swaps out a user-owned session.
+- **Ownership markers survive guard rewrites** (B369 review): the reconcile probe keeps the user markers in
+  `constraints_applied` (`user_owned.carry_user_markers`). Since A301 no user action rewrites anything, so this
+  only matters for legacy plans.
 - **`_stale`** (week plan flag, B369): set by `deps.mark_weeks_stale` on the cached current/future weeks (never a
   past week) by `invalidate_week_cache` (macrocycle generate, onboarding, start-week, test-reminder confirm),
   `PUT /api/state` when `availability` / `planning_prefs` / `weekly_overrides` actually change,

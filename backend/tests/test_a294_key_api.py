@@ -101,11 +101,13 @@ class TestEventsDryRun:
         body = r.json()
         assert body["dry_run"] is True
         codes = {(c["code"], c.get("key")) for c in body["key_conflicts"]}
-        # finger_max: replaced (tested athlete) or partially replaced (untested
-        # fixture: no official max → partial dose) — never silent.
-        assert ("key_replaced", "finger_max") in codes or ("key_removed", "finger_max") in codes
-        assert ("key_removed", "pulling_max") in codes
-        assert body["adjustments"] and body["adjustments"][0]["previous_session_id"] == "strength_long"
+        # A301: the key session the day after is no longer downshifted by the
+        # insertion — the clash is a finger gap, never silent.
+        assert ("finger_gap", None) in codes
+        assert body["adjustments"] == []
+        thu = (_monday() + timedelta(days=3)).isoformat()
+        assert any(w["code"] == "finger_gap" and w["date"] == thu for w in body["added_guard_warnings"])
+        assert any(w["code"] == "finger_gap" and w["date"] == thu for w in body["guard_warnings"])
         assert "key_status" in body and "key_status" not in body["week_plan"]
         after = deps.load_state(None)
         assert after["week_plans"] == before["week_plans"]
@@ -144,10 +146,15 @@ class TestEventsReal:
         })
         assert r.status_code == 200, r.text
         body = r.json()
-        assert body["adjustments"][0]["previous_session_id"] == "strength_long"
+        # A301: nothing rewritten; the alert travels next to the plan.
+        assert body["adjustments"] == []
+        thu = (_monday() + timedelta(days=3)).isoformat()
+        assert body["week_plan"]["weeks"][0]["days"][3]["sessions"][0]["session_id"] == "strength_long"
+        assert any(w["code"] == "finger_gap" and w["date"] == thu for w in body["guard_warnings"])
         assert body["key_status"]["week_start"] == _monday().isoformat()
         saved = deps.load_state(None)
         assert "key_status" not in json.dumps(saved["week_plans"])
+        assert "guard_warnings" not in json.dumps(saved["week_plans"])
 
     def test_slot_only_skip_logs_the_real_session_id(self):
         plan = _seed()

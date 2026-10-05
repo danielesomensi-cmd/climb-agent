@@ -224,7 +224,9 @@ def test_custom_finger_session_is_not_rewritten_by_the_guard():
 
 
 def test_custom_finger_session_constrains_the_following_day():
-    """Exempt from rewriting is NOT exempt from counting: the engine moves around it."""
+    """Exempt from rewriting is NOT exempt from counting. A301: the engine's
+    finger session the day after is no longer downshifted (guards are alerts
+    after a user action) — the custom still counts, so the gap is an alert."""
     plan = _plan(_WEEK)
     # Planner finger session the day AFTER the custom one.
     plan["weeks"][0]["days"][2]["sessions"] = [{
@@ -237,9 +239,13 @@ def test_custom_finger_session_constrains_the_following_day():
           "target_date": "2026-09-08", "slot": "evening"}],
         custom_sessions=[_finger_custom_session()],
     )
+    from backend.engine import guards_v1
+
     day_after = next(d for d in out["weeks"][0]["days"] if d["date"] == "2026-09-09")
-    assert day_after["sessions"][0]["session_id"] == "regeneration_easy", (
-        "the planner's finger session survived 24h after a custom finger session — "
+    assert day_after["sessions"][0]["session_id"] == "finger_strength_home"
+    alerts = guards_v1.evaluate(out)
+    assert any(w["code"] == "finger_gap" and w["date"] == "2026-09-09"
+               and w["with"][0]["date"] == "2026-09-08" for w in alerts), (
         "the 48h gap is still blind to custom content"
     )
 

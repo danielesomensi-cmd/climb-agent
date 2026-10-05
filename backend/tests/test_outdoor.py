@@ -386,7 +386,7 @@ class TestOutdoorRipple:
         s.update(kwargs)
         return s
 
-    def test_high_load_triggers_ripple(self):
+    def test_high_load_alerts_instead_of_ripple(self):
         from backend.engine.replanner_v1 import apply_events
         plan = self._make_week_plan(
             [],
@@ -395,9 +395,11 @@ class TestOutdoorRipple:
         updated = apply_events(plan, [
             {"event_type": "complete_outdoor", "date": "2026-03-16", "outdoor_load_score": 70},
         ])
+        # A301: no ripple; the alert says it instead.
+        from backend.engine import guards_v1
         day2 = updated["weeks"][0]["days"][1]
-        assert day2["sessions"][0]["session_id"] == "complementary_conditioning"
-        assert "outdoor_ripple" in day2["sessions"][0].get("constraints_applied", [])
+        assert day2["sessions"][0]["session_id"] == "strength_long"
+        assert [w["code"] for w in guards_v1.evaluate(updated)] == ["post_outdoor"]
 
     def test_low_load_no_ripple(self):
         from backend.engine.replanner_v1 import apply_events
@@ -411,7 +413,7 @@ class TestOutdoorRipple:
         day2 = updated["weeks"][0]["days"][1]
         assert day2["sessions"][0]["session_id"] == "strength_long"
 
-    def test_replaces_hard_to_complementary(self):
+    def test_hard_next_day_not_replaced(self):
         from backend.engine.replanner_v1 import apply_events
         plan = self._make_week_plan(
             [],
@@ -421,9 +423,9 @@ class TestOutdoorRipple:
             {"event_type": "complete_outdoor", "date": "2026-03-16", "outdoor_load_score": 80},
         ])
         day2 = updated["weeks"][0]["days"][1]
-        assert day2["sessions"][0]["session_id"] == "complementary_conditioning"
+        assert day2["sessions"] == plan["weeks"][0]["days"][1]["sessions"]  # A301
 
-    def test_replaces_medium_to_recovery(self):
+    def test_medium_next_day_not_replaced(self):
         from backend.engine.replanner_v1 import apply_events
         plan = self._make_week_plan(
             [],
@@ -433,7 +435,7 @@ class TestOutdoorRipple:
             {"event_type": "complete_outdoor", "date": "2026-03-16", "outdoor_load_score": 75},
         ])
         day2 = updated["weeks"][0]["days"][1]
-        assert day2["sessions"][0]["session_id"] == "deload_recovery"
+        assert day2["sessions"] == plan["weeks"][0]["days"][1]["sessions"]  # A301
 
     def test_keeps_low_sessions(self):
         from backend.engine.replanner_v1 import apply_events
