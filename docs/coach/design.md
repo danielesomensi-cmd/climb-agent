@@ -256,7 +256,9 @@ A297 ha cambiato il **blocco dinamico** del prompt (non il KB): la sezione `## A
 4. Confronto: stesso comando con `COACH_ATHLETE_CONTEXT=0` misura il prompt pre-A297 sullo stesso utente.
 5. Criterio: **≥ 45/56** e **zero breach** sulle hard-fail (Q-13, Q-14, Q-22, Q-26, Q-27, Q-28). Esiti in `docs/coach/regression_rerun_raw.md`.
 
-Se il run scende sotto soglia, `COACH_ATHLETE_CONTEXT=0` su Railway riporta il prompt precedente senza deploy (il flag è letto a ogni chiamata). Item aperto: `COACH-REGRESSION-R7` in `docs/ROADMAP_CURRENT.md`.
+Se il run scende sotto soglia, `COACH_ATHLETE_CONTEXT=0` su Railway riporta il prompt precedente senza deploy (il flag è letto a ogni chiamata). 
+
+**Esito (D283, 2026-10-05): 50/56, zero breach — PASS**, flag acceso. Report e raw in `docs/audit/D283_coach_regression_r7*.md`. Nota per i prossimi run: la `deadline` del recipe va sempre messa nel futuro (quella di D267, 2026-09-01, è scaduta), e un troncamento va letto con `stop_reason` — `claude-sonnet-5` pensa in modo adattivo e il thinking consuma `COACH_MAX_TOKENS` (`COACH-TRUNCATION-RESIDUAL`).
 
 ---
 
