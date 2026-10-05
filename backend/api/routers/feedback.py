@@ -37,6 +37,7 @@ from backend.api.deps import (
 )
 from backend.api.rate_limit import limiter
 from backend.api.models import FeedbackRequest
+from backend.api.key_status import resolve_today
 from backend.api.routers.replanner import _event_floor, _prev_week_days, persist_week_plan
 from backend.engine.adaptive_replan import (
     append_feedback_log,
@@ -470,7 +471,10 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
     if plan and plan.get("weeks"):
         current_date = target_date or date_type.today().isoformat()
         feedback_history = state.get("feedback_log", [])
-        result = check_adaptive_replan(plan, feedback_history, current_date)
+        # B367: days before today are past — never rewritten (server clock:
+        # /feedback carries no client today; UTC is never ahead of Europe).
+        result = check_adaptive_replan(plan, feedback_history, current_date,
+                                       today=resolve_today(None))
         if result["actions"]:
             updated_plan = apply_adaptive_replan(plan, result["actions"])
             state["current_week_plan"] = updated_plan

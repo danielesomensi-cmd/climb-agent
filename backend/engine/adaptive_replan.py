@@ -146,14 +146,34 @@ def _parse_date(value: str) -> datetime:
     return datetime.strptime(value, "%Y-%m-%d")
 
 
+def _rewritable(session: Dict[str, Any]) -> bool:
+    """B367: the replanner's single exemption list (done/skipped, forced, custom)."""
+    from backend.engine.replanner_v1 import _is_rewritable
+
+    return _is_rewritable(session)
+
+
+def _past(day_date: str, today: Optional[str]) -> bool:
+    """B367: a day before the athlete's today is immutable even when unmarked."""
+    return bool(today) and day_date < str(today)
+
+
 def check_adaptive_replan(
     plan: Dict[str, Any],
     feedback_history: List[Dict[str, Any]],
     current_date: str,
+    today: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Check if adaptive replanning is needed based on feedback history.
 
     Returns {"actions": [...], "warnings": [...]}.
+
+    B367: a target day/session must be something the engine may rewrite —
+    never a done/skipped, forced (A254) or user-authored custom (B345)
+    session, and never a day before *today* (ISO; ``None`` = no frozen past).
+    Rule 2 used to pick the first day that was not ENTIRELY done/skipped, so a
+    day holding a done session plus a planned one — or any custom session —
+    was then wiped wholesale by ``apply_adaptive_replan``.
     """
     actions: List[Dict[str, Any]] = []
     warnings: List[str] = []
@@ -199,15 +219,17 @@ def check_adaptive_replan(
                 day_dt = _parse_date(day_date)
             except (ValueError, TypeError):
                 continue
-            if day_dt <= current_dt:
+            if day_dt <= current_dt or _past(day_date, today):
                 continue
             # Skip days already done/skipped
             if day.get("status") in {"done", "skipped"}:
                 continue
             sessions = day.get("sessions") or []
-            if all(s.get("status") in {"done", "skipped"} for s in sessions if s.get("status")):
-                if any(s.get("status") in {"done", "skipped"} for s in sessions):
-                    continue
+            # B367: a day with sessions but none the engine may rewrite is not
+            # a target (the recovery would have to delete the user's work).
+            # An empty day keeps the pre-B367 behaviour.
+            if sessions and not any(_rewritable(s) for s in sessions):
+                continue
             actions.append({
                 "type": "insert_recovery",
                 "target_date": day_date,
@@ -225,11 +247,13 @@ def check_adaptive_replan(
                 day_dt = _parse_date(day_date)
             except (ValueError, TypeError):
                 continue
-            if day_dt <= current_dt:
+            if day_dt <= current_dt or _past(day_date, today):
                 continue
             sessions = day.get("sessions") or []
             for session in sessions:
-                if session.get("status") in {"done", "skipped"}:
+                # B367: done/skipped, forced and custom sessions are never
+                # downgraded (it used to check done/skipped only).
+                if not _rewritable(session):
                     continue
                 tags = session.get("tags") or {}
                 if tags.get("hard"):
@@ -249,7 +273,12 @@ def apply_adaptive_replan(
     plan: Dict[str, Any],
     actions: List[Dict[str, Any]],
 ) -> Dict[str, Any]:
-    """Apply adaptive replan actions to the plan. Returns modified copy."""
+    """Apply adaptive replan actions to the plan. Returns modified copy.
+
+    B367: only sessions ``_is_rewritable`` allows are touched — a done/skipped,
+    forced or custom session on the target day is kept byte-identical (the
+    recovery used to replace the whole day).
+    """
     updated = deepcopy(plan)
     days = updated.get("weeks", [{}])[0].get("days", []) if updated.get("weeks") else []
 
@@ -269,7 +298,7 @@ def apply_adaptive_replan(
             sessions = target_day.get("sessions") or []
             for i, session in enumerate(sessions):
                 tags = session.get("tags") or {}
-                if tags.get("hard") and session.get("status") not in {"done", "skipped"}:
+                if tags.get("hard") and _rewritable(session):
                     sessions[i] = {
                         "slot": session.get("slot", "evening"),
                         "session_id": "complementary_conditioning",
@@ -288,34 +317,41 @@ def apply_adaptive_replan(
 
         elif action_type == "insert_recovery":
             sessions = target_day.get("sessions") or []
-            if sessions:
-                # Preserve slot/location/gym_id from first session
-                ref = sessions[0]
-                target_day["sessions"] = [{
-                    "slot": ref.get("slot", "evening"),
-                    "session_id": "regeneration_easy",
-                    "location": ref.get("location", "home"),
-                    "gym_id": ref.get("gym_id"),
-                    "intensity": "low",
-                    "tags": {"hard": False, "finger": False},
-                    "constraints_applied": ["adaptive_replan"],
-                    "explain": [
-                        "adaptive replan: recovery day after repeated very_hard feedback",
-                    ],
-                }]
+            rewritable = [s for s in sessions if _rewritable(s)]
+            if sessions and not rewritable:
+                continue  # B367: nothing the engine may touch on this day
+            recovery = {
+                "slot": "evening",
+                "session_id": "regeneration_easy",
+                "location": "home",
+                "gym_id": None,
+                "intensity": "low",
+                "tags": {"hard": False, "finger": False},
+                "constraints_applied": ["adaptive_replan"],
+                "explain": [
+                    "adaptive replan: recovery day after repeated very_hard feedback",
+                ],
+            }
+            if rewritable:
+                # Preserve slot/location/gym_id from the first rewritable
+                # session; the rewritable ones collapse into the one recovery
+                # session, the protected ones stay exactly as they are.
+                ref = rewritable[0]
+                recovery["slot"] = ref.get("slot", "evening")
+                recovery["location"] = ref.get("location", "home")
+                recovery["gym_id"] = ref.get("gym_id")
+                lost = next(
+                    (s for s in rewritable if (s.get("tags") or {}).get("hard") or (s.get("tags") or {}).get("finger")),
+                    ref,
+                )
+                if lost.get("session_id") != "regeneration_easy":
+                    recovery["downshifted_from"] = lost.get("session_id")  # A294
+                first = sessions.index(ref)
+                kept = [s for s in sessions if not _rewritable(s)]
+                kept_before = [s for s in sessions[:first] if not _rewritable(s)]
+                target_day["sessions"] = kept_before + [recovery] + kept[len(kept_before):]
             else:
-                target_day["sessions"] = [{
-                    "slot": "evening",
-                    "session_id": "regeneration_easy",
-                    "location": "home",
-                    "gym_id": None,
-                    "intensity": "low",
-                    "tags": {"hard": False, "finger": False},
-                    "constraints_applied": ["adaptive_replan"],
-                    "explain": [
-                        "adaptive replan: recovery day after repeated very_hard feedback",
-                    ],
-                }]
+                target_day["sessions"] = [recovery]
 
     # Log adaptation
     current_date = actions[0].get("target_date", "") if actions else ""
