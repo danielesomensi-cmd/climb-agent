@@ -17,6 +17,7 @@ import logging
 import math
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from functools import lru_cache
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 logger = logging.getLogger(__name__)
@@ -491,9 +492,109 @@ def _normalize_availability(
                 gym_id = slot_value.get("gym_id")
                 if isinstance(gym_id, str) and gym_id:
                     default["gym_id"] = gym_id
+                # A300: optional slot structure. Copied only when present and
+                # valid, so an availability without them normalizes to exactly
+                # the same dict as before (byte-identical plans).
+                default.update(_slot_structure_fields(slot_value))
             day_slots[slot] = default
         normalized[wd] = day_slots
     return normalized
+
+
+# ---------------------------------------------------------------------------
+# A300 — slot roles (primary | complementary | any)
+# ---------------------------------------------------------------------------
+#
+# A slot may declare what it is for. ``complementary`` slots (a lunch break at a
+# weights gym) are invisible to every placement pass of this module and to the
+# A294 re-schedule proposals: primaries never land there, quality floors and
+# substitutions never take them. They are filled by their own pass
+# (``complementary_v1.place_complementary``) with their own budget, outside
+# ``target_training_days_per_week`` and the pruning. ``primary`` and ``any``
+# (default) slots behave exactly as before A300 for the passes of this module;
+# only the complementary pass tells them apart (it never uses them).
+# ``max_minutes`` excludes, on that slot, any session whose catalog
+# ``time_budget.hard_cap_min`` is longer.
+
+SLOT_ROLES: Tuple[str, ...] = ("primary", "complementary", "any")
+SLOT_MAX_MINUTES_RANGE: Tuple[int, int] = (10, 240)
+
+
+def _slot_structure_fields(slot_value: Dict[str, Any]) -> Dict[str, Any]:
+    """The A300 fields of a raw availability slot, valid ones only."""
+    out: Dict[str, Any] = {}
+    role = slot_value.get("role")
+    if isinstance(role, str) and role in SLOT_ROLES and role != "any":
+        out["role"] = role
+    mm = slot_value.get("max_minutes")
+    lo, hi = SLOT_MAX_MINUTES_RANGE
+    if isinstance(mm, int) and not isinstance(mm, bool) and lo <= mm <= hi:
+        out["max_minutes"] = mm
+    focus = slot_value.get("focus")
+    if isinstance(focus, str) and focus:
+        out["focus"] = focus
+    return out
+
+
+def _primary_view(
+    normalized: Dict[str, Dict[str, Dict[str, Any]]],
+) -> Dict[str, Dict[str, Dict[str, Any]]]:
+    """``normalized`` with every complementary slot marked unavailable.
+
+    The placement passes (and the A294 proposals) read this view, so the role
+    filter lives in one place instead of at each placement site — a new pass
+    cannot forget it. When no slot is complementary the very same object is
+    returned (identity for users without the A300 fields).
+    """
+    if not any(si.get("role") == "complementary"
+               for day in normalized.values() for si in day.values()):
+        return normalized
+    out: Dict[str, Dict[str, Dict[str, Any]]] = {}
+    for wd, day in normalized.items():
+        out[wd] = {}
+        for slot, si in day.items():
+            if si.get("role") == "complementary":
+                si = dict(si)
+                si["available"] = False
+            out[wd][slot] = si
+    return out
+
+
+@lru_cache(maxsize=None)
+def session_duration_min(session_id: str) -> Optional[int]:
+    """Catalog duration of a session: ``time_budget.hard_cap_min`` (the honest
+    ceiling — 45' gross of lunch break leave ~35 net), else
+    ``target_duration_min``; ``None`` when unknown. Deterministic file read."""
+    import json as _json
+    import os as _os
+    path = _os.path.join(_os.path.dirname(__file__), "..", "catalog", "sessions", "v1", f"{session_id}.json")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            data = _json.load(fh)
+    except (OSError, ValueError):
+        return None
+    tb = (data or {}).get("time_budget") or {}
+    raw = tb.get("hard_cap_min", tb.get("target_duration_min"))
+    if isinstance(raw, (int, float)) and not isinstance(raw, bool):
+        return int(raw)
+    return None
+
+
+def _fits_max_minutes(slot_info: Dict[str, Any], session_id: Optional[str]) -> bool:
+    """A300: False when the slot has ``max_minutes`` and the session is longer."""
+    mm = slot_info.get("max_minutes")
+    if mm is None or not session_id:
+        return True
+    dur = session_duration_min(session_id)
+    return dur is None or dur <= mm
+
+
+def _meta_session_id(meta: Dict[str, Any]) -> Optional[str]:
+    """The ``_SESSION_META`` key of a meta dict (identity lookup, no copy)."""
+    for sid, m in _SESSION_META.items():
+        if m is meta:
+            return sid
+    return None
 
 
 def _select_gym_id(
@@ -585,6 +686,9 @@ def _find_best_slot(
             continue
         slot_info = day_availability[slot]
         if not slot_info["available"]:
+            continue
+        # A300: a slot with a time limit refuses longer sessions.
+        if "max_minutes" in slot_info and not _fits_max_minutes(slot_info, _meta_session_id(meta)):
             continue
         location = _pick_location(
             effective_locations, slot_info, locations,
@@ -693,6 +797,7 @@ def generate_phase_week(
     test_queue: Optional[List[Dict[str, Any]]] = None,
     taper_volume: Optional[Dict[str, float]] = None,
     retest_decisions: Optional[Dict[str, Any]] = None,
+    existing_week_plan: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Generate a single week plan within a macrocycle phase.
 
@@ -731,6 +836,11 @@ def generate_phase_week(
             (tested < 90 days); PASS 3a places them, the historical PASS 3 keeps
             the other axes. ``None`` (default) → byte-identical to pre-A289.
             Ignored for placement when ``inject_tests`` (explicit request wins).
+        existing_week_plan: A300 — the plan of this same week being
+            regenerated (force / stale). Read only by the complementary pass,
+            and only for the days before ``today``: what already happened at
+            the complementary slots counts toward this week's rotation and HIIT
+            cap. Ignored when no slot is complementary.
 
     Returns:
         Week plan dict compatible with planner.v1 format.
@@ -751,7 +861,10 @@ def generate_phase_week(
         raise ValueError(f"generate_phase_week: invalid start_date format '{start_date}', expected YYYY-MM-DD") from exc
 
     locations = sorted(set(allowed_locations or ["home", "gym"]))
-    normalized = _normalize_availability(availability, locations)
+    # A300: the passes below see only the non-complementary slots; the full
+    # view feeds the complementary pass at the end.
+    normalized_full = _normalize_availability(availability, locations)
+    normalized = _primary_view(normalized_full)
     cap = intensity_cap or PHASE_INTENSITY_CAP.get(phase_id, "max")
     prefs = planning_prefs or {}
     effective_hard_cap = min(hard_cap_per_week, prefs.get("hard_day_cap_per_week", hard_cap_per_week))
@@ -2367,6 +2480,27 @@ def generate_phase_week(
             ),
         }
 
+    # ── A300: complementary slots (own budget, after every other pass) ──
+    # Runs last — after the deload transform too — so the primaries it reads
+    # are final, and the deload 5-session cap, the target-days pruning and the
+    # hard cap never see these sessions. No complementary slot → no-op, the
+    # plan is byte-identical to pre-A300.
+    if normalized is not normalized_full:
+        from backend.engine.complementary_v1 import place_complementary
+
+        place_complementary(
+            week_plan,
+            normalized_full=normalized_full,
+            phase_id=phase_id,
+            planning_prefs=prefs,
+            locations=locations,
+            home_equipment=home_equipment,
+            gyms=gyms or [],
+            default_gym_id=default_gym_id,
+            today=today_date,
+            existing_week_plan=existing_week_plan,
+        )
+
     return week_plan
 
 
@@ -2404,7 +2538,8 @@ def generate_test_week(
     """
     locations = list(allowed_locations or ["gym", "home"])
     gyms_list = list(gyms or [])
-    norm_avail = _normalize_availability(availability, locations)
+    # A300: tests never go on a complementary slot.
+    norm_avail = _primary_view(_normalize_availability(availability, locations))
     recovery_mult = 1.0  # test weeks always use default spacing
 
     start = _parse_date(start_date)

@@ -190,6 +190,10 @@ def _short_to_long(name: str) -> str:
     return _SHORT_TO_LONG.get(name.lower(), name)
 
 
+#: A300 slot fields a weekly override keeps from the default availability.
+_SLOT_STRUCTURE_KEYS = ("role", "max_minutes", "focus")
+
+
 def _apply_day_override(
     base_day: Dict[str, Any],
     day_override: Dict[str, Any],
@@ -222,6 +226,13 @@ def _apply_day_override(
                     "locations": locations,
                     "gym_id": s_gym if s_loc == "gym" else None,
                 }
+                # A300: the override changes where/whether, not what the slot
+                # is for — role, time limit and pinned focus carry over.
+                base_slot = base_day.get(slot_key)
+                if isinstance(base_slot, dict):
+                    for k in _SLOT_STRUCTURE_KEYS:
+                        if k in base_slot:
+                            result[slot_key][k] = base_slot[k]
             else:
                 # Keep original slot data
                 slot_data = base_day.get(slot_key)
@@ -247,6 +258,9 @@ def _apply_day_override(
                 "locations": locations,
                 "gym_id": gym_id if location == "gym" else None,
             }
+            for k in _SLOT_STRUCTURE_KEYS:  # A300, see above
+                if k in slot_data:
+                    slots[slot][k] = slot_data[k]
         elif isinstance(slot_data, dict):
             slots[slot] = {
                 "available": False,

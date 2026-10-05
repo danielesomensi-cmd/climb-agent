@@ -179,6 +179,19 @@ Once you have a recent strength test (max hang or weighted pull-up, within the l
 To protect you from stacking fatigue, the heavy version steps down for that day if you did weighted pull-ups in the last 48 hours or have a limit/strength day tomorrow (a pulling session that steps down does not use up one of the two weekly heavy slots). If you did max hangs (or a finger test) in the last 72 hours, the finger block switches to sub-maximal hangs (long, light hangs with no max effort). It never gives you another max hang. Without a recent test nothing changes: exercises keep rotating as before.
 
 
+### Climbing in the evening, extras at lunch (complementary slots)
+
+If you train twice on some days — say climbing in the evening and a short gym session at lunch — you can mark a time slot as **complementary** and give it a time limit (for example 45 minutes for a lunch break). The planner then keeps the climbing sessions of your phase on your other slots and fills each complementary slot itself with a short session from a rotation you choose: **legs**, **HIIT**, **easy cardio (Zone 2)** and **push + arms** (chest, triceps, biceps). Sessions longer than the slot's limit are never put there.
+
+Which extra goes on which day is decided **every week from your actual climbing days**, not fixed in advance:
+
+- HIIT never on the day of, or the day before, a max / limit / test session — and at most one HIIT a week (it does not count as one of your hard days). In a deload week HIIT becomes easy cardio.
+- Biceps work not in the 24 hours before a heavy pulling session.
+- Legs not in the 48 hours before a limit session or an outdoor day.
+- Easy cardio can go anywhere.
+
+These are preferences, never locks: if a week cannot satisfy all of them, the planner picks the least bad option and **tells you** which rule it had to bend; if a slot cannot be filled (for example the gym lacks the equipment), it says so instead of leaving it empty without a word. Complementary sessions do not change how many climbing days you get. *(Setting slot roles from the Settings screen is coming in a following update.)*
+
 ### Key sessions
 
 Each phase has a few **key stimuli** that matter more than everything else — the sessions that make the phase work:

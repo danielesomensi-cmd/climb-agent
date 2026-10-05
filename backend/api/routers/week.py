@@ -765,6 +765,9 @@ def get_week(
                 test_queue=state.get("test_queue"),
                 taper_volume=taper_volume if taper_volume else None,
                 retest_decisions=_retest_decisions,
+                # A300: the days before today already happened — the
+                # complementary rotation and the weekly HIIT cap count them.
+                existing_week_plan=old_plan,
             )
         except Exception as e:
             logger.error("Week generation failed: %s", e, exc_info=True)

@@ -69,6 +69,7 @@ from backend.engine.stimulus import (
     counted_entries,
     finger_hard_days,
     is_finger_hard_session,
+    is_hiit_like,
     is_test_session,
     iter_plan_sessions,
     outdoor_hard_days,
@@ -133,7 +134,6 @@ TRYHARD_EXERCISE_IDS = ("fall_practice", "fall_ladder", "three_attempt_comp", "n
 #: lunch sessions: re-checked against the day guards and at each phase change.
 _WORK_RE = re.compile(r"^\s*Work\b", re.IGNORECASE)
 
-_HIIT_RE = re.compile(r"\b(HIIT|VO2)", re.IGNORECASE)
 _TRYHARD_TOKEN_RE = re.compile(r"\b(SEND|FALL|TAKE|LET_GO)\b")
 
 
@@ -373,7 +373,9 @@ def _session_view(d: str, s: Mapping[str, Any]) -> Dict[str, Any]:
         "is_custom": bool(s.get("is_custom")),
         "is_test": is_test_session(s),
         "stimuli": session_stimuli(s),
-        "hiit": bool(_HIIT_RE.search(str(s.get("name") or ""))),
+        # A300: one HIIT predicate with the planner (catalog ``tags.hiit``,
+        # ``conditioning_hiit`` exercises; the name regex only for legacy customs).
+        "hiit": is_hiit_like(s),
     }
 
 
@@ -628,7 +630,7 @@ def _work_checks(state: Mapping[str, Any], today: date, position: Mapping[str, A
     no_hiit = {g["date"]: g for g in guards.get("days") or [] if not g.get("hiit_ok")}
     for d_iso in sorted(no_hiit):
         for s in days.get(d_iso, []):
-            if s.get("status") in ("done", "skipped") or not _HIIT_RE.search(str(s.get("name") or "")):
+            if s.get("status") in ("done", "skipped") or not is_hiit_like(s):
                 continue
             out.append({"code": "HIIT_ON_GUARD_DAY", "date": d_iso, "session_id": s.get("session_id"),
                         "message": f"«{s.get('name')}» pianificata il {d_iso} ({s.get('slot')}) in un giorno NO HIIT "

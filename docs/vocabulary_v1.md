@@ -1534,6 +1534,54 @@ is_preservable(session)   = status ∈ {done, skipped} | is_user_owned(session)
   `{type: "adaptive_replan"}` adaptation is written any more.
 - **`plan_revision`** after a merge = `max(old, new) + 1` (monotonic across regenerations).
 
+### 5.7.3 Slot roles and complementary rotation (A300)
+
+```
+availability.<weekday>.<slot>  (all optional; absent ⇒ planner byte-identical to pre-A300)
+  role:         "primary" | "complementary" | "any"        (default "any")
+  max_minutes:  int 10..240 — sessions whose catalog time_budget.hard_cap_min
+                (else target_duration_min) is longer never go on this slot (every pass)
+  focus:        FocusFamily — pins the family of a complementary slot
+
+planning_prefs
+  complementary_rotation:           list[FocusFamily]   (default legs, hiit, z2, upper_push_arms)
+  complementary_rotation_by_phase:  { phase_id: list[FocusFamily] }  (replaces the rotation of that phase)
+
+FocusFamily → catalog sessions (first that fits slot equipment, max_minutes, max_per_week)
+  legs             legs_maintenance_lunch | legs_strength | lower_body_gym
+  hiit             treadmill_hiit_4x4
+  z2               treadmill_zone2_cardio
+  upper_push_arms  upper_push_arms_lunch (carries the biceps curl) | upper_body_weights
+Phase variant (default): deload → hiit becomes z2.
+```
+
+- **`complementary`** slots are invisible to every placement pass of `planner_v2` (PASS 1/1.5/2/2.2/2.5/2.6/3a/3,
+  test week) and to the A294 re-schedule proposals (`planner_v2._primary_view`): primaries, quality floors,
+  tests and substitutions never land there. They are filled last (after the deload transform) by
+  `complementary_v1.place_complementary`, one session per slot, with their own budget — outside
+  `target_training_days_per_week`, the target-days pruning, the hard cap and the deload 5-session cap.
+  `primary` / `any` slots are used by the primary passes exactly as before; the complementary pass never uses them.
+- **Adaptive pairing** family ↔ slot, by minimum penalty over the week's actual primaries (ties → rotation
+  order, deterministic): HIIT not the same day as / the day before a max day (finger-hard, pulling-hard, test,
+  `intensity: max`); at most **1 HIIT/week** (`stimulus.is_hiit_like`; HIIT is `hard: false`, never consumes
+  the hard-day cap); biceps not within 24 h before a heavy pull (`is_pulling_hard_session`); legs not within
+  48 h before a limit session (`limit_power` or max-intensity climbing on a wall) or an outdoor day; Z2
+  anywhere. Time model: morning 08:00, lunch 13:00, evening 19:00, outdoor day from 08:00.
+- **Penalties, never blocks.** Generated session fields: `slot_role: "complementary"`, `focus`, explain
+  `pass_complementary:a300`. Week plan fields (only when a complementary slot exists):
+  `secondary_warnings: [{date, slot, session_id, focus, code, with}]` with
+  `code ∈ hiit_near_max | biceps_before_heavy_pull | legs_before_limit | hiit_weekly_cap`, and
+  `unmet_secondary: [{date, slot, focus, reason, candidates?}]` with
+  `reason ∈ no_focus | rotation_exhausted | no_session_fits`.
+- **Regeneration mid-week**: `generate_phase_week(existing_week_plan=…)` (GET `/api/week` passes the cached plan
+  on force / stale) — the families and HIITs already on the days before `today` count toward the week.
+- **HIIT single source** (`stimulus.is_hiit_like`): catalog `tags.hiit` / `conditioning_hiit` exercises
+  (`is_hiit_session`), the `HIIT|VO2` name regex only for legacy customs without an explicit `tags.hiit`.
+  Used by the complementary pass and by `athlete_context` (`hiit` of a session view, `HIIT_ON_GUARD_DAY`).
+- **Validation**: `PUT /api/state` and `POST /api/onboarding/complete` answer 422 on an unknown `role` /
+  `focus`, an out-of-range `max_minutes` or an unknown family/phase in the rotation
+  (`complementary_v1.validate_structure`). A weekly override of a slot keeps its `role` / `max_minutes` / `focus`.
+
 ---
 
 ### 5.8 Exercise sort category (A121)

@@ -46,6 +46,7 @@ from __future__ import annotations
 import glob
 import json
 import os
+import re
 from datetime import date, datetime
 from functools import lru_cache
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
@@ -473,6 +474,28 @@ def is_hiit_session(session: Mapping[str, Any]) -> bool:
     entries, _origin = counted_entries(session)
     hiit_ids = _hiit_exercise_ids()
     return any(str(e.get("exercise_id") or "") in hiit_ids for e in entries)
+
+
+# A300: the name regex athlete_context used before C274. Kept ONLY as a
+# fallback for legacy custom sessions that carry no catalog session id, no
+# ``tags.hiit`` and no ``conditioning_hiit`` exercise (e.g. a hand-written
+# "Work — HIIT" custom). Never consulted when the session states its own
+# ``tags.hiit`` (True or False).
+_LEGACY_HIIT_NAME_RE = re.compile(r"\b(HIIT|VO2)", re.IGNORECASE)
+
+
+def is_hiit_like(session: Mapping[str, Any]) -> bool:
+    """:func:`is_hiit_session`, plus the legacy name fallback for customs.
+
+    The one predicate the planner's complementary pass (A300) and
+    ``athlete_context`` share, so the app and the script never disagree.
+    """
+    if is_hiit_session(session):
+        return True
+    tags = session.get("tags") or {}
+    if isinstance(tags, Mapping) and tags.get("hiit") is not None:
+        return False
+    return bool(_LEGACY_HIIT_NAME_RE.search(str(session.get("name") or "")))
 
 
 def is_pulling_hard_session(session: Mapping[str, Any]) -> bool:

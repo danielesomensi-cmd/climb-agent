@@ -267,6 +267,16 @@ Tests bypass the phase intensity cap. Placement is **two-pass** (B297 / D211-F9)
 
 Any test that still cannot be placed is recorded in `week_plan.skipped_tests` with `reason="no_placement_slot"` (plus `required`), instead of being silently dropped. The `/week` view surfaces the `required` ones so the user can free up a day.
 
+#### Complementary pass (A300, `complementary_v1.place_complementary`)
+
+Runs **last**, after the deload transform. A slot with `role: "complementary"` is hidden from every pass above
+(and from the A294 proposals) by `_primary_view`; this pass fills it with one session of a focus family
+(`legs`, `hiit`, `z2`, `upper_push_arms` → C274 catalog sessions), own budget outside target days, pruning,
+hard cap and deload cap. The family ↔ slot pairing is the minimum-penalty permutation over the week's real
+primaries (HIIT not on/before a max day and ≤ 1/week, biceps not ≤ 24 h before a heavy pull, legs not ≤ 48 h
+before a limit/outdoor day), ties broken by rotation order. Violations → `secondary_warnings`, unfillable slots
+→ `unmet_secondary`. No complementary slot → no-op, plan byte-identical. See vocabulary §5.7.3.
+
 ### Availability normalization
 
 `_normalize_availability()` handles 13 input cases (`planner_v2.py:lines 237-326`):
@@ -275,6 +285,7 @@ Any test that still cannot be placed is recorded in `week_plan.skipped_tests` wi
 - `{available: False}` → rest
 - Per-slot dicts with `preferred_location`, `gym_id`, `locations`
 - `preferred_location: "other_sport"` → slot unavailable
+- A300: valid `role` (≠ `any`), `max_minutes`, `focus` copied onto the slot only when present
 
 ### Day scoring for cap
 

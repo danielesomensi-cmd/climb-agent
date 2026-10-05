@@ -75,6 +75,14 @@ def put_state(request: Request, patch: Dict[str, Any], user_id: Optional[str] = 
             status_code=422,
             detail=f"Unknown state keys: {', '.join(sorted(unknown))}",
         )
+    # A300: the optional slot structure (role / max_minutes / focus) and the
+    # complementary rotation are validated — a typo must not silently turn a
+    # lunch break into a primary slot.
+    from backend.engine.complementary_v1 import validate_structure
+
+    structure_errors = validate_structure(patch.get("availability"), patch.get("planning_prefs"))
+    if structure_errors:
+        raise HTTPException(status_code=422, detail="; ".join(structure_errors))
     # Auto-correct macrocycle.start_date to Monday if present in patch
     mc_patch = patch.get("macrocycle")
     if isinstance(mc_patch, dict) and "start_date" in mc_patch:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 # --------------------------------------------------------------------------- #
@@ -225,6 +225,18 @@ class OnboardingData(BaseModel):
     # A233: first-touch attribution captured client-side (utm_*, referrer,
     # landing_page, first_touch_at). Sanitized server-side before persisting.
     attribution: Optional[Dict[str, Any]] = None
+
+    @model_validator(mode="after")
+    def _a300_slot_structure(self):
+        """A300: slot ``role`` / ``max_minutes`` / ``focus`` and the
+        complementary rotation are optional, but a wrong value is refused
+        (422) instead of being silently ignored by the planner."""
+        from backend.engine.complementary_v1 import validate_structure
+
+        errors = validate_structure(self.availability, self.planning_prefs)
+        if errors:
+            raise ValueError("; ".join(errors))
+        return self
 
 
 class OnboardingDraftEnvelope(BaseModel):

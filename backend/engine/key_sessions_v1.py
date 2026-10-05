@@ -842,6 +842,7 @@ def _propose_for(
         _find_best_slot,
         _normalize_availability,
         _pick_location,
+        _primary_view,
         _select_gym_id,
         allowed_locations_for,
     )
@@ -881,7 +882,8 @@ def _propose_for(
         locations = list(allowed_locations_for(equipment))
     except Exception:
         locations = ["gym", "home"]
-    norm = _normalize_availability(_effective_availability(state, ws), locations)
+    # A300: a key session is never proposed on a complementary slot.
+    norm = _primary_view(_normalize_availability(_effective_availability(state, ws), locations))
     default_gym = _default_gym_id(state)
     we = ws + timedelta(days=6)
     gap = _recovery_gap_days(plan)
