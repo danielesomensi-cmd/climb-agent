@@ -58,36 +58,60 @@ EMPTY_TEMPLATE: Dict[str, Any] = {
 }
 
 
+#: B369: a cached week plan that no longer reflects the user's settings
+#: (availability, planning prefs, weekly override, new macrocycle, resume, test
+#: request). The plan stays in the cache — it IS the user's plan, with their
+#: custom / forced / moved sessions and their removals — and GET /api/week
+#: regenerates it THROUGH the preserving merge on the next read. Deleting it
+#: (the pre-B369 behaviour) left nothing to merge from.
+STALE_KEY = "_stale"
+
+
+def mark_weeks_stale(
+    state: Dict[str, Any],
+    *,
+    from_monday: Optional[str] = None,
+    only: Optional[str] = None,
+    today: Optional[date] = None,
+) -> list:
+    """Flag the cached current and future weeks as stale (B369). Returns the
+    flagged ``week_plans`` keys.
+
+    Past weeks (key < this Monday) are never touched — they are immutable.
+    *from_monday* raises the lower bound (a new cycle starting next week),
+    *only* restricts the flag to one week (a weekly override). The legacy
+    ``current_week_plan`` pointer is flagged with the same rule.
+    """
+    lower = this_monday(today or datetime.now().date())
+    if from_monday and from_monday > lower:
+        lower = from_monday
+    marked = []
+    for k, plan in (state.get("week_plans") or {}).items():
+        if not isinstance(k, str) or not isinstance(plan, dict):
+            continue
+        if k < lower or (only is not None and k != only):
+            continue
+        plan[STALE_KEY] = True
+        marked.append(k)
+    cwp = state.get("current_week_plan")
+    if isinstance(cwp, dict):
+        k = cwp.get("start_date")
+        if isinstance(k, str) and k >= lower and (only is None or k == only):
+            cwp[STALE_KEY] = True
+    return sorted(marked)
+
+
 def invalidate_week_cache(state: Dict[str, Any]) -> None:
-    """Clear cached week plans for current/future weeks only.
+    """Mark the cached current and future weeks stale (B369).
 
-    Past weeks (start_date < today) are preserved — they contain
-    completed session data that must not be lost.
+    They used to be deleted (and ``current_week_plan`` stashed into
+    ``_prev_week_plan``, which on any day but Monday was never merged back and
+    could later be weekday-copied onto another week). Now they stay in the
+    cache flagged ``_stale``: the next GET /api/week regenerates each one
+    through the merge that keeps the user's sessions and removals. Past weeks
+    are never touched.
     """
-    old = state.get("current_week_plan")
-    if old:
-        state["_prev_week_plan"] = old
-    state["current_week_plan"] = None
-
-    today_str = datetime.now().strftime("%Y-%m-%d")
-    old_plans = state.get("week_plans") or {}
-    state["week_plans"] = {
-        k: v for k, v in old_plans.items() if k < today_str
-    }
-
-
-def invalidate_future_week_cache(state: Dict[str, Any]) -> None:
-    """Clear cached week plans for future weeks only (start_date > this Monday).
-
-    The current week is left intact — the frontend handles its
-    regeneration via ``GET /api/week/0?force=true``.
-    Past weeks are always preserved (completed session data).
-    """
-    current_monday = this_monday()
-    old_plans = state.get("week_plans") or {}
-    state["week_plans"] = {
-        k: v for k, v in old_plans.items() if k <= current_monday
-    }
+    mark_weeks_stale(state)
 
 
 def _legacy_header_allowed() -> bool:

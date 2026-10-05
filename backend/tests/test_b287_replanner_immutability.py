@@ -285,14 +285,15 @@ class TestR4NoDateRestamping:
         assert any(s.get("status") == "done" for s in mon["sessions"]), \
             "same-date preservation must keep working"
 
-    def test_future_day_weekday_fallback_still_merges_sessions(self):
-        """The fallback stays allowed for days >= preserve_before, where it only
-        merges preservable sessions and never rewrites a date."""
+    def test_future_day_weekday_fallback_is_gone(self):
+        """B369/P5: no weekday fallback on future days either — a done session
+        of another week would land on a date it never happened. The stashed
+        plan of another week is discarded wholesale."""
         prev = _plan(PAST_KEY, done_on=(3,))
         new = _plan(CURRENT_KEY)
-        # Floor at the week's Monday → every day is >= preserve_before.
         out = merge_prev_week_sessions(prev, new, preserve_before=CURRENT_KEY)
 
         thu = out["weeks"][0]["days"][3]
         assert thu["date"] == new["weeks"][0]["days"][3]["date"]
-        assert any(s.get("status") == "done" for s in thu["sessions"])
+        assert not any(s.get("status") == "done" for s in thu["sessions"])
+        assert out == new

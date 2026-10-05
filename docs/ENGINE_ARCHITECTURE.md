@@ -706,9 +706,11 @@ Returns up to N session suggestions for quick-add, filtered by location and equi
 
 ### Completed session preservation
 
-**Immutability invariant:** `_is_preservable()` checks if a session has status `done` or `skipped`. Preservable sessions are **never** modified by regeneration.
+**Immutability invariant (B369):** `_is_preservable()` = status `done`/`skipped` **or** `user_owned.is_user_owned()` (forced, custom, quick-add, override, key re-schedule, moved, custom/generated add, `_user_edited`). Preservable sessions are **never** modified or dropped by regeneration.
 
-`regenerate_preserving_completed(old_plan, new_plan, preserve_before)` and `merge_prev_week_sessions(prev_plan, new_plan, preserve_before)` enforce this by keeping completed sessions from the old plan.
+`regenerate_preserving_completed(old_plan, new_plan, preserve_before)` and `merge_prev_week_sessions(prev_plan, new_plan, preserve_before)` are the same merge, `_merge_user_content`, for the SAME week only (exact-date matching; a plan of another week is discarded — no weekday fallback): days before `preserve_before` (and that day if it holds a done session) are copied wholesale; on every other day the old plan's preservable sessions replace the generated ones in their slot, the user's removals logged in `adaptations` (`remove_session`, the source of `move_session`, a `whole_day` / outdoor `day_override`) keep the engine's sessions off, the outdoor/other-activity day fields are kept, and `adaptations` is carried forward. Invalidations do not delete cached weeks: `deps.mark_weeks_stale` flags them `_stale` and `GET /api/week` regenerates them through this merge; a failed regeneration or merge serves the cached plan and saves nothing (`regeneration_failed`).
+
+**Adaptive replan (B369):** `check_adaptive_replan` (very_hard/fail → next hard session, or a recovery day after two in 3 days) only feeds `build_adaptive_suggestion`, returned by `/api/feedback` as `adaptive_suggestion`. The plan is never changed.
 
 ---
 

@@ -795,9 +795,13 @@ def _plan_days(plan: Optional[Mapping[str, Any]]) -> List[Mapping[str, Any]]:
 
 def _locked_by_merge(state: Mapping[str, Any], ws: date, today: Optional[date]) -> Dict[str, Any]:
     """What ``regenerate_preserving_completed`` will put back over a freshly
-    generated week (A289 review): the old plan's done/skipped sessions take
+    generated week (A289 review): the old plan's preserved sessions take
     their slot, and today is copied wholesale when it holds a done session.
-    A test placed there would be silently overwritten after generation."""
+    A test placed there would be silently overwritten after generation.
+    B369: preserved = done/skipped or user-owned (``user_owned.is_preservable``),
+    the same predicate the merge uses."""
+    from backend.engine.user_owned import is_preservable
+
     slots: List[Dict[str, Any]] = []
     dates: List[str] = []
     for day in _plan_days(_hot_plan(state, ws.isoformat())):
@@ -813,7 +817,7 @@ def _locked_by_merge(state: Mapping[str, Any], ws: date, today: Optional[date]) 
             dates.append(d_iso)
             continue
         for x in sessions:
-            if x.get("status") in ("done", "skipped") and x.get("slot"):
+            if is_preservable(x) and x.get("slot"):
                 slots.append({"date": d_iso, "slot": x.get("slot")})
     return {"locked_slots": slots, "locked_dates": dates}
 

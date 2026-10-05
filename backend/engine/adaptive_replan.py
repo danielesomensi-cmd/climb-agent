@@ -1,17 +1,22 @@
-"""Adaptive replanning after user feedback (B25).
+"""Adaptive replanning after user feedback (B25) — suggestion only since B369.
 
 Pure functions, no I/O except catalog loading. When a user reports very_hard
-or fail feedback, the plan is conservatively adjusted:
-  - Rule 1: single very_hard → downgrade next hard day
-  - Rule 2: 2× very_hard in 3 days → insert recovery day (overrides Rule 1)
-Never auto-upgrades.
+or fail feedback, the detection below finds what a conservative coach would
+lighten:
+  - Rule 1: single very_hard → the next hard session
+  - Rule 2: 2× very_hard in 3 days → a recovery day (overrides Rule 1)
+
+B369 (Daniele, 2026-10-05: "non facciamo cose automatiche"): the plan is NEVER
+changed. ``build_adaptive_suggestion`` turns the detection into an alert the
+/api/feedback response carries; lightening a session is the athlete's call
+(a custom session). ``apply_adaptive_replan`` — the old automatic rewrite —
+is gone.
 """
 
 from __future__ import annotations
 
 import functools
 import json
-from copy import deepcopy
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -163,6 +168,7 @@ def check_adaptive_replan(
     feedback_history: List[Dict[str, Any]],
     current_date: str,
     today: Optional[str] = None,
+    include_protected: bool = False,
 ) -> Dict[str, Any]:
     """Check if adaptive replanning is needed based on feedback history.
 
@@ -177,6 +183,14 @@ def check_adaptive_replan(
     """
     actions: List[Dict[str, Any]] = []
     warnings: List[str] = []
+
+    # B369: with *include_protected* (the suggestion path — nothing is
+    # rewritten) a forced / custom / user-owned session is a valid target too:
+    # it is exactly what the athlete may want to lighten. Done/skipped never.
+    def _candidate(session: Dict[str, Any]) -> bool:
+        if include_protected:
+            return session.get("status") not in ("done", "skipped")
+        return _rewritable(session)
 
     if not feedback_history:
         return {"actions": actions, "warnings": warnings}
@@ -228,7 +242,7 @@ def check_adaptive_replan(
             # B367: a day with sessions but none the engine may rewrite is not
             # a target (the recovery would have to delete the user's work).
             # An empty day keeps the pre-B367 behaviour.
-            if sessions and not any(_rewritable(s) for s in sessions):
+            if sessions and not any(_candidate(s) for s in sessions):
                 continue
             actions.append({
                 "type": "insert_recovery",
@@ -253,7 +267,7 @@ def check_adaptive_replan(
             for session in sessions:
                 # B367: done/skipped, forced and custom sessions are never
                 # downgraded (it used to check done/skipped only).
-                if not _rewritable(session):
+                if not _candidate(session):
                     continue
                 tags = session.get("tags") or {}
                 if tags.get("hard"):
@@ -269,96 +283,59 @@ def check_adaptive_replan(
     return {"actions": actions, "warnings": warnings}
 
 
-def apply_adaptive_replan(
-    plan: Dict[str, Any],
-    actions: List[Dict[str, Any]],
-) -> Dict[str, Any]:
-    """Apply adaptive replan actions to the plan. Returns modified copy.
+def build_adaptive_suggestion(
+    result: Dict[str, Any], plan: Optional[Dict[str, Any]] = None,
+) -> Optional[Dict[str, Any]]:
+    """B369: the alert /api/feedback returns after a very_hard / fail — never
+    a plan change. ``None`` when the detection found nothing.
 
-    B367: only sessions ``_is_rewritable`` allows are touched — a done/skipped,
-    forced or custom session on the target day is kept byte-identical (the
-    recovery used to replace the whole day).
+    ``kind`` is ``lighten_next_hard`` (Rule 1) or ``recovery_day`` (Rule 2);
+    ``session_id`` / ``session_name`` name the session concerned when there is
+    one (Rule 1, or the first not-done session of the Rule-2 day).
     """
-    updated = deepcopy(plan)
-    days = updated.get("weeks", [{}])[0].get("days", []) if updated.get("weeks") else []
-
-    for action in actions:
-        target_date = action.get("target_date")
-        target_day = None
-        for day in days:
-            if day.get("date") == target_date:
-                target_day = day
-                break
-        if target_day is None:
+    actions = (result or {}).get("actions") or []
+    if not actions:
+        return None
+    action = actions[0]
+    target_date = action.get("target_date")
+    kind = "recovery_day" if action.get("type") == "insert_recovery" else "lighten_next_hard"
+    session: Optional[Dict[str, Any]] = None
+    for day in ((plan or {}).get("weeks") or [{}])[0].get("days", []) if plan else []:
+        if day.get("date") != target_date:
             continue
+        for s in day.get("sessions") or []:
+            if s.get("status") in ("done", "skipped"):
+                continue
+            if kind == "recovery_day" or s.get("session_id") == action.get("original_session_id"):
+                session = s
+                break
+    suggestion: Dict[str, Any] = {
+        "kind": kind,
+        "target_date": target_date,
+        "reason": action.get("reason"),
+        "plan_changed": False,
+    }
+    if session is not None:
+        suggestion["session_id"] = session.get("session_id")
+        if session.get("name"):
+            suggestion["session_name"] = session.get("name")
+        suggestion["user_owned"] = _user_owned(session)
+    elif action.get("original_session_id"):
+        suggestion["session_id"] = action.get("original_session_id")
+    if kind == "recovery_day":
+        suggestion["message"] = (
+            f"Repeated very hard sessions: consider making {target_date} a recovery day. "
+            "Nothing was changed in your plan."
+        )
+    else:
+        suggestion["message"] = (
+            f"That felt very hard: consider lightening your next hard session ({target_date}). "
+            "Nothing was changed in your plan."
+        )
+    return suggestion
 
-        action_type = action.get("type")
 
-        if action_type == "downgrade_next_hard":
-            sessions = target_day.get("sessions") or []
-            for i, session in enumerate(sessions):
-                tags = session.get("tags") or {}
-                if tags.get("hard") and _rewritable(session):
-                    sessions[i] = {
-                        "slot": session.get("slot", "evening"),
-                        "session_id": "complementary_conditioning",
-                        "downshifted_from": session.get("session_id"),  # A294
-                        "location": session.get("location", "home"),
-                        "gym_id": session.get("gym_id"),
-                        "intensity": "medium",
-                        "tags": {"hard": False, "finger": False},
-                        "constraints_applied": ["adaptive_replan"],
-                        "explain": [
-                            "adaptive replan: downgrade hard session after very_hard feedback",
-                            f"original_session={session.get('session_id')}",
-                        ],
-                    }
-                    break
+def _user_owned(session: Dict[str, Any]) -> bool:
+    from backend.engine.user_owned import is_user_owned
 
-        elif action_type == "insert_recovery":
-            sessions = target_day.get("sessions") or []
-            rewritable = [s for s in sessions if _rewritable(s)]
-            if sessions and not rewritable:
-                continue  # B367: nothing the engine may touch on this day
-            recovery = {
-                "slot": "evening",
-                "session_id": "regeneration_easy",
-                "location": "home",
-                "gym_id": None,
-                "intensity": "low",
-                "tags": {"hard": False, "finger": False},
-                "constraints_applied": ["adaptive_replan"],
-                "explain": [
-                    "adaptive replan: recovery day after repeated very_hard feedback",
-                ],
-            }
-            if rewritable:
-                # Preserve slot/location/gym_id from the first rewritable
-                # session; the rewritable ones collapse into the one recovery
-                # session, the protected ones stay exactly as they are.
-                ref = rewritable[0]
-                recovery["slot"] = ref.get("slot", "evening")
-                recovery["location"] = ref.get("location", "home")
-                recovery["gym_id"] = ref.get("gym_id")
-                lost = next(
-                    (s for s in rewritable if (s.get("tags") or {}).get("hard") or (s.get("tags") or {}).get("finger")),
-                    ref,
-                )
-                if lost.get("session_id") != "regeneration_easy":
-                    recovery["downshifted_from"] = lost.get("session_id")  # A294
-                first = sessions.index(ref)
-                kept = [s for s in sessions if not _rewritable(s)]
-                kept_before = [s for s in sessions[:first] if not _rewritable(s)]
-                target_day["sessions"] = kept_before + [recovery] + kept[len(kept_before):]
-            else:
-                target_day["sessions"] = [recovery]
-
-    # Log adaptation
-    current_date = actions[0].get("target_date", "") if actions else ""
-    updated.setdefault("adaptations", []).append({
-        "type": "adaptive_replan",
-        "date": current_date,
-        "actions": actions,
-    })
-
-    return updated
+    return is_user_owned(session)

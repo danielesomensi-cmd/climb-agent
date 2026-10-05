@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 from backend.engine.macrocycle_v1 import _build_session_pool
 from backend.engine.planner_v2 import _INTENSITY_TO_LOAD, _SESSION_META
 from backend.engine.session_tags import derive_session_tags, merge_declared_tags
+from backend.engine import user_owned as _uo
 from backend.engine.other_activity_v1 import (
     ensure_other_activities_list,
     normalize_other_activities,
@@ -596,12 +597,14 @@ def _recompute_day_status(day: Dict[str, Any]) -> None:
 
 
 def _is_preservable(session: Dict[str, Any]) -> bool:
-    """Return True if *session* should survive a plan regeneration."""
-    if session.get("status") in ("done", "skipped"):
-        return True
-    if "quick_add" in (session.get("constraints_applied") or []):
-        return True
-    return False
+    """Return True if *session* should survive a plan regeneration.
+
+    B369: done/skipped (history) or user-owned (``user_owned.is_user_owned``:
+    forced, custom, quick-add, override, key re-schedule, moved, custom/generated
+    add, ``_user_edited``). It used to be done/skipped/quick-add only, so every
+    other thing the user put on the plan was lost on regeneration.
+    """
+    return _uo.is_preservable(session)
 
 
 def _preserve_floor(plan: Dict[str, Any], today: Optional[str] = None) -> str:
@@ -625,22 +628,39 @@ def _preserve_floor(plan: Dict[str, Any], today: Optional[str] = None) -> str:
     return max(today_str, start) if start else today_str
 
 
-def merge_prev_week_sessions(
-    prev_plan: Dict[str, Any],
+def _session_sort_key(s: Dict[str, Any]) -> tuple:
+    return (
+        SLOTS.index(s.get("slot") if s.get("slot") in SLOTS else "evening"),
+        s.get("priority", 99),
+        s.get("session_id", ""),
+    )
+
+
+def _merge_user_content(
+    old_plan: Dict[str, Any],
     new_plan: Dict[str, Any],
     preserve_before: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Merge preservable sessions from *prev_plan* into *new_plan* by date.
+    """B369: the one merge every regeneration goes through.
 
-    Days before *preserve_before* (YYYY-MM-DD) are copied wholesale from the
-    previous plan — sessions, status, outdoor fields and all — so that past
-    completed days are never corrupted by regeneration.
+    *old_plan* is the plan the user has been looking at, *new_plan* the freshly
+    generated one for the SAME week (callers check ``start_date``; a different
+    week is never merged — see ``merge_prev_week_sessions``). Days are matched by
+    exact date only: no weekday fallback, so nothing done/skipped is ever
+    re-stamped onto another date.
 
-    For days >= *preserve_before*, only done/skipped/quick-add sessions are
-    merged into the freshly generated plan.
-
-    Falls back to matching by weekday index when the dates don't overlap
-    (e.g. macrocycle start_date shifted).
+    - days before *preserve_before* → copied wholesale from *old_plan* (past
+      days are immutable);
+    - the *preserve_before* day itself with a done session or a done outdoor
+      day → copied wholesale;
+    - every other day → the generated day, plus every preservable session of
+      the old day (done/skipped/user-owned) byte-identical in its slot. An
+      engine session the user removed (or moved away), and every engine
+      session of a day the user replaced wholesale with an override, does not
+      come back;
+    - the day-level outdoor / other-activity fields of the old day are kept;
+    - ``adaptations`` (the record of the user's removals) is carried forward,
+      so the NEXT regeneration still honours them.
     """
     result = deepcopy(new_plan)
 
@@ -650,117 +670,115 @@ def merge_prev_week_sessions(
         else None
     )
 
-    # Index previous days by date AND weekday for fallback
-    prev_by_date: Dict[str, Dict[str, Any]] = {}
-    prev_by_wd: Dict[int, Dict[str, Any]] = {}
-    for day in (prev_plan.get("weeks") or [{}])[0].get("days", []):
+    old_by_date: Dict[str, Dict[str, Any]] = {}
+    for day in (old_plan.get("weeks") or [{}])[0].get("days", []):
         d = day.get("date")
         if d:
-            prev_by_date[d] = day
-            try:
-                prev_by_wd[datetime.strptime(d, "%Y-%m-%d").weekday()] = day
-            except ValueError:
-                logger.warning("Invalid date format in previous plan day: %s", d)
+            old_by_date[d] = day
 
-    if not prev_by_date:
-        return result
+    removed = _uo.removed_refs(old_plan)
+    whole_day = set(_uo.whole_day_override_dates(old_plan))
 
-    for i, day in enumerate((result.get("weeks") or [{}])[0].get("days", [])):
-        day_date_str = day.get("date")
-        if not day_date_str:
+    new_days = (result.get("weeks") or [{}])[0].get("days", [])
+    copied: set = set()  # indices copied wholesale: byte-identical, no recompute
+    for i, day in enumerate(new_days):
+        date_key = day.get("date")
+        if not date_key:
             continue
-
         try:
-            day_date = datetime.strptime(day_date_str, "%Y-%m-%d").date()
+            day_d = datetime.strptime(date_key, "%Y-%m-%d").date()
         except ValueError:
             continue
+        old_day = old_by_date.get(date_key)
 
-        # --- Hard guard: days before preserve_before → copy wholesale ---
-        #
-        # B287/R-4: EXACT DATE ONLY. The weekday fallback used to apply here too
-        # and then re-stamped copied["date"], moving another day's completed
-        # sessions onto this date — fabricated training history, and
-        # _attach_feedback would then bind the wrong feedback via its
-        # (date, session_id) key. When the date ranges don't overlap we now
-        # leave the regenerated past day untouched: the immutable records
-        # (session_completion_log, feedback logs, outdoor JSONL) remain the
-        # source of truth for what actually happened.
-        if preserve_date and day_date < preserve_date:
-            prev_day = prev_by_date.get(day_date_str)
-            if prev_day:
-                # Same date by construction → no date rewrite happens.
-                (result.get("weeks") or [{}])[0]["days"][i] = deepcopy(prev_day)
-            elif prev_by_wd.get(day_date.weekday()):
-                logger.warning(
-                    "merge_prev_week_sessions: no same-date match for past day %s "
-                    "(date ranges don't overlap) — skipping weekday fallback to "
-                    "avoid re-stamping another day's history",
-                    day_date_str,
-                )
-            continue
-
-        # --- Days >= preserve_before: merge preservable sessions ---
-        # The weekday fallback stays allowed here (B114: macrocycle start_date
-        # shifted) because this path only merges preservable sessions into the
-        # freshly generated day and never rewrites a date.
-        prev_day = prev_by_date.get(day_date_str)
-        same_date_match = prev_day is not None
-        if not prev_day:
-            wd = day_date.weekday()
-            prev_day = prev_by_wd.get(wd)
-        if not prev_day:
-            continue
-
-        # Bug 2: if today has any completed session or outdoor log → copy wholesale.
-        # B287/R-4: wholesale copy requires a same-date match, for the reason above.
-        if preserve_date and day_date == preserve_date and same_date_match:
-            has_completed = any(
-                s.get("status") == "done" for s in prev_day.get("sessions", [])
-            )
-            has_outdoor = prev_day.get("outdoor_session_status") == "done"
-            if has_completed or has_outdoor:
-                (result.get("weeks") or [{}])[0]["days"][i] = deepcopy(prev_day)
+        if old_day is not None and preserve_date:
+            # B114: days before preserve_before → copy wholesale (exact date).
+            if day_d < preserve_date:
+                new_days[i] = deepcopy(old_day)
+                copied.add(i)
+                continue
+            # Bug 2: today with a completed session / outdoor → copy wholesale.
+            if day_d == preserve_date and (
+                any(s.get("status") == "done" for s in old_day.get("sessions", []))
+                or old_day.get("outdoor_session_status") == "done"
+            ):
+                new_days[i] = deepcopy(old_day)
+                copied.add(i)
                 continue
 
-        to_merge = [s for s in prev_day.get("sessions", []) if _is_preservable(s)]
-        prev_extras = {k: prev_day[k] for k in _DAY_LEVEL_FIELDS if k in prev_day}
+        # Engine sessions of the generated day the user took out.
+        engine = list(day.get("sessions") or [])
+        if date_key in whole_day:
+            engine = []
+        else:
+            day_removed = [(r, sl) for (d, r, sl) in removed if d == date_key]
+            if day_removed:
+                engine = [
+                    s for s in engine
+                    if not any(_uo.ref_matches(s, r, sl) for (r, sl) in day_removed)
+                ]
 
-        if to_merge:
-            occupied_slots = {s.get("slot") for s in day.get("sessions", [])}
-            for ps in to_merge:
-                ps_slot = ps.get("slot")
-                if ps_slot in occupied_slots:
-                    day["sessions"] = [
-                        ps if s.get("slot") == ps_slot else s
-                        for s in day["sessions"]
-                    ]
-                else:
-                    day.setdefault("sessions", []).append(ps)
-                occupied_slots.add(ps_slot)
+        if old_day is None:
+            if len(engine) != len(day.get("sessions") or []):
+                day["sessions"] = engine
+            continue
 
-            day["sessions"].sort(
-                key=lambda s: (
-                    SLOTS.index(s.get("slot", "evening")),
-                    s.get("priority", 99),
-                    s.get("session_id", ""),
-                )
-            )
+        kept = [deepcopy(s) for s in old_day.get("sessions", []) if _uo.is_preservable(s)]
+        kept_slots = {s.get("slot") for s in kept}
+        merged = [s for s in engine if s.get("slot") not in kept_slots] + kept
+        if kept or len(engine) != len(day.get("sessions") or []):
+            merged.sort(key=_session_sort_key)
+            day["sessions"] = merged
 
-        if prev_extras:
-            day.update(prev_extras)
+        extras = {k: deepcopy(old_day[k]) for k in _DAY_LEVEL_FIELDS if k in old_day}
+        if extras:
+            day.update(extras)
 
-    # Recompute day-level status from merged sessions
-    for day in (result.get("weeks") or [{}])[0].get("days", []):
-        _recompute_day_status(day)
+    # Recompute day-level status from merged sessions (B98) — not on a day
+    # copied wholesale: a past day stays exactly as it was (B369).
+    for i, day in enumerate(new_days):
+        if i not in copied:
+            _recompute_day_status(day)
 
-    # B164: restore planned_load from previous plan (regen calculates only future days)
-    prev_summary = prev_plan.get("weekly_load_summary") or {}
-    prev_planned = prev_summary.get("planned_load") or prev_summary.get("total_load")
-    if prev_planned is not None:
-        result.setdefault("weekly_load_summary", {})["planned_load"] = prev_planned
+    # B164: restore planned_load from old plan (regen calculates only future days)
+    old_summary = old_plan.get("weekly_load_summary") or {}
+    old_planned = old_summary.get("planned_load") or old_summary.get("total_load")
+    if old_planned is not None:
+        result.setdefault("weekly_load_summary", {})["planned_load"] = old_planned
 
-    result["plan_revision"] = int(result.get("plan_revision") or 1) + 1
+    # B369: the user's removals stay on record for the next regeneration.
+    old_adaptations = old_plan.get("adaptations") or []
+    if old_adaptations:
+        result["adaptations"] = deepcopy(old_adaptations) + list(result.get("adaptations") or [])
+
+    # B369: monotonic across regenerations (it used to restart from the fresh
+    # plan's 1 → always 2).
+    result["plan_revision"] = max(
+        int(old_plan.get("plan_revision") or 1), int(result.get("plan_revision") or 1)
+    ) + 1
     return result
+
+
+def merge_prev_week_sessions(
+    prev_plan: Dict[str, Any],
+    new_plan: Dict[str, Any],
+    preserve_before: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Merge the user's content of a stashed plan into a regenerated week.
+
+    B369/P5: a stashed plan of a DIFFERENT week is discarded — the new plan is
+    returned unchanged. The weekday fallback (B114) used to copy done/skipped
+    sessions and completed outdoor days of another week onto the same weekday
+    of this one: training history that never happened, on future dates.
+    """
+    if not prev_plan or prev_plan.get("start_date") != new_plan.get("start_date"):
+        if prev_plan:
+            logger.warning(
+                "merge_prev_week_sessions: stashed plan is for week %r, not %r — discarded",
+                prev_plan.get("start_date"), new_plan.get("start_date"),
+            )
+        return deepcopy(new_plan)
+    return _merge_user_content(prev_plan, new_plan, preserve_before)
 
 
 _DAY_LEVEL_FIELDS = (
@@ -786,97 +804,21 @@ def regenerate_preserving_completed(
     new_plan: Dict[str, Any],
     preserve_before: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Merge completed/skipped sessions from *old_plan* into *new_plan*.
+    """Merge the user's content of *old_plan* into *new_plan* (same week).
 
-    Days before *preserve_before* are copied wholesale from *old_plan*.
+    B369: done/skipped AND user-owned sessions survive, the user's removals are
+    honoured — the same merge as ``merge_prev_week_sessions``
+    (``_merge_user_content``). Days before *preserve_before* are copied
+    wholesale from *old_plan*.
     """
-    result = deepcopy(new_plan)
-
-    preserve_date = (
-        datetime.strptime(preserve_before, "%Y-%m-%d").date()
-        if preserve_before
-        else None
-    )
-
-    # Index old days by date
-    old_by_date: Dict[str, Dict[str, Any]] = {}
-    for day in (old_plan.get("weeks") or [{}])[0].get("days", []):
-        d = day.get("date")
-        if d:
-            old_by_date[d] = day
-
-    new_days = (result.get("weeks") or [{}])[0].get("days", [])
-    for i, day in enumerate(new_days):
-        date_key = day.get("date")
-        if not date_key or date_key not in old_by_date:
-            continue
-
-        old_day = old_by_date[date_key]
-
-        # B114: days before preserve_before → copy wholesale
-        if preserve_date:
-            try:
-                day_d = datetime.strptime(date_key, "%Y-%m-%d").date()
-            except ValueError:
-                day_d = None
-            if day_d and day_d < preserve_date:
-                new_days[i] = deepcopy(old_day)
-                continue
-            # Bug 2: today with completed sessions → copy wholesale
-            if day_d and day_d == preserve_date:
-                has_completed = any(
-                    s.get("status") == "done" for s in old_day.get("sessions", [])
-                )
-                has_outdoor = old_day.get("outdoor_session_status") == "done"
-                if has_completed or has_outdoor:
-                    new_days[i] = deepcopy(old_day)
-                    continue
-
-        # Normal merge: only done/skipped sessions
-        completed_sessions = [
-            s for s in old_day.get("sessions", [])
-            if s.get("status") in ("done", "skipped")
-        ]
-        if not completed_sessions:
-            # Still restore day-level fields
-            extras = {k: old_day[k] for k in _DAY_LEVEL_FIELDS if k in old_day}
-            if extras:
-                day.update(extras)
-            continue
-
-        occupied_slots = {s.get("slot") for s in day.get("sessions", [])}
-        for cs in completed_sessions:
-            cs_slot = cs.get("slot")
-            if cs_slot in occupied_slots:
-                day["sessions"] = [
-                    cs if s.get("slot") == cs_slot else s
-                    for s in day["sessions"]
-                ]
-            else:
-                day.setdefault("sessions", []).append(cs)
-            occupied_slots.add(cs_slot)
-
-        day["sessions"].sort(
-            key=lambda s: (SLOTS.index(s.get("slot", "evening")), s.get("priority", 99), s.get("session_id", ""))
+    if old_plan.get("start_date") and new_plan.get("start_date") and (
+        old_plan.get("start_date") != new_plan.get("start_date")
+    ):
+        raise ValueError(
+            f"regenerate_preserving_completed: old plan is week {old_plan.get('start_date')!r}, "
+            f"new plan is week {new_plan.get('start_date')!r}"
         )
-
-        # Restore day-level fields
-        extras = {k: old_day[k] for k in _DAY_LEVEL_FIELDS if k in old_day}
-        if extras:
-            day.update(extras)
-
-    # Recompute day-level status from merged sessions (B98)
-    for day in (result.get("weeks") or [{}])[0].get("days", []):
-        _recompute_day_status(day)
-
-    # B164: restore planned_load from old plan (regen calculates only future days)
-    old_summary = old_plan.get("weekly_load_summary") or {}
-    old_planned = old_summary.get("planned_load") or old_summary.get("total_load")
-    if old_planned is not None:
-        result.setdefault("weekly_load_summary", {})["planned_load"] = old_planned
-
-    result["plan_revision"] = int(result.get("plan_revision") or 1) + 1
-    return result
+    return _merge_user_content(old_plan, new_plan, preserve_before)
 
 
 def _adjustment(day_date: str, session: Dict[str, Any], previous_id: str, reason: str) -> Dict[str, Any]:
@@ -1466,6 +1408,8 @@ def apply_events(
 
     for event in events:
         event_type = event.get("event_type")
+        # B369: what goes into the adaptations log (move_session enriches it).
+        log_event = event
         if event_type == "move_session":
             from_date = event.get("from_date")
             to_date = event.get("to_date")
@@ -1489,6 +1433,13 @@ def apply_events(
                     break
             to_day = _find_day(updated, to_date)
             moved = _extract_session(from_day, session_ref=ref, slot=from_slot)
+            # B369: a moved session is the user's — a regeneration keeps it
+            # where it was put, and the log names what left the source slot so
+            # the regenerated source day does not get it back.
+            _ca = list(moved.get("constraints_applied") or [])
+            if "user_moved" not in _ca:
+                moved["constraints_applied"] = _ca + ["user_moved"]
+            log_event = {**event, "moved_session_id": moved.get("session_id")}
             _insert_or_replace(to_day, moved, to_slot)
 
             # B354: the slot the user vacated stays empty. It used to be refilled
@@ -2047,7 +1998,7 @@ def apply_events(
             if event_type is not None:
                 logger.warning("apply_events: unknown event_type %r — event ignored", event_type)
 
-        updated["adaptations"].append({"type": "event", "event": event})
+        updated["adaptations"].append({"type": "event", "event": log_event})
 
     _adj = _reconcile(updated, prev_days=prev_days, frozen_before=today)
     if _adj:
@@ -2377,7 +2328,8 @@ def apply_day_override(
     }
 
     # B48: if session_index is provided, replace only that session
-    if session_index is not None and len(original_sessions) > 1:
+    whole_day = not (session_index is not None and len(original_sessions) > 1)
+    if not whole_day:
         if session_index < 0 or session_index >= len(original_sessions):
             raise ValueError(
                 f"session_index {session_index} out of range "
@@ -2439,6 +2391,9 @@ def apply_day_override(
             "type": "day_override",
             "reference_date": reference_date,
             "target_date": target_key,
+            # B369: the user replaced the whole day — a regeneration must not
+            # bring the engine's other sessions of that day back.
+            "whole_day": whole_day,
             "ripple_days": [
                 (target + timedelta(days=1)).isoformat(),
                 (target + timedelta(days=2)).isoformat(),

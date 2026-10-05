@@ -9,7 +9,7 @@ import pytest
 from backend.engine.adaptive_replan import (
     _derive_session_difficulty,
     append_feedback_log,
-    apply_adaptive_replan,
+    build_adaptive_suggestion,
     check_adaptive_replan,
 )
 
@@ -221,47 +221,41 @@ def test_feedback_log_trimmed():
     assert "2026-01-03" not in dates
 
 
-# ── Tests for apply_adaptive_replan ──
+# ── Tests for build_adaptive_suggestion (B369: suggestion only) ──
 
 
-def test_adaptive_replan_preserves_slot_location():
-    """Replaced session keeps slot, location, gym_id from original."""
+def test_suggestion_names_the_next_hard_session():
+    """Rule 1 → a 'lighten_next_hard' alert on the session, plan untouched."""
     plan = _make_plan([
         _make_day("2026-01-06", [
             _make_session("strength_long", hard=True, slot="morning", location="gym", gym_id="my_gym"),
         ]),
     ])
-    actions = [{
-        "type": "downgrade_next_hard",
-        "target_date": "2026-01-06",
-        "reason": "test",
-        "original_session_id": "strength_long",
-        "replacement_session_id": "complementary_conditioning",
-    }]
-    updated = apply_adaptive_replan(plan, actions)
+    before = deepcopy(plan)
+    result = check_adaptive_replan(plan, [_make_feedback("2026-01-05", "very_hard")], "2026-01-05")
+    suggestion = build_adaptive_suggestion(result, plan)
 
-    session = updated["weeks"][0]["days"][0]["sessions"][0]
-    assert session["session_id"] == "complementary_conditioning"
-    assert session["slot"] == "morning"
-    assert session["location"] == "gym"
-    assert session["gym_id"] == "my_gym"
+    assert plan == before
+    assert suggestion["kind"] == "lighten_next_hard"
+    assert suggestion["target_date"] == "2026-01-06"
+    assert suggestion["session_id"] == "strength_long"
+    assert suggestion["plan_changed"] is False
+    assert "Nothing was changed" in suggestion["message"]
 
 
-def test_adaptations_logged():
-    """plan['adaptations'] contains entry with type 'adaptive_replan'."""
+def test_suggestion_recovery_day_on_rule2():
     plan = _make_plan([
         _make_day("2026-01-06", [_make_session("strength_long", hard=True)]),
     ])
-    actions = [{
-        "type": "downgrade_next_hard",
-        "target_date": "2026-01-06",
-        "reason": "test",
-        "original_session_id": "strength_long",
-        "replacement_session_id": "complementary_conditioning",
-    }]
-    updated = apply_adaptive_replan(plan, actions)
+    history = [_make_feedback("2026-01-04", "very_hard"), _make_feedback("2026-01-05", "fail")]
+    suggestion = build_adaptive_suggestion(check_adaptive_replan(plan, history, "2026-01-05"), plan)
+    assert suggestion["kind"] == "recovery_day"
+    assert suggestion["target_date"] == "2026-01-06"
+    assert not any(a.get("type") == "adaptive_replan" for a in plan["adaptations"])
 
-    assert any(a["type"] == "adaptive_replan" for a in updated["adaptations"])
+
+def test_no_suggestion_without_actions():
+    assert build_adaptive_suggestion({"actions": [], "warnings": []}, None) is None
 
 
 # ── Tests for _derive_session_difficulty (weighted average) ──

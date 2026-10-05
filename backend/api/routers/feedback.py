@@ -7,7 +7,7 @@ feedback and have the backend:
   3. progression feedback update
   4. closed-loop state update (stimulus recency, fatigue proxy)
   5. actual_exercises persistence into the session slot
-  6. adaptive replan check
+  6. adaptive replan check — a suggestion only (B369), never a plan change
   7. save state + return updated week_plan
 
 The updated week_plan is returned in the response so the frontend can call
@@ -41,7 +41,7 @@ from backend.api.key_status import resolve_today
 from backend.api.routers.replanner import _event_floor, _prev_week_days, persist_week_plan
 from backend.engine.adaptive_replan import (
     append_feedback_log,
-    apply_adaptive_replan,
+    build_adaptive_suggestion,
     check_adaptive_replan,
     load_exercises_by_id,
 )
@@ -466,24 +466,21 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
                     f"Exercise IDs not found in current session plan: {sorted(_stale_ids)}"
                 )
 
-    # 5. Check adaptive replanning (B25)
+    # 5. Adaptive replanning (B25) — B369: a SUGGESTION only. The plan is
+    # never changed after a very_hard / fail ("non facciamo cose automatiche",
+    # Daniele 2026-10-05): the response names the session a coach would
+    # lighten, and lightening it is the athlete's call (a custom session).
+    adaptive_suggestion = None
     plan = state.get("current_week_plan")
     if plan and plan.get("weeks"):
         current_date = target_date or date_type.today().isoformat()
         feedback_history = state.get("feedback_log", [])
-        # B367: days before today are past — never rewritten (server clock:
-        # /feedback carries no client today; UTC is never ahead of Europe).
+        # B367: days before today are past (server clock: /feedback carries no
+        # client today; UTC is never ahead of Europe).
         result = check_adaptive_replan(plan, feedback_history, current_date,
-                                       today=resolve_today(None))
-        if result["actions"]:
-            updated_plan = apply_adaptive_replan(plan, result["actions"])
-            state["current_week_plan"] = updated_plan
-            # Sync to per-week cache so navigation doesn't lose the change
-            start_key = updated_plan.get("start_date", "")
-            if start_key:
-                if "week_plans" not in state:
-                    state["week_plans"] = {}
-                state["week_plans"][start_key] = updated_plan
+                                       today=resolve_today(None),
+                                       include_protected=True)
+        adaptive_suggestion = build_adaptive_suggestion(result, plan)
 
     # 6. Limitation severity suggestions (B38)
     limitation_suggestions = []
@@ -579,4 +576,6 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
         response["bw_ladder_updates"] = _bw_lines
     if stale_exercise_warning:
         response["warning"] = stale_exercise_warning
+    if adaptive_suggestion:
+        response["adaptive_suggestion"] = adaptive_suggestion
     return response

@@ -15,6 +15,7 @@ from backend.api.deps import (
     ensure_monday,
     get_user_id,
     invalidate_week_cache,
+    mark_weeks_stale,
     load_state,
     require_active_subscription,
     this_monday,
@@ -139,17 +140,19 @@ _DEFAULT_TOTAL_WEEKS_BOULDER = 10
 
 
 def _clear_week_cache_for_new_cycle(state: dict, new_start_date: str) -> None:
-    """Invalidate the week cache for the new cycle.
+    """Mark the week cache of the new cycle stale (B369).
 
-    - ``current_week_plan`` (B216 legacy single-pointer) is always cleared.
-    - ``week_plans[]`` entries with key ``< new_start_date`` are preserved
-      (history view of past cycles); entries ``>= new_start_date`` are removed
-      so the new cycle doesn't inherit stale plans from the old one.
+    - ``week_plans[]`` entries with key ``< new_start_date`` are untouched
+      (history view of past cycles, and the rest of the current week);
+    - entries ``>= new_start_date`` — and the legacy ``current_week_plan``
+      pointer if it is one of them — are flagged stale instead of deleted: the
+      next GET /api/week regenerates them for the new cycle THROUGH the merge
+      that keeps the sessions the user put there and the ones they removed.
+      Deleting them lost every custom / forced / moved session of the weeks
+      ahead.
     """
-    state["current_week_plan"] = None
     state.pop("_prev_week_plan", None)
-    plans = state.get("week_plans") or {}
-    state["week_plans"] = {k: v for k, v in plans.items() if k < new_start_date}
+    mark_weeks_stale(state, from_monday=new_start_date)
 
 
 @router.post(

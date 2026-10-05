@@ -1469,6 +1469,40 @@ protected finger session within `_recovery_gap` days AFTER it downshifts the add
 (`finger_spacing_downshift`, unless it was forced); a protected hard session on day+1 adds the warning
 "Back-to-back hard days: …" (no rewrite — no rule forbids back-to-back hard days).
 
+### 5.7.2 User-owned sessions and stale weeks (B369)
+
+```
+is_user_owned(session)    (backend/engine/user_owned.py — the ONE predicate of every regeneration path)
+  = forced | is_custom | _user_edited
+    | constraints_applied ∩ {quick_add, user_forced, manual_override, key_reschedule,
+                             custom_add, generated_add, user_moved} ≠ ∅
+is_preservable(session)   = status ∈ {done, skipped} | is_user_owned(session)
+```
+
+- **`user_moved`** (constraint, B369): stamped by `move_session` on the moved session. The logged event gains
+  `moved_session_id` (what left the source slot).
+- **`day_override.whole_day`** (adaptation, B369): `true` when the override replaced every session of the day.
+- **User removals** = `adaptations[]` events `remove_session` (`date`, `session_ref`/`slot`), the source side of
+  `move_session` (`from_date`, `session_ref` or `moved_session_id`, `from_slot`), and `day_override` with
+  `whole_day` or `outdoor`. Read by `user_owned.removed_refs` / `whole_day_override_dates`; the merge carries
+  `adaptations[]` forward so the next regeneration still honours them.
+- **`_stale`** (week plan flag, B369): set by `deps.mark_weeks_stale` on the cached current/future weeks (never a
+  past week) by `invalidate_week_cache` (macrocycle generate, onboarding, start-week, test-reminder confirm),
+  `PUT /api/state` when `availability` / `planning_prefs` / `weekly_overrides` actually change,
+  `PUT`/`DELETE /api/weekly-override/{week}` (that week only), `start-new-cycle` (weeks ≥ the new start) and
+  resume (weeks ≥ this Monday). `GET /api/week` regenerates a stale week through
+  `regenerate_preserving_completed` and saves it without the flag; `persist_week_plan` keeps the flag on an edit.
+  Replaces the deletions and the `_prev_week_plan` stash (no longer written; a legacy stash is merged only when it
+  is the same week, else discarded).
+- **`regeneration_failed: true`** (GET `/api/week` response, additive): the regeneration or the merge raised —
+  the cached plan is served unchanged, nothing is saved, the week stays stale.
+- **Resume response:** `weeks_marked_stale` (new); `weeks_shifted` / `weeks_dropped` kept, always 0.
+- **`adaptive_suggestion`** (`POST /api/feedback` response, additive, B369): `{kind: lighten_next_hard |
+  recovery_day, target_date, reason, plan_changed: false, message, session_id?, session_name?, user_owned?}`.
+  The adaptive replan after very_hard/fail no longer changes the plan; `apply_adaptive_replan` is gone and no
+  `{type: "adaptive_replan"}` adaptation is written any more.
+- **`plan_revision`** after a merge = `max(old, new) + 1` (monotonic across regenerations).
+
 ---
 
 ### 5.8 Exercise sort category (A121)

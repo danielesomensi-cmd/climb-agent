@@ -541,7 +541,17 @@ You can regenerate your plan from **Settings**:
 - Mid-phase because you're impatient — give the phase time to work
 - Because one session was too easy or too hard — feedback handles this
 
+**After a *very hard* or *failed* session the plan is never changed for you.** The app used to downgrade your next hard session (or turn the next day into recovery after repeated very hard sessions) on its own; it no longer does. Whether to lighten the next hard session is your call: swap or edit it yourself, for example with a custom session.
+
 **Important**: Regenerating creates a new plan. Past sessions are **never modified** — they're immutable history. Only future weeks are affected.
+
+**What you put on the plan stays there.** Whenever a week is rebuilt — a new cycle, a change to your weekly availability or planning preferences, a one-week availability change, resuming after a pause, asking for tests — the app regenerates the parts it planned itself and keeps everything that is yours exactly as it was:
+
+- custom sessions, sessions added from the body-part picker or the coach, quick-adds (forced or not), day overrides, sessions you moved, re-scheduled key sessions, sessions whose exercises you edited;
+- sessions you already marked done or skipped, and your outdoor days with their pitch plans;
+- what you **removed**: a session you deleted, or the spot you moved a session away from, does not come back when the week is rebuilt. If you replaced a whole day with an override, the app does not add its own sessions back to that day.
+
+Changing your availability or planning preferences now updates the weeks already planned (current and future), not only the weeks you have not opened yet. If a week cannot be rebuilt for a technical reason, you keep seeing your current plan unchanged and the app tries again the next time you open it.
 
 ---
 
@@ -557,6 +567,7 @@ Going away — travel, illness, a busy stretch? Instead of regenerating, you can
 - The shift is measured in **whole weeks** (Monday to Monday). A short break of **less than a week** resumes in place and does **not** shift the plan.
 - You can pause and resume as many times as you need — the shifts add up.
 - Your start date never changes, so all your completed history stays exactly where it happened.
+- The weeks ahead are rebuilt for the new timeline, but anything you put on a future date yourself (a custom session, a forced or quick-added session, an override…) stays on **the date you chose** — it is not moved along with the shift.
 
 **While paused:**
 

@@ -6,7 +6,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
-from backend.api.deps import invalidate_week_cache
+from backend.api.deps import STALE_KEY, invalidate_week_cache
 from backend.engine.replanner_v1 import merge_prev_week_sessions, regenerate_preserving_completed
 
 
@@ -66,8 +66,8 @@ class TestInvalidatePreservesPastWeeks:
         assert state["week_plans"]["2026-03-02"]["weeks"][0]["days"][0]["sessions"][0]["status"] == "done"
 
     @patch("backend.api.deps.datetime")
-    def test_current_week_removed(self, mock_dt):
-        """week_plans with start_date >= today are removed."""
+    def test_current_week_marked_stale(self, mock_dt):
+        """B369: the current week is kept and flagged stale (it was removed)."""
         mock_dt.now.return_value = datetime(2026, 3, 9, 12, 0, 0)
         mock_dt.strptime = datetime.strptime
 
@@ -80,11 +80,13 @@ class TestInvalidatePreservesPastWeeks:
         }
         invalidate_week_cache(state)
 
-        assert "2026-03-09" not in state["week_plans"]
+        assert state["week_plans"]["2026-03-09"][STALE_KEY] is True
+        assert state["current_week_plan"][STALE_KEY] is True
+        assert STALE_KEY not in state["week_plans"]["2026-03-02"]
 
     @patch("backend.api.deps.datetime")
-    def test_future_week_removed(self, mock_dt):
-        """week_plans with start_date > today are also removed."""
+    def test_future_week_marked_stale(self, mock_dt):
+        """B369: future weeks are kept and flagged stale too."""
         mock_dt.now.return_value = datetime(2026, 3, 9, 12, 0, 0)
         mock_dt.strptime = datetime.strptime
 
@@ -98,9 +100,9 @@ class TestInvalidatePreservesPastWeeks:
         }
         invalidate_week_cache(state)
 
-        assert "2026-03-02" in state["week_plans"]
-        assert "2026-03-09" not in state["week_plans"]
-        assert "2026-03-16" not in state["week_plans"]
+        assert STALE_KEY not in state["week_plans"]["2026-03-02"]
+        assert state["week_plans"]["2026-03-09"][STALE_KEY] is True
+        assert state["week_plans"]["2026-03-16"][STALE_KEY] is True
 
     @patch("backend.api.deps.datetime")
     def test_multiple_past_weeks_preserved(self, mock_dt):
@@ -119,10 +121,9 @@ class TestInvalidatePreservesPastWeeks:
         }
         invalidate_week_cache(state)
 
-        assert "2026-02-23" in state["week_plans"]
-        assert "2026-03-02" in state["week_plans"]
-        assert "2026-03-09" in state["week_plans"]
-        assert "2026-03-16" not in state["week_plans"]
+        for past in ("2026-02-23", "2026-03-02", "2026-03-09"):
+            assert STALE_KEY not in state["week_plans"][past]
+        assert state["week_plans"]["2026-03-16"][STALE_KEY] is True
 
 
 # ---- merge_prev_week_sessions with preserve_before --------------------------
@@ -325,11 +326,11 @@ class TestFullRegenFlowB114:
         assert wp_past["weeks"][0]["days"][1]["sessions"][0]["status"] == "done"
         assert wp_past["weeks"][0]["days"][3]["sessions"][0]["status"] == "done"
 
-        # Current week is removed
-        assert "2026-03-09" not in state["week_plans"]
-
-        # _prev_week_plan stashed for current week merge
-        assert state["_prev_week_plan"] is current_plan
+        # B369: the current week is kept, flagged stale (it was removed and
+        # stashed in _prev_week_plan) — the regeneration merges from it.
+        assert state["week_plans"]["2026-03-09"][STALE_KEY] is True
+        assert "_prev_week_plan" not in state
+        assert STALE_KEY not in state["week_plans"]["2026-03-02"]
 
     @patch("backend.api.deps.datetime")
     def test_outdoor_on_past_week_survives_full_regen(self, mock_dt):

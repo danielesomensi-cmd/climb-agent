@@ -32,6 +32,7 @@ from backend.api.deps import (
     compute_pause_offset,
     get_user_id,
     load_state,
+    mark_weeks_stale,
     require_active_subscription,
     save_state,
 )
@@ -48,77 +49,29 @@ def _get_macrocycle(state: Dict[str, Any]) -> Dict[str, Any]:
     return mc
 
 
-def _week_has_user_edits(plan: Dict[str, Any]) -> bool:
-    """True if any session in the plan was user-edited (B153b ``_user_edited``)
-    or quick-added/completed — i.e. content the user would lose on a plain
-    regenerate. Future weeks beyond the pause-start week have no real completed
-    sessions, so this is effectively "did the user customize this week"."""
-    for week in (plan.get("weeks") or []):
-        for day in (week.get("days") or []):
-            for s in (day.get("sessions") or []):
-                if s.get("_user_edited") or s.get("status") in ("done", "skipped"):
-                    return True
-    return False
-
-
-def _shift_plan_dates(plan: Dict[str, Any], n_days: int) -> Dict[str, Any]:
-    """Return *plan* with its ``start_date`` and every ``days[].date`` shifted
-    forward by ``n_days``. Mutates in place and returns it."""
-    def _add(iso: str) -> str:
-        return (datetime.strptime(iso, "%Y-%m-%d").date() + timedelta(days=n_days)).isoformat()
-
-    if isinstance(plan.get("start_date"), str):
-        try:
-            plan["start_date"] = _add(plan["start_date"])
-        except ValueError:
-            pass
-    for week in (plan.get("weeks") or []):
-        for day in (week.get("days") or []):
-            if isinstance(day.get("date"), str):
-                try:
-                    day["date"] = _add(day["date"])
-                except ValueError:
-                    pass
-    return plan
-
-
 def _shift_future_weeks(state: Dict[str, Any], active_since: str, n_days: int) -> Dict[str, Any]:
-    """On resume with N>0: shift only weeks strictly AFTER the pause-start week.
+    """On resume with N>0: the cached weeks from the current one on go stale.
 
     - keys <= Monday(active_since): immutable (completed/past + the paused-week
       remnant) → left untouched. The remnant's undone sessions are classified
       "paused" at read time (macrocycle_archive), never rewritten.
-    - keys > Monday(active_since): genuinely-future cached weeks (no real
-      completed sessions). User-edited → shift dates +N and rekey (preserve
-      edits, stays phase-consistent because +N matches the anchor shift).
-      Otherwise → drop (regenerated lazily at the new effective anchor).
+    - keys between the pause week and this Monday are past now → untouched.
+    - keys >= this Monday: marked stale (B369). The next GET /api/week
+      regenerates each one at the new effective anchor THROUGH the merge that
+      keeps the user's sessions on the calendar date they were put on, and the
+      user's removals. They used to be dropped (losing any custom / forced
+      session the old edit check did not see) or, when edited, shifted +N
+      days — moving the user's sessions to dates they never chose.
 
-    Returns a small report dict for the resume response.
+    Returns a small report dict for the resume response (``weeks_shifted`` /
+    ``weeks_dropped`` stay, always 0, for older clients).
     """
     p = datetime.strptime(active_since, "%Y-%m-%d").date()
     freeze_monday = (p - timedelta(days=p.weekday())).isoformat()
-    week_plans = state.get("week_plans") or {}
-    new_plans: Dict[str, Any] = {}
-    shifted, dropped = 0, 0
-    for k, plan in week_plans.items():
-        if not isinstance(k, str) or k <= freeze_monday:
-            new_plans[k] = plan
-            continue
-        if _week_has_user_edits(plan):
-            new_key = (datetime.strptime(k, "%Y-%m-%d").date() + timedelta(days=n_days)).isoformat()
-            new_plans[new_key] = _shift_plan_dates(plan, n_days)
-            shifted += 1
-        else:
-            dropped += 1  # not carried over → regenerated on demand
-    state["week_plans"] = new_plans
-
-    # Legacy single-pointer: if it pointed at a now-shifted/dropped future week,
-    # clear it so the next read regenerates against the new anchor.
-    cwp = state.get("current_week_plan")
-    if cwp and isinstance(cwp.get("start_date"), str) and cwp["start_date"] > freeze_monday:
-        state["current_week_plan"] = None
-        state.pop("_prev_week_plan", None)
-    return {"weeks_shifted": shifted, "weeks_dropped": dropped}
+    marked = mark_weeks_stale(state, from_monday=freeze_monday)
+    marked = [k for k in marked if k > freeze_monday]
+    state.pop("_prev_week_plan", None)
+    return {"weeks_shifted": 0, "weeks_dropped": 0, "weeks_marked_stale": len(marked)}
 
 
 @router.post("/pause", dependencies=[Depends(require_active_subscription)])
@@ -159,7 +112,7 @@ def resume_plan(user_id: Optional[str] = Depends(get_user_id)):
 
     today = date.today().isoformat()
     n = compute_pause_offset(active_since, today)
-    report = {"weeks_shifted": 0, "weeks_dropped": 0}
+    report = {"weeks_shifted": 0, "weeks_dropped": 0, "weeks_marked_stale": 0}
 
     if n > 0:
         pause["offset_days"] = int(pause.get("offset_days") or 0) + n

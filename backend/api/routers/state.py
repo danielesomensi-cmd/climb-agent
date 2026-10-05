@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from backend.api.deps import (
     EMPTY_TEMPLATE, ensure_monday, get_user_id,
-    invalidate_future_week_cache, load_state, refresh_current_level_from_grades, save_state,
+    invalidate_week_cache, load_state, refresh_current_level_from_grades, save_state,
 )
 from backend.api.rate_limit import limiter
 from backend.engine import storage
@@ -57,6 +57,10 @@ _ALLOWED_STATE_KEYS = {
     # dedicated /api/bw-progression endpoints).
     "bw_progression",
 }
+
+
+#: B369: the keys whose change regenerates the cached current/future weeks.
+_STRUCTURE_KEYS = ("availability", "planning_prefs", "weekly_overrides")
 
 
 @router.put("")
@@ -113,6 +117,8 @@ def put_state(request: Request, patch: Dict[str, Any], user_id: Optional[str] = 
                     "target_grade", existing_target,
                 )
     previous_os = ((state.get("assessment") or {}).get("grades") or {}).get("lead_max_os")
+    # B369: snapshot of what shapes the week structure, to detect a real change.
+    _structure_before = {k: deepcopy(state.get(k)) for k in _STRUCTURE_KEYS}
     _deep_merge(state, patch)
     # B272: grade edits must refresh performance.current_level — progression
     # benchmarks (e.g. kilter fallback on current_level.boulder.worked.grade)
@@ -153,11 +159,14 @@ def put_state(request: Request, patch: Dict[str, Any], user_id: Optional[str] = 
                 sources = {}
             sources["lead_max_os"] = {"source": "manual", "date": date.today().isoformat(), "previous": previous_os}
             assessment["grades_source"] = sources
-    # B151: availability change → invalidate future week cache so they
-    # regenerate with the new slots.  Current week is handled by the
-    # frontend via GET /api/week/0?force=true.
-    if "availability" in patch:
-        invalidate_future_week_cache(state)
+    # B151 / B369: a change of availability, planning prefs or weekly overrides
+    # marks the current and future weeks stale. Nothing is deleted: the next
+    # GET /api/week regenerates each one with the new structure THROUGH the
+    # merge that keeps the user's sessions and removals. Planning prefs used
+    # not to invalidate at all (a new target or hard cap never reached the
+    # cached weeks), and the current week was left to the client's force-GET.
+    if any(k in patch and state.get(k) != _structure_before[k] for k in _STRUCTURE_KEYS):
+        invalidate_week_cache(state)
     save_state(state, user_id)
     return state
 

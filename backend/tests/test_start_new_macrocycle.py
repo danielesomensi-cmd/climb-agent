@@ -499,14 +499,18 @@ class TestT12WeekCacheInvalidation:
         )
 
         plans = client.get("/api/state").json().get("week_plans", {})
-        # Past entry preserved.
+        # Past entry preserved, untouched.
         assert past_key in plans, f"Past entry {past_key} should be kept (< {new_start})"
-        # Future entry — the rule is: drop keys >= new_start_date.
-        assert future_key not in plans, (
-            f"Future entry {future_key} should be dropped (>= {new_start})"
+        assert "_stale" not in plans[past_key]
+        # B369: keys >= new_start_date are flagged stale (they used to be
+        # dropped) — regenerated for the new cycle through the preserving merge.
+        assert plans[future_key].get("_stale") is True, (
+            f"Future entry {future_key} should be flagged stale (>= {new_start})"
         )
 
-    def test_current_week_plan_legacy_cache_cleared(self):
+    def test_current_week_plan_legacy_cache_flagged_stale(self):
+        """B369: the legacy pointer of a week in the new cycle is flagged
+        stale, not cleared."""
         _ensure_seed_state_has_macrocycle()
         client.put("/api/state", json={
             "current_week_plan": {"start_date": "2099-01-05", "weeks": []},
@@ -514,5 +518,4 @@ class TestT12WeekCacheInvalidation:
         r = client.post("/api/macrocycle/start-new-cycle", json=_valid_body())
         assert r.status_code == 200
         state = client.get("/api/state").json()
-        assert state.get("current_week_plan") in (None, {}), \
-            f"current_week_plan should be cleared, got {state.get('current_week_plan')!r}"
+        assert state["current_week_plan"].get("_stale") is True

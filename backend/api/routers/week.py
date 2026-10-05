@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from backend.api.deps import (
     REPO_ROOT,
+    STALE_KEY,
     current_phase_and_week,
     get_user_id,
     is_past_week,
@@ -28,7 +29,7 @@ from backend.engine.planner_v2 import (
     generate_phase_week,
     should_show_test_reminder,
 )
-from backend.engine.replanner_v1 import merge_prev_week_sessions, regenerate_preserving_completed
+from backend.engine.replanner_v1 import regenerate_preserving_completed
 from backend.engine.resolve_session import resolve_session
 from backend.engine.target_refresh import refresh_edited_session_targets
 from backend.engine.weekly_override import merge_override_into_availability
@@ -373,6 +374,22 @@ def _current_week_num(macrocycle: dict) -> int:
     return cumulative + wi + 1
 
 
+def _client_today(today: Optional[str]) -> str:
+    """B369: the athlete's local today (``?today=``) when it is a valid ISO
+    date within one day of the server clock (time zones), else the server's.
+    It sets the frozen-past floor of a current-week regeneration, so an
+    absurd value must not freeze — or unfreeze — the whole week."""
+    server = datetime.now().date()
+    if today:
+        try:
+            d = datetime.strptime(str(today)[:10], "%Y-%m-%d").date()
+        except ValueError:
+            d = None
+        if d is not None and abs((d - server).days) <= 1:
+            return d.isoformat()
+    return server.isoformat()
+
+
 def _is_servable_plan(plan: Optional[dict], week_start_key: str) -> bool:
     """True iff *plan* is a usable cached week plan for *week_start_key*
     (correct start_date, at least one week block with days)."""
@@ -471,8 +488,11 @@ def get_week(
 ):
     """Generate the plan for a given week (1-based). week_num=0 → current week.
 
-    When force=True and this is the current week, regenerate from scratch but
-    preserve any sessions already marked done/skipped.
+    When force=True, or when the cached week was flagged stale by an
+    invalidation (B369), the week is regenerated and merged with the cached
+    plan: done/skipped and user-owned sessions are kept byte-identical, the
+    user's removals are honoured. A failed regeneration or merge serves the
+    cached plan unchanged (``regeneration_failed``) and saves nothing.
 
     *preserve_before* (YYYY-MM-DD): days before this date are copied wholesale
     from the previous plan, protecting completed past days from corruption.
@@ -548,12 +568,20 @@ def get_week(
                     "past_week_unavailable": True,
                 }
 
-    # Store old plan before force-regeneration
-    old_plan = week_plans.get(week_start_key) if force else None
-    if old_plan is None and force and is_current_week:
-        old_plan = state.get("current_week_plan")
+    # B369: the plan the user has been looking at. On a force-regeneration, or
+    # when an invalidation flagged it stale (availability / planning prefs /
+    # weekly override / new cycle / resume / test request), it is regenerated
+    # and merged back — never thrown away.
+    cached_plan = week_plans.get(week_start_key)
+    if cached_plan is None and is_current_week:
+        cached_plan = state.get("current_week_plan")
+    if not _is_servable_plan(cached_plan, week_start_key):
+        cached_plan = None
+    stale = bool(cached_plan and cached_plan.get(STALE_KEY))
+    old_plan = cached_plan if (force or stale) else None
+    regeneration_failed = False
 
-    if not force:
+    if not force and not stale:
         try:
             # Try per-week cache first, then legacy current_week_plan for current week
             cached = week_plans.get(week_start_key)
@@ -601,8 +629,9 @@ def get_week(
         pretrip_dates = _taper["no_hard"]
         taper_volume = _taper["volume"]
 
-        # B114: resolve preserve_before — default to today for current week
-        today_str = datetime.now().strftime("%Y-%m-%d") if is_current_week else None
+        # B114: resolve preserve_before — default to today for current week.
+        # B369: the athlete's local today when the client sent one.
+        today_str = _client_today(today) if is_current_week else None
         effective_preserve = preserve_before or today_str
 
         try:
@@ -721,40 +750,50 @@ def get_week(
             )
         except Exception as e:
             logger.error("Week generation failed: %s", e, exc_info=True)
-            raise HTTPException(status_code=500, detail="Week generation failed. Please try again.")
+            if old_plan is None:
+                raise HTTPException(status_code=500, detail="Week generation failed. Please try again.")
+            # B369: the user's plan is still there — serve it, save nothing.
+            week_plan = None
+            regeneration_failed = True
 
-        # When force-regenerating, preserve completed sessions from old plan
-        if (
-            old_plan
-            and old_plan.get("start_date") == week_plan.get("start_date")
-        ):
-            try:
-                week_plan = regenerate_preserving_completed(
-                    old_plan, week_plan, preserve_before=effective_preserve,
-                )
-            except Exception:
-                logger.warning("Failed to preserve completed sessions, using fresh plan")
+        if not regeneration_failed:
+            # B369: the plan to merge the user's content back from — the cached
+            # plan (force / stale), else the legacy pre-B369 ``_prev_week_plan``
+            # stash, and only when it is THIS week (P5: a stash of another
+            # week is discarded, never weekday-copied onto this one).
+            legacy_prev = state.get("_prev_week_plan") if is_current_week else None
+            source = None
+            if old_plan and old_plan.get("start_date") == week_plan.get("start_date"):
+                source = old_plan
+            elif legacy_prev and legacy_prev.get("start_date") == week_plan.get("start_date"):
+                source = legacy_prev
+            if source is not None:
+                try:
+                    week_plan = regenerate_preserving_completed(
+                        source, week_plan, preserve_before=effective_preserve,
+                    )
+                except Exception:
+                    # B369/P2: a failed merge used to save the fresh plan over
+                    # the user's — customs, forced and moved sessions gone.
+                    logger.error(
+                        "B369: preserving merge failed for week %s — serving the cached plan, nothing saved",
+                        week_start_key, exc_info=True,
+                    )
+                    regeneration_failed = True
 
-        # B114: merge preservable sessions from stashed plan (after macrocycle
-        # regen).  Now uses date-based matching with preserve_before guard so
-        # past completed days are never corrupted.
-        prev_plan = state.get("_prev_week_plan")
-        if prev_plan and is_current_week:
-            try:
-                week_plan = merge_prev_week_sessions(
-                    prev_plan, week_plan, preserve_before=effective_preserve,
-                )
-            except Exception:
-                logger.warning("Failed to merge sessions from previous plan")
-            state.pop("_prev_week_plan", None)
-
-        # Cache the freshly generated plan
-        if "week_plans" not in state:
-            state["week_plans"] = {}
-        state["week_plans"][week_start_key] = week_plan
-        if is_current_week:
-            state["current_week_plan"] = week_plan
-        save_state(state, user_id)
+        if regeneration_failed:
+            week_plan = old_plan if old_plan is not None else state.get("_prev_week_plan")
+        else:
+            if is_current_week:
+                # Consumed, or discarded as another week's (P5).
+                state.pop("_prev_week_plan", None)
+            # Cache the freshly generated plan
+            if "week_plans" not in state:
+                state["week_plans"] = {}
+            state["week_plans"][week_start_key] = week_plan
+            if is_current_week:
+                state["current_week_plan"] = week_plan
+            save_state(state, user_id)
 
     # Auto-resolve each session so the frontend gets exercises inline
     _auto_resolve(week_plan, state, user_id, phase=ctx["phase_id"])
@@ -763,7 +802,7 @@ def get_week(
     # roundtrips and are never re-resolved with changed state (device switch).
     # A221: a week served from the cold store must never be written back into
     # hot state — it is already fully resolved and immutable.
-    if not served_from_archive and _cache_completed_resolved(
+    if not served_from_archive and not regeneration_failed and _cache_completed_resolved(
         week_plan, state, week_start_key, is_current_week
     ):
         save_state(state, user_id)
@@ -795,6 +834,10 @@ def get_week(
         # copy — never persisted, never applied to done/skipped sessions.
         "week_plan": _with_custom_anchored_loads(week_plan, state),
     }
+    if regeneration_failed:
+        # B369: the week could not be regenerated with the new settings; the
+        # previous plan is served unchanged and stays flagged for the next read.
+        result["regeneration_failed"] = True
     if test_reminder:
         result["test_reminder"] = test_reminder
     if retest_status:

@@ -8,7 +8,9 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
 
-from backend.api.deps import assert_plan_not_paused, ensure_monday, get_user_id, load_state, save_state
+from backend.api.deps import (
+    assert_plan_not_paused, ensure_monday, get_user_id, load_state, mark_weeks_stale, save_state,
+)
 from backend.engine.weekly_override import SLOTS, build_merged_view, build_slot_view
 
 # B358 — i nomi di giorno che il motore sa davvero leggere.
@@ -127,14 +129,11 @@ def put_weekly_override(
         state["weekly_overrides"] = {}
     state["weekly_overrides"][validated_start] = override_data
 
-    # Invalidate cached week plan for this week so next GET regenerates with override
-    week_plans = state.get("week_plans") or {}
-    week_plans.pop(validated_start, None)
-    state["week_plans"] = week_plans
-    # Also invalidate current_week_plan if it matches
-    cwp = state.get("current_week_plan")
-    if cwp and cwp.get("start_date") == validated_start:
-        state["current_week_plan"] = None
+    # B369: the week is marked stale, not deleted — the next GET regenerates
+    # it with the override THROUGH the merge that keeps what the user did
+    # (done Monday..yesterday, customs, forced, moved, removals). Deleting it
+    # left nothing to merge from.
+    mark_weeks_stale(state, only=validated_start)
 
     save_state(state, user_id)
 
@@ -163,6 +162,9 @@ def delete_weekly_override(
     if validated_start in overrides:
         del overrides[validated_start]
         state["weekly_overrides"] = overrides
+        # B369: reverting to the defaults is a structure change too — it used
+        # to leave the overridden week cached forever.
+        mark_weeks_stale(state, only=validated_start)
         save_state(state, user_id)
 
     return {"status": "ok", "week_start": validated_start}

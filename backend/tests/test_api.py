@@ -105,16 +105,45 @@ class TestState:
         }
         client.put("/api/state", json={"week_plans": fake_plans})
 
-        # Patch availability — should invalidate future weeks only
+        # Patch availability with a real change (B369: an identical PUT is not
+        # a change and flags nothing).
+        mon_evening = ((client.get("/api/state").json().get("availability") or {})
+                       .get("mon") or {}).get("evening") or {}
         client.put("/api/state", json={
-            "availability": {"mon": {"evening": {"available": True, "preferred_location": "gym"}}},
+            "availability": {"mon": {"evening": {
+                "available": not mon_evening.get("available", False), "preferred_location": "gym"}}},
         })
 
         state = client.get("/api/state").json()
         plans = state.get("week_plans", {})
+        # B369: nothing is deleted any more — current and future weeks are
+        # flagged stale and regenerated through the preserving merge on read.
         assert past_key in plans, "Past weeks must be preserved"
-        assert current in plans, "Current week must be preserved"
-        assert future_key not in plans, "Future weeks must be invalidated"
+        assert "_stale" not in plans[past_key], "Past weeks are never touched"
+        assert plans[current].get("_stale") is True, "Current week must be flagged stale"
+        assert plans[future_key].get("_stale") is True, "Future weeks must be flagged stale"
+
+    def test_put_identical_availability_flags_nothing(self):
+        """B369: re-saving the same availability is not a structure change."""
+        future_key = "2099-01-04"
+        client.put("/api/state", json={"week_plans": {
+            future_key: {"start_date": future_key, "weeks": [{"days": []}]}}})
+        same = client.get("/api/state").json().get("availability") or {}
+        client.put("/api/state", json={"availability": same})
+        plans = client.get("/api/state").json().get("week_plans", {})
+        assert "_stale" not in plans[future_key]
+
+    def test_put_planning_prefs_change_flags_weeks_stale(self):
+        """B369: a planning_prefs change (target, hard cap…) regenerates the
+        cached weeks — it used not to invalidate anything."""
+        future_key = "2099-01-04"
+        client.put("/api/state", json={"week_plans": {
+            future_key: {"start_date": future_key, "weeks": [{"days": []}]}}})
+        prefs = client.get("/api/state").json().get("planning_prefs") or {}
+        cap = int(prefs.get("hard_day_cap_per_week") or 3)
+        client.put("/api/state", json={"planning_prefs": {"hard_day_cap_per_week": cap + 1}})
+        plans = client.get("/api/state").json().get("week_plans", {})
+        assert plans[future_key].get("_stale") is True
 
     def test_put_without_availability_keeps_week_cache(self):
         """PUT /api/state without availability key must NOT touch week cache."""
@@ -380,18 +409,20 @@ class TestMacrocycle:
         assert r.status_code == 422
 
     def test_generate_invalidates_week_cache(self):
-        """Generating a new macrocycle should clear current_week_plan."""
+        """Generating a new macrocycle flags the cached current week stale
+        (B369 — it used to clear it, losing the user's sessions)."""
         self._setup_profile()
-        # Seed a fake cached week plan
+        # Seed a cached week plan for the current week
+        current = deps.this_monday()
         state = json.loads(deps.STATE_PATH.read_text())
-        state["current_week_plan"] = {"fake": True}
+        state["current_week_plan"] = {"start_date": current, "weeks": [{"days": []}]}
         deps.STATE_PATH.write_text(json.dumps(state, indent=2))
 
         r = client.post("/api/macrocycle/generate", json={"total_weeks": 12})
         assert r.status_code == 200
 
         state_after = json.loads(deps.STATE_PATH.read_text())
-        assert state_after.get("current_week_plan") is None
+        assert state_after["current_week_plan"].get("_stale") is True
 
 
 # -----------------------------------------------------------------------

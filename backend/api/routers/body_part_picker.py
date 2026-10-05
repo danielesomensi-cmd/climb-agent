@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import date as date_type
+from datetime import date as date_type, datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -23,7 +23,6 @@ from backend.api.deps import (
     get_user_id,
     load_state,
     require_active_subscription,
-    save_state,
 )
 from backend.engine.body_part_picker import (
     BODY_PART_CATEGORIES,
@@ -34,9 +33,17 @@ from backend.engine.body_part_picker import (
     resolve_equipment_mode,
 )
 from backend.engine.replanner_v1 import apply_events
-from backend.api.routers.replanner import _event_floor, _prev_week_days
+from backend.api.routers.replanner import _event_floor, _prev_week_days, persist_week_plan
 
 logger = logging.getLogger(__name__)
+
+def _monday_of(iso_date: Optional[str]) -> Optional[str]:
+    try:
+        d = datetime.strptime(str(iso_date)[:10], "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        return None
+    return (d - timedelta(days=d.weekday())).isoformat()
+
 
 router = APIRouter(prefix="/api/body-part-picker", tags=["body-part-picker"])
 
@@ -168,7 +175,13 @@ def start(req: StartRequest, user_id: Optional[str] = Depends(get_user_id)):
             detail="No exercises matched — try a broader equipment mode or different body parts.",
         )
 
-    week_plan = state.get("current_week_plan")
+    # B369: the week of the target date, from the per-week cache first —
+    # ``current_week_plan`` can lag behind at the Monday rollover, and writing
+    # it over ``week_plans`` replaced the right week with an old one.
+    _target_monday = _monday_of(req.target_date)
+    week_plan = (state.get("week_plans") or {}).get(_target_monday) if _target_monday else None
+    if not week_plan:
+        week_plan = state.get("current_week_plan")
     if not week_plan:
         raise HTTPException(
             status_code=422,
@@ -197,11 +210,9 @@ def start(req: StartRequest, user_id: Optional[str] = Depends(get_user_id)):
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
-    state["current_week_plan"] = updated
-    start_key = updated.get("start_date")
-    if start_key:
-        state.setdefault("week_plans", {})[start_key] = updated
-    save_state(state, user_id)
+    # B369: one writer for both caches (current_week_plan only when this IS
+    # the current week; a stale flag survives the edit).
+    persist_week_plan(updated, state, user_id)
 
     inserted = _find_session(updated, req.target_date, req.slot)
     return {"session": inserted, "week_plan": updated}

@@ -146,6 +146,11 @@ def persist_week_plan(updated: dict, state: dict, user_id) -> None:
 
     if "week_plans" not in state:
         state["week_plans"] = {}
+    # B369: an edit does not clear an invalidation — a week flagged stale (new
+    # availability, prefs, override…) is still regenerated, through the
+    # preserving merge, on the next read.
+    if ((state["week_plans"].get(start_key) or {}).get("_stale")) and not updated.get("_stale"):
+        updated["_stale"] = True
     state["week_plans"][start_key] = updated
 
     # Also update legacy current_week_plan if this IS the current week.

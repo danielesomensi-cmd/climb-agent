@@ -301,23 +301,29 @@ class TestImmutability:
 # ===========================================================================
 
 class TestFutureWeekHandling:
-    def test_edited_future_week_shifted_and_rekeyed(self):
+    """B369: future weeks are flagged stale on resume and stay on their
+    calendar key — the next read regenerates them at the new anchor through
+    the merge that keeps the user's sessions on the dates they chose. (A223
+    shifted edited weeks +N days and dropped the others.)"""
+
+    def test_edited_future_week_kept_on_its_dates_and_flagged_stale(self):
         start = _weeks_ago_monday(3)
         pause_week = _weeks_ago_monday(1)        # pause opened last week
         future = _this_monday().isoformat()      # a cached future week, > pause week
         wp = _week_plan(future, edited=True)
         _seed(_mc(start, pause={"active_since": pause_week, "offset_days": 0, "log": []}),
               week_plans={future: wp})
-        client.post("/api/plan/resume")  # N = 7
+        r = client.post("/api/plan/resume")  # N = 7
+        assert r.json()["weeks_marked_stale"] == 1
         st = deps.load_state(None)
         new_key = (date.fromisoformat(future) + timedelta(days=7)).isoformat()
-        assert future not in st["week_plans"], "edited week should have been rekeyed"
-        assert new_key in st["week_plans"], "edited week missing at shifted key"
-        # content preserved + day dates shifted
-        assert st["week_plans"][new_key]["start_date"] == new_key
-        assert st["week_plans"][new_key]["weeks"][0]["days"][0]["date"] == new_key
+        assert new_key not in st["week_plans"], "nothing is shifted any more"
+        kept = st["week_plans"][future]
+        assert kept.get("_stale") is True
+        assert kept["weeks"][0]["days"][0]["date"] == future
+        assert kept["weeks"][0]["days"][0]["sessions"] == wp["weeks"][0]["days"][0]["sessions"]
 
-    def test_unedited_future_week_dropped(self):
+    def test_unedited_future_week_flagged_stale_not_dropped(self):
         start = _weeks_ago_monday(3)
         pause_week = _weeks_ago_monday(1)
         future = _this_monday().isoformat()
@@ -326,9 +332,29 @@ class TestFutureWeekHandling:
               week_plans={future: wp})
         client.post("/api/plan/resume")
         st = deps.load_state(None)
-        new_key = (date.fromisoformat(future) + timedelta(days=7)).isoformat()
-        assert future not in st["week_plans"] and new_key not in st["week_plans"], \
-            "unedited future week should be dropped (regenerated lazily)"
+        assert st["week_plans"][future].get("_stale") is True
+
+    def test_custom_session_survives_resume_and_regeneration(self):
+        """A custom session the old edit check did not see is no longer lost:
+        resume → GET regenerates the week and the custom is still there."""
+        start = _weeks_ago_monday(3)
+        pause_week = _weeks_ago_monday(1)
+        future = _this_monday().isoformat()
+        wp = _week_plan(future)
+        custom = {"session_id": "custom_cs_x", "slot": "lunch", "is_custom": True,
+                  "custom_session_id": "cs_x", "status": "planned",
+                  "constraints_applied": ["custom_add"], "tags": {"hard": False, "finger": False},
+                  "exercises": []}
+        wp["weeks"][0]["days"][6]["sessions"].append(custom)
+        _seed(_mc(start, pause={"active_since": pause_week, "offset_days": 0, "log": []}),
+              week_plans={future: wp})
+        client.post("/api/plan/resume")
+        r = client.get("/api/week/0")
+        assert r.status_code == 200
+        st = deps.load_state(None)
+        sun = st["week_plans"][future]["weeks"][0]["days"][6]
+        assert custom in sun["sessions"]
+        assert "_stale" not in st["week_plans"][future]
 
 
 # ===========================================================================
