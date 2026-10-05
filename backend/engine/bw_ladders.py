@@ -33,7 +33,7 @@ from functools import lru_cache
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 
 from backend.engine import retest_policy as rp
-from backend.engine.stimulus import counted_entries, is_test_session, iter_plan_sessions
+from backend.engine.stimulus import counted_entries, is_finger_hard_session, is_test_session, iter_plan_sessions
 
 DateLike = Union[date, str]
 ArchivedWeeks = Optional[Union[Mapping[str, Any], Sequence[Mapping[str, Any]]]]
@@ -79,6 +79,36 @@ def family_index(ladders: Optional[Mapping[str, Any]] = None) -> Dict[str, Tuple
     return out
 
 
+def heavy_pull_exercise_ids(ladders: Optional[Mapping[str, Any]] = None) -> frozenset:
+    """Bodyweight exercises the ladder file declares a heavy pull (C272 review).
+
+    A family with ``heavy_pull`` contributes its levels from
+    ``heavy_pull_from_level`` on; a family heavy from level 0 also contributes
+    its variants and its terminal ``then_exercise_ids`` (front lever: raise,
+    row, negative). ``retest_policy.is_heavy_pulling_session`` does not read
+    these (it is load-based and engine-wide); ``athlete_context`` adds them to
+    the heavy-pull days of a TESTED athlete, which is what makes "conta come
+    tirata pesante" true in the rendered context."""
+    out = set()
+    for fam in _families(ladders):
+        if not fam.get("heavy_pull"):
+            continue
+        start = int(fam.get("heavy_pull_from_level") or 0)
+        out.update(str(lv["exercise_id"]) for lv in fam.get("levels") or [] if int(lv["level_idx"]) >= start)
+        if start == 0:
+            out.update(str(v) for v in fam.get("variants") or [])
+            out.update(str(v) for v in (fam.get("terminal") or {}).get("then_exercise_ids") or [])
+    return frozenset(out)
+
+
+def carries_heavy_bw_pull(session: Mapping[str, Any], ids: Optional[Iterable[str]] = None) -> bool:
+    """True when the session (logged entries when done, else the plan — the
+    ``stimulus.counted_entries`` rule) carries a ladder heavy-pull exercise."""
+    want = frozenset(ids) if ids is not None else heavy_pull_exercise_ids()
+    entries, _origin = counted_entries(session)
+    return any(str(e.get("exercise_id") or "") in want for e in entries)
+
+
 def _as_date(value: DateLike) -> date:
     if isinstance(value, datetime):
         return value.date()
@@ -91,19 +121,24 @@ def family_of(exercise_id: Optional[str], as_of: Optional[DateLike] = None,
               ladders: Optional[Mapping[str, Any]] = None) -> Optional[Tuple[str, int]]:
     """The (family, level_idx) of an exercise logged on ``as_of``.
 
-    History aliases apply before their cut-off date: a ``hanging_leg_raise``
-    logged before C272 counts as ``toes_to_bar`` (the old catalog note said
-    "straight legs to bar")."""
+    History aliases map an exercise id onto a ladder level: ``hanging_leg_raise``
+    counts as ``toes_to_bar``, because its catalog note says "straight legs to
+    bar" (C272 review: that note is left unchanged for every user; the
+    to-horizontal level is ``hanging_leg_raise_horizontal``). An alias without
+    ``before`` holds for every log; one with ``before`` (ISO date) only for logs
+    before that date, and only when ``as_of`` is given."""
     if not exercise_id:
         return None
     doc = ladders if ladders is not None else _load_file()
     eid = str(exercise_id)
-    if as_of is not None:
-        d = _as_date(as_of).isoformat()
-        for alias in doc.get("history_aliases") or []:
-            if alias.get("exercise_id") == eid and d < str(alias.get("before") or ""):
-                eid = str(alias["counts_as"])
-                break
+    d = _as_date(as_of).isoformat() if as_of is not None else None
+    for alias in doc.get("history_aliases") or []:
+        if alias.get("exercise_id") != eid:
+            continue
+        before = alias.get("before")
+        if before is None or (d is not None and d < str(before)):
+            eid = str(alias["counts_as"])
+            break
     return family_index(doc).get(eid)
 
 
@@ -391,13 +426,14 @@ def technique_library(catalog: Mapping[str, Mapping[str, Any]],
             roles = [roles]
         if "library" not in roles:
             continue
-        stress = ex.get("stress_tags") or {}
         drills.append({
             "exercise_id": eid,
             "name": ex.get("name"),
             "recency_group": ex.get("recency_group"),
             "measure": ex.get("measure"),
-            "finger_hard": stress.get("fingers") == "high",
+            # C272 review: the SAME definition the guards use, so the
+            # "(dita-hard)" label never promises a guard the engine skips.
+            "finger_hard": is_finger_hard_session({"exercises": [{"exercise_id": eid}]}),
             "equipment": sorted(set(ex.get("equipment_required") or []) | set(ex.get("equipment_required_any") or [])),
         })
     ladders_view = []

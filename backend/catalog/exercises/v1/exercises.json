@@ -3209,7 +3209,7 @@
         "work_seconds": 7,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 120,
-        "notes": "Hold 5-10s at 90° and at 120° — open angles only, never fully closed. 3-5 sets per angle."
+        "notes": "Hold 5-10s at each angle. 90°, 120°, full lock. 3-5 sets per angle."
       },
       "stress_tags": {
         "fingers": "low",
@@ -3646,7 +3646,7 @@
         "work_seconds": 8,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 180,
-        "notes": "Advance to front_lever_advanced_tuck when 4x15s is consistent. 3 min rest is minimum — this is near-maximal isometric effort."
+        "notes": "Advance to next progression when 4x15s is consistent. 3 min rest is minimum — this is near-maximal isometric effort."
       },
       "stress_tags": {
         "fingers": "low",
@@ -3699,7 +3699,7 @@
         "work_seconds": null,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 60,
-        "notes": "Legs straight to horizontal (90°). Control the negative. No kipping."
+        "notes": "Straight legs to bar. Control the negative. No kipping."
       },
       "stress_tags": {
         "fingers": "low",
@@ -6218,7 +6218,7 @@
         "work_seconds": 20,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 30,
-        "notes": "Shoulder stability and coordination. Knees off the ground. Slow and controlled."
+        "notes": "Quadrupedia. Shoulder stability + coordination. Knees off ground. Slow and controlled."
       },
       "stress_tags": {
         "fingers": "none",
@@ -17037,7 +17037,7 @@
         "work_seconds": null,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 180,
-        "notes": "Lower on one arm in 3-5 s. 3x1-3. Open angles only, never a closed lock-off."
+        "notes": "Lower on one arm in 3-5 s, starting from the elbow at 90°. 3x1-3. Open angles only, never a closed lock-off."
       },
       "stress_tags": {
         "fingers": "low",
@@ -17047,7 +17047,7 @@
       },
       "description": "One-arm pull-up, lowering phase only. For athletes WITHOUT a tested weighted 2RM: a tested athlete keeps the weighted pull-up (anchored load).",
       "cues": [
-        "Start at the top with both hands, release one",
+        "Pull up with both hands to 90° at the elbow, release one there — never from the top",
         "Lower in 3-5 s",
         "Stop at the first elbow discomfort"
       ],
@@ -18620,6 +18620,61 @@
       ],
       "progression": "None — the effort ceiling stays at 6/10. It is a warm-up, not a training stimulus.",
       "measure": "None. Discomfort is logged as pain 0-3 for the finger zone."
+    },
+    {
+      "id": "hanging_leg_raise_horizontal",
+      "name": "Hanging Leg Raise (to Horizontal)",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "ladder"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "compression",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "core_compression",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 8,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Legs straight to horizontal (90°). Band 8-12 reps, +1 rep per step. Control the negative. No kipping."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Straight-leg raise from a dead hang to horizontal (hips at 90°): the step between the bent-knee raise and knees-to-elbows / toes-to-bar. The catalog's hanging_leg_raise goes to the bar, so it sits higher on the ladder. (Recommended Routine hanging leg raise progression; Horst)",
+      "cues": [
+        "Start from a dead hang with shoulders actively engaged — not passive",
+        "Initiate with scapular depression before hip flexion, no kipping",
+        "Legs straight, stop at horizontal and hold 1 s",
+        "Slow controlled eccentric: 2-3 seconds down, avoid swinging"
+      ],
+      "video_url": "https://trainingforclimbing.com/video-advanced-core-training-for-climbers/",
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ],
+      "sources": [
+        "https://www.liftosaur.com/programs/recommended-routine",
+        "https://akuaku.org/Sarco+/progression-hanging-leg-raise-progression.html"
+      ]
     }
   ]
 }

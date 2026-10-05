@@ -1,7 +1,6 @@
 {
   "version": "bw_ladders.v1",
   "_doc": "C272 — progression ladders, data only. The engine does NOT select from this file yet: the exercises it introduces carry role 'ladder' (bodyweight levels) or 'library' (technique / try-hard / pocket drills), which no template block requests. Claude Code reads it through backend/engine/athlete_context.py (current level per family, seeded read-only from history and tests) and the /custom-session command. level_idx starts at 0. A later A brief turns the bodyweight ladders into a closed loop (bw_progression state, R0-R12 of the BW spec).",
-  "c272_date": "2026-10-05",
   "caps": {
     "max_reps": 30,
     "max_seconds": 60,
@@ -22,8 +21,7 @@
     {
       "exercise_id": "hanging_leg_raise",
       "counts_as": "toes_to_bar",
-      "before": "2026-10-05",
-      "why": "until C272 the catalog note said 'straight legs to bar', which is the toes-to-bar movement"
+      "why": "the catalog note of hanging_leg_raise says 'straight legs to bar' (the toes-to-bar movement) and C272 leaves it unchanged for every user; the to-horizontal level is hanging_leg_raise_horizontal. No cut-off date: the alias holds for every log."
     }
   ],
   "bands": {
@@ -313,7 +311,7 @@
           "level_idx": 0
         },
         {
-          "exercise_id": "hanging_leg_raise",
+          "exercise_id": "hanging_leg_raise_horizontal",
           "axis": "reps",
           "sets": 3,
           "band_ref": "core_dyn",
@@ -842,7 +840,7 @@
           "level_idx": 4
         }
       ],
-      "notes": "Every level counts as a heavy pull: never in the 24 h before limit / strength_long, counts in the 2 heavy pulls per 7 days, at most 1 per week in performance (ENGINEERING CONSTANT). Seed only from history (the pulling ratio is too weak a proxy for an elbow-risk skill)."
+      "notes": "Every level (and raise / row / negative) counts as a heavy pull: athlete_context adds it to the heavy-pull days of a tested athlete, so it counts in the 2 heavy pulls per 7 days of the context guards. NOT counted by retest_policy (the pull-up retest blocker is load-based, engine-wide): keep it 48 h away from a pull-up test by hand. Never in the 24 h before limit / strength_long and at most 1 per week in performance are manual rules (ENGINEERING CONSTANT). Seed only from history (the pulling ratio is too weak a proxy for an elbow-risk skill)."
     },
     {
       "family": "lateral",
@@ -1528,7 +1526,7 @@
           "level_idx": 5
         }
       ],
-      "notes": "A tested athlete keeps weighted_pullup with the anchored load (B364). Lock-offs at open angles only."
+      "notes": "A tested athlete keeps weighted_pullup with the anchored load (B364). Lock-offs at open angles only. From L3 (one-arm) a heavy pull for the context guards of a tested athlete (same rule as front_lever)."
     },
     {
       "family": "single_leg_squat",

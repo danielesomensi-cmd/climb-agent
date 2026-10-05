@@ -136,7 +136,7 @@ Il test conta come esposizione. Durante il rientro, max hang al massimo 5 serie.
 | Pacing / lento | `slow_climbing`, `tech_smooth_is_fast` | deload: chiave tecnica a severità bassa |
 | Limit | `limit_bouldering`, `board_limit_boulders`, `system_board_limit`, `spray_wall_limit` | il limit nello stile debole (protocollo `limit_weak_style`, vedi sopra) |
 | Forza del piede | `toe_flexor_isometric`, `edge_calf_raise_bigtoe` *(C272)*, `single_leg_calf_raise` | 2 volte a settimana dopo una seduta qualsiasi |
-| Benchmark | `technique_benchmark_test` *(C272)* | ogni 4 settimane: B1 piedi 25-30°, B2 posizione 40°, flash rate su 10. Non passa dalla retest policy |
+| Benchmark | `technique_benchmark_test` *(C272)* | ogni 4 settimane: B1 piedi 25-30°, B2 posizione 40°, flash rate su 10. Non passa dalla retest policy e **non chiude la chiave tecnica** (è un test: il suo gruppo di recency è escluso) |
 
 Conteggio per la chiave tecnica (A294): servono ≥ 2 drill tecnici diversi, esclusi i drill di riscaldamento e quelli try-hard (gruppo `technique_tryhard`).
 
@@ -182,7 +182,7 @@ A Berdorf: volume verticale 7a-7c su piedi piccoli, scarpetta annotata, scivolat
   - no-take: 2-3 vie da OS a OS+1, vietato chiedere corda, solo con fall ladder ≥ F2 e assicuratore abituale;
   - il limit con budget di tentativi.
   Nella settimana vanno anche le cadute (`fall_ladder` a 3 gradini, oppure `fall_practice`): fase intensiva per 4-6 settimane, poi 2-3 cadute a inizio di ogni giornata lead.
-- **Id del catalogo (C272, role `library`):** `pre_attempt_routine`, `three_attempt_comp`, `no_take_lead_onsight`, `fall_ladder`, `commit_map`. Contano per la componente try-hard della settimana (A294), come `fall_practice`.
+- **Id del catalogo (C272, role `library`):** `pre_attempt_routine`, `three_attempt_comp`, `no_take_lead_onsight`, `fall_ladder`, `commit_map`. Contano per la componente try-hard della settimana (A294), come `fall_practice`. `three_attempt_comp` (flash+1, cioè ≥ RP−2 per te) è **dita-hard per tutte le guardie** (gap 48 h, blocco 72 h del test, tetto per seduta: `stimulus.FINGER_HARD_LIBRARY_IDS`); non è un'esposizione limit_power.
 - **Misura primaria = l'esito:** % di non-send chiusi in FALL rispetto a TAKE+LET_GO, più i movimenti provati dopo il punto in cui volevi fermarti. Lo sforzo 0-3 è secondario e facoltativo.
 - **Se l'esito è piatto da 3 settimane:** grado −1 su gara e no-take, fall ladder giù di un gradino. Il problema è la paura, non la difficoltà. Né più volume né più grado.
 
@@ -240,11 +240,11 @@ Il seed **non scrive niente**: le promozioni (label easy/very_easy, 2 sedute in 
 | Famiglia | Livelli (dal più facile) | Partenza indicata da BW per Daniele |
 |---|---|---|
 | Compressione a terra | `tuck_l_sit` → `one_leg_l_sit` → `core_l_sit` → `straddle_l_sit` → `v_sit_45` → `v_sit` (terminale `weighted_l_sit`) | L-sit 60 s: `straddle_l_sit` 3×20 s. Dal V-sit serve `compression_pulses` nel blocco |
-| Compressione appesi | `hanging_knee_raise` → `hanging_leg_raise` (a 90°) → `knees_to_elbows` → `toes_to_bar` (poi eccentrica 3 s, 5 s, poi `weighted_hanging_leg_raise` +1 kg) | storico T2B: eccentrica, poi +1 kg alle caviglie |
+| Compressione appesi | `hanging_knee_raise` → `hanging_leg_raise_horizontal` (a 90°) → `knees_to_elbows` → `toes_to_bar` (`hanging_leg_raise` del catalogo arriva alla sbarra: conta come `toes_to_bar`) (poi eccentrica 3 s, 5 s, poi `weighted_hanging_leg_raise` +1 kg) | storico T2B: eccentrica, poi +1 kg alle caviglie |
 | Rollout | `ab_wheel_rollout` → `ring_fallout` → `ab_wheel_rollout_standing_wall` → `ab_wheel_rollout_standing_eccentric` → `ab_wheel_rollout_standing` | `ring_fallout` 3×6 (anelli all'altezza del ginocchio). In piedi solo manuale (zona lombare) |
 | Dragon flag (panca) | `bench_hip_lift` → `candlestick_hold` → `dragon_flag_tuck_negative` → `dragon_flag_tuck` → straddle neg. → straddle → neg. → `dragon_flag` | `dragon_flag_tuck_negative` 3×4 da 5 s al posto di `v_up` |
 | Hollow / plank | `plank` → `rkc_plank` → `core_hollow_hold` → `hollow_rock` → `weighted_hollow_hold` | per lui solo riscaldamento |
-| Front lever | `front_lever_tuck` → `front_lever_advanced_tuck` → `front_lever_one_leg` → `front_lever_straddle` → `front_lever_full` (poi `front_lever_raise`, `front_lever_row`; varianti `front_lever_raise_tuck`, `front_lever_negative`) | straddle 4×10 s. **Mai** nelle 24 h prima di limit/strength_long; conta come tirata pesante; nessuna zavorra |
+| Front lever | `front_lever_tuck` → `front_lever_advanced_tuck` → `front_lever_one_leg` → `front_lever_straddle` → `front_lever_full` (poi `front_lever_raise`, `front_lever_row`; varianti `front_lever_raise_tuck`, `front_lever_negative`) | straddle 4×10 s. Conta come tirata pesante nelle guardie del contesto (2 per 7 gg; `bw_ladders.heavy_pull_exercise_ids`). **A mano:** mai nelle 24 h prima di limit/strength_long e lontano 48 h dal test trazione (la retest policy non lo conta). Nessuna zavorra |
 | Laterale | `side_plank` → `copenhagen_short_lever` → `copenhagen_plank` → `copenhagen_dynamic` (terminale `weighted_side_plank`) | 2 sedute short lever 3×15 s, poi lunga 3×10 s |
 | Catena posteriore | `arch_hold` → `back_extension` → `single_leg_back_extension` | obbligatoria con 2 esercizi di compressione in seduta |
 | Anti-rotazione | `pallof_press_half_kneeling` → `pallof_press` → `pallof_press_standing_pause` | solo attivazione per lui |

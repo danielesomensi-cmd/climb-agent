@@ -134,6 +134,18 @@ FINGER_FATIGUE_EXTRA_IDS: Tuple[str, ...] = (
     "lp_max_lift_10s",
 )
 
+# C272 review: library drills (role "library", never engine-selected) that put
+# near-limit climbing on the fingers without being a limit_power EXPOSURE.
+# ``three_attempt_comp`` is prescribed at boulder flash+1 (6-8 problems x 3
+# attempts) — at or above RP-2 for an athlete like Daniele, which is the
+# TECH.json finger-hard rule. Rule pinned by test_c272: every library-only
+# exercise with ``stress_tags.fingers == "high"`` is finger-hard. Used by
+# ``is_finger_hard_session`` and athlete_context's per-session cap only — never
+# an exposure, never a family.
+FINGER_HARD_LIBRARY_IDS: Tuple[str, ...] = (
+    "three_attempt_comp",
+)
+
 EXERCISE_FAMILY: Dict[str, str] = {
     **{eid: FAMILY_FINGER_MAX for eid in _FINGER_MAX_IDS},
     **{eid: FAMILY_PULLING_MAX for eid in _PULLING_MAX_IDS},
@@ -381,7 +393,8 @@ def is_finger_hard_session(session: Mapping[str, Any]) -> bool:
     stimulus — the second clause is what makes custom sessions visible
     (``_SESSION_META`` has no entry for ``custom_*``) — OR when it carries a
     ``FINGER_FATIGUE_EXTRA_IDS`` hang (min-edge / 10 s max hangs: not a
-    finger_max exposure, but a max-intensity finger load all the same).
+    finger_max exposure, but a max-intensity finger load all the same) OR a
+    ``FINGER_HARD_LIBRARY_IDS`` drill (near-limit comp bouldering, C272).
     """
     if session_flag(session, "finger") and session_flag(session, "hard"):
         return True
@@ -389,7 +402,8 @@ def is_finger_hard_session(session: Mapping[str, Any]) -> bool:
     if FAMILY_FINGER_MAX in stimuli or FAMILY_LIMIT_POWER in stimuli:
         return True
     entries, _origin = counted_entries(session)
-    return any(str(e.get("exercise_id") or "") in FINGER_FATIGUE_EXTRA_IDS for e in entries)
+    extra = set(FINGER_FATIGUE_EXTRA_IDS) | set(FINGER_HARD_LIBRARY_IDS)
+    return any(str(e.get("exercise_id") or "") in extra for e in entries)
 
 
 def is_pulling_hard_session(session: Mapping[str, Any]) -> bool:

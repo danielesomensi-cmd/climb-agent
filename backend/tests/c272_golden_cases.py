@@ -14,9 +14,10 @@ Every non-test catalog session is resolved twice per profile (gym in strength
 PRESCRIPTION (exercise ids, sets/reps/seconds/rests, loads, grade targets) and
 strips three things on purpose:
 
-- free text (``notes``, ``cues``, ``description``...): C272 rewrites a few
-  catalog notes (hanging_leg_raise, front_lever_tuck, lock_off_isometric,
-  bear_crawl, core_standard) — that is the point of the note-only fixes;
+- free text (``notes``, ``cues``, ``description``...): kept out so a future
+  wording fix does not churn the golden. C272 itself changes no note of an
+  engine-selected exercise (the review reverted those rewrites; the A290
+  golden, which hashes the full output, pins that);
 - ``p0_trace`` / ``filter_trace``: their candidate counts (``start``, ``after_location``...) grow
   with the catalog by construction; they are debugging data, not output;
 - ``generated_at``.

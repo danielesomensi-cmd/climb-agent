@@ -463,10 +463,15 @@ def _guards(
 
     heavy: Dict[str, List[str]] = {}
     finger_tagged: Dict[str, List[str]] = {}
+    # C272 review: the ladder heavy pulls (every front-lever level and variant,
+    # one-arm pull-up from L3) count as heavy-pull days — decision 2026-10-04,
+    # and what the rendered ladder line promises. TESTED athletes only: an
+    # untested athlete's guards (and so the in-app composer) stay pre-C272.
+    bw_heavy = _bw.heavy_pull_exercise_ids() if _bw.tested_gate(state, today) else frozenset()
     for k in range(-7, GUARD_DAYS + 7):
         d = today + timedelta(days=k)
         for s in sessions_on(d):
-            if rp.is_heavy_pulling_session(state, s, d):
+            if rp.is_heavy_pulling_session(state, s, d) or (bw_heavy and _bw.carries_heavy_bw_pull(s, bw_heavy)):
                 heavy.setdefault(d.isoformat(), []).append(str(s.get("session_id")))
             if session_flag(s, "finger"):
                 finger_tagged.setdefault(d.isoformat(), []).append(str(s.get("session_id")))
@@ -1621,10 +1626,11 @@ def render_composer_block(
 # ---------------------------------------------------------------------------
 
 def _finger_hard_ids() -> set:
-    from backend.engine.stimulus import EXERCISE_FAMILY, FAMILY_FINGER_MAX, FINGER_FATIGUE_EXTRA_IDS
+    from backend.engine.stimulus import (EXERCISE_FAMILY, FAMILY_FINGER_MAX, FINGER_FATIGUE_EXTRA_IDS,
+                                         FINGER_HARD_LIBRARY_IDS)
 
     ids = {eid for eid, fam in EXERCISE_FAMILY.items() if fam in (FAMILY_FINGER_MAX, FAMILY_LIMIT_POWER)}
-    return ids | set(FINGER_FATIGUE_EXTRA_IDS)
+    return ids | set(FINGER_FATIGUE_EXTRA_IDS) | set(FINGER_HARD_LIBRARY_IDS)
 
 
 def _pulling_max_ids() -> set:

@@ -1,9 +1,11 @@
 """C272 — bodyweight ladders, technique / try-hard library, pocket warm-up.
 
-Catalog-only brief: 72 exercises with role ``ladder`` / ``library`` that the
+Catalog-only brief: 73 exercises with role ``ladder`` / ``library`` that the
 engine never selects, the ladder file
-``backend/catalog/progressions/v1/bw_ladders.json``, four note-only fixes, and
-the read-only level seed Claude Code sees in the athlete context.
+``backend/catalog/progressions/v1/bw_ladders.json``, and the read-only level
+seed Claude Code sees in the athlete context. The review reverted the note
+rewrites on engine-selected exercises (other users stay bit for bit) and wired
+the guards the data promises (finger-hard comp drill, ladder heavy pulls).
 
 What is pinned here:
 1. the ladder file is internally valid and agrees with the catalog;
@@ -153,11 +155,24 @@ class TestLadderFile:
         fl = fams["front_lever"]
         assert fl["heavy_pull"] and fl["heavy_pull_from_level"] == 0 and fl["terminal"]["no_added_load"]
 
-    def test_history_alias_maps_hlr_to_toes_to_bar_only_before_c272(self, ladders):
+    def test_history_alias_maps_hlr_to_toes_to_bar_for_every_log(self, ladders):
+        # C272 review: the catalog note of hanging_leg_raise stays "to bar" for
+        # every user, so the alias has no cut-off; the 90° level is its own id.
         assert bw.family_of("hanging_leg_raise", "2026-09-30") == ("compression_hang", 3)
-        assert bw.family_of("hanging_leg_raise", ladders["c272_date"]) == ("compression_hang", 1)
-        assert bw.family_of("hanging_leg_raise") == ("compression_hang", 1)
+        assert bw.family_of("hanging_leg_raise", "2026-10-05") == ("compression_hang", 3)
+        assert bw.family_of("hanging_leg_raise", "2027-03-01") == ("compression_hang", 3)
+        assert bw.family_of("hanging_leg_raise") == ("compression_hang", 3)
+        assert bw.family_of("hanging_leg_raise_horizontal", "2027-03-01") == ("compression_hang", 1)
         assert bw.family_of("not_an_exercise") is None
+        assert all("before" not in a for a in ladders["history_aliases"])
+
+    def test_alias_with_a_cutoff_only_applies_before_it(self, ladders):
+        doc = copy.deepcopy(ladders)
+        doc["history_aliases"] = [{"exercise_id": "hanging_leg_raise", "counts_as": "toes_to_bar",
+                                   "before": "2026-10-05"}]
+        assert bw.family_of("hanging_leg_raise", "2026-10-04", doc) == ("compression_hang", 3)
+        assert bw.family_of("hanging_leg_raise", "2026-10-05", doc) is None
+        assert bw.family_of("hanging_leg_raise", None, doc) is None
 
     def test_protocols_carry_steps_and_sources(self, ladders):
         for pid in ("limit_weak_style", "template_warmup", "outdoor_technique_day", "pocket_warmup"):
@@ -172,9 +187,9 @@ class TestLadderFile:
 # ---------------------------------------------------------------------------
 
 class TestCatalogEntries:
-    def test_seventy_two_library_only_entries(self, catalog):
+    def test_seventy_three_library_only_entries(self, catalog):
         lib = {i for i, e in catalog.items() if is_library_only(e)}
-        assert len(lib) == 72
+        assert len(lib) == 73
         assert {r for e in catalog.values() for r in (e.get("role") or [])} >= LIBRARY_ONLY_ROLES
         # library-only means ONLY that role: never mixed with an engine role.
         for i in lib:
@@ -220,13 +235,28 @@ class TestCatalogEntries:
             assert "feet" in text  # load controlled from the feet
         assert "always" in catalog["single_finger_pocket_rampup"]["prescription_defaults"]["notes"].lower()
 
-    def test_note_only_fixes(self, catalog):
-        assert "horizontal (90°)" in catalog["hanging_leg_raise"]["prescription_defaults"]["notes"]
-        assert "front_lever_advanced_tuck" in catalog["front_lever_tuck"]["prescription_defaults"]["notes"]
-        assert "full lock" not in catalog["lock_off_isometric"]["prescription_defaults"]["notes"].lower()
-        assert "Quadrupedia" not in catalog["bear_crawl"]["prescription_defaults"]["notes"]
+    def test_engine_selected_notes_are_unchanged(self, catalog):
+        # C272 review: rewriting the notes of exercises the engine selects for
+        # every user broke "other users bit for bit" (hanging_leg_raise even
+        # became an easier movement at the same dose). Reverted; the 90° raise
+        # is the ladder-only hanging_leg_raise_horizontal.
+        notes = {eid: catalog[eid]["prescription_defaults"]["notes"]
+                 for eid in ("hanging_leg_raise", "front_lever_tuck", "lock_off_isometric", "bear_crawl")}
+        assert notes["hanging_leg_raise"] == "Straight legs to bar. Control the negative. No kipping."
+        assert notes["front_lever_tuck"].startswith("Advance to next progression when 4x15s is consistent.")
+        assert notes["lock_off_isometric"] == "Hold 5-10s at each angle. 90°, 120°, full lock. 3-5 sets per angle."
+        assert notes["bear_crawl"].startswith("Quadrupedia.")
         core = json.loads((REPO / "backend/catalog/templates/v1/core_standard.json").read_text(encoding="utf-8"))
-        assert "Pick one" not in core["blocks"][0]["prescription"]["notes"]
+        assert core["blocks"][0]["prescription"]["notes"] == (
+            "Core exercise: hollow hold, dead bug, side plank, or pallof press. Pick one.")
+        hz = catalog["hanging_leg_raise_horizontal"]
+        assert hz["role"] == ["ladder"] and "horizontal (90°)" in hz["prescription_defaults"]["notes"]
+
+    def test_one_arm_negative_starts_from_an_open_angle(self, catalog):
+        e = catalog["one_arm_pullup_negative"]
+        text = " ".join([e["prescription_defaults"]["notes"]] + e["cues"]).lower()
+        assert "90°" in e["cues"][0] and "never from the top" in e["cues"][0].lower()
+        assert "start at the top" not in text
 
     def test_limit_exercises_point_to_the_weak_style_protocol(self, catalog):
         for eid in ("limit_bouldering", "board_limit_boulders", "system_board_limit", "spray_wall_limit"):
@@ -318,6 +348,48 @@ class TestEngineUnchanged:
         from backend.engine.stimulus import FAMILY_LIMIT_POWER, stimulus_of
 
         assert stimulus_of("vertical_small_feet_limit") == FAMILY_LIMIT_POWER
+
+    def test_three_attempt_comp_is_finger_hard_for_every_guard(self, catalog):
+        from backend.engine.stimulus import is_finger_hard_session, session_stimuli, stimulus_of
+
+        s = {"session_id": "custom_x", "is_custom": True, "exercises": [{"exercise_id": "three_attempt_comp"}]}
+        assert is_finger_hard_session(s)
+        assert session_stimuli(s) == [] and stimulus_of("three_attempt_comp") is None  # not an exposure
+        assert "three_attempt_comp" in ac.finger_hard_session_ids(catalog)
+        assert not is_finger_hard_session({**s, "exercises": [{"exercise_id": "glued_feet_board"}]})
+
+    def test_every_library_drill_tagged_fingers_high_is_finger_hard(self, catalog):
+        from backend.engine.stimulus import is_finger_hard_session
+
+        for eid, e in catalog.items():
+            if is_library_only(e) and (e.get("stress_tags") or {}).get("fingers") == "high":
+                assert is_finger_hard_session({"session_id": "custom_x", "exercises": [{"exercise_id": eid}]}), eid
+
+    def test_finger_hard_day_from_a_comp_custom_blocks_the_next_day(self):
+        from backend.engine.stimulus import finger_hard_days
+
+        st = _tested_state()
+        _add_done(st, "2026-10-01", [{"exercise_id": "three_attempt_comp", "sets": 1, "reps": 7}],
+                  actual=[{"exercise_id": "three_attempt_comp", "completed": True, "completed_sets": 1}])
+        days = {r["date"] for r in finger_hard_days(st, since="2026-09-28", until="2026-10-04")}
+        assert "2026-10-01" in days
+
+    def test_technique_benchmark_does_not_close_the_technique_key(self, catalog):
+        from backend.engine import key_sessions_v1 as ks
+
+        s = {"session_id": "custom_x", "is_custom": True, "status": "done",
+             "exercises": [{"exercise_id": "technique_benchmark_test", "sets": 1},
+                           {"exercise_id": "rest_and_clip_drill", "sets": 2}]}
+        assert "technique_benchmark" in ks.TECHNIQUE_EXCLUDED_RECENCY
+        assert not ks.technique_hit(s, catalog)
+
+    def test_ladder_heavy_pull_ids(self, ladders):
+        ids = bw.heavy_pull_exercise_ids()
+        fl = next(f for f in ladders["families"] if f["family"] == "front_lever")
+        assert {lv["exercise_id"] for lv in fl["levels"]} <= ids
+        assert {"front_lever_raise", "front_lever_row", "front_lever_negative", "front_lever_raise_tuck"} <= ids
+        assert {"one_arm_pullup_assisted", "one_arm_pullup_negative", "one_arm_pullup"} <= ids
+        assert not ({"pullup", "l_sit_pullup", "archer_pullup"} & ids)
 
 
 # ---------------------------------------------------------------------------
@@ -411,7 +483,7 @@ class TestSeed:
         ch = _fam(bw.seed_levels(st, REF), "compression_hang")
         assert (ch["exercise_id"], ch["target"]) == ("knees_to_elbows", 7)
 
-    def test_hlr_before_c272_counts_as_toes_to_bar_at_the_top_of_the_band(self):
+    def test_hlr_counts_as_toes_to_bar_at_the_top_of_the_band(self):
         st = _tested_state()
         _add_done(st, "2026-09-20", [{"exercise_id": "hanging_leg_raise", "sets": 3, "reps": 8}])
         ch = _fam(bw.seed_levels(st, REF), "compression_hang")
@@ -470,3 +542,32 @@ class TestAthleteContext:
         # The in-app prompt blocks (A297) do not carry the C272 sections.
         assert "Scale corpo libero" not in ac.render_coach_block(ctx)
         assert "ladder" not in ac.render_composer_block(ctx, day=REF).lower()
+
+    def test_front_lever_day_is_a_heavy_pull_day_for_a_tested_athlete(self):
+        st = _tested_state()
+        st["macrocycle"] = golden.profiles()["advanced"]["macrocycle"]
+        _add_done(st, "2026-10-03", [{"exercise_id": "front_lever_straddle", "sets": 4, "work_seconds": 10}],
+                  sid="custom_fl")
+        ctx = ac.build_athlete_context(st, REF, with_proposals=False, include_next_week=False)
+        assert "custom_fl" in ctx["guards"]["heavy_pull_days"].get("2026-10-03", [])
+        # Same for a one-arm negative (pull_bw L4), never for a plain pull-up.
+        st2 = _tested_state()
+        st2["macrocycle"] = st["macrocycle"]
+        _add_done(st2, "2026-10-03", [{"exercise_id": "one_arm_pullup_negative", "sets": 3, "reps": 2}], sid="custom_oa")
+        _add_done(st2, "2026-10-02", [{"exercise_id": "pullup", "sets": 3, "reps": 8}], sid="custom_pu")
+        days = ac.build_athlete_context(st2, REF, with_proposals=False, include_next_week=False)["guards"]["heavy_pull_days"]
+        assert "custom_oa" in days.get("2026-10-03", []) and "2026-10-02" not in days
+
+    def test_untested_athlete_front_lever_day_is_not_counted(self):
+        st = copy.deepcopy(golden.profiles()["untested"])
+        _add_done(st, "2026-10-03", [{"exercise_id": "front_lever_straddle", "sets": 4, "work_seconds": 10}],
+                  sid="custom_fl")
+        ctx = ac.build_athlete_context(st, REF, with_proposals=False, include_next_week=False)
+        assert "2026-10-03" not in ctx["guards"]["heavy_pull_days"]
+
+    def test_comp_drill_is_rendered_finger_hard_and_comfy_board_drills_are_not(self):
+        st = _tested_state()
+        st["macrocycle"] = golden.profiles()["advanced"]["macrocycle"]
+        text = ac.render_text(ac.build_athlete_context(st, REF, with_proposals=False, include_next_week=False))
+        assert "three_attempt_comp (dita-hard)" in text
+        assert "glued_feet_board (dita-hard)" not in text and "position_menu_3way (dita-hard)" not in text

@@ -102,7 +102,11 @@ TECHNIQUE_EXCLUDED_RECENCY = ("technique_pacing_drills", "technique_relaxation_d
                               # C272: the try-hard library (comp, no-take, fall
                               # ladder, routine, commit map) is the try-hard
                               # component, not the feet / positioning stimulus.
-                              "technique_tryhard")
+                              "technique_tryhard",
+                              # C272 review: the 4-weekly benchmark is a TEST
+                              # (read on the 8-week trend), not the weekly
+                              # stimulus at limit.
+                              "technique_benchmark")
 #: ENGINEERING CONSTANT (R5, Prilepin at 85-90 %: 6-8 total reps in sets of
 #: 2-3): a heavy session needs this many effective sets of the main exercise to
 #: count as a FULL dose. Unknown set count → not penalised.

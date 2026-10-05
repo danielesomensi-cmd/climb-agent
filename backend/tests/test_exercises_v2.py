@@ -31,7 +31,7 @@ def test_version_is_2_1(exercises):
 
 
 def test_total_count(exercise_list):
-    assert len(exercise_list) == 335  # C272: +72 library-only (53 bodyweight ladder levels, 19 technique / try-hard / pocket drills) on top of C266's 263
+    assert len(exercise_list) == 336  # C272: +73 library-only (54 bodyweight ladder levels, 19 technique / try-hard / pocket drills) on top of C266's 263
 
 
 def test_all_have_canonical_prescription_fields(exercise_list):
