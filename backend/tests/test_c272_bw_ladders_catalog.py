@@ -235,20 +235,34 @@ class TestCatalogEntries:
             assert "feet" in text  # load controlled from the feet
         assert "always" in catalog["single_finger_pocket_rampup"]["prescription_defaults"]["notes"].lower()
 
-    def test_engine_selected_notes_are_unchanged(self, catalog):
-        # C272 review: rewriting the notes of exercises the engine selects for
-        # every user broke "other users bit for bit" (hanging_leg_raise even
-        # became an easier movement at the same dose). Reverted; the 90° raise
-        # is the ladder-only hanging_leg_raise_horizontal.
+    def test_engine_selected_notes_match_their_cues(self, catalog):
+        # C272 review reverted the note rewrites on engine-selected exercises
+        # (they change every user's output); C273 applied them with Daniele's
+        # OK. hanging_leg_raise stays the to-the-bar movement (the A298 history
+        # alias counts it as toes_to_bar): its cues were aligned to the note,
+        # not the other way round, so the dose keeps the same difficulty. The
+        # 90° raise is the ladder-only hanging_leg_raise_horizontal.
         notes = {eid: catalog[eid]["prescription_defaults"]["notes"]
                  for eid in ("hanging_leg_raise", "front_lever_tuck", "lock_off_isometric", "bear_crawl")}
         assert notes["hanging_leg_raise"] == "Straight legs to bar. Control the negative. No kipping."
-        assert notes["front_lever_tuck"].startswith("Advance to next progression when 4x15s is consistent.")
-        assert notes["lock_off_isometric"] == "Hold 5-10s at each angle. 90°, 120°, full lock. 3-5 sets per angle."
-        assert notes["bear_crawl"].startswith("Quadrupedia.")
+        hlr_cues = " ".join(catalog["hanging_leg_raise"]["cues"]).lower()
+        assert "parallel" not in hlr_cues and "all the way to the bar" in hlr_cues
+        assert notes["front_lever_tuck"].startswith(
+            "Advance to Front Lever (Advanced Tuck) when 4x15s is consistent.")
+        assert "front_lever_advanced_tuck" in catalog
+        assert catalog["front_lever_advanced_tuck"]["name"] == "Front Lever (Advanced Tuck)"
+        lock = notes["lock_off_isometric"]
+        assert "full lock" not in lock.lower() and "never lock off fully closed" in lock.lower()
+        assert any("never lock off fully closed" in c.lower() for c in catalog["lock_off_isometric"]["cues"])
+        assert notes["bear_crawl"].startswith("Quadruped crawl.") and "Quadrupedia" not in notes["bear_crawl"]
         core = json.loads((REPO / "backend/catalog/templates/v1/core_standard.json").read_text(encoding="utf-8"))
-        assert core["blocks"][0]["prescription"]["notes"] == (
-            "Core exercise: hollow hold, dead bug, side plank, or pallof press. Pick one.")
+        core_note = core["blocks"][0]["prescription"]["notes"]
+        assert "Pick one" not in core_note and "pool" in core_note
+        # every exercise the template excludes is named as excluded, not offered
+        excluded_sentence = core_note.rsplit(". ", 1)[-1].lower()
+        assert "left out" in excluded_sentence
+        for eid in core["blocks"][0]["rotation_exclude"]:
+            assert catalog[eid]["name"].lower() in excluded_sentence
         hz = catalog["hanging_leg_raise_horizontal"]
         assert hz["role"] == ["ladder"] and "horizontal (90°)" in hz["prescription_defaults"]["notes"]
 

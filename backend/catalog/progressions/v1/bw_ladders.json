@@ -21,7 +21,7 @@
     {
       "exercise_id": "hanging_leg_raise",
       "counts_as": "toes_to_bar",
-      "why": "the catalog note of hanging_leg_raise says 'straight legs to bar' (the toes-to-bar movement) and C272 leaves it unchanged for every user; the to-horizontal level is hanging_leg_raise_horizontal. No cut-off date: the alias holds for every log."
+      "why": "hanging_leg_raise is the straight-legs-to-bar movement (catalog note 'straight legs to bar'; C273 aligned its cues to the note); the to-horizontal level is hanging_leg_raise_horizontal. No cut-off date: the alias holds for every log."
     }
   ],
   "bands": {

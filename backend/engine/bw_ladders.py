@@ -122,8 +122,8 @@ def family_of(exercise_id: Optional[str], as_of: Optional[DateLike] = None,
     """The (family, level_idx) of an exercise logged on ``as_of``.
 
     History aliases map an exercise id onto a ladder level: ``hanging_leg_raise``
-    counts as ``toes_to_bar``, because its catalog note says "straight legs to
-    bar" (C272 review: that note is left unchanged for every user; the
+    counts as ``toes_to_bar``, because it is the straight-legs-to-bar movement
+    (catalog note "straight legs to bar"; C273 aligned its cues to the note; the
     to-horizontal level is ``hanging_leg_raise_horizontal``). An alias without
     ``before`` holds for every log; one with ``before`` (ISO date) only for logs
     before that date, and only when ``as_of`` is given."""

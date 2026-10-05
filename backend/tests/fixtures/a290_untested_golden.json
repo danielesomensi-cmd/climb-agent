@@ -1,6 +1,6 @@
 {
  "no_tests_onboarding_baselines|2026-10-05|limit_boulder_gym": {
-  "digest": "57823d4aa6d4069b0e1c3133eeb7f81b1e91bdca7ca0feb99e19d3404136f700",
+  "digest": "a21510b0190ba79d9b74a1829a1adabb664979ff22dfa76255cbed808413f46b",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
@@ -18,7 +18,7 @@
   ]
  },
  "no_tests_onboarding_baselines|2026-10-06|pulling_strength_gym": {
-  "digest": "5895f1fc2726beab27d2dc530a0296c90e05524917593317b18428281a398f9d",
+  "digest": "87441eab11a53151c21c2c474cbd588c16b6123f593908b2c45074db54cbf7c9",
   "exercise_ids": [
    "dynamic_mobility_flow",
    "general_pulse_raise",
@@ -35,7 +35,7 @@
   ]
  },
  "no_tests_onboarding_baselines|2026-10-07|power_contact_gym": {
-  "digest": "a9c3d8dff7258b293dd254488f1b3e35b02d4a79cc179e236257d8636cf34357",
+  "digest": "6b34547bcdf1a6f5a7dadbca408eeb762d800f967e30525a3ca05b6647155b26",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
@@ -53,7 +53,7 @@
   ]
  },
  "no_tests_onboarding_baselines|2026-10-09|strength_long": {
-  "digest": "5b4493d05da7be4783e2ac90ed16749d4cf45139e5c7c3f54239a1926ed0bdf1",
+  "digest": "bcb2f6e0f429fa4a395f46305a375b119ce13eec9f37029653cd4f776cd47b01",
   "exercise_ids": [
    "active_hip_mobility",
    "bear_crawl",
@@ -103,7 +103,7 @@
   ]
  },
  "no_tests_onboarding_baselines|2026-10-15|limit_boulder_gym": {
-  "digest": "28b11944506b8c557cd69727d8148b862b99ce013137e314ecbfd34e7d365b07",
+  "digest": "bc18fb7913febe3e68c17d94dfd4abd982b050a29feaf86c6a266a4421e72e58",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
@@ -121,7 +121,7 @@
   ]
  },
  "no_tests_onboarding_baselines|2026-10-17|boulder_circuit_gym": {
-  "digest": "68131a85a5c712a9f27a451c2ae4914ffc0026ff21c91d11ff862fa866508630",
+  "digest": "c3a3756dfdb5c10654cc1754c1d9d57535643e1daa882267669e817f479fac30",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
@@ -154,7 +154,7 @@
   ]
  },
  "no_tests_onboarding_baselines|2026-10-22|power_endurance_gym": {
-  "digest": "3ac6036dd4f413da29f7bd6b64194e8b0966e8dcd8b42f0d0570718731f79c04",
+  "digest": "8f75c5d094a5313b794916bfda564622639bbe2ba74b215fa77d5dfe5b5412f7",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
@@ -174,7 +174,7 @@
   ]
  },
  "no_tests_onboarding_baselines|2026-10-24|strength_long": {
-  "digest": "e5083cf8be4a0e45942d74f85086d0c4dfbde5db5500bdb239cbd896d0ddd700",
+  "digest": "418348d53c4f909e3892cc09b0bae180ce426e45a9f502a233fe2e513a650215",
   "exercise_ids": [
    "active_hip_mobility",
    "bear_crawl",
@@ -194,7 +194,7 @@
   ]
  },
  "stale_tests|2026-10-05|limit_boulder_gym": {
-  "digest": "2714a37ee03920810fda8ec21029e630596b66d3a294b8807ccb3b040ce0dada",
+  "digest": "ed81900418b8d7e26b05af1a308031c932265e63e7655737c00db5c4f2af42f4",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
@@ -212,7 +212,7 @@
   ]
  },
  "stale_tests|2026-10-06|pulling_strength_gym": {
-  "digest": "c036904bff700a1941207fe3e67aa0bac3b8050b1a45d2c6590a1ca13448f2e9",
+  "digest": "76764ada2ecd9bcfc7f818ad0367b0ed0c392f3cf6e08c8389192c777aa99514",
   "exercise_ids": [
    "dynamic_mobility_flow",
    "general_pulse_raise",
@@ -229,7 +229,7 @@
   ]
  },
  "stale_tests|2026-10-07|power_contact_gym": {
-  "digest": "a9c3d8dff7258b293dd254488f1b3e35b02d4a79cc179e236257d8636cf34357",
+  "digest": "6b34547bcdf1a6f5a7dadbca408eeb762d800f967e30525a3ca05b6647155b26",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
@@ -247,7 +247,7 @@
   ]
  },
  "stale_tests|2026-10-09|strength_long": {
-  "digest": "aa270db8f3e2e9490fdd280427bdf744585e8659a8e78069869b1d2aa953d4da",
+  "digest": "a9a9c458802f7caa4888d29f44d60c9bd6fdeea278839e886970d6ea1ab002e4",
   "exercise_ids": [
    "active_hip_mobility",
    "bear_crawl",
@@ -297,7 +297,7 @@
   ]
  },
  "stale_tests|2026-10-15|limit_boulder_gym": {
-  "digest": "28b11944506b8c557cd69727d8148b862b99ce013137e314ecbfd34e7d365b07",
+  "digest": "bc18fb7913febe3e68c17d94dfd4abd982b050a29feaf86c6a266a4421e72e58",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
@@ -315,7 +315,7 @@
   ]
  },
  "stale_tests|2026-10-17|boulder_circuit_gym": {
-  "digest": "68131a85a5c712a9f27a451c2ae4914ffc0026ff21c91d11ff862fa866508630",
+  "digest": "c3a3756dfdb5c10654cc1754c1d9d57535643e1daa882267669e817f479fac30",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
@@ -348,7 +348,7 @@
   ]
  },
  "stale_tests|2026-10-22|power_endurance_gym": {
-  "digest": "446d9471a36572f54992955fd0dcc4eb48bb565e7beebdea3eb08fb0104092da",
+  "digest": "5ab9138f3811efbaa17effc8dfcb7419217052ce778bef144bae18012fd1bc6d",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
@@ -368,7 +368,7 @@
   ]
  },
  "stale_tests|2026-10-24|strength_long": {
-  "digest": "9f3e35ec6a0fd1143b7bf5ebf8cd39e1fdacf9febdf438e8777353faae6e4413",
+  "digest": "1dc5baa45e3838315e1bb91b3b415c318aa8e27a30fa8ec164ddb4321767655d",
   "exercise_ids": [
    "active_hip_mobility",
    "bear_crawl",

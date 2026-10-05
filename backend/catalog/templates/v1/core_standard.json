@@ -15,7 +15,7 @@
       "prescription": {
         "sets_range": [3, 4],
         "rest_seconds_range": [45, 75],
-        "notes": "Core exercise: hollow hold, dead bug, side plank, or pallof press. Pick one."
+        "notes": "One core exercise, chosen and rotated by the engine from the core accessory pool that fits your equipment and limitations: anti-extension (hollow hold, L-sit, ab wheel), compression (hanging leg raise, knees to elbows, toes to bar, V-up), anti-rotation and lateral (Pallof press, side plank, suitcase carry, Copenhagen plank), front lever and more. Plank, dead bug and plank shoulder tap are left out here."
       }
     }
   ]

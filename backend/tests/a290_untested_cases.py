@@ -40,6 +40,13 @@ identical (the C272 review reverted the note rewrites on engine-selected
 exercises). ``c272_golden_cases`` pins the same claim with traces and free text
 stripped, so the next catalog addition does not need this dance there.
 
+C273 rewrote catalog free text with Daniele's OK (notes of lock_off_isometric,
+front_lever_tuck, bear_crawl, the core_standard block note, the cues of
+hanging_leg_raise). The 16 digests that carry bear_crawl or the core_standard
+note were regenerated after diffing the raw resolver output (both week_plan
+modes) against origin/main @ 155f4f6 with the same text substitutions applied:
+zero other differences, exercise_ids unchanged.
+
 Pure data + one function, importable by the generator without pytest.
 """
 

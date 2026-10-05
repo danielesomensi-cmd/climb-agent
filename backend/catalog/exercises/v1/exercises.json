@@ -3209,7 +3209,7 @@
         "work_seconds": 7,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 120,
-        "notes": "Hold 5-10s at each angle. 90°, 120°, full lock. 3-5 sets per angle."
+        "notes": "Hold 5-10s at each angle: 90° (primary) and 120° (secondary). Never lock off fully closed. 3-5 sets per angle."
       },
       "stress_tags": {
         "fingers": "low",
@@ -3646,7 +3646,7 @@
         "work_seconds": 8,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 180,
-        "notes": "Advance to next progression when 4x15s is consistent. 3 min rest is minimum — this is near-maximal isometric effort."
+        "notes": "Advance to Front Lever (Advanced Tuck) when 4x15s is consistent. 3 min rest is minimum — this is near-maximal isometric effort."
       },
       "stress_tags": {
         "fingers": "low",
@@ -3711,9 +3711,9 @@
       "cues": [
         "Start from a dead hang with shoulders actively engaged — not passive",
         "Initiate with scapular depression before hip flexion, no kipping",
-        "Aim for legs parallel to floor or higher — not just a partial lift",
+        "Straight legs all the way to the bar — stopping at horizontal is Hanging Leg Raise (to Horizontal)",
         "Slow controlled eccentric: 2-3 seconds down, avoid swinging",
-        "Progression: bent-knee raises → straight-leg parallel → toes to bar"
+        "Progression: bent-knee raises → straight legs to horizontal → straight legs to bar"
       ],
       "video_url": "https://trainingforclimbing.com/video-advanced-core-training-for-climbers/",
       "load_model": "bodyweight_only",
@@ -6218,7 +6218,7 @@
         "work_seconds": 20,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 30,
-        "notes": "Quadrupedia. Shoulder stability + coordination. Knees off ground. Slow and controlled."
+        "notes": "Quadruped crawl. Shoulder stability + coordination. Knees off ground. Slow and controlled."
       },
       "stress_tags": {
         "fingers": "none",
