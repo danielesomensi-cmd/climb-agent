@@ -1247,7 +1247,16 @@ def _position_en(pos: Mapping[str, Any]) -> str:
 def _maxima_lines_en(ctx: Mapping[str, Any]) -> List[str]:
     out: List[str] = []
     for proto, m in (ctx.get("maxima") or {}).items():
-        if not m or not m.get("tested"):
+        if not m:
+            continue
+        if not m.get("tested"):
+            # A297 review: a stale test (> TEST_FRESH_DAYS) or a baseline-only
+            # self-report stays visible — flagged as such — exactly like the
+            # pre-A297 B364 line, so the coach never reads the leftover raw
+            # baseline numbers as a current tested max.
+            out.append(f"- {_PROTOCOL_EN.get(proto, proto)}: {_fmt_kg(m.get('total_kg'))} kg total, from "
+                       f"{m.get('date')} (stale or not a test — not a current tested max; it changes ONLY "
+                       "with a test)")
             continue
         bits = [f"{_fmt_kg(m.get('total_kg'))} kg total"]
         if m.get("one_rm_kg"):
@@ -1290,7 +1299,9 @@ def _load_flags_lines_en(ctx: Mapping[str, Any]) -> List[str]:
     out: List[str] = []
     for axis, p in sorted((lf.get("pain") or {}).items()):
         out.append(f"- Pain ({p.get('site')}, score {p.get('score')}/3) active {p.get('from')} → {p.get('until')}: "
-                   f"{_AXIS_EN.get(axis, axis)} loads are reduced; keep that work submaximal and ask how it feels.")
+                   f"{_AXIS_EN.get(axis, axis)} loads are reduced and no max {_AXIS_EN.get(axis, axis)} efforts "
+                   "while it lasts (the engine removes them from ad-hoc sessions); keep that work submaximal "
+                   "and ask how it feels.")
     for axis, f in sorted((lf.get("fatigue") or {}).items()):
         out.append(f"- Fatigue: {len(f.get('hard_days') or [])} hard/very hard {_AXIS_EN.get(axis, axis)} sessions in "
                    "14 days → loads held at the phase floor.")
@@ -1531,6 +1542,77 @@ def heavy_pull_pct(state: Mapping[str, Any], exercise_id: str, day: DateLike, *,
     return _num(anch.get("pct_of_official"))
 
 
+def athlete_is_tested(ctx: Optional[Mapping[str, Any]]) -> bool:
+    """True when the athlete has at least one TESTED official max (source test
+    and < TEST_FRESH_DAYS old). DECISIONS (global): higher intensities and the
+    anchor rules apply only to tested athletes; an untested athlete's ad-hoc
+    selection stays the pre-A297 one (guards still remove, never add)."""
+    return any(bool(m and m.get("tested")) for m in ((ctx or {}).get("maxima") or {}).values())
+
+
+#: ENGINEERING CONSTANT (design choice, no published source): finger-hard /
+#: campus exercises allowed in ONE ad-hoc session — 2 normally, 1 on a
+#: low-energy day. Without it the intensity ranking stacks four campus drills
+#: or three max-hang protocols in one preview.
+MAX_FINGER_HARD_PER_SESSION = 2
+MAX_FINGER_HARD_PER_SESSION_LOW_ENERGY = 1
+
+
+def finger_hard_session_ids(catalog: Mapping[str, Mapping[str, Any]]) -> set:
+    """Exercises that count against ``MAX_FINGER_HARD_PER_SESSION``: the
+    finger-max / limit-power families, the finger-fatigue hangs and every
+    campus drill (campus_sprint_endurance included)."""
+    ids = {i for i in _finger_hard_ids() if i in catalog}
+    ids |= {str(eid) for eid in catalog if str(eid).startswith("campus_")}
+    return ids
+
+
+def _max_intensity_ids(catalog: Mapping[str, Mapping[str, Any]], domains: Iterable[str]) -> set:
+    """Catalog exercises at ``intensity_level == "max"`` in any of ``domains``
+    (bodyweight max pulls such as one_arm_pullup_assisted are not in the
+    pulling_max family, but they are a max pulling effort all the same)."""
+    want = set(domains)
+    out = set()
+    for eid, ex in catalog.items():
+        ex = ex or {}
+        if ex.get("intensity_level") != "max":
+            continue
+        dom = ex.get("domain") or []
+        if isinstance(dom, str):
+            dom = [dom]
+        if want & set(dom):
+            out.add(str(eid))
+    return out
+
+
+def cap_finger_hard(
+    exercises: List[Dict[str, Any]],
+    catalog: Mapping[str, Mapping[str, Any]],
+    energy: Optional[str],
+) -> List[str]:
+    """Remove, in place, the finger-hard / campus lines beyond the per-session
+    cap (LLM path, after validation; first ones kept). Returns ``dropped``."""
+    ids = finger_hard_session_ids(catalog)
+    cap = MAX_FINGER_HARD_PER_SESSION_LOW_ENERGY if energy == "low" else MAX_FINGER_HARD_PER_SESSION
+    n = 0
+    keep: List[Dict[str, Any]] = []
+    dropped: List[str] = []
+    for e in exercises:
+        eid = str(e.get("exercise_id"))
+        if eid in ids:
+            if n >= cap:
+                dropped.append(f"{eid}: more than {cap} finger-hard / campus exercises in one session")
+                continue
+            n += 1
+        keep.append(e)
+    exercises[:] = keep
+    return dropped
+
+
+_FINGER_DOMAINS = ("finger_strength", "finger_max_strength", "contact_strength")
+_PULLING_DOMAINS = ("strength_pulling",)
+
+
 def composer_guard_view(
     state: Mapping[str, Any],
     ctx: Mapping[str, Any],
@@ -1552,34 +1634,61 @@ def composer_guard_view(
     g = day_guard(ctx, day) if ctx else None
     out: Dict[str, Any] = {"day": None, "finger_max_ok": True, "heavy_pull_ok": True, "hiit_ok": True,
                            "exclude_ids": [], "builder_exclude_ids": [], "heavy_pull_check": False,
-                           "dropped": [], "reasons": {}}
-    if g is None:
+                           "dropped": [], "reasons": {}, "pain_axes": []}
+    day_d: Optional[date] = None
+    if day is not None:
+        day_d = _as_date(day)
+    elif ctx and ctx.get("as_of"):
+        day_d = _as_date(ctx["as_of"])
+    # A297 review: an active A295 pain block (score ≥ 2) on an axis makes the
+    # day a NO-max day on that axis, guard horizon or not — the anchored-load
+    # reduction alone never stopped the builder from picking campus / max
+    # hangs, whose loads are not anchored.
+    pain = {axis: pain_for(state, axis, day_d) for axis in (AXIS_FINGER, AXIS_PULLING)} if day_d else {}
+    pain = {a: p for a, p in pain.items() if p is not None}
+    if g is None and not pain:
         return out
-    out["day"] = g["date"]
-    out["finger_max_ok"] = bool(g.get("finger_max_ok"))
-    out["heavy_pull_ok"] = bool(g.get("heavy_pull_ok"))
-    out["hiit_ok"] = bool(g.get("hiit_ok"))
+    out["day"] = g["date"] if g is not None else day_d.isoformat()
+    out["finger_max_ok"] = bool(g.get("finger_max_ok")) if g is not None else True
+    out["heavy_pull_ok"] = bool(g.get("heavy_pull_ok")) if g is not None else True
+    out["hiit_ok"] = bool(g.get("hiit_ok")) if g is not None else True
+    finger_why = _codes_en(g.get("finger_codes") or []) if g is not None else ""
+    pull_why = _codes_en(g.get("pull_codes") or []) if g is not None else ""
+    for axis, p in sorted(pain.items()):
+        txt = f"pain {p.get('site')} {p.get('score')}/3 until {p.get('until')}"
+        out["pain_axes"].append(axis)
+        if axis == AXIS_FINGER:
+            out["finger_max_ok"] = False
+            finger_why = "; ".join(x for x in (finger_why, txt) if x)
+        else:
+            out["heavy_pull_ok"] = False
+            pull_why = "; ".join(x for x in (pull_why, txt) if x)
     excl: set = set()
     if not out["finger_max_ok"]:
-        why = _codes_en(g.get("finger_codes") or [])
-        out["reasons"]["finger"] = why
+        out["reasons"]["finger"] = finger_why
         ids = {i for i in _finger_hard_ids() if i in catalog}
+        ids |= _max_intensity_ids(catalog, _FINGER_DOMAINS)
         excl |= ids
         if ids:
-            out["dropped"].append(f"guard: max finger work left out — {why}")
+            out["dropped"].append(f"guard: max finger work left out — {finger_why}")
     builder_extra: set = set()
     if not out["heavy_pull_ok"]:
-        why = _codes_en(g.get("pull_codes") or [])
-        out["reasons"]["pull"] = why
+        out["reasons"]["pull"] = pull_why
         fl = front_lever_ids(catalog)
-        excl |= fl
+        # A297 review: a max-intensity bodyweight pull (one-arm pull-up) is a
+        # ≥85% pulling effort too, even without an anchored load to check.
+        max_pulls = _max_intensity_ids(catalog, _PULLING_DOMAINS)
+        excl |= fl | max_pulls
         if fl:
-            out["dropped"].append(f"guard: front lever left out — {why}")
+            out["dropped"].append(f"guard: front lever left out — {pull_why}")
+        if max_pulls:
+            out["dropped"].append(f"guard: max-intensity pulls left out ({', '.join(sorted(max_pulls))}) — "
+                                  f"{pull_why}")
         out["heavy_pull_check"] = True
         for eid in sorted(_pulling_max_ids()):
             if eid not in catalog:
                 continue
-            pct = heavy_pull_pct(state, eid, g["date"])
+            pct = heavy_pull_pct(state, eid, out["day"])
             if pct is not None and pct >= rp.HEAVY_PULL_PCT_1RM:
                 builder_extra.add(eid)
     out["exclude_ids"] = sorted(excl)
@@ -1624,4 +1733,6 @@ __all__ = [
     "key_requirements_for", "key_matches", "WARMUP_TECHNIQUE_DRILLS",
     "render_coach_block", "render_composer_block", "day_guard", "composer_guard_view",
     "drop_heavy_pulls", "front_lever_ids", "COACH_BLOCK_MAX_CHARS", "COMPOSER_BLOCK_MAX_CHARS",
+    "athlete_is_tested", "finger_hard_session_ids", "cap_finger_hard", "MAX_FINGER_HARD_PER_SESSION",
+    "MAX_FINGER_HARD_PER_SESSION_LOW_ENERGY",
 ]

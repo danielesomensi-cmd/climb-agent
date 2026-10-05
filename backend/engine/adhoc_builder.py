@@ -591,13 +591,41 @@ def compose_adhoc_session(
         equipment = resolve_equipment_mode(equipment_set, user_state)
     phase = _current_phase(user_state)
     guard_view: Optional[Dict[str, Any]] = None
+    # A297 review: finger-hard / campus picks are capped per session for a
+    # tested athlete (None = no cap: flag off or untested, pre-A297 path).
+    finger_hard_ids: set = set()
+    finger_hard_cap: Optional[int] = None
+    tested_ctx = False
     if athlete_ctx:
-        from datetime import datetime as _dt
+        from backend.engine.athlete_context import athlete_is_tested
 
-        from backend.engine.anchored_load import ANCHORED_EXERCISES
+        tested_ctx = athlete_is_tested(athlete_ctx)
+    if athlete_ctx and not tested_ctx:
+        # DECISIONS (global): an UNTESTED athlete keeps the pre-A297 selection
+        # bit-for-bit — same recency, same ranking, no intensity target. Only
+        # the day's guards (pain, finger gap, heavy-pull window) remove lines.
         from backend.engine.athlete_context import composer_guard_view
 
         guard_view = composer_guard_view(user_state, athlete_ctx, today, catalog_by_id)
+        recent = set(_recent_exercise_ids(user_state)) | set(guard_view.get("builder_exclude_ids") or [])
+
+        def rank(e: Dict[str, Any]) -> tuple:
+            return _rank_key(e, phase)
+    elif athlete_ctx:
+        from datetime import datetime as _dt
+
+        from backend.engine.anchored_load import ANCHORED_EXERCISES
+        from backend.engine.athlete_context import (
+            MAX_FINGER_HARD_PER_SESSION,
+            MAX_FINGER_HARD_PER_SESSION_LOW_ENERGY,
+            composer_guard_view,
+            finger_hard_session_ids,
+        )
+
+        guard_view = composer_guard_view(user_state, athlete_ctx, today, catalog_by_id)
+        finger_hard_ids = finger_hard_session_ids(catalog_by_id)
+        finger_hard_cap = (MAX_FINGER_HARD_PER_SESSION_LOW_ENERGY if energy == "low"
+                           else MAX_FINGER_HARD_PER_SESSION)
         today_d = _dt.strptime(today[:10], "%Y-%m-%d").date()
         days_since: Dict[str, int] = {}
         for eid, last in ((athlete_ctx.get("variety") or {}).get("exercise_last_date") or {}).items():
@@ -611,6 +639,15 @@ def compose_adhoc_session(
         recent = {eid for eid, n in days_since.items()
                   if eid in ANCHORED_EXERCISES and n < ANCHOR_REUSE_MIN_DAYS}
         recent |= set(guard_view.get("builder_exclude_ids") or [])
+        # DECISIONS: min_edge_hang stays out of the main work of a finger-tested
+        # athlete outside power endurance (density variant in PE only).
+        hang_tested = any(
+            bool(m and m.get("tested"))
+            for proto, m in (athlete_ctx.get("maxima") or {}).items()
+            if "hang" in str(proto)
+        )
+        if hang_tested and phase != "power_endurance":
+            recent.add("min_edge_hang")
 
         def rank(e: Dict[str, Any]) -> tuple:
             return _rank_key_ctx(e, phase, target_level, days_since.get(str(e.get("id")), NEVER_USED_DAYS))
@@ -690,6 +727,14 @@ def compose_adhoc_session(
     def _append_within_budget(candidate: Dict[str, Any]) -> bool:
         return _estimate(chosen + [candidate]) + reserved_minutes <= minutes
 
+    def _finger_cap_ok(candidate: Dict[str, Any], already: List[Dict[str, Any]]) -> bool:
+        """A297 review: per-session cap on finger-hard / campus picks (tested
+        athletes with a context only; always True otherwise)."""
+        if finger_hard_cap is None or str(candidate.get("id")) not in finger_hard_ids:
+            return True
+        n = sum(1 for e in already if str(e.get("id")) in finger_hard_ids)
+        return n < finger_hard_cap
+
     if use_body_parts:
         # A252: muscle-level main block. Constrain to the requested body-parts'
         # catalog membership (reusing body_part_picker's classification) and
@@ -735,6 +780,8 @@ def compose_adhoc_session(
                     cid = str(cand.get("id"))
                     if cid in used:
                         continue
+                    if not _finger_cap_ok(cand, chosen):
+                        continue
                     # Guarantee at least one main even on a tiny budget; after
                     # that, respect the time budget. Never pad unrelated muscles.
                     if main_picks and not _append_within_budget(cand):
@@ -756,6 +803,8 @@ def compose_adhoc_session(
                 pat = _pattern_of(c)
                 if sec_counts.get(pat, 0) >= MAX_PER_PATTERN:
                     continue
+                if not _finger_cap_ok(c, secondary_picks):
+                    continue
                 secondary_picks.append(c)
                 used.add(str(c.get("id")))
                 sec_counts[pat] = sec_counts.get(pat, 0) + 1
@@ -773,6 +822,8 @@ def compose_adhoc_session(
                 continue
             pat = _pattern_of(m)
             if pattern_counts.get(pat, 0) >= MAX_PER_PATTERN:
+                continue
+            if not _finger_cap_ok(m, chosen + secondary_picks):
                 continue
             if _append_within_budget(m):
                 chosen.append(m)
@@ -915,7 +966,7 @@ def compose_adhoc_session(
         "estimated_duration_minutes": estimate_custom_session_duration(exercises),
         # Display metadata for the coach card (not part of the stored session).
         "explanation": explanation,
-        "effort_band": (effort_band_for(phase, energy, guard_view) if guard_view is not None
+        "effort_band": (effort_band_for(phase, energy if tested_ctx else None, guard_view) if guard_view is not None
                         else effort_band_for_phase(phase)),
         "phase": phase,
         "intent": {

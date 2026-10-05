@@ -144,13 +144,20 @@ _SYSTEM = (
 _SYSTEM_CONTEXT_RULES = (
     "\n\nAn ATHLETE CONTEXT follows the request. The request decides WHAT is "
     "trained; the context constrains HOW. Respect its guards — the engine removes "
-    "the lines they forbid anyway, so picking them only shortens the session. For "
-    "an athlete at the level the context shows, exercises with intensity=low or "
-    "very_low are activation or warm-up only, never the main work. 'Harder' means "
-    "intensity first (a harder variation, fewer reps in reserve), then density, "
-    "then volume. Never swap an [ANCHOR] exercise for a variant to change its load, "
+    "the lines they forbid anyway, so picking them only shortens the session. "
+    "Never swap an [ANCHOR] exercise for a variant to change its load, "
     "and prefer alternatives to exercises marked [OVERUSED]. Loads are never yours "
     "to set: the engine sets them from the athlete's tested maxima and history."
+)
+# A297 review — DECISIONS (global): the intensity rules apply ONLY to an athlete
+# with a tested max. An untested athlete gets neither these sentences nor the
+# ``intensity=`` pool markers, so the model is not pushed toward harder work.
+_SYSTEM_CONTEXT_INTENSITY_RULES = (
+    " For an athlete at the level the context shows, exercises with intensity=low "
+    "or very_low are activation or warm-up only, never the main work. 'Harder' "
+    "means intensity first (a harder variation, fewer reps in reserve), then "
+    "density, then volume. Never stack more than two finger-hard or campus "
+    "exercises in one session (one on a low-energy day)."
 )
 
 _TOOL: Dict[str, Any] = {
@@ -231,7 +238,8 @@ def _pool_line(ex: Dict[str, Any], markers: Optional[Dict[str, Any]] = None) -> 
         bits.append("default:" + "".join(default))
     if markers is not None:
         eid = str(ex.get("id"))
-        bits.append(f"intensity={ex.get('intensity_level') or '?'}")
+        if markers.get("intensity"):
+            bits.append(f"intensity={ex.get('intensity_level') or '?'}")
         if eid in (markers.get("anchors") or set()):
             bits.append("[ANCHOR]")
         over = (markers.get("overused") or {}).get(str(ex.get("recency_group") or eid))
@@ -248,7 +256,9 @@ def _pool_markers(athlete_ctx: Optional[Dict[str, Any]]) -> Optional[Dict[str, A
     variety = athlete_ctx.get("variety") or {}
     overused = set(variety.get("overused") or [])
     counts = {g["group"]: g["count"] for g in variety.get("groups") or [] if g.get("group") in overused}
-    return {"anchors": anchors, "overused": counts}
+    from backend.engine.athlete_context import athlete_is_tested
+
+    return {"anchors": anchors, "overused": counts, "intensity": athlete_is_tested(athlete_ctx)}
 
 
 def build_pool(
@@ -547,6 +557,8 @@ def compose(
         if block:
             context += ["", block]
             system = _SYSTEM + _SYSTEM_CONTEXT_RULES
+            if markers and markers.get("intensity"):
+                system += _SYSTEM_CONTEXT_INTENSITY_RULES
     context += ["", f"EXERCISE POOL ({len(pool)} options):"]
     context += [_pool_line(ex, markers) for ex in pool]
 
@@ -590,6 +602,10 @@ def compose(
 
         dropped = list(guard_view.get("dropped") or []) + dropped
         dropped += drop_heavy_pulls(user_state, exercises, guard_view)
+        from backend.engine.athlete_context import athlete_is_tested, cap_finger_hard
+
+        if athlete_is_tested(athlete_ctx):
+            dropped += cap_finger_hard(exercises, catalog_by_id, energy)
 
     logger.info(
         "composer: proposed=%d kept=%d dropped=%s",
@@ -626,7 +642,9 @@ def compose(
     if guard_view is not None:
         from backend.engine.adhoc_prescription import effort_band_for
 
-        effort_band = effort_band_for(phase, energy, guard_view)
+        from backend.engine.athlete_context import athlete_is_tested
+
+        effort_band = effort_band_for(phase, energy if athlete_is_tested(athlete_ctx) else None, guard_view)
     session: Dict[str, Any] = {
         "adhoc": True,
         "name": name,

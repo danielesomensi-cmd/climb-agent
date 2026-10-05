@@ -94,7 +94,8 @@ def effort_band_for(
     if g.get("heavy_pull_ok") is False:
         blocked.append("heavy pulling")
     if blocked:
-        notes.append(f"{' and '.join(blocked)} submaximal today (recovery guard)")
+        why = "pain flag" if g.get("pain_axes") else "recovery guard"
+        notes.append(f"{' and '.join(blocked)} submaximal today ({why})")
     return band + (" — " + "; ".join(notes) if notes else "")
 
 

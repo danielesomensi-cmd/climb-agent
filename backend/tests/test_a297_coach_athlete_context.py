@@ -331,7 +331,9 @@ class TestComposer:
         ctx["variety"]["groups"].append({"group": "pullup_variants", "count": 4})
         out, calls = self._run(st, catalog, _proposal(self._filler(st, catalog)), today=FREE_DAY, athlete_ctx=ctx)
         system, content = calls[0]
-        assert system == session_composer._SYSTEM + session_composer._SYSTEM_CONTEXT_RULES
+        assert ac.athlete_is_tested(ctx)
+        assert system == (session_composer._SYSTEM + session_composer._SYSTEM_CONTEXT_RULES
+                          + session_composer._SYSTEM_CONTEXT_INTENSITY_RULES)
         assert content.index("ATHLETE REQUEST") < content.index("ATHLETE CONTEXT") < content.index("EXERCISE POOL")
         wp = next(l for l in content.splitlines() if l.startswith("weighted_pullup |"))
         assert "intensity=" in wp and "[ANCHOR]" in wp
@@ -489,10 +491,153 @@ class TestChatPrompt:
         st = _st()
         athlete_block._archived_weeks(st, None, date.fromisoformat(TODAY))
         assert reads  # weeks before 21/09 are not hot in the fixture
-        hot = {(date(2026, 7, 27) + timedelta(days=7 * k)).isoformat(): {} for k in range(11)}
+        # Look-back 90 + 21 + 7 = 118 d, Monday-aligned: 08/06 → 28/09 (17 weeks).
+        hot = {(date(2026, 6, 8) + timedelta(days=7 * k)).isoformat(): {} for k in range(17)}
         reads.clear()
         athlete_block._archived_weeks({"week_plans": hot}, None, date.fromisoformat(TODAY))
         assert not reads
+
+
+# ---------------------------------------------------------------------------
+# Review fixes (2026-10-05)
+# ---------------------------------------------------------------------------
+
+def _stale_tests(st):
+    """Every test of the fixture moved > TEST_FRESH_DAYS back."""
+    import json as _json
+    tests = _json.loads(_json.dumps(st.get("tests") or {}))
+    for rows in tests.values():
+        for t in rows if isinstance(rows, list) else []:
+            if isinstance(t, dict) and t.get("date"):
+                t["date"] = "2026-05-01"
+    return tests
+
+
+def _untested(st):
+    st = deepcopy(st)
+    st["tests"] = {}
+    st["baselines"] = {}
+    st["working_loads"] = {"entries": []}
+    return st
+
+
+class TestReviewFixes:
+    INTENT = {"equipment_set": "home", "focus": "pull", "minutes": 60, "energy": "high"}
+
+    def test_stale_max_stays_in_the_chat_block_flagged(self):
+        st = _st()
+        st["tests"] = _stale_tests(st)
+        ctx = _ctx(st)
+        assert any(m for m in ctx["maxima"].values()) and not ac.athlete_is_tested(ctx)
+        text = ac.render_coach_block(ctx)
+        assert "Official maxima" in text
+        assert "stale or not a test" in text and "changes ONLY with a test" in text
+
+    def test_pain_block_makes_the_day_no_max_and_is_named(self, catalog):
+        st = _st(progression_counters={"pain_blocks": {
+            "fingers": {"from": "2026-10-18", "until": "2026-11-01", "score": 3}}})
+        ctx = _ctx(st, FREE_DAY)
+        view = ac.composer_guard_view(st, ctx, FREE_DAY, catalog)
+        assert view["finger_max_ok"] is False and view["pain_axes"] == ["finger"]
+        assert {"max_hang_5s", "campus_bumps", "min_edge_hang"} <= set(view["exclude_ids"])
+        assert "pain" in view["reasons"]["finger"]
+        for focus, energy in (("pull", "low"), ("fingers", "high")):
+            out = adhoc_builder.compose_adhoc_session(
+                {**self.INTENT, "focus": focus, "energy": energy}, st, catalog, today=FREE_DAY, athlete_ctx=ctx)
+            ids = {e["exercise_id"] for e in out["exercises"]}
+            assert not (ids & set(view["exclude_ids"])), (focus, ids)
+            assert "pain flag" in out["effort_band"]
+
+    def test_pain_without_guard_row_still_applies(self, catalog):
+        st = _st(progression_counters={"pain_blocks": {
+            "fingers": {"from": "2026-10-01", "until": "2027-01-01", "score": 2}}})
+        view = ac.composer_guard_view(st, {"guards": {"days": []}}, "2026-12-01", catalog)
+        assert view["day"] == "2026-12-01" and view["finger_max_ok"] is False
+
+    def test_no_heavy_pull_day_drops_max_bodyweight_pulls(self, catalog):
+        st = _st()
+        ctx = _ctx(st, GUARDED_DAY)
+        view = ac.composer_guard_view(st, ctx, GUARDED_DAY, catalog)
+        assert view["heavy_pull_ok"] is False
+        assert "one_arm_pullup_assisted" in view["exclude_ids"]
+        assert "pullup" not in view["exclude_ids"]  # moderate pulling stays
+        out = adhoc_builder.compose_adhoc_session(dict(self.INTENT), st, catalog, today=GUARDED_DAY,
+                                                  athlete_ctx=ctx)
+        assert "one_arm_pullup_assisted" not in {e["exercise_id"] for e in out["exercises"]}
+
+    @pytest.mark.parametrize("focus,energy", [("pull", "low"), ("pull", "high"),
+                                              ("fingers", "high"), ("fingers", "low")])
+    def test_finger_hard_capped_per_session(self, catalog, focus, energy):
+        st = _st()
+        ctx = _ctx(st, FREE_DAY)
+        assert ac.athlete_is_tested(ctx)
+        out = adhoc_builder.compose_adhoc_session({**self.INTENT, "focus": focus, "energy": energy},
+                                                  st, catalog, today=FREE_DAY, athlete_ctx=ctx)
+        hard = ac.finger_hard_session_ids(catalog)
+        n = sum(1 for e in out["exercises"] if e["exercise_id"] in hard)
+        cap = ac.MAX_FINGER_HARD_PER_SESSION_LOW_ENERGY if energy == "low" else ac.MAX_FINGER_HARD_PER_SESSION
+        assert n <= cap
+
+    def test_cap_finger_hard_llm_path(self, catalog):
+        exs = [{"exercise_id": i} for i in ("campus_bumps", "max_hang_5s", "campus_touches", "pullup")]
+        dropped = ac.cap_finger_hard(exs, catalog, "low")
+        assert [e["exercise_id"] for e in exs] == ["campus_bumps", "pullup"]
+        assert len(dropped) == 2
+
+    def test_min_edge_hang_out_of_sp_for_hang_tested(self, catalog):
+        st = _st()
+        day = "2026-10-13"  # strength_power, no guard on the day
+        ctx = _ctx(st, day)
+        assert ctx["position"]["phase_id"] == "strength_power" and ac.day_guard(ctx, day)["finger_max_ok"]
+        out = adhoc_builder.compose_adhoc_session({**self.INTENT, "focus": "fingers"}, st, catalog,
+                                                  today=day, athlete_ctx=ctx)
+        ids = [e["exercise_id"] for e in out["exercises"]]
+        assert "min_edge_hang" not in ids
+        assert sum(1 for i in ids if i in ac.finger_hard_session_ids(catalog)) <= ac.MAX_FINGER_HARD_PER_SESSION
+
+    @pytest.mark.parametrize("focus,energy", [("pull", "high"), ("fingers", "high"),
+                                              ("pull", "low"), ("general_strength", "medium")])
+    def test_untested_builder_bit_for_bit(self, catalog, focus, energy):
+        """DECISIONS (global): an untested athlete's ad-hoc selection is the
+        pre-A297 one on a day without guards."""
+        st = _untested(_st())
+        ctx = _ctx(st, FREE_DAY)
+        assert not ac.athlete_is_tested(ctx)
+        assert ac.composer_guard_view(st, ctx, FREE_DAY, catalog)["exclude_ids"] == []
+        intent = {**self.INTENT, "focus": focus, "energy": energy}
+        on = adhoc_builder.compose_adhoc_session(dict(intent), st, catalog, today=FREE_DAY, athlete_ctx=ctx)
+        off = adhoc_builder.compose_adhoc_session(dict(intent), st, catalog, today=FREE_DAY)
+        assert on["exercises"] == off["exercises"]
+        assert on["effort_band"] == off["effort_band"]
+        assert on["explanation"] == off["explanation"]
+
+    def test_untested_llm_prompt_has_no_intensity_rules(self, catalog):
+        st = _untested(_st())
+        ctx = _ctx(st, FREE_DAY)
+        calls = []
+
+        def fake_extract(system, content, tool):
+            calls.append((system, content))
+            return _proposal(["pullup", "bicep_curl", "pushup", "barbell_row"])
+
+        with mock.patch.object(session_composer, "ENABLED", True), \
+                mock.patch.object(session_composer.llm_client, "extract", side_effect=fake_extract):
+            session_composer.compose("pull session", dict(TestComposer.INTENT), st, catalog,
+                                     today=FREE_DAY, athlete_ctx=ctx)
+        system, content = calls[0]
+        assert system == session_composer._SYSTEM + session_composer._SYSTEM_CONTEXT_RULES
+        assert "intensity=" not in content
+
+    def test_archive_lookback_matches_week_and_cli(self, monkeypatch):
+        from backend.api.routers import week as week_router
+
+        assert athlete_block.ARCHIVE_LOOKBACK_D == week_router._RETEST_ARCHIVE_LOOKBACK_D
+        reads = []
+        monkeypatch.setattr("backend.engine.storage.read_archived_weeks_in_range",
+                            lambda uid, a, b: reads.append((a, b)) or {})
+        athlete_block._archived_weeks({"week_plans": {}}, None, date(2026, 10, 8))
+        lo = date.fromisoformat(reads[0][0])
+        assert lo.weekday() == 0 and (date(2026, 10, 8) - lo).days >= athlete_block.ARCHIVE_LOOKBACK_D
 
 
 # ---------------------------------------------------------------------------

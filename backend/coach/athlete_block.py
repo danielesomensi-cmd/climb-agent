@@ -34,10 +34,12 @@ from typing import Any, Dict, Mapping, Optional
 
 logger = logging.getLogger(__name__)
 
-#: Look-back of the archived weeks read for the context: the variety window
-#: (3 weeks), the guards (8 days back) and the low-confidence window of a test
-#: up to ~6 weeks old (21 days before it).
-ARCHIVE_LOOKBACK_D = 63
+#: Look-back of the archived weeks read for the context: the confidence window
+#: of a test up to TEST_FRESH_DAYS old (21 days before it) + a week — the SAME
+#: 90 + 21 + 7 the /week retest policy (A289) and the A293 CLI read, so the
+#: chat never states a confidence the rest of the app contradicts. It also
+#: covers the variety window (3 weeks) and the guards (8 days back).
+ARCHIVE_LOOKBACK_D = 90 + 21 + 7
 #: Outdoor logs read for the context (try-hard window, 28 days).
 OUTDOOR_LOOKBACK_D = 28
 
@@ -56,9 +58,12 @@ def _as_date(value: Any) -> date:
 def _archived_weeks(state: Mapping[str, Any], user_id: Optional[str], day: date) -> Optional[dict]:
     """Archived weeks (A221 cold store) of the look-back window, only when a
     week of it is no longer hot. None when not needed or on failure."""
+    # Monday-aligned: the store filters on week_start >= lo, so an unaligned
+    # lo would lose the week that contains it.
     lo = day - timedelta(days=ARCHIVE_LOOKBACK_D)
+    lo = lo - timedelta(days=lo.weekday())
     hot = set((state.get("week_plans") or {}).keys())
-    wk = lo - timedelta(days=lo.weekday())
+    wk = lo
     this_monday = day - timedelta(days=day.weekday())
     missing = False
     while wk < this_monday:
