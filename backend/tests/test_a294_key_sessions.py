@@ -367,8 +367,15 @@ class TestProposals:
         days[6]["sessions"] = [_sess("evening", "custom_cs_f", is_custom=True, tags={"hard": False, "finger": True},
                                      exercises=[{"exercise_id": "max_hang_7s", "sets": 3}])]
         s = ks.compute_key_status(st, "2026-10-06")
+        assert s["proposals"]
         for p in s["proposals"]:
-            assert p["date"] != "2026-10-10"  # would sit next to the custom finger session
+            # A finger proposal on 10 would sit next to the custom finger
+            # session; the custom itself is never the target. (A301 review: a
+            # hard proposal is not put the day after another hard day either —
+            # hard_back_to_back — so the pulling key lands on Saturday's lunch.)
+            assert not (p["date"] == "2026-10-10" and "finger_max" in p["keys"])
+            assert (p["date"], p["slot"]) != ("2026-10-11", "evening")
+        assert days[6]["sessions"][0]["session_id"] == "custom_cs_f"
 
     def test_pre_test_block(self):
         st = self._skipped_strength_long()
@@ -737,7 +744,9 @@ class TestReviewFixes:
         pulls = [p for p in s["proposals"] if "pulling_max" in p["keys"]]
         for p in pulls:
             assert p["date"] not in ("2026-10-07",) and not (p["date"] == "2026-10-08" and p["slot"] != "evening")
-        assert pulls and pulls[0]["date"] == "2026-10-09"  # after the limit key, not the evening before
+        # After the limit key, not the evening before. A301 review: not the day
+        # right after it either (hard_back_to_back would be a new alert).
+        assert pulls and pulls[0]["date"] == "2026-10-10"
         clash = ks._heavy_pull_clash(self._pull_week(), ks._plan_days(self._pull_week(), None),
                                      date(2026, 10, 7), "evening", "pulling_strength_gym")
         assert clash["reason"] == "heavy_pull_before_limit" and clash["with"] == ["2026-10-08 limit_boulder_gym"]

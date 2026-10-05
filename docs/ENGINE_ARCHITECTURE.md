@@ -719,13 +719,15 @@ alert") no user action rewrites a session the user did not touch. `apply_day_add
 `_protected_neighbor_guard` are gone. What the guards object to is computed at read time by
 **`guards_v1.evaluate(plan, prev_days, today, state)`** (pure, deterministic, never persisted) and returned as a
 `guard_warnings[]` sibling of `week_plan` on `GET /api/week` and every replanner response (codes `finger_gap`,
-`finger_test_72h`, `heavy_pull_7d`, `hiit_near_max`, `hard_cap`, `pre_trip`, `post_outdoor` — see
+`finger_test_72h`, `heavy_pull_7d`, `hiit_near_max`, `hard_cap`, `pre_trip`, `post_outdoor`, `hard_back_to_back` — see
 `docs/vocabulary_v1.md` §5.7.1). Only sessions that can still change are flagged; history counts.
 
 - `_enforce_caps()` / `_enforce_no_consecutive_finger()` (via `_reconcile`) survive as a **probe** on a copy: the
   post-merge `regeneration_guard_warnings` of B369. Their counting rules (done counts, skipped not, frozen past,
   `recovery_multiplier` gap) are the same definitions `guards_v1` reads.
-- Override replaces only the targeted slot; `move_session` refuses a done/skipped destination; quick-add `force`
+- Override replaces only the targeted slot — an inferred target replaces engine sessions only, never the
+  user's; `whole_day` (default for `rest` with no index/slot, the "Skip day" button) replaces every engine
+  session of the day; `move_session` refuses a done/skipped destination; quick-add `force`
   is a no-op.
 - The planner (`generate_phase_week`), building a week on its own, still respects every guard; the A294 key
   re-schedule proposals reject a candidate that would add a guard alert (`reason: guard_alert`).

@@ -143,6 +143,9 @@ class OverrideRequest(BaseModel):
     target_date: Optional[str] = None
     gym_id: Optional[str] = None
     session_index: Optional[int] = None
+    # A301 review: replace every engine session of the day ("Skip day").
+    # None ⇒ the engine decides: True for intent "rest" with no index/slot.
+    whole_day: Optional[bool] = None
     # B360 — dove si va, quando l'override è outdoor. Opzionali: un client
     # vecchio che non li invia ottiene il placeholder, non un 422.
     spot_id: Optional[str] = None

@@ -506,3 +506,182 @@ class TestApi:
         assert "guard_warnings" not in json.dumps(saved.get("week_plans") or {})
         # Reading the alerts changes nothing in the stored plan.
         assert saved["week_plans"][mon.isoformat()] == plan
+
+
+# ---------------------------------------------------------------------------
+# A301 review — override targeting, Skip day, back-to-back alert, alert keys
+# ---------------------------------------------------------------------------
+
+def _generated(slot: str = "evening") -> dict:
+    return {"slot": slot, "session_id": "generated_bp_1", "is_generated": True, "location": "home",
+            "status": "planned", "intensity": "medium", "tags": {"hard": False, "finger": False},
+            "constraints_applied": ["generated_add"]}
+
+
+class TestOverrideTargetReview:
+    def test_inferred_override_never_replaces_the_users_evening(self):
+        """Engine lunch + the user's custom in the evening, override without
+        index/slot: the engine lunch is the target, the custom stays."""
+        plan = _plan({2: [_sess(EASY, slot="lunch"), _custom("evening")]})
+        out = apply_day_override(plan, intent="strength", location="gym", reference_date=_d(1),
+                                 target_date=_d(2))
+        wed = _day(out, 2)["sessions"]
+        assert _custom("evening") in wed
+        assert [s["slot"] for s in wed if s.get("constraints_applied") == ["manual_override"]] == ["lunch"]
+        assert EASY not in [s["session_id"] for s in wed]
+
+    @pytest.mark.parametrize("intent", ["technique", "rest", "strength"])
+    def test_lone_custom_evening_is_byte_identical(self, intent):
+        plan = _plan({2: [_custom("evening")]})
+        out = apply_day_override(plan, intent=intent, location="home", reference_date=_d(1),
+                                 target_date=_d(2))
+        wed = _day(out, 2)["sessions"]
+        assert wed[0] == _custom("evening") or _custom("evening") in wed
+        assert len(wed) == 2
+        ov = next(a for a in out["adaptations"] if a["type"] == "day_override")
+        assert "replaced_session_id" not in ov and not ov.get("replaced_slots")
+
+    def test_stacked_engine_and_generated_evening(self):
+        """B218 stack: only the engine session of the evening is replaced."""
+        plan = _plan({2: [_sess(HARD), _generated("evening")]})
+        out = apply_day_override(plan, intent="technique", location="gym", reference_date=_d(1),
+                                 target_date=_d(2))
+        wed = _day(out, 2)["sessions"]
+        assert _generated("evening") in wed
+        assert HARD not in [s["session_id"] for s in wed]
+        assert EASY in [s["session_id"] for s in wed]
+
+    def test_skip_day_replaces_every_engine_session(self):
+        """'Skip day' (rest, no index/slot): the old whole-day semantics over
+        the ENGINE sessions — lunch and evening both go; nothing the user owns
+        or did is touched; the regeneration does not bring them back."""
+        from backend.engine.replanner_v1 import regenerate_preserving_completed
+
+        base = {2: [_sess(EASY, slot="lunch"), _sess(LIMIT)]}
+        out = apply_day_override(_plan(base), intent="rest", location="home", reference_date=_d(1),
+                                 target_date=_d(2))
+        wed = _day(out, 2)["sessions"]
+        assert [(s["slot"], s["session_id"]) for s in wed] == [("evening", "regeneration_easy")]
+        ov = next(a for a in out["adaptations"] if a["type"] == "day_override")
+        assert ov["whole_day"] is True and ov["replaced_slots"] == ["lunch", "evening"]
+        regen = regenerate_preserving_completed(out, _plan(base))
+        assert _day(regen, 2)["sessions"] == wed
+
+    def test_skip_day_keeps_user_and_done_sessions(self):
+        plan = _plan({2: [_sess(EASY, slot="morning", status="done"), _custom("lunch"), _sess(LIMIT)]})
+        out = apply_day_override(plan, intent="rest", location="home", reference_date=_d(1),
+                                 target_date=_d(2))
+        wed = _day(out, 2)["sessions"]
+        assert wed[0] == _day(plan, 2)["sessions"][0]
+        assert wed[1] == _custom("lunch")
+        assert wed[2]["session_id"] == "regeneration_easy"
+        _unchanged_except(plan, out, {_d(2)})
+
+    def test_whole_day_flag_is_explicit(self):
+        base = {2: [_sess(EASY, slot="lunch"), _sess(LIMIT)]}
+        only_evening = apply_day_override(_plan(base), intent="rest", location="home", reference_date=_d(1),
+                                          target_date=_d(2), whole_day=False)
+        assert [s["session_id"] for s in _day(only_evening, 2)["sessions"]] == [EASY, "regeneration_easy"]
+        whole = apply_day_override(_plan(base), intent="technique", location="gym", reference_date=_d(1),
+                                   target_date=_d(2), whole_day=True)
+        assert [s["session_id"] for s in _day(whole, 2)["sessions"]] == [EASY]
+        assert _day(whole, 2)["sessions"][0]["constraints_applied"] == ["manual_override"]
+
+    def test_skip_day_on_a_done_day_is_refused(self):
+        plan = _plan({2: [_sess(LIMIT, status="done")]})
+        with pytest.raises(ValueError, match="already completed/skipped"):
+            apply_day_override(plan, intent="rest", location="home", reference_date=_d(1), target_date=_d(2))
+
+
+class TestHardBackToBack:
+    def test_quick_add_the_day_before_an_engine_hard_day(self):
+        plan = _plan({2: [_sess(HARD)]})
+        out, warnings, _adj = apply_day_add(plan, session_id=HARD, target_date=_d(1), slot="evening",
+                                            location="gym")
+        alerts = guards_v1.evaluate(out)
+        assert _codes(alerts) == [("hard_back_to_back", _d(2), HARD)]
+        assert alerts[0]["with"] == [{"date": _d(1), "slot": "evening", "session_id": HARD}]
+        assert any("back-to-back" in w for w in warnings)
+
+    def test_override_next_to_an_engine_hard_day(self):
+        plan = _plan({1: [_sess(EASY)], 2: [_sess(HARD)]})
+        out = apply_day_override(plan, intent="power_endurance", location="gym", reference_date=_d(0),
+                                 target_date=_d(1))
+        assert ("hard_back_to_back", _d(2)) in {(w["code"], w["date"]) for w in guards_v1.evaluate(out)}
+
+    def test_engine_pairs_are_not_flagged(self):
+        assert guards_v1.evaluate(_plan({1: [_sess(HARD)], 2: [_sess(HARD)]})) == []
+
+    def test_hiit_is_not_hard(self):
+        plan = _plan({1: [_sess(HIIT, slot="lunch", constraints_applied=["quick_add"])], 2: [_sess(HARD)]})
+        assert [w for w in guards_v1.evaluate(plan) if w["code"] == "hard_back_to_back"] == []
+
+    def test_done_side_is_never_flagged(self):
+        plan = _plan({1: [_sess(HARD, constraints_applied=["quick_add"])], 2: [_sess(HARD, status="done")]})
+        alerts = guards_v1.evaluate(plan)
+        assert _codes(alerts) == [("hard_back_to_back", _d(1), HARD)]
+
+
+def test_new_warnings_over_the_cap_on_an_already_hard_day():
+    """A week already over the cap: one more hard session on a day that is
+    already hard adds no hard day, so no alert is 'new'."""
+    before_plan = _plan({0: [_sess(HARD)], 2: [_sess(HARD)], 4: [_sess(HARD)], 6: [_sess(HARD)]}, hard_cap=2)
+    after_plan = copy.deepcopy(before_plan)
+    _day(after_plan, 0)["sessions"].append(_sess(HARD, slot="lunch"))
+    before, after = guards_v1.evaluate(before_plan), guards_v1.evaluate(after_plan)
+    assert [w["with"] for w in before] != [w["with"] for w in after]  # the `with` lists did change
+    assert guards_v1.new_warnings(before, after) == []
+
+
+class TestApiReview:
+    def test_quick_add_warnings_read_the_state(self, isolated_state):
+        mon = _current_monday()
+        state = deps.load_state(None)
+        state["trips"] = [{"start_date": _d(5, mon), "end_date": _d(9, mon), "name": "Kalymnos"}]
+        deps.save_state(state, None)
+        plan = _plan({}, start=mon)
+        _seed(plan)
+        r = client.post("/api/replanner/quick-add", json={
+            "week_plan": plan, "session_id": HARD, "target_date": _d(3, mon), "slot": "evening",
+            "location": "gym", "today": mon,
+        })
+        assert r.status_code == 200, r.text
+        body = r.json()
+        pre = [w["message"] for w in body["guard_warnings"] if w["code"] == "pre_trip" and w["date"] == _d(3, mon)]
+        assert pre and all(m in body["warnings"] for m in pre)
+
+    def test_override_warnings_are_the_overridden_slot_only(self, isolated_state):
+        mon = _current_monday()
+        plan = _plan({1: [_sess(FINGER)], 2: [_sess(LIMIT, slot="lunch"), _sess(EASY)]}, start=mon)
+        _seed(plan)
+        r = client.post("/api/replanner/override", json={
+            "week_plan": plan, "intent": "technique", "location": "gym",
+            "reference_date": _d(1, mon), "target_date": _d(2, mon), "session_index": 1, "today": mon,
+        })
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert any(w["code"] == "finger_gap" and w["slot"] == "lunch" for w in body["guard_warnings"])
+        assert body["warnings"] == []
+
+    def test_skip_day_through_the_api(self, isolated_state):
+        mon = _current_monday()
+        plan = _plan({2: [_sess(EASY, slot="lunch"), _sess(LIMIT)]}, start=mon)
+        _seed(plan)
+        r = client.post("/api/replanner/override", json={
+            "week_plan": plan, "intent": "rest", "location": "home",
+            "reference_date": _d(1, mon), "target_date": _d(2, mon), "today": mon,
+        })
+        assert r.status_code == 200, r.text
+        wed = r.json()["week_plan"]["weeks"][0]["days"][2]["sessions"]
+        assert [s["session_id"] for s in wed] == ["regeneration_easy"]
+
+    def test_events_surface_a_lost_finger_session(self, isolated_state):
+        mon = _current_monday()
+        plan = _plan({1: [_sess(LIMIT)]}, start=mon)
+        _seed(plan)
+        r = client.post("/api/replanner/events", json={
+            "week_plan": plan, "today": mon,
+            "events": [{"event_type": "change_gym", "date": _d(1, mon), "location": "home"}],
+        })
+        assert r.status_code == 200, r.text
+        assert any("finger session lost" in w for w in r.json()["warnings"])

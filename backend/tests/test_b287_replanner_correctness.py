@@ -305,7 +305,8 @@ class TestR8DoneSessionsAreConstraints:
 
         assert _session_on(updated, 1)["session_id"] == FINGER_SESSION
         assert adjustments == []
-        assert [w["code"] for w in guards_v1.evaluate(updated)] == ["finger_gap"]
+        # A301 review: and the hard day right after a hard one is said too.
+        assert [w["code"] for w in guards_v1.evaluate(updated)] == ["finger_gap", "hard_back_to_back"]
 
 
 # ── R-6: pause-aware current-week anchor ────────────────────────────────────

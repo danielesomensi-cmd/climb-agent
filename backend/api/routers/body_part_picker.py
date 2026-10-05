@@ -78,6 +78,9 @@ class StartRequest(PreviewRequest):
     target_date: str
     slot: str = "evening"
     location: str = "home"
+    # A301 review: client-local date (YYYY-MM-DD) for the guard alerts' today
+    # floor, as every other endpoint. Optional: absent ⇒ server clock.
+    today: Optional[str] = None
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────
@@ -219,7 +222,7 @@ def start(req: StartRequest, user_id: Optional[str] = Depends(get_user_id)):
     from backend.api.guard_status import build_guard_warnings
 
     return {"session": inserted, "week_plan": updated,
-            "guard_warnings": build_guard_warnings(state, updated, None)}
+            "guard_warnings": build_guard_warnings(state, updated, req.today)}
 
 
 @router.get("/estimate", dependencies=[Depends(require_active_subscription)])

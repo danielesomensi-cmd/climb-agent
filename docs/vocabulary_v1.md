@@ -1490,20 +1490,35 @@ GuardWarning (backend/engine/guards_v1.py, computed at read, NEVER persisted):
                            past the cap; + count, cap
        | pre_trip          hard session on a compute_taper_windows no_hard day (needs state.trips)
        | post_outdoor      hard/finger session the day after a done outdoor day with load ≥ 65; + outdoor_load
+       | hard_back_to_back hard session (HIIT is not hard) the day after a hard day, when at least one of the two
+                           is user-owned (a pair the planner made alone is not flagged); the later one is
+                           flagged, the earlier when the later is done/past (A301 review)
   Only sessions that can still change are flagged (not done/skipped, not before `today`); history counts.
 ```
 
 Where they surface: `guard_warnings[]` sibling of `week_plan` (like `key_status`) on `GET /api/week/{n}`,
 `POST /api/replanner/override`, `/quick-add`, `/events` (dry run too, plus `added_guard_warnings[]` = the alerts
 the events ADD, from `key_sessions_v1.check_insertion`) and `POST /api/body-part-picker/start`. The legacy
-`warnings[]` strings of quick-add / override carry the messages of the alerts that involve the touched day.
+`warnings[]` strings of quick-add / override carry the messages of the alerts that involve the touched session
+(its date + slot; the whole date for a whole-day / outdoor override). Quick-add evaluates them with the user state,
+like `guard_warnings` (A301 review). `/events` adds `warnings[]`: the notes of the call's `change_gym` events (a
+lost finger session). `POST /api/body-part-picker/start` accepts an optional client-local `today`.
+`guards_v1.new_warnings` keys `hard_cap` / `heavy_pull_7d` on the flagged session only (their `with` is every
+other counted day).
 
 Other A301 semantics:
-- **Override = one slot.** `session_index`'s slot, else `slot`, else the day's only session when it is an engine
-  session, else `evening`. Other sessions of the day stay (a user-owned one is replaced only through its own
-  slot); done/skipped blocks only the targeted slot. `day_override.whole_day` is always `false`; the adaptation
-  names `replaced_session_id` + `replaced_slot` (one session) or `replaced_slots: [slot]` (several in that slot),
-  and `warnings: ["finger session replaced on … — not compensated elsewhere"]` when a finger session was lost.
+- **Override = one slot.** `session_index`'s session, else every session of `slot`. With neither the slot is
+  INFERRED from the day's pending ENGINE sessions (the only one's slot, else `evening` if one is there, else the
+  first one's, else `evening`) and only engine sessions of that slot are replaced — a user-owned session is never
+  replaced by inference (with nothing replaceable the new session is added next to it). Done/skipped blocks
+  only the targeted slot (and only when nothing there is replaceable, for an inferred target).
+- **`whole_day`** (A301 review, `OverrideRequest.whole_day: bool | null`): every pending ENGINE session of the
+  day is replaced by the one new session (evening if one was there); user-owned and done/skipped sessions stay;
+  422 when nothing is replaceable and the day holds a done/skipped session. `null` ⇒ `true` for `intent: "rest"`
+  sent without `session_index`/`slot` — the "Skip day" button. The adaptation records `whole_day`, `slot` (the
+  new session's), `replaced_session_id` + `replaced_slot` (one session, slot override) or `replaced_slots`
+  (always, for whole-day), and `warnings: ["finger session replaced on … — not compensated elsewhere"]` when a
+  finger session was lost.
   An outdoor override keeps the day's user-owned sessions and drops the engine's.
 - **`move_session`** onto a done/skipped session → `ValueError` → 422. A planned session there (engine or the
   user's) is replaced, as before.

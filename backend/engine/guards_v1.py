@@ -45,6 +45,11 @@ Codes (one warning per flagged session):
 - ``post_outdoor`` — a hard or finger session the day after a completed
   outdoor day whose load reached ``OUTDOOR_RIPPLE_THRESHOLD`` (the old outdoor
   ripple, now an alert).
+- ``hard_back_to_back`` — a hard session the day after a hard day, when at
+  least one of the two is the user's (quick-add, override, custom, moved…):
+  the old quick-add / override day+1 ripple and B366's "back-to-back hard
+  days" warning, now an alert. A pair the planner made on its own is not
+  flagged (the planner's spacing is its own business).
 
 HIIT is not hard (C274 / A300: it never consumes the hard-day or finger cap),
 so it never appears under ``hard_cap`` / ``pre_trip``.
@@ -62,7 +67,7 @@ from backend.engine.stimulus import (
     session_flag,
 )
 
-VERSION = "a301.1"
+VERSION = "a301.2"
 
 CODE_FINGER_GAP = "finger_gap"
 CODE_FINGER_TEST = "finger_test_72h"
@@ -71,11 +76,16 @@ CODE_HIIT_NEAR_MAX = "hiit_near_max"
 CODE_HARD_CAP = "hard_cap"
 CODE_PRE_TRIP = "pre_trip"
 CODE_POST_OUTDOOR = "post_outdoor"
+CODE_HARD_BACK_TO_BACK = "hard_back_to_back"
 
 CODES = (
     CODE_FINGER_GAP, CODE_FINGER_TEST, CODE_HEAVY_PULL, CODE_HIIT_NEAR_MAX,
-    CODE_HARD_CAP, CODE_PRE_TRIP, CODE_POST_OUTDOOR,
+    CODE_HARD_CAP, CODE_PRE_TRIP, CODE_POST_OUTDOOR, CODE_HARD_BACK_TO_BACK,
 )
+
+#: Codes whose ``with`` lists every other day of a weekly / rolling count:
+#: adding a session elsewhere changes ``with`` without changing the alert.
+_COUNT_CODES = (CODE_HARD_CAP, CODE_HEAVY_PULL)
 
 _SLOTS = ("morning", "lunch", "evening")
 
@@ -346,6 +356,36 @@ def _post_outdoor(tl: _Timeline, em: _Emitter, threshold: int) -> None:
                     outdoor_load=int(load))
 
 
+def _is_hard(s: Mapping[str, Any]) -> bool:
+    # HIIT is never hard (C274 / A300).
+    return session_flag(s, "hard") and not is_hiit_like(s)
+
+
+def _hard_back_to_back(tl: _Timeline, em: _Emitter) -> None:
+    from backend.engine.user_owned import is_user_owned
+
+    for d_iso in tl.plan_dates:
+        d = _parse(d_iso)
+        prev = (d - timedelta(days=1)).isoformat()
+        earlier = [s for s in tl.by_date.get(prev, []) if _is_hard(s)]
+        if not earlier:
+            continue
+        for s in tl.on(d):
+            if not _is_hard(s):
+                continue
+            pair = [e for e in earlier if is_user_owned(s) or is_user_owned(e)]
+            if not pair:
+                continue
+            msg = (f"{_label(s)} on {d_iso} is a hard session the day after "
+                   f"{_label(pair[0])} on {prev}: back-to-back hard days.")
+            if em.flaggable(d_iso, s):
+                em.emit(CODE_HARD_BACK_TO_BACK, d_iso, s, [_ref(prev, e) for e in pair], msg)
+            else:
+                for e in pair:
+                    if em.flaggable(prev, e):
+                        em.emit(CODE_HARD_BACK_TO_BACK, prev, e, [_ref(d_iso, s)], msg)
+
+
 def evaluate(
     plan: Optional[Mapping[str, Any]],
     prev_days: Optional[Sequence[Mapping[str, Any]]] = None,
@@ -378,6 +418,7 @@ def evaluate(
     if st:
         _pre_trip(plan, em, st)
     _post_outdoor(tl, em, OUTDOOR_RIPPLE_THRESHOLD)
+    _hard_back_to_back(tl, em)
 
     order = {c: i for i, c in enumerate(CODES)}
     return sorted(em.out, key=lambda w: (w["date"], _slot_index(w.get("slot")),
@@ -398,10 +439,15 @@ def involves(warning: Mapping[str, Any], date_iso: str, slot: Optional[str] = No
 def new_warnings(before: Sequence[Mapping[str, Any]], after: Sequence[Mapping[str, Any]]
                  ) -> List[Dict[str, Any]]:
     """The warnings of *after* that *before* did not have (same code, flagged
-    session and other side)."""
+    session and other side). ``hard_cap`` / ``heavy_pull_7d`` are keyed on the
+    flagged session only: their ``with`` is every other counted day, so an
+    addition elsewhere would make every existing one look new."""
     def key(w: Mapping[str, Any]) -> Tuple:
-        return (w.get("code"), w.get("date"), w.get("slot"), w.get("session_id"),
-                tuple((x.get("date"), x.get("slot"), x.get("session_id")) for x in w.get("with") or []))
+        head = (w.get("code"), w.get("date"), w.get("slot"), w.get("session_id"))
+        if w.get("code") in _COUNT_CODES:
+            return head
+        return head + (tuple((x.get("date"), x.get("slot"), x.get("session_id"))
+                             for x in w.get("with") or []),)
 
     seen = {key(w) for w in before}
     return [dict(w) for w in after if key(w) not in seen]

@@ -320,6 +320,7 @@ def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)
             gym_id=req.gym_id,
             gyms=gyms,
             session_index=req.session_index,
+            whole_day=req.whole_day,
             # B360 — la falesia scelta nel dialog, non l'intent
             spot_id=req.spot_id,
             spot_name=req.spot_name,
@@ -346,13 +347,19 @@ def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)
     adjustments: list = []
     warnings: list = []
     target_date = None
+    target_slot = None
+    whole = False
     for a in (updated.get("adaptations") or [])[_n_adapt_before:]:
         if a.get("type") == "day_override":
             adjustments.extend(a.get("adjustments") or [])
             warnings.extend(a.get("warnings") or [])
             target_date = a.get("target_date") or target_date
+            target_slot = a.get("slot") or target_slot
+            whole = bool(a.get("whole_day") or a.get("outdoor")) or whole
     guard_warnings = build_guard_warnings(state, updated, req.today)
-    warnings.extend(messages_for(guard_warnings, target_date))
+    # Only the alerts that involve the overridden session (its slot; the whole
+    # day for a whole-day / outdoor override) — not the other slot's.
+    warnings.extend(messages_for(guard_warnings, target_date, None if whole else target_slot))
 
     return {"week_plan": updated, "adjustments": adjustments, "warnings": warnings,
             "guard_warnings": guard_warnings,
@@ -440,6 +447,8 @@ def quick_add(req: QuickAddRequest, user_id: Optional[str] = Depends(get_user_id
             # B367: days before the athlete's today are frozen (A294 review fix,
             # until now applied to /events only).
             today=resolve_today(req.today),
+            # A301 review: the same state the response's guard_warnings read.
+            state=state,
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
@@ -722,12 +731,18 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
     # "reconcile" records). The guard alerts and the key status are siblings
     # of week_plan.
     adjustments: list = []
+    # A301 review: the notes of THIS call's events (a change of gym that lost
+    # the finger session says so — nothing compensates it any more).
+    warnings: list = []
     for a in (updated.get("adaptations") or [])[_n_adapt_before:]:
         if a.get("type") == "reconcile":
             adjustments.extend(a.get("adjustments") or [])
+        elif a.get("type") == "change_gym":
+            warnings.extend(a.get("warnings") or [])
     return {
         "week_plan": updated,
         "adjustments": adjustments,
+        "warnings": warnings,
         "guard_warnings": build_guard_warnings(state, updated, req.today),
         "key_status": build_key_status(state, user_id, week_start=updated.get("start_date"), today=req.today),
     }

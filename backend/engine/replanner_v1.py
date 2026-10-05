@@ -438,6 +438,7 @@ def apply_day_add(
     force: bool = False,
     prev_days: Optional[Sequence[Dict[str, Any]]] = None,
     today: Optional[str] = None,
+    state: Optional[Dict[str, Any]] = None,
 ) -> tuple:
     """Append a session to an existing day (quick-add).
 
@@ -451,7 +452,9 @@ def apply_day_add(
     alerts that involve the added session (``guards_v1``), plus the weekly hard
     cap message. *force* is a no-op compatibility flag: every quick-add is
     applied, so there is nothing left to force. *prev_days* / *today* only
-    feed the alerts (Sunday→Monday gap; nothing before today is flagged).
+    feed the alerts (Sunday→Monday gap; nothing before today is flagged);
+    *state* too (heavy-pull loads read against the athlete's 1RM, pre-trip) —
+    the router passes it so ``warnings`` agree with its ``guard_warnings``.
     """
     del force  # A301: compatibility only — the add always goes through.
     # --- Input validation ---
@@ -496,7 +499,7 @@ def apply_day_add(
     target_day["sessions"].sort(key=_session_sort_key)
 
     warnings = _hard_cap_warnings(updated) + _guard_messages(
-        updated, prev_days, today, target_date, slot, skip_codes=("hard_cap",),
+        updated, prev_days, today, target_date, slot, skip_codes=("hard_cap",), state=state,
     )
 
     updated["adaptations"].append({
@@ -532,13 +535,14 @@ def _guard_messages(
     slot: Optional[str],
     *,
     skip_codes: Sequence[str] = (),
+    state: Optional[Dict[str, Any]] = None,
 ) -> List[str]:
     """A301: the messages of the guard alerts that involve the session the
     user just placed at *date_iso* / *slot* (flagged, or the other side)."""
     from backend.engine import guards_v1
 
     try:
-        alerts = guards_v1.evaluate(plan, prev_days, today)
+        alerts = guards_v1.evaluate(plan, prev_days, today, state)
     except Exception:  # an alert never breaks a user action
         logger.warning("A301: guard alerts failed", exc_info=True)
         return []
@@ -1805,18 +1809,29 @@ def apply_day_override(
     # ⇒ old behaviour.
     prev_days: Optional[Sequence[Dict[str, Any]]] = None,
     today: Optional[str] = None,
+    # A301 review: replace every ENGINE session of the day (the "Skip day"
+    # button). None ⇒ True for ``intent == "rest"`` sent without index/slot
+    # (what that button sends), False otherwise.
+    whole_day: Optional[bool] = None,
 ) -> Dict[str, Any]:
     """Replace the session of one slot of a day by intent (or make the day
     outdoor).
 
     A301 (guards are alerts):
 
-    - the override replaces only the TARGETED slot: ``session_index``'s slot,
-      else *slot*, else the only session of the day when it is the engine's,
-      else the evening. Every
-      other session of the day stays — a user-owned one is replaced only when
-      its slot is the target. (It used to replace the whole day when no
-      ``session_index`` was sent, the user's custom sessions included.)
+    - the override replaces only the TARGETED slot: ``session_index``'s
+      session, else every session of *slot*. With neither, the slot is
+      INFERRED from the engine's pending sessions (the only one's slot, else
+      the evening when an engine session is there, else the first engine
+      session's slot, else the evening) and only ENGINE sessions of that slot
+      are replaced — a user-owned session (custom, forced, quick-add,
+      override, moved, edited) is never replaced by inference; with nothing
+      replaceable the new session is added next to it.
+    - *whole_day* (default: ``intent == "rest"`` with no index/slot — the
+      "Skip day" button): every pending ENGINE session of the day is replaced
+      by the one new session; user-owned and done/skipped sessions stay.
+    - B120: a done/skipped session is never overwritten; with nothing
+      replaceable and a done/skipped session in the target, it is a 422.
     - nothing else in the week moves: no day+1/day+2 recovery ripple, no
       finger compensation on another day, no reconcile downshift, no neighbour
       guard downshifting the override itself. ``adjustments`` / ``warnings``
@@ -1951,9 +1966,17 @@ def apply_day_override(
 
     original_sessions = list(target_day.get("sessions") or [])
 
-    # A301: the slot this override targets — the session_index's slot, else
-    # the slot asked for, else the day's only (engine) session's, else the
-    # evening.
+    def _slot_of(s: Dict[str, Any]) -> str:
+        return s.get("slot") or "evening"
+
+    def _done(s: Dict[str, Any]) -> bool:
+        return s.get("status") in ("done", "skipped")
+
+    # A301: what this override targets — see the docstring.
+    inferred = session_index is None and slot is None
+    if whole_day is None:
+        whole_day = inferred and intent == "rest"
+    whole_day = bool(whole_day) and session_index is None and slot is None
     if session_index is not None:
         if not (0 <= session_index < len(original_sessions)):
             raise ValueError(
@@ -1961,28 +1984,47 @@ def apply_day_override(
                 f"(day has {len(original_sessions)} sessions)"
             )
         indexed = original_sessions[session_index]
-        if indexed.get("status") in ("done", "skipped"):
+        if _done(indexed):
             # B120: immutability pillar.
             raise ValueError(
                 f"Cannot override session at index {session_index}: "
                 f"status is '{indexed['status']}'"
             )
         if slot is None:
-            slot = indexed.get("slot") or "evening"
+            slot = _slot_of(indexed)
         replaced = [indexed]
     else:
-        if slot is None:
-            # The day's only session is the target when it is the engine's;
-            # a session the user owns is replaced only through its own slot
-            # (session_index / slot), never by inference.
-            only = original_sessions[0] if len(original_sessions) == 1 else None
-            slot = (only.get("slot") or "evening") if only is not None and not _uo.is_user_owned(only) else "evening"
-        replaced = [s for s in original_sessions if (s.get("slot") or "evening") == slot]
-        done_there = [s for s in replaced if s.get("status") in ("done", "skipped")]
+        # Engine sessions that can still change: the only ones an inferred
+        # target may replace.
+        engine = [s for s in original_sessions if not _done(s) and not _uo.is_user_owned(s)]
+        if whole_day:
+            replaced = engine
+            if any(_slot_of(s) == "evening" for s in engine) or not engine:
+                slot = "evening"
+            else:
+                slot = _slot_of(engine[0])
+            done_there = [s for s in original_sessions if _done(s)] if not replaced else []
+            where = f"day {target_key}"
+        else:
+            if slot is None:
+                if len(engine) == 1:
+                    slot = _slot_of(engine[0])
+                elif any(_slot_of(s) == "evening" for s in engine) or not engine:
+                    slot = "evening"
+                else:
+                    slot = _slot_of(engine[0])
+                replaced = [s for s in engine if _slot_of(s) == slot]
+            else:
+                # An explicit slot is the user's target: everything there.
+                replaced = [s for s in original_sessions if _slot_of(s) == slot]
+            done_there = [s for s in original_sessions if _slot_of(s) == slot and _done(s)]
+            if inferred and replaced:
+                done_there = []  # the engine session goes, the done one stays
+            where = f"{target_key} {slot}"
         if done_there:
-            # B120: immutability pillar — only the targeted slot is checked.
+            # B120: immutability pillar.
             raise ValueError(
-                f"Cannot override {target_key} {slot}: "
+                f"Cannot override {where}: "
                 f"{len(done_there)} session(s) already completed/skipped"
             )
 
@@ -2012,7 +2054,11 @@ def apply_day_override(
     # B369 review: what the override took off the day, so a regeneration does
     # not bring it back. A301: always the targeted slot only.
     replaced_info: Dict[str, Any] = {}
-    if len(replaced) == 1:
+    if whole_day:
+        if replaced:
+            replaced_info = {"replaced_slots": sorted({_slot_of(s) for s in replaced},
+                                                      key=lambda x: _session_sort_key({"slot": x}))}
+    elif len(replaced) == 1:
         replaced_info = {
             "replaced_session_id": replaced[0].get("session_id"),
             "replaced_slot": replaced[0].get("slot") or "evening",
@@ -2025,8 +2071,11 @@ def apply_day_override(
             "type": "day_override",
             "reference_date": reference_date,
             "target_date": target_key,
-            # A301: never the whole day any more — only the targeted slot.
-            "whole_day": False,
+            # A301: the targeted slot only, unless whole_day (engine sessions
+            # of the day — always recorded with replaced_slots, so it is never
+            # read as a legacy whole-date override).
+            "whole_day": bool(whole_day),
+            "slot": slot,
             **replaced_info,
             # A301: nothing rewritten around the override (alerts are computed
             # at read time by guards_v1). Kept as empty lists for the contract.
