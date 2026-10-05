@@ -230,6 +230,13 @@ export interface WeekPlan {
   unmet_secondary?: UnmetSecondary[];
   /** A300 — lunch placement rules the week breaks (alerts only, nothing moved). */
   secondary_warnings?: SecondaryWarning[];
+  /** Monday of the week (YYYY-MM-DD). */
+  start_date?: string;
+  /**
+   * B371 — monotonic revision of the stored week. Every write sends it back as
+   * `base_revision`; a stale one gets a 409 (`StalePlanError`).
+   */
+  plan_revision?: number;
 }
 
 // ── A300 — adaptive structure (slot roles + complementary rotation) ─────────

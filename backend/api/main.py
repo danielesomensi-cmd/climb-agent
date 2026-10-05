@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
+from backend.api.plan_revision import StalePlanError
 from backend.api.rate_limit import limiter
 
 from backend.api.deps import DATA_DIR, USERS_DIR
@@ -124,6 +125,13 @@ app.add_middleware(
 # /api/state/status, 29B) skip compression overhead. No streaming/SSE endpoints
 # exist, so there is nothing to double-compress or break.
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+
+@app.exception_handler(StalePlanError)
+async def stale_plan_handler(request: Request, exc: StalePlanError):
+    """B371: the client edited an older revision of the week → 409 with the
+    stored revision (and plan), never a silent overwrite."""
+    return JSONResponse(status_code=409, content=exc.payload())
 
 
 @app.exception_handler(Exception)

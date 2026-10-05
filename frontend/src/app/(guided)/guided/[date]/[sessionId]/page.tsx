@@ -11,6 +11,7 @@ import { GuidedExerciseStep } from "@/components/guided/guided-exercise-step";
 import { GuidedSummary } from "@/components/guided/guided-summary";
 import { postFeedback, getState } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
+import { writeWeekCache } from "@/lib/week-cache";
 import { buildGuidedFeedbackItems } from "@/lib/feedback-items";
 import { guidedStorageKey } from "@/lib/guided-session-utils";
 import { unlockAudio, getAudioContext } from "@/lib/audio-unlock";
@@ -447,13 +448,10 @@ export default function GuidedSessionPage() {
         // paint — no refetch round-trip needed. State cache is invalidated so
         // progression working_loads get picked up on next read.
         if (response.week_plan) {
-          qc.setQueryData<{
-            week_num: number;
-            phase_id: string;
-            week_plan: WeekPlan;
-          }>(queryKeys.week(0), (old) =>
-            old ? { ...old, week_plan: response.week_plan as WeekPlan } : old,
-          );
+          // B371: mirrored onto the week(N) alias too (the revision moved).
+          if (qc.getQueryData(queryKeys.week(0))) {
+            writeWeekCache(qc, 0, response.week_plan as WeekPlan);
+          }
         } else {
           // Fallback: force a refetch if the backend could not return a plan
           await qc.refetchQueries({ queryKey: queryKeys.weekAll });

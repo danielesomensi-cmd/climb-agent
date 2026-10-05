@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { postFeedback } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
+import { writeWeekCache } from "@/lib/week-cache";
 import type { WeekPlan } from "@/lib/types";
 
 /**
@@ -30,13 +31,12 @@ export function useFeedback() {
     mutationFn: postFeedback,
     onSuccess: (data) => {
       if (data.week_plan) {
-        qc.setQueryData<{
-          week_num: number;
-          phase_id: string;
-          week_plan: WeekPlan;
-        }>(queryKeys.week(0), (old) =>
-          old ? { ...old, week_plan: data.week_plan as WeekPlan } : old,
-        );
+        // B371: also the week(N) alias — the feedback moved the plan's
+        // revision, and a stale alias would make the next write from /week a
+        // 409. Only when the sentinel is loaded (nothing is invented).
+        if (qc.getQueryData(queryKeys.week(0))) {
+          writeWeekCache(qc, 0, data.week_plan as WeekPlan);
+        }
       } else {
         // Fallback when backend could not produce an updated plan
         qc.invalidateQueries({ queryKey: queryKeys.weekAll });

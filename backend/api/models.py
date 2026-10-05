@@ -103,6 +103,10 @@ class AddExerciseRequest(BaseModel):
     exercise_id: str
     prescription_override: Optional[Dict[str, Any]] = None
     week_plan: Optional[Dict[str, Any]] = None
+    # B371: the plan_revision of the week_plan the client is editing. A
+    # mismatch with the stored week → 409 {detail, current_revision}. None
+    # (an installed PWA from before B371) → accepted and logged.
+    base_revision: Optional[int] = None
 
 
 class RemoveExerciseRequest(BaseModel):
@@ -111,6 +115,10 @@ class RemoveExerciseRequest(BaseModel):
     session_index: int = 0
     exercise_index: int
     week_plan: Optional[Dict[str, Any]] = None
+    # B371: the plan_revision of the week_plan the client is editing. A
+    # mismatch with the stored week → 409 {detail, current_revision}. None
+    # (an installed PWA from before B371) → accepted and logged.
+    base_revision: Optional[int] = None
 
 
 class SurfaceOverrideRequest(BaseModel):
@@ -123,6 +131,10 @@ class SurfaceOverrideRequest(BaseModel):
     session_index: int = 0
     surface: Optional[Literal["boulder"]] = None
     week_plan: Optional[Dict[str, Any]] = None
+    # B371: the plan_revision of the week_plan the client is editing. A
+    # mismatch with the stored week → 409 {detail, current_revision}. None
+    # (an installed PWA from before B371) → accepted and logged.
+    base_revision: Optional[int] = None
 
 
 
@@ -153,6 +165,10 @@ class OverrideRequest(BaseModel):
     # A294 review: client-local date (YYYY-MM-DD) for the key-session status
     # returned with the override; the server's UTC clock otherwise.
     today: Optional[str] = None
+    # B371: the plan_revision of the week_plan the client is editing. A
+    # mismatch with the stored week → 409 {detail, current_revision}. None
+    # (an installed PWA from before B371) → accepted and logged.
+    base_revision: Optional[int] = None
 
 
 class EventsRequest(BaseModel):
@@ -171,6 +187,10 @@ class EventsRequest(BaseModel):
     # A294: client-local date (YYYY-MM-DD) for the key-session status; the
     # server's UTC clock otherwise.
     today: Optional[str] = None
+    # B371: the plan_revision of the week_plan the client is editing. A
+    # mismatch with the stored week → 409 {detail, current_revision}. None
+    # (an installed PWA from before B371) → accepted and logged.
+    base_revision: Optional[int] = None
 
 
 class QuickAddRequest(BaseModel):
@@ -187,6 +207,10 @@ class QuickAddRequest(BaseModel):
     force: bool = False
     # A294 review: client-local date (YYYY-MM-DD) for the key-session status.
     today: Optional[str] = None
+    # B371: the plan_revision of the week_plan the client is editing. A
+    # mismatch with the stored week → 409 {detail, current_revision}. None
+    # (an installed PWA from before B371) → accepted and logged.
+    base_revision: Optional[int] = None
 
 
 # --------------------------------------------------------------------------- #

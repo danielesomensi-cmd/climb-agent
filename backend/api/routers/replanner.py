@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from backend.api.deps import REPO_ROOT, assert_plan_not_paused, current_phase_and_week, get_user_id, is_past_week, load_state, require_active_subscription, save_state, week_num_to_phase_context
 from backend.api.models import EventsRequest, OverrideRequest, QuickAddRequest
+from backend.api.plan_revision import guard_client_plan, stamp_revision, stored_plan_for
 from backend.api.guard_status import build_guard_warnings, messages_for
 from backend.api.key_status import build_key_conflicts, build_key_status, resolve_today
 from backend.engine.outdoor_log import compute_outdoor_load_score, load_outdoor_sessions, remove_outdoor_session
@@ -147,6 +148,10 @@ def persist_week_plan(updated: dict, state: dict, user_id) -> None:
 
     if "week_plans" not in state:
         state["week_plans"] = {}
+    # B371: every save of a week moves its revision forward — strictly above
+    # the stored one — so a client still holding the previous copy gets a 409
+    # instead of overwriting this write.
+    stamp_revision(updated, stored_plan_for(state, start_key))
     # B369: an edit does not clear an invalidation — a week flagged stale (new
     # availability, prefs, override…) is still regenerated, through the
     # preserving merge, on the next read.
@@ -289,6 +294,8 @@ def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)
             status_code=422,
             detail="week_plan is required — generate one from GET /api/week/{week_num} first",
         )
+    # B371: stale copy → 409; read-time fields never saved.
+    guard_client_plan(state, week_plan, req.base_revision, endpoint="override", user_id=user_id)
 
     # B257: past weeks are immutable. Reject any override targeting a week whose
     # Monday is before the current week's — set_availability would regenerate it
@@ -430,6 +437,8 @@ def quick_add(req: QuickAddRequest, user_id: Optional[str] = Depends(get_user_id
             status_code=422,
             detail="week_plan is required — generate one from GET /api/week/{week_num} first",
         )
+    # B371: stale copy → 409; read-time fields never saved.
+    guard_client_plan(state, week_plan, req.base_revision, endpoint="quick-add", user_id=user_id)
 
     try:
         updated, warnings, adjustments = apply_day_add(
@@ -485,6 +494,16 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
     _retired = sorted({ev.get("event_type") for ev in req.events} & RETIRED_EVENT_TYPES)
     if _retired:
         raise HTTPException(status_code=422, detail=RETIRED_SET_AVAILABILITY)
+
+    # B371: a write on a stale copy → 409, and the read-time fields never
+    # reach the save. A dry run writes nothing: it is never refused (it only
+    # answers "what would happen"), it is only cleaned.
+    if req.dry_run:
+        from backend.api.plan_revision import strip_derived
+
+        strip_derived(week_plan, stored_plan_for(state, week_plan.get("start_date")))
+    else:
+        guard_client_plan(state, week_plan, req.base_revision, endpoint="events", user_id=user_id)
 
     # B287/R-2: /override has carried the B257 past-week guard since B257, but
     # /events never did — and `set_availability` is reachable from BOTH (it is

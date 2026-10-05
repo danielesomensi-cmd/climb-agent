@@ -825,6 +825,12 @@ def get_week(
             # Cache the freshly generated plan
             if "week_plans" not in state:
                 state["week_plans"] = {}
+            # B371: a regeneration is a write — strictly above the revision
+            # it replaces (the merge already does it; a plan generated over
+            # an unservable cache entry did not).
+            from backend.api.plan_revision import stamp_revision, stored_plan_for
+
+            stamp_revision(week_plan, stored_plan_for(state, week_start_key))
             state["week_plans"][week_start_key] = week_plan
             if is_current_week:
                 state["current_week_plan"] = week_plan
@@ -869,6 +875,9 @@ def get_week(
         # copy — never persisted, never applied to done/skipped sessions.
         "week_plan": _with_custom_anchored_loads(week_plan, state),
     }
+    # B371: the client always gets a revision to send back as base_revision
+    # (a plan from before B369 has none → 1, the server's own default).
+    result["week_plan"].setdefault("plan_revision", 1)
     if regeneration_failed:
         # B369: the week could not be regenerated with the new settings; the
         # previous plan is served unchanged and stays flagged for the next read.

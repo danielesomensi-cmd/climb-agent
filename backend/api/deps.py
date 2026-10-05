@@ -86,18 +86,42 @@ def mark_weeks_stale(
     if from_monday and from_monday > lower:
         lower = from_monday
     marked = []
+    # B371: flagging a week is a write — its revision moves forward, so a
+    # client still holding the pre-change copy gets a 409 (and refetches the
+    # regenerated week) instead of editing the old structure. Only on the
+    # transition (flagging twice stays idempotent) and once per plan object:
+    # current_week_plan is often the same dict as its week_plans entry.
+    bumped: set = set()
+
+    def _flag(plan: dict) -> None:
+        was_stale = bool(plan.get(STALE_KEY))
+        plan[STALE_KEY] = True
+        if not was_stale and id(plan) not in bumped:
+            bumped.add(id(plan))
+            try:
+                plan["plan_revision"] = max(1, int(plan.get("plan_revision") or 1)) + 1
+            except (TypeError, ValueError):
+                plan["plan_revision"] = 2
+
     for k, plan in (state.get("week_plans") or {}).items():
         if not isinstance(k, str) or not isinstance(plan, dict):
             continue
         if k < lower or (only is not None and k != only):
             continue
-        plan[STALE_KEY] = True
+        _flag(plan)
         marked.append(k)
     cwp = state.get("current_week_plan")
     if isinstance(cwp, dict):
         k = cwp.get("start_date")
         if isinstance(k, str) and k >= lower and (only is None or k == only):
-            cwp[STALE_KEY] = True
+            hot = (state.get("week_plans") or {}).get(k)
+            if isinstance(hot, dict) and hot is not cwp:
+                # A separate copy of the same week: same flag, same revision.
+                cwp[STALE_KEY] = True
+                if hot.get("plan_revision") is not None:
+                    cwp["plan_revision"] = hot["plan_revision"]
+            else:
+                _flag(cwp)
     return sorted(marked)
 
 

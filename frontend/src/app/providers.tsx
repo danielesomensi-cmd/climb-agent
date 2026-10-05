@@ -4,6 +4,7 @@ import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useState } from "react";
 import { makeQueryClient } from "@/lib/query-client";
+import { StalePlanWatcher } from "@/components/layout/stale-plan-watcher";
 import {
   createPersister,
   PERSISTED_QUERY_PREFIXES,
@@ -55,6 +56,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
       }}
     >
       {children}
+      {/* B371: a stale-plan 409 → refetch the week + one toast. */}
+      <StalePlanWatcher />
       {process.env.NODE_ENV === "development" && (
         <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
       )}

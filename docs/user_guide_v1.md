@@ -1023,6 +1023,10 @@ If this happens, give honest feedback ("Hard" / "Very Hard") and the closed-loop
 
 Your account is tied to the email address you signed up with, and your training data lives on the server — not on the phone. If you reinstall the app, switch device, or the iOS PWA clears its local data, **sign in with the same email** and everything is there.
 
+### Using the app on two devices
+
+Your plan is saved on the server, and every change you make (done, skip, move, swap, add, edit an exercise) is checked against the latest version. If the plan changed on another device — or the app rebuilt your week after you changed your availability — since this screen loaded, the change is **not** saved over the newer plan: the week reloads and a message says *"The plan changed on another device — reloaded"*. Marking a session done or skipped (when it is still open in the latest plan) and saving an outdoor pitch plan are re-applied automatically; for anything else, check the reloaded week and redo the change.
+
 > **Note (2026-08-02):** earlier versions of this guide described a `CLIMB-XXXX-XXXX` recovery code stored in Settings. That flow was replaced by email sign-in; B320 removed the last leftovers of it (the welcome-screen link and the page behind it). If you are locked out, sign in with your original email — or restore from the export file below.
 
 ### "I tap Sign in and nothing happens"

@@ -30,6 +30,7 @@ const FeedbackDialog = dynamic(() => import("@/components/training/feedback-dial
 import { useRouter } from "next/navigation";
 import { applyOverride, quickAddSession,
   ApiError, apiErrorDetail, applyEvents, checkKeyConflicts, postFeedback, getOutdoorSpots, getOutdoorLogByDate, deleteFreeSession, getPitchLadder, setOutdoorPlan } from "@/lib/api";
+import { STALE_PLAN_MESSAGE } from "@/lib/plan-revision";
 import { useUserState } from "@/lib/hooks/queries/use-user-state";
 import { useWeekPlan } from "@/lib/hooks/queries/use-week-plan";
 import { useFreeSessionsForDates } from "@/lib/hooks/queries/use-free-session";
@@ -109,7 +110,13 @@ export default function WeekPage() {
   }, [stateQuery.data]);
   const loading = (stateQuery.isLoading || weekQuery.isLoading) && authReady;
   const queryError = stateQuery.error || weekQuery.error;
-  const [error, setError] = useState<string | null>(null);
+  const [error, setErrorState] = useState<string | null>(null);
+  // B371: a stale-plan 409 is not a page error — the watcher refetches the
+  // week and toasts; hiding the plan behind an error box would be wrong.
+  const setError = useCallback(
+    (msg: string | null) => setErrorState(msg === STALE_PLAN_MESSAGE ? null : msg),
+    [],
+  );
 
   /** Update the cached week plan after a mutation. */
   const updateWeekCache = useCallback(

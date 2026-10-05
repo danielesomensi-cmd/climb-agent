@@ -1607,6 +1607,17 @@ is_preservable(session)   = status ∈ {done, skipped} | is_user_owned(session)
   The adaptive replan after very_hard/fail no longer changes the plan; `apply_adaptive_replan` is gone and no
   `{type: "adaptive_replan"}` adaptation is written any more.
 - **`plan_revision`** after a merge = `max(old, new) + 1` (monotonic across regenerations).
+- **`plan_revision` (B371)** — monotonic on **every** write of a week: `persist_week_plan` (events, override,
+  quick-add, session/*, feedback, body-part picker, outdoor sync) and the GET regeneration stamp it strictly above
+  the stored one (`plan_revision.stamp_revision`); `mark_weeks_stale` raises it on the transition to stale.
+  GET `/api/week` always returns one (`1` for a plan from before B369).
+- **`base_revision`** (B371, request field of `/api/replanner/events|override|quick-add` and
+  `/api/session/add-exercise|remove-exercise|surface-override`): the `plan_revision` the client is editing. ≠ stored
+  → **409** `{detail, code: "stale_plan", current_revision, week_start, week_plan}`, nothing written. Absent (a
+  client from before B371) → accepted and logged. A dry run is never refused.
+- **Read-time fields** (B371, `plan_revision.strip_derived`): response siblings (`guard_warnings`, `key_status`, …),
+  `_stale`, `process_cue` on unplayed sessions and the `exercises` of unplayed custom sessions (anchored loads, B364)
+  are replaced by / dropped in favour of the stored plan before a client plan is applied. Played sessions untouched.
 
 ### 5.7.3 Slot roles and complementary rotation (A300)
 

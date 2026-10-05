@@ -34,6 +34,7 @@ import { WeekProgressBar } from "@/components/training/week-progress-bar";
 import { TodaySkeleton } from "@/components/training/today-skeleton";
 import { ApiError, apiErrorDetail, applyEvents, checkKeyConflicts, postFeedback, applyOverride, quickAddSession,
   getOutdoorSpots, getOutdoorLogByDate, deleteFreeSession, getPitchLadder, setOutdoorPlan } from "@/lib/api";
+import { STALE_PLAN_MESSAGE } from "@/lib/plan-revision";
 import { useSubscription } from "@/lib/hooks/use-subscription";
 import { useUserState, useWeekPlan, useDailyQuote, useOutdoorDoneDays } from "@/lib/hooks/queries";
 import { useFreeSessionHistory, useFreeSessionsForDates } from "@/lib/hooks/queries/use-free-session";
@@ -234,7 +235,13 @@ function TodayContent() {
     qc.invalidateQueries({ queryKey: queryKeys.sessionResolveAll });
   }, [qc]);
 
-  const [error, setError] = useState<string | null>(null);
+  const [error, setErrorState] = useState<string | null>(null);
+  // B371: a stale-plan 409 is not a page error — the watcher refetches the
+  // week and toasts; hiding the plan behind an error box would be wrong.
+  const setError = useCallback(
+    (msg: string | null) => setErrorState(msg === STALE_PLAN_MESSAGE ? null : msg),
+    [],
+  );
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackSessionId, setFeedbackSessionId] = useState<string | null>(
     null

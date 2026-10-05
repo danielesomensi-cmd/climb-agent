@@ -10,6 +10,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 
 from backend.api.deps import REPO_ROOT, get_user_id, load_state, require_active_subscription, save_state
+from backend.api.plan_revision import guard_client_plan
 from backend.api.models import (
     AddExerciseRequest,
     RemoveExerciseRequest,
@@ -93,6 +94,8 @@ def add_exercise(req: AddExerciseRequest, user_id: Optional[str] = Depends(get_u
     week_plan = req.week_plan
     if not week_plan:
         raise HTTPException(status_code=422, detail="week_plan is required")
+    # B371: stale copy → 409; read-time fields never saved.
+    guard_client_plan(state, week_plan, req.base_revision, endpoint="add-exercise", user_id=user_id)
 
     # Find the target day (B157: search all weeks, not just weeks[0])
     target_day = None
@@ -216,6 +219,8 @@ def remove_exercise(req: RemoveExerciseRequest, user_id: Optional[str] = Depends
     week_plan = req.week_plan
     if not week_plan:
         raise HTTPException(status_code=422, detail="week_plan is required")
+    # B371: stale copy → 409; read-time fields never saved.
+    guard_client_plan(state, week_plan, req.base_revision, endpoint="remove-exercise", user_id=user_id)
 
     _, session, resolved, exercise_instances = _find_session(week_plan, req.date, req.session_index)
     _assert_session_mutable(session, req.date)
@@ -406,6 +411,8 @@ def surface_override(req: SurfaceOverrideRequest, user_id: Optional[str] = Depen
     week_plan = req.week_plan
     if not week_plan:
         raise HTTPException(status_code=422, detail="week_plan is required")
+    # B371: stale copy → 409; read-time fields never saved.
+    guard_client_plan(state, week_plan, req.base_revision, endpoint="surface-override", user_id=user_id)
 
     day, session, resolved, _ = _find_session(week_plan, req.date, req.session_index)
     _assert_session_mutable(session, req.date)

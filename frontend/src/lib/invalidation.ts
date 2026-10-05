@@ -19,9 +19,13 @@ export function invalidateWeekPlans(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: queryKeys.state });
 }
 
-/** Outdoor write: refresh sessions, stats, and any per-date logs. */
+/** Outdoor write: refresh sessions, stats, and any per-date logs. B371: and
+ * the weeks — logging an outdoor session syncs it onto the week plan server
+ * side (B273), which moves the plan's revision; a cached week left behind
+ * would make the next write a 409. */
 export function invalidateOutdoor(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: queryKeys.outdoorAll });
+  qc.invalidateQueries({ queryKey: queryKeys.weekAll });
 }
 
 /** Free session write: refresh history (badges in today/week). */

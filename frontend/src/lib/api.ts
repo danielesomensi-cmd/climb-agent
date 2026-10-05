@@ -37,6 +37,14 @@ import type {
   AdaptiveSuggestion,
 } from "./types";
 import { localToday } from "./key-sessions";
+import {
+  STALE_PLAN_MESSAGE,
+  emitStalePlan,
+  isRetrySafeEvents,
+  parseStalePlanBody,
+  withBaseRevision,
+  type StalePlanBody,
+} from "./plan-revision";
 import { notifyLimitationSuggestions, type LimitationSuggestion } from "./limitation-suggestions";
 import { notifyLimitSummary, type LimitSummary } from "./limit-problems";
 import { notifyBwLadderUpdates, type BwLadderUpdate } from "./bw-ladder";
@@ -202,6 +210,11 @@ async function _send<T>(
         detail || "Subscription required. Manage your plan in Settings.",
       );
     }
+    if (res.status === 409) {
+      // B371: a write on an older revision of the week — nothing was saved.
+      const stale = parseStalePlanBody(body);
+      if (stale) throw new StalePlanError(stale);
+    }
     throw new ApiError(res.status, `API ${res.status}: ${body}`);
   }
   return res.json() as Promise<T>;
@@ -219,6 +232,8 @@ async function _send<T>(
  */
 export function apiErrorDetail(err: unknown, fallback: string): string {
   if (!(err instanceof ApiError)) return fallback;
+  // B371: the stale-plan sentence is the whole explanation.
+  if (err instanceof StalePlanError) return err.message;
   if (err.status === 404) {
     return "This feature needs a newer version of the app — reload the page and try again.";
   }
@@ -247,6 +262,37 @@ export class ApiError extends Error {
     super(message);
     this.name = "ApiError";
     this.status = status;
+  }
+}
+
+/**
+ * B371 — 409 on a write that edited an older revision of the week. Nothing was
+ * saved. `currentPlan` is the stored week (for a safe retry); the app-level
+ * watcher refetches the week and shows the toast.
+ */
+export class StalePlanError extends ApiError {
+  currentRevision: number;
+  weekStart: string | null;
+  currentPlan: WeekPlan | null;
+  constructor(body: StalePlanBody) {
+    super(409, STALE_PLAN_MESSAGE);
+    this.name = "StalePlanError";
+    this.currentRevision = body.current_revision;
+    this.weekStart = body.week_start ?? null;
+    this.currentPlan = body.week_plan ?? null;
+  }
+}
+
+/**
+ * B371 — a write that ships the week plan: adds `base_revision`, and on a 409
+ * tells the watcher (refetch + toast) before rethrowing.
+ */
+async function revisionedWrite<T>(path: string, data: { week_plan?: WeekPlan | null } & Record<string, unknown>): Promise<T> {
+  try {
+    return await request<T>(path, { method: "POST", body: JSON.stringify(withBaseRevision(data)) });
+  } catch (e) {
+    if (e instanceof StalePlanError) emitStalePlan({ retried: false, weekStart: e.weekStart });
+    throw e;
   }
 }
 
@@ -445,10 +491,7 @@ export const addExerciseToSession = (data: {
   prescription_override?: Record<string, unknown>;
   week_plan: WeekPlan;
 }) =>
-  request<{ week_plan: WeekPlan }>("/api/session/add-exercise", {
-    method: "POST",
-    body: JSON.stringify(data),
-  });
+  revisionedWrite<{ week_plan: WeekPlan }>("/api/session/add-exercise", data);
 
 export const removeExerciseFromSession = (data: {
   date: string;
@@ -456,10 +499,7 @@ export const removeExerciseFromSession = (data: {
   exercise_index: number;
   week_plan: WeekPlan;
 }) =>
-  request<{ week_plan: WeekPlan }>("/api/session/remove-exercise", {
-    method: "POST",
-    body: JSON.stringify(data),
-  });
+  revisionedWrite<{ week_plan: WeekPlan }>("/api/session/remove-exercise", data);
 
 /**
  * B313 — "Boulder only (today)": adapt a rope session to the boulder wall, or
@@ -473,10 +513,7 @@ export const setSessionSurface = (data: {
   surface: "boulder" | null;
   week_plan: WeekPlan;
 }) =>
-  request<{ week_plan: WeekPlan }>("/api/session/surface-override", {
-    method: "POST",
-    body: JSON.stringify(data),
-  });
+  revisionedWrite<{ week_plan: WeekPlan }>("/api/session/surface-override", data);
 
 
 // Replanner
@@ -499,11 +536,11 @@ export const applyOverride = (data: {
   // A301: the override replaces one slot and rewrites nothing around it.
   // `warnings` = its own notes + the alerts involving the overridden session;
   // `guard_warnings` = the alerts of the whole week.
-  request<{ week_plan: WeekPlan; adjustments?: QuickAddAdjustment[]; warnings?: string[]; guard_warnings?: GuardWarning[]; key_status?: KeyStatus | null }>("/api/replanner/override", {
-    method: "POST",
-    // A294 review: client-local today for the key status (the server is UTC).
-    body: JSON.stringify({ ...data, today: localToday() }),
-  });
+  // A294 review: client-local today for the key status (the server is UTC).
+  revisionedWrite<{ week_plan: WeekPlan; adjustments?: QuickAddAdjustment[]; warnings?: string[]; guard_warnings?: GuardWarning[]; key_status?: KeyStatus | null }>(
+    "/api/replanner/override",
+    { ...data, today: localToday() },
+  );
 
 export type EventsResponse = {
   week_plan: WeekPlan;
@@ -528,11 +565,31 @@ export const applyEvents = (data: {
   dry_run?: boolean;
   /** A294 + dry_run — a custom session that does not exist yet. */
   custom_session_payload?: Record<string, unknown>;
-}) =>
-  request<EventsResponse>("/api/replanner/events", {
-    method: "POST",
-    body: JSON.stringify({ ...data, today: localToday() }),
+}): Promise<EventsResponse> => {
+  const send = (d: typeof data) =>
+    request<EventsResponse>("/api/replanner/events", {
+      method: "POST",
+      body: JSON.stringify({ ...withBaseRevision(d), today: localToday() }),
+    });
+  // A dry run writes nothing — the server never refuses it.
+  if (data.dry_run) return send(data);
+  return send(data).catch(async (e: unknown) => {
+    if (!(e instanceof StalePlanError)) throw e;
+    // B371: re-send by itself only what is idempotent on the fresh plan.
+    if (e.currentPlan && isRetrySafeEvents(data.events, e.currentPlan)) {
+      try {
+        const res = await send({ ...data, week_plan: e.currentPlan });
+        emitStalePlan({ retried: true, weekStart: e.weekStart });
+        return res;
+      } catch (e2) {
+        if (e2 instanceof StalePlanError) emitStalePlan({ retried: false, weekStart: e2.weekStart });
+        throw e2;
+      }
+    }
+    emitStalePlan({ retried: false, weekStart: e.weekStart });
+    throw e;
   });
+};
 
 /**
  * A294 — would these events (typically one `add_custom_session`) take a key
@@ -620,12 +677,9 @@ export const quickAddSession = (data: {
   // A301: every quick-add is applied as picked (the old `force` is a no-op on
   // the server). `warnings` are the alert messages that involve the added
   // session; `guard_warnings` the alerts of the whole week.
-  request<{ week_plan: WeekPlan; warnings: string[]; adjustments: QuickAddAdjustment[]; guard_warnings?: GuardWarning[]; key_status?: KeyStatus | null }>(
+  revisionedWrite<{ week_plan: WeekPlan; warnings: string[]; adjustments: QuickAddAdjustment[]; guard_warnings?: GuardWarning[]; key_status?: KeyStatus | null }>(
     "/api/replanner/quick-add",
-    {
-      method: "POST",
-      body: JSON.stringify({ ...data, today: localToday() }),
-    },
+    { ...data, today: localToday() },
   );
 
 // Feedback
