@@ -225,8 +225,11 @@ def _with_custom_anchored_loads(week_plan: dict, state: dict) -> dict:
     from backend.engine.anchored_load import resolve_custom_exercises
     from backend.engine.bw_progression import attach_technique_measures, resolve_custom_ladder_rows
     from backend.engine.measured_feedback import attach_measure_fields
-    from backend.api.routers.custom_session import attach_limit_targets
+    from backend.api.routers.custom_session import (
+        _fill_rest_default, _load_exercises_catalog, attach_limit_targets,
+    )
 
+    catalog = _load_exercises_catalog()
     out = deepcopy(week_plan)
     for week_block in out.get("weeks") or []:
         for day_entry in week_block.get("days") or []:
@@ -263,6 +266,10 @@ def _with_custom_anchored_loads(week_plan: dict, state: dict) -> dict:
                     session_entry["exercises"] = attach_limit_targets(
                         state, session_entry["exercises"], day,
                     )
+                    # B370: slots copied before the rest default existed carry
+                    # a null rest — the player showed no rest timer.
+                    for ex in session_entry["exercises"]:
+                        _fill_rest_default(ex, catalog)
     return out
 
 

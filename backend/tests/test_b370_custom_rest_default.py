@@ -50,3 +50,23 @@ def test_single_set_is_left_alone():
          "rest_between_sets_seconds": None, "cues": ["c"]},
     ]}]
     assert enrich_custom_sessions_for_play(stored)[0]["exercises"][0]["rest_between_sets_seconds"] is None
+
+
+def test_week_read_fills_unplayed_custom_slot_but_not_done_ones():
+    from backend.api.routers.week import _with_custom_anchored_loads
+
+    calf = {"exercise_id": "single_leg_calf_raise", "sets": 3, "reps": 10,
+            "rest_between_sets_seconds": None}
+    plan = {"weeks": [{"days": [
+        {"date": "2026-10-05", "sessions": [
+            {"session_id": "custom_cs_a", "is_custom": True, "status": "planned", "exercises": [dict(calf)]},
+            {"session_id": "custom_cs_b", "is_custom": True, "status": "done", "exercises": [dict(calf)]},
+        ]},
+    ]}]}
+    out = _with_custom_anchored_loads(plan, {})
+    sessions = out["weeks"][0]["days"][0]["sessions"]
+    assert sessions[0]["exercises"][0]["rest_between_sets_seconds"] == 60
+    # Past sessions are immutable: a done slot is returned exactly as stored.
+    assert sessions[1]["exercises"][0]["rest_between_sets_seconds"] is None
+    # The stored plan is untouched.
+    assert plan["weeks"][0]["days"][0]["sessions"][0]["exercises"][0]["rest_between_sets_seconds"] is None
