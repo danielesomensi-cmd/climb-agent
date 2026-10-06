@@ -53,6 +53,16 @@ resolver output (both week_plan modes, ``p0_trace`` / ``filter_trace``
 stripped) against a clean export of origin/main @ 69f8b9f: zero differences —
 only the catalog candidate counts in the traces moved.
 
+C276 moved ``fall_practice``'s rope-route requirement from
+``equipment_required_any`` to ``equipment_required`` and added the
+``lead_tryhard_gym`` session plus a falls block in ``route_projecting_gym``
+(neither scheduled here). The two ``power_endurance_gym`` digests were
+regenerated after diffing the raw resolver output (both week_plan modes)
+against origin/main @ e21e79d: the only differences are the P0 candidate
+counts of the ``pe_routes`` block from ``after_equipment_pref`` on (14 → 15:
+fall_practice now counts among the exercises that need the preferred rope
+routes) — exercise_ids, prescriptions, loads and texts identical.
+
 Pure data + one function, importable by the generator without pytest.
 """
 

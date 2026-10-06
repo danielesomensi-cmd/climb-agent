@@ -506,6 +506,24 @@
     "forearm_stretches"
    ]
   },
+  "advanced|2026-10-07|lead_tryhard_gym": {
+   "digest": "74da318fa6859e43af382ded3cb82d71c2b627c533d6077f818be19fe067e34e",
+   "exercise_ids": [
+    "active_hip_mobility",
+    "dynamic_mobility_flow",
+    "general_pulse_raise",
+    "warmup_easy_boulders",
+    "fall_practice",
+    "lead_precision_feet_above_bolt",
+    "lead_technique_under_pump",
+    "dumbbell_external_rotation",
+    "pushup",
+    "scapular_pullup",
+    "cooldown_forearm_wrist_stretch",
+    "cooldown_hip_pigeon",
+    "forearm_stretches"
+   ]
+  },
   "advanced|2026-10-07|legs_maintenance_lunch": {
    "digest": "a04bbada0873903233a7b16b48d79946e650f709cb8711329f0cb9ac8e8586f7",
    "exercise_ids": [
@@ -658,12 +676,13 @@
    ]
   },
   "advanced|2026-10-07|route_projecting_gym": {
-   "digest": "0ee86ed4e94f815cc5e169360331bce032221753ed6ff17bb1697a1af1caba6f",
+   "digest": "182883240db4aaae306f3c11eedd278c531a8e622e7a8128b0cedbc2b8516158",
    "exercise_ids": [
     "active_hip_mobility",
     "dynamic_mobility_flow",
     "general_pulse_raise",
     "warmup_easy_boulders",
+    "fall_practice",
     "route_redpoint_attempt",
     "route_redpoint_attempt",
     "core_l_sit",
@@ -676,7 +695,7 @@
    ]
   },
   "advanced|2026-10-07|strength_long": {
-   "digest": "ec7b8bf73609729d4d666215df3d97f0c0791f56e65762ea82ba9e07896a9b9f",
+   "digest": "ce2c184b5b0c8ce96d8c7bb451d94ed3f698acef0bb507d968e8a0947683ee15",
    "exercise_ids": [
     "active_hip_mobility",
     "dynamic_mobility_flow",
@@ -697,7 +716,7 @@
    ]
   },
   "advanced|2026-10-07|technique_focus_gym": {
-   "digest": "c466424121535778e08c2331b2f9f1a313754eb817c3b8c75afe70f33ec6bbd0",
+   "digest": "614fe29425363c235c162bbfb8db85bec94c06b5a91c126e89a00b165818c2de",
    "exercise_ids": [
     "active_hip_mobility",
     "dynamic_mobility_flow",
@@ -974,6 +993,21 @@
     "cooldown_shoulder_chest"
    ]
   },
+  "advanced|2026-10-21|lead_tryhard_gym": {
+   "digest": "8db8e0ed2f362c21ce066963d7b59bfd7d1dd73c6a2c2988443a00be4374fcf7",
+   "exercise_ids": [
+    "active_hip_mobility",
+    "bear_crawl",
+    "dynamic_mobility_flow",
+    "general_pulse_raise",
+    "band_pull_apart",
+    "pushup",
+    "shoulder_car",
+    "cooldown_forearm_wrist_stretch",
+    "cooldown_hip_pigeon",
+    "cooldown_shoulder_chest"
+   ]
+  },
   "advanced|2026-10-21|legs_maintenance_lunch": {
    "digest": "a2e955e3a36412712be394d3847382bc42365142621e00028df712a092baa664",
    "exercise_ids": [
@@ -1126,7 +1160,7 @@
    ]
   },
   "advanced|2026-10-21|route_projecting_gym": {
-   "digest": "8c70e26d1713b79180231064e32c8d1a857458c21442bdbf2f4dcdd1114ceeda",
+   "digest": "24197fdc7c3fca1947f6bbfba450faa2c1759157be8a7bc560934d3912a8777f",
    "exercise_ids": [
     "active_hip_mobility",
     "bear_crawl",
@@ -1439,6 +1473,24 @@
     "forearm_stretches"
    ]
   },
+  "intermediate|2026-10-07|lead_tryhard_gym": {
+   "digest": "74da318fa6859e43af382ded3cb82d71c2b627c533d6077f818be19fe067e34e",
+   "exercise_ids": [
+    "active_hip_mobility",
+    "dynamic_mobility_flow",
+    "general_pulse_raise",
+    "warmup_easy_boulders",
+    "fall_practice",
+    "lead_precision_feet_above_bolt",
+    "lead_technique_under_pump",
+    "dumbbell_external_rotation",
+    "pushup",
+    "scapular_pullup",
+    "cooldown_forearm_wrist_stretch",
+    "cooldown_hip_pigeon",
+    "forearm_stretches"
+   ]
+  },
   "intermediate|2026-10-07|legs_maintenance_lunch": {
    "digest": "f6b5a888cd4642b0bde32e7dcd517e4b1524a337ea0a5ef71663b4f0b314fe37",
    "exercise_ids": [
@@ -1591,12 +1643,13 @@
    ]
   },
   "intermediate|2026-10-07|route_projecting_gym": {
-   "digest": "0ee86ed4e94f815cc5e169360331bce032221753ed6ff17bb1697a1af1caba6f",
+   "digest": "182883240db4aaae306f3c11eedd278c531a8e622e7a8128b0cedbc2b8516158",
    "exercise_ids": [
     "active_hip_mobility",
     "dynamic_mobility_flow",
     "general_pulse_raise",
     "warmup_easy_boulders",
+    "fall_practice",
     "route_redpoint_attempt",
     "route_redpoint_attempt",
     "core_l_sit",
@@ -1609,7 +1662,7 @@
    ]
   },
   "intermediate|2026-10-07|strength_long": {
-   "digest": "3aa5c506f442a0decf47871426b9b1d06401b2ae8545436c6ca917c1f361151f",
+   "digest": "0bc89abddb5b77e75e764d4c9b19c88835b582c01ffb57f4f29d37ffdafdd97e",
    "exercise_ids": [
     "active_hip_mobility",
     "dynamic_mobility_flow",
@@ -1630,7 +1683,7 @@
    ]
   },
   "intermediate|2026-10-07|technique_focus_gym": {
-   "digest": "61492c56da5aa57ae4b8edaaebc7cab5538b3a43a8dfd62f3c8f32232726a10a",
+   "digest": "4fc2e0ec1db49210cf0e4270ac7d9e29b6af51b21b48151573e4909b94ed87d3",
    "exercise_ids": [
     "active_hip_mobility",
     "dynamic_mobility_flow",
@@ -1907,6 +1960,21 @@
     "cooldown_shoulder_chest"
    ]
   },
+  "intermediate|2026-10-21|lead_tryhard_gym": {
+   "digest": "8db8e0ed2f362c21ce066963d7b59bfd7d1dd73c6a2c2988443a00be4374fcf7",
+   "exercise_ids": [
+    "active_hip_mobility",
+    "bear_crawl",
+    "dynamic_mobility_flow",
+    "general_pulse_raise",
+    "band_pull_apart",
+    "pushup",
+    "shoulder_car",
+    "cooldown_forearm_wrist_stretch",
+    "cooldown_hip_pigeon",
+    "cooldown_shoulder_chest"
+   ]
+  },
   "intermediate|2026-10-21|legs_maintenance_lunch": {
    "digest": "fe10014ce7c9962720a1584a2fdb472e2f9d17f4f6d09b4bac4eafe2ad75662c",
    "exercise_ids": [
@@ -2059,7 +2127,7 @@
    ]
   },
   "intermediate|2026-10-21|route_projecting_gym": {
-   "digest": "77a09da68b112ca950949f04fbef2f4c8a491648b98b0d18c79fe13149e69eb9",
+   "digest": "71dd0d007ae9ace7c37a3c9a9fd2f64d40f10a946227d4e046b2b448a1f1ce5e",
    "exercise_ids": [
     "active_hip_mobility",
     "bear_crawl",
@@ -2372,6 +2440,24 @@
     "forearm_stretches"
    ]
   },
+  "untested|2026-10-07|lead_tryhard_gym": {
+   "digest": "daaf7d114f1ef5399d43901311fb53ef931c736d820b4d043b97fb90f3edba5c",
+   "exercise_ids": [
+    "active_hip_mobility",
+    "dynamic_mobility_flow",
+    "general_pulse_raise",
+    "warmup_easy_boulders",
+    "fall_practice",
+    "lead_precision_feet_above_bolt",
+    "lead_technique_under_pump",
+    "pushup",
+    "scapular_pullup",
+    "wall_slide",
+    "cooldown_forearm_wrist_stretch",
+    "cooldown_hip_pigeon",
+    "forearm_stretches"
+   ]
+  },
   "untested|2026-10-07|legs_maintenance_lunch": {
    "digest": "f6b5a888cd4642b0bde32e7dcd517e4b1524a337ea0a5ef71663b4f0b314fe37",
    "exercise_ids": [
@@ -2524,12 +2610,13 @@
    ]
   },
   "untested|2026-10-07|route_projecting_gym": {
-   "digest": "c66b5f906d2214cc83906673d1bfca8356f1a91e92316ed33eb40b9c9a1697f6",
+   "digest": "8893c8a05fa41551e750cd067fa9f5da900999861f985adf89f5b148d6decd5d",
    "exercise_ids": [
     "active_hip_mobility",
     "dynamic_mobility_flow",
     "general_pulse_raise",
     "warmup_easy_boulders",
+    "fall_practice",
     "route_redpoint_attempt",
     "side_plank",
     "glute_bridge",
@@ -2542,7 +2629,7 @@
    ]
   },
   "untested|2026-10-07|strength_long": {
-   "digest": "e2795c3b2e11c62ed5dbf637e83a727398ccda6fa568e4474d869f235ec5c596",
+   "digest": "9fc399a6d35073eed437a158d401edc60f5a13cb9b923f5134f74aef5cd83516",
    "exercise_ids": [
     "active_hip_mobility",
     "dynamic_mobility_flow",
@@ -2563,7 +2650,7 @@
    ]
   },
   "untested|2026-10-07|technique_focus_gym": {
-   "digest": "6aecaf153b7934ca5b3264def0d9ad01362ff7cdeeaa50a21957638b52a9f8b8",
+   "digest": "6e32ca511e894ad37d1fbbce9f14440a8c76431c62b1477953e0f03bca7d303d",
    "exercise_ids": [
     "active_hip_mobility",
     "dynamic_mobility_flow",
@@ -2840,6 +2927,21 @@
     "cooldown_shoulder_chest"
    ]
   },
+  "untested|2026-10-21|lead_tryhard_gym": {
+   "digest": "fc41216b60f52b604792f6893decbf0f38ee7a740bf833e65560adf7460bee18",
+   "exercise_ids": [
+    "active_hip_mobility",
+    "bear_crawl",
+    "dynamic_mobility_flow",
+    "general_pulse_raise",
+    "pushup",
+    "shoulder_car",
+    "wall_slide",
+    "cooldown_forearm_wrist_stretch",
+    "cooldown_hip_pigeon",
+    "cooldown_shoulder_chest"
+   ]
+  },
   "untested|2026-10-21|legs_maintenance_lunch": {
    "digest": "fe10014ce7c9962720a1584a2fdb472e2f9d17f4f6d09b4bac4eafe2ad75662c",
    "exercise_ids": [
@@ -2992,7 +3094,7 @@
    ]
   },
   "untested|2026-10-21|route_projecting_gym": {
-   "digest": "b4d2ac73f5307648677375faf000e2c84365676579e2e3a16581d3e04f299ee1",
+   "digest": "4b924809c5a1cdb6b0386ed443a1313b23ff2b021864e273e553157267d98dad",
    "exercise_ids": [
     "active_hip_mobility",
     "bear_crawl",

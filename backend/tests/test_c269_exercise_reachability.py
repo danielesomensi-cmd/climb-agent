@@ -173,7 +173,9 @@ def test_library_only_entries_are_never_selected(reachable_ids):
     assert library, "C272 library entries missing from the catalog"
     pinned = _session_pinned_ids()
     assert not ((library & reachable_ids) - pinned), sorted((library & reachable_ids) - pinned)
-    assert library & pinned == {"toe_flexor_isometric", "edge_calf_raise_bigtoe"}
+    # C276: the two lead route-rule drills pinned by lead_tryhard_gym.
+    assert library & pinned == {"toe_flexor_isometric", "edge_calf_raise_bigtoe",
+                                "lead_precision_feet_above_bolt", "lead_technique_under_pump"}
 
 
 def test_approach_hike_is_reachable_indoors_too(reachable_ids):

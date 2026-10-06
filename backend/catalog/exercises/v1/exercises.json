@@ -10329,8 +10329,7 @@
       "intensity_level": "medium",
       "fatigue_cost": 3,
       "recency_group": "technique_lead_specific",
-      "equipment_required": [],
-      "equipment_required_any": [
+      "equipment_required": [
         "gym_routes"
       ],
       "location_allowed": [

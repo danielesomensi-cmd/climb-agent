@@ -27,6 +27,16 @@ The golden ``fixtures/c272_resolver_golden.json`` was produced with
 any C272 catalog change. Time stability follows a290_untested_cases: the
 phase is passed explicitly and ``week_plans`` holds only the past history
 week, so the B267 recency window is the same whatever day the suite runs.
+
+C276 changed 18 keys, each checked against a stripped export of origin/main @
+e21e79d: 6 new ``lead_tryhard_gym`` keys (the home power-endurance day has no
+rope routes, so its strict pins fail — pinned as a failed resolution);
+``route_projecting_gym`` gains ``fall_practice`` right after the warm-up on the
+3 gym keys and becomes a failed resolution (falls block failed, nothing else
+changed) on the 3 home keys; ``strength_long`` / ``technique_focus_gym`` on the
+3 gym keys change only in the ``equipment_required`` field of their
+``fall_practice`` instance (``[]`` → ``["gym_routes"]``, the catalog moved the
+requirement from ``equipment_required_any``) — same ids, same prescriptions.
 """
 
 from __future__ import annotations

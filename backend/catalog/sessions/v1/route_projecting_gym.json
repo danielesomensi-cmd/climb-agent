@@ -9,7 +9,7 @@
       "power_endurance",
       "core_tension"
     ],
-    "notes": "Redpoint attempts and route projecting on gym routes at or near target grade. Primary session for performance phase lead climbers. Quality over quantity — 2-4 burns max, full rest between attempts."
+    "notes": "Redpoint attempts and route projecting on gym routes at or near target grade. Primary session for performance phase lead climbers. Quality over quantity — 2-4 burns max, full rest between attempts. Opens with 2-3 maintenance falls right after the warm-up (the try-hard component of the performance phase)."
   },
   "compatibility": {
     "slot": ["long"],
@@ -27,6 +27,35 @@
       "required": true,
       "priority": 100,
       "module_role": "general_warmup"
+    },
+    {
+      "block_id": "falls_primer",
+      "required": true,
+      "priority": 95,
+      "module_role": "secondary",
+      "order": "after_warmup",
+      "notes": "2-3 maintenance falls at the start of the day, before the first burn: the redpoint attempts are where you commit, so the fall is rehearsed while fresh. Strict pin: without rope routes the block fails instead of degrading.",
+      "selection": {
+        "primary": {
+          "exercise_id": "fall_practice",
+          "pin_strict": true,
+          "prescription_overrides": {
+            "sets": 1,
+            "reps": 3,
+            "rest_between_reps_seconds": 60,
+            "rest_between_sets_seconds": 120,
+            "notes": "2-3 falls on the first easy lap, from a normal lead position above the clip, with your usual belayer. Push away from the wall, feet facing it, knees soft. Then go to the project and commit: fall rather than take."
+          },
+          "filters": {
+            "role": [
+              "technique"
+            ],
+            "domain": [
+              "technique_lead"
+            ]
+          }
+        }
+      }
     },
     {
       "template_id": "route_projecting_main",

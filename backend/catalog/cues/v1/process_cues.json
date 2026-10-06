@@ -268,23 +268,23 @@
   {
     "id": "cue_047",
     "text": "Take one planned fall each session \u2014 small, above the bolt, eyes open. Fear shrinks when the body owns the experience.",
-    "session_types": ["route_projecting_gym", "route_endurance_gym", "power_endurance_gym"],
+    "session_types": ["route_projecting_gym", "route_endurance_gym", "power_endurance_gym", "lead_tryhard_gym"],
     "source": "Ilgner (Rock Warrior's Way)"
   },
   {
     "id": "cue_048",
     "text": "Pre-read every clip \u2014 which hold, which hand, which body position. Clipping from a struggle is lead's costliest error.",
-    "session_types": ["route_projecting_gym", "route_endurance_gym"]
+    "session_types": ["route_projecting_gym", "route_endurance_gym", "lead_tryhard_gym"]
   },
   {
     "id": "cue_049",
     "text": "Long exhale through pump \u2014 4 seconds out, slow in. The slow exhale interrupts the panic loop driven by rising CO\u2082.",
-    "session_types": ["route_endurance_gym", "endurance_aerobic_gym", "power_endurance_gym", "route_projecting_gym"]
+    "session_types": ["route_endurance_gym", "endurance_aerobic_gym", "power_endurance_gym", "route_projecting_gym", "lead_tryhard_gym"]
   },
   {
     "id": "cue_050",
     "text": "Call the clip, the take, the fall \u2014 silent climbers stress belayers, and stressed belayers shorten rope at the worst moment.",
-    "session_types": ["route_endurance_gym", "route_projecting_gym"]
+    "session_types": ["route_endurance_gym", "route_projecting_gym", "lead_tryhard_gym"]
   },
   {
     "id": "cue_051",

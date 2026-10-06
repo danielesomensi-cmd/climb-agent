@@ -388,6 +388,23 @@ def enforce_ordering_constraints(
         )
         result = others[:last_main + 1] + accessories + others[last_main + 1:]
 
+    # --- Constraint 6 (C276): catalog-declared "after_warmup" blocks ---
+    # A session block may declare `"order": "after_warmup"` (carried on the
+    # instance as source.order): the falls of route_projecting_gym and
+    # lead_tryhard_gym belong at the start of the day, while fresh
+    # (athlete_plan §5), whatever the phase sort says about technique work.
+    # Applied last so it wins; only instances that declare it move.
+    def _after_warmup(ex):
+        return ((ex.get("source") or {}).get("order") == "after_warmup")
+
+    if any(_after_warmup(ex) for ex in result):
+        pinned = [ex for ex in result if _after_warmup(ex)]
+        others = [ex for ex in result if not _after_warmup(ex)]
+        head = 0
+        while head < len(others) and _cat(others[head]) in ("warmup", "activation"):
+            head += 1
+        result = others[:head] + pinned + others[head:]
+
     # P0 INVARIANT: never lose exercises
     ids_after = set(ex.get("exercise_id", id(ex)) for ex in result)
     if ids_before != ids_after:

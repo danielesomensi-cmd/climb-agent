@@ -232,7 +232,11 @@ class TestResolution:
             for m in json.loads(p.read_text(encoding="utf-8")).get("modules") or []:
                 if ((m.get("selection") or {}).get("primary") or {}).get("pin_strict"):
                     found.append((p.stem, m["block_id"]))
-        assert found == [("treadmill_hiit_4x4", "hiit_intervals")]
+        # C276 adds the rope-route pins of lead_tryhard_gym / route_projecting_gym
+        # (allowlist pinned in test_c276_tryhard_catalog).
+        assert ("treadmill_hiit_4x4", "hiit_intervals") in found
+        assert [f for f in found if f[0] not in ("lead_tryhard_gym", "route_projecting_gym")] == [
+            ("treadmill_hiit_4x4", "hiit_intervals")]
 
     def test_upper_push_needs_a_cable_machine(self):
         """Without a cable machine the triceps block would fall back to an

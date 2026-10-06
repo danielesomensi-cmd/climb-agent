@@ -656,6 +656,7 @@ The single owner of "which sessions of the week carry the phase's key stimuli". 
 - **Athlete context in the coach (A297, R7b)**: `backend/coach/athlete_block.py` is the one integration point of the engine's athlete data into an LLM prompt. It gathers archived weeks (only when a week of the 63-day window is cold) and outdoor rows, calls the pure `athlete_context.build_athlete_context` (no proposals, no next week for the composer) and renders it in English: `render_coach_block` for the chat (replaces the key block and the B364 baseline lines), `render_composer_block` placed after the literal request in the ad-hoc composer. `composer_guard_view` turns the day's guard row into pool exclusions (finger-hard ids, front-lever variants; weighted pulls ≥ 85 % 1RM re-checked after validation by `drop_heavy_pulls`), every exclusion listed in `dropped`; the deterministic builder ranks with `_rank_key_ctx` (phase affinity → intensity gap → least recently used → id) on the `variety` collector. Behind `COACH_ATHLETE_CONTEXT` (default on, only `0` disables); off = pre-A297 byte for byte.
 - **Replanner additions** (additive): `apply_events(prev_days=)` + a `reconcile` adaptation with the downshifts it used to discard; `downshifted_from` stamped by every downshift; `mark_skipped` stubs keep `skipped_session_id` / `skipped_tags`.
 - **Review fixes (A294):** `/events` passes `today` to `apply_events` → `_reconcile(frozen_before=today)`: past days are counted, never rewritten (the Sunday→Monday seed used to downshift an unticked past Monday). Proposals are validated cumulatively and against the heavy-pulling rules (24 h before limit / strength_long, ≤ 2 per 7 days); candidates outside the phase pool are allowed after the in-pool ones. Try-hard needs a fall-practice block (or outdoor-hard / free limit), technique needs feet / positioning drills (outdoor no longer counts) and can turn critical. The coach block sits behind `COACH_ATHLETE_CONTEXT`.
+- **Try-hard in the catalog (C276)**: `lead_tryhard_gym` (falls + 2 lead routes with a declared rule) and `route_projecting_gym` (2-3 falls after the warm-up) carry a pinned, strict fall block. `try_hard.session_ids` lists them: `tryhard_hit` counts them by id only while unresolved (no exercise entries), then the fall exercise itself decides. `try_hard.propose` stays empty, so A294 proposals are unchanged; the session is in no phase pool until A305 places it.
 - Known divergence: `closed_loop_v1.stimulus_recency` still classifies by session id/tags; the key status reads the A288 exposure view. Not unified in A294.
 
 ### 8.4 Measured feedback — `measured_feedback.py` (A295)
@@ -776,7 +777,7 @@ pulling(4) → finger_endurance(5) → threshold(6) → technique(7) →
 aerobic(8) → core(9) → antagonist_prehab(10) → cooldown(11)
 ```
 
-### 5 hard constraints (`enforce_ordering_constraints()`)
+### 6 hard constraints (`enforce_ordering_constraints()`)
 
 Applied **after** the phase sort. Auto-fix with logging when violated:
 
@@ -785,6 +786,7 @@ Applied **after** the phase sort. Auto-fix with logging when violated:
 3. **ARC before pump** — `aerobic_pure` before `threshold`/`pe_intervals`
 4. **Max hangs before pulling** — `strength_neural` before `pulling_supplementary`
 5. **Accessories after main** — `core`/`antagonist_prehab` after all main work categories
+6. **Declared "after warm-up" blocks (C276)** — an instance whose catalog block declares `"order": "after_warmup"` (`source.order`, set by the resolver only where declared) moves right after the leading warm-up / activation exercises. Applied last. Today only the fall blocks of `lead_tryhard_gym` and `route_projecting_gym` (falls while fresh, athlete_plan §5) — without it the phase sort put them after the redpoint attempts.
 
 ### P0 invariant
 

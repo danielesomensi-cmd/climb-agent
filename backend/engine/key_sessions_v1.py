@@ -302,9 +302,19 @@ def tryhard_hit(session: Mapping[str, Any], req: Optional[Mapping[str, Any]] = N
     A294 review: a limit session alone no longer counts — that made the
     try-hard row a copy of the limit row and never checked the component the
     GOAL REFRAME asked for. Outdoor attempts near the redpoint and a free
-    boulder session at the limit still count (flags on the requirement)."""
+    boulder session at the limit still count (flags on the requirement).
+
+    C276: the catalog sessions with a pinned fall block (``session_ids`` —
+    lead_tryhard_gym, route_projecting_gym) count while still UNRESOLVED (no
+    exercise entries yet, like ``SESSION_FALLBACK_STIMULI``). Once there are
+    entries — planned or logged — the fall exercise itself decides, so a
+    session whose falls were removed by hand (or a degraded resolution) does
+    not count."""
     ex_ids = set((req or {}).get("exercise_ids") or ["fall_practice"])
-    entries, _origin = counted_entries(session)
+    entries, origin = counted_entries(session)
+    if origin == "none":
+        sids = (req or {}).get("session_ids") or []
+        return str(session.get("session_id") or "") in sids
     return any(str(e.get("exercise_id") or "") in ex_ids for e in entries)
 
 

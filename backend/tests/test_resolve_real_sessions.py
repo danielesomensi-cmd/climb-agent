@@ -24,7 +24,12 @@ def _load_user_state():
 # loudly without their equipment instead of degrading — by design. The planner
 # only places a session where its ``required_equipment`` exists, so they are
 # resolved here where that equipment is declared.
-_STRICT_PIN_EQUIPMENT = {"treadmill_hiit_4x4": ["treadmill"]}
+# C276: the falls / route-rule blocks of lead_tryhard_gym and the falls block
+# of route_projecting_gym are strict pins on rope routes (both sessions already
+# require gym_routes, so the planner never places them elsewhere).
+_STRICT_PIN_EQUIPMENT = {"treadmill_hiit_4x4": ["treadmill"],
+                         "lead_tryhard_gym": ["gym_routes"],
+                         "route_projecting_gym": ["gym_routes"]}
 
 
 def _make_user_state(base, location, gym_id=None, session_id=None):

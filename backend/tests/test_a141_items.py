@@ -24,8 +24,12 @@ class TestFallPracticeExercise:
     def test_requires_gym_routes(self):
         exercises = _load_exercises()
         fall = next(e for e in exercises if e["id"] == "fall_practice")
-        assert "gym_routes" in fall.get("equipment_required_any", []), \
-            "fall_practice should require gym_routes in equipment_required_any"
+        # C276: hard requirement (AND) rather than equipment_required_any, so
+        # every consumer that reads only equipment_required (pin check, pools)
+        # also keeps it off a gym without rope routes.
+        assert fall.get("equipment_required") == ["gym_routes"], \
+            "fall_practice should require gym_routes in equipment_required"
+        assert not fall.get("equipment_required_any")
 
     def test_gym_only(self):
         exercises = _load_exercises()

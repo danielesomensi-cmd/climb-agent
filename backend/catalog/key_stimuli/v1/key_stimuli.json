@@ -1,6 +1,6 @@
 {
   "version": "key_stimuli.v1",
-  "_doc": "A294 (R5) — the key stimuli of each phase. Data only: backend/engine/key_sessions_v1.py derives the weekly key status from it at read time (never persisted). A stimulus is satisfied by a session that delivers it (families from backend/engine/stimulus.py, session_ids, technique drills, try-hard exercises, outdoor-hard days) — by DOSE, not by presence, for the anchored families. Decisions 2026-10-04 + GOAL REFRAME (technique in every phase, try-hard attached to the limit key — to the project key in performance, absent in base where there is no limit key). A294 review: outdoor days no longer count as technique (not verifiable), a limit session alone no longer counts as try-hard (a fall-practice block, outdoor near RP or a free limit session do), deload technique is info only. C272: the try-hard library drills (fall_ladder, three_attempt_comp, no_take_lead_onsight, commit_map) count for try_hard like fall_practice; they are role 'library' (composed by hand, never by the engine), so only sessions that contain them are affected.",
+  "_doc": "A294 (R5) — the key stimuli of each phase. Data only: backend/engine/key_sessions_v1.py derives the weekly key status from it at read time (never persisted). A stimulus is satisfied by a session that delivers it (families from backend/engine/stimulus.py, session_ids, technique drills, try-hard exercises, outdoor-hard days) — by DOSE, not by presence, for the anchored families. Decisions 2026-10-04 + GOAL REFRAME (technique in every phase, try-hard attached to the limit key — to the project key in performance, absent in base where there is no limit key). A294 review: outdoor days no longer count as technique (not verifiable), a limit session alone no longer counts as try-hard (a fall-practice block, outdoor near RP or a free limit session do), deload technique is info only. C272: the try-hard library drills (fall_ladder, three_attempt_comp, no_take_lead_onsight, commit_map) count for try_hard like fall_practice; they are role 'library' (composed by hand, never by the engine), so only sessions that contain them are affected. C276: two catalog sessions carry a pinned fall block — lead_tryhard_gym (falls + 2 committed routes) and route_projecting_gym (2-3 falls after the warm-up). try_hard.session_ids lets them count while still unresolved; once resolved, the fall exercise itself is checked (a session whose falls were removed does not count).",
   "stimuli": {
     "finger_max": {
       "label": "Finger max",
@@ -72,8 +72,9 @@
     },
     "try_hard": {
       "label": "Try-hard",
-      "why": "Falls practice and full commitment on attempts: you often stop before 100%. It rides on the limit session — it counts when that session (or another one) holds a fall-practice block, or when you climb outdoors near your redpoint.",
+      "why": "Falls practice and full commitment on attempts: you often stop before 100%. It rides on the limit session — it counts when that session (or another one) holds a fall-practice block (the lead try-hard session and gym projecting have one built in), or when you climb outdoors near your redpoint.",
       "exercise_ids": ["fall_practice", "fall_ladder", "three_attempt_comp", "no_take_lead_onsight", "commit_map"],
+      "session_ids": ["lead_tryhard_gym", "route_projecting_gym"],
       "outdoor_hard_counts": true,
       "free_limit_counts": true,
       "attached_to": "limit_power",

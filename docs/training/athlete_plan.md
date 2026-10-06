@@ -215,7 +215,7 @@ La chiave TECNICA della settimana si soddisfa con una di queste:
 | Sab | outdoor tecnico: riscaldamento con regola piedi, cadute di mantenimento, progetto con mappa dei punti di impegno. È il try-hard della settimana |
 | Dom | outdoor leggero (verticale 7a-7b, onsight con Beta Forecast) oppure riposo |
 
-Senza roccia: giovedì lead in palestra (cadute 10', 2 vie con regola tecnica, no-take su 2-3 vie), sabato gara a 3 tentativi.
+Senza roccia: giovedì lead in palestra (cadute 10', 2 vie con regola tecnica, no-take su 2-3 vie), sabato gara a 3 tentativi. La parte cadute + 2 vie è la sessione di catalogo `lead_tryhard_gym` (C276); il no-take resta da aggiungere a mano.
 
 **Power Endurance.**
 - Chiave tecnica: lead con regole tecniche sotto pump vero; nei 4×4, 1 regola tecnica per serie.
@@ -224,7 +224,7 @@ Senza roccia: giovedì lead in palestra (cadute 10', 2 vie con regola tecnica, n
 
 **Performance.**
 - Chiave tecnica: outdoor o onsight in palestra con Beta Forecast a 1-2'. Niente drill nuovi, solo applicazione.
-- Chiave progetto: mappa dei punti di impegno, routine, 2-3 cadute a inizio giornata.
+- Chiave progetto: mappa dei punti di impegno, routine, 2-3 cadute a inizio giornata. Le 2-3 cadute sono nel catalogo: `route_projecting_gym` apre con il blocco `falls_primer` (C276).
 
 **Deload.** Riscaldamento tecnico e 20' di `slow_climbing` / hover a flash −2. Niente try-hard e niente cadute oltre il mantenimento.
 

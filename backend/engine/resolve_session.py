@@ -1364,6 +1364,12 @@ def _resolve_inline_block(
                 "block_id": block_id,
             },
         }
+        # C276: a catalog block may ask to sit right after the warm-up
+        # (`"order": "after_warmup"` — the falls of route_projecting_gym /
+        # lead_tryhard_gym). Carried on the instance only when declared, so no
+        # other session's output changes; exercise_ordering applies it.
+        if mod.get("order") == "after_warmup":
+            inst["source"]["order"] = "after_warmup"
         if ex_attrs.get("intensity_pct") is not None:
             sug = suggest_max_hang_load(user_state, merged, exercise_attrs=ex_attrs)
             if sug:

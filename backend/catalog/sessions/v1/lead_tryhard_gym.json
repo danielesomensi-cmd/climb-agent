@@ -1,0 +1,135 @@
+{
+  "id": "lead_tryhard_gym",
+  "name": "Lead Try-Hard (Gym — Falls + Committed Routes)",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "technique_lead",
+    "secondary_goals": [
+      "technique_footwork",
+      "power_endurance"
+    ],
+    "notes": "The weekly try-hard session on lead: 8-10 min of practice falls right after the warm-up, then two lead routes, each with one technique rule declared on the ground and climbed to the last clip — fall rather than take. Routes at or below your onsight: this is commitment and technique under pump, not a finger-hard session. Needs a gym with rope routes and a trusted belayer."
+  },
+  "compatibility": {
+    "slot": [
+      "long"
+    ],
+    "sports": [
+      "climbing"
+    ]
+  },
+  "required_equipment": [
+    "gym_routes"
+  ],
+  "boulder_fallback": null,
+  "time_budget": {
+    "target_duration_min": 75,
+    "hard_cap_min": 90
+  },
+  "tags": {
+    "hard": false,
+    "finger": false
+  },
+  "modules": [
+    {
+      "template_id": "warmup_climbing",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup"
+    },
+    {
+      "block_id": "falls_block",
+      "required": true,
+      "priority": 95,
+      "module_role": "primary",
+      "order": "after_warmup",
+      "notes": "Practice falls straight after the warm-up, while fresh. Strict pin: without rope routes the block fails instead of turning into a boulder drill.",
+      "selection": {
+        "primary": {
+          "exercise_id": "fall_practice",
+          "pin_strict": true,
+          "prescription_overrides": {
+            "sets": 3,
+            "reps": 3,
+            "rest_between_sets_seconds": 60,
+            "notes": "8-10 min of falls with your usual belayer: 3 rounds of 3 falls, stepping up from just above the clip to a normal lead fall. Push away from the wall, feet facing it, knees soft. Note your fear 0-10 once."
+          },
+          "filters": {
+            "role": [
+              "technique"
+            ],
+            "domain": [
+              "technique_lead"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "route_feet_rule",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary",
+      "notes": "Route 1 of 2: footwork rule above the bolt.",
+      "selection": {
+        "primary": {
+          "exercise_id": "lead_precision_feet_above_bolt",
+          "pin_strict": true,
+          "prescription_overrides": {
+            "sets": 1,
+            "reps": 1,
+            "rest_between_sets_seconds": 300,
+            "notes": "Route 1: a vertical small-edge route 2-3 grades below your onsight. Rule declared on the ground: every foot loaded and still for 3 s before a hand moves, above the bolt too. Climb to the top — if you come off, it is a fall, not a take. Log foot slips."
+          },
+          "filters": {
+            "role": [
+              "technique"
+            ],
+            "domain": [
+              "technique_lead"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "route_pump_rule",
+      "required": true,
+      "priority": 85,
+      "module_role": "primary",
+      "notes": "Route 2 of 2: one technique rule kept under pump.",
+      "selection": {
+        "primary": {
+          "exercise_id": "lead_technique_under_pump",
+          "pin_strict": true,
+          "prescription_overrides": {
+            "sets": 1,
+            "reps": 1,
+            "rest_between_sets_seconds": 300,
+            "notes": "Route 2: a steeper route at onsight-1 to onsight, never above (above onsight it becomes a finger-hard session). Declare ONE rule before leaving the ground: clip from a straight arm with the hip in, or feet still and hips under before shaking out. Commit to every move to the last clip — fall, do not take. Log: rule kept yes/no, attempt outcome (SEND / FALL / TAKE / LET_GO)."
+          },
+          "filters": {
+            "role": [
+              "technique"
+            ],
+            "domain": [
+              "technique_lead"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "template_id": "antagonist_prehab",
+      "required": false,
+      "priority": 50,
+      "module_role": "secondary"
+    },
+    {
+      "template_id": "cooldown_stretch",
+      "required": false,
+      "priority": 40,
+      "module_role": "cooldown"
+    }
+  ]
+}
