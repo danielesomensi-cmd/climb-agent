@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 import shutil
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -638,9 +638,12 @@ class TestCoachStorage:
         storage.append_coach_message(uid, "user", "q")
         storage.append_coach_message(uid, "assistant", "a")
         storage.append_coach_message(uid, "user", "q2")
-        today = date.today().isoformat()
+        # The daily limit counts from UTC midnight (coach.service.messages_sent_today):
+        # a local date fails between 00:00 and 02:00 CEST.
+        utc_today = datetime.now(timezone.utc).date()
+        today = utc_today.isoformat()
         assert storage.count_coach_user_messages_since(uid, today) == 2
-        tomorrow = (date.today() + timedelta(days=1)).isoformat()
+        tomorrow = (utc_today + timedelta(days=1)).isoformat()
         assert storage.count_coach_user_messages_since(uid, tomorrow) == 0
 
 

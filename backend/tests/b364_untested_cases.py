@@ -142,7 +142,26 @@ def _strip(sug: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def compute() -> Dict[str, Any]:
-    """Prescriptions + untested feedback memory for every case."""
+    """Prescriptions + untested feedback memory for every case.
+
+    The clock is pinned to the day the golden was written (2026-10-04):
+    ``estimate_missing_baselines`` stamps ``datetime.now()`` on the baselines it
+    fills, and that date moves the loads of the ``onboarding_measured`` case.
+    """
+    from unittest import mock
+
+    from backend.engine import progression_v1 as _p
+
+    class _Pinned(_p.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2026, 10, 4, 12, 0, 0, tzinfo=tz)
+
+    with mock.patch.object(_p, "datetime", _Pinned):
+        return _compute()
+
+
+def _compute() -> Dict[str, Any]:
     from backend.engine.adhoc_prescription import propose_exercise_prescription
     from backend.engine.body_part_picker import apply_resolver_light
     from backend.engine.progression_v1 import apply_feedback, inject_targets

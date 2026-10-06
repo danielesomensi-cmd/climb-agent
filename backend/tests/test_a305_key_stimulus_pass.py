@@ -378,13 +378,22 @@ class TestNoStacking:
 
 
 # ---------------------------------------------------------------------------
-# Review A305: the planner does not create a hiit_near_max on its own
+# B373: a lunch HIIT never vetoes a key session (only an alert)
 # ---------------------------------------------------------------------------
 
-def test_pretrip_week_leaves_the_hiit_a_safe_day():
+def test_hiit_with_no_clean_day_does_not_block_the_limit():
+    """Every PE week places its limit even when the lunch rotation is then
+    left without a HIIT day free of `hiit_near_max` — the alert is the cost
+    (Daniele 2026-10-06), never a missing key session."""
+    for start in PE_WEEKS:
+        wp = plan("power_endurance", start_date=start)
+        assert sum(1 for _d, s in _sessions(wp) if s["session_id"] in LIMIT_SIDS) == 1, start
+        assert not any(u.get("stimulus") == "limit_power" for u in wp["unmet_stimulus"]), start
+
+
+def test_pretrip_week_keeps_two_pe_sessions():
     wp = plan("power_endurance", start_date="2026-12-07",
               pretrip_dates=["2026-12-10", "2026-12-11", "2026-12-12"])
-    assert [w for w in guards_v1.evaluate(wp) if w["code"] == guards_v1.CODE_HIIT_NEAR_MAX] == []
     assert _count(wp, "power_endurance", "power_endurance") >= 2
 
 

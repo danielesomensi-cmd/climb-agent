@@ -1085,15 +1085,6 @@ def _key_stimulus_pass(
             return 0
         return 1 if (o in comp_days or (o - 1) in comp_days) else 0
 
-    def _hiit_safe_days(view: Optional[List[List[Dict[str, Any]]]] = None) -> int:
-        """Complementary-lunch days where a HIIT would raise no alert: not a
-        pre-trip day, no max session that day nor the next."""
-        return sum(
-            1 for o in comp_days
-            if day_dates[o] not in pretrip_set
-            and not any(guards_v1._is_max(s) for p in (o, o + 1) for s in on(p, view))
-        )
-
     def _victim_rank(e: Dict[str, Any]) -> Optional[Tuple[int, int]]:
         """Tier of a session the pass may replace, or None. Volume first,
         then conditioning, then (A305 review) a session whose every key is in
@@ -1210,11 +1201,10 @@ def _key_stimulus_pass(
         # The merge must keep it (a lived day, a slot the user holds…).
         if not any(_is_entry(s, sid, slot) for s in after[o]):
             return None
-        # A max session that leaves the lunch rotation no day for its HIIT
-        # would make the planner raise `hiit_near_max` on its own (review).
-        if (rotation_has_hiit and comp_days and guards_v1._is_max({"session_id": sid})
-                and _hiit_safe_days() >= 1 and _hiit_safe_days(after) == 0):
-            return None
+        # B373: a lunch HIIT never vetoes a key session. Leaving the rotation
+        # no clean HIIT day only costs a `hiit_near_max` alert (Daniele,
+        # 2026-10-06: "non è grave, lasciamo solo il warning"); `_hiit_risk`
+        # still steers the day choice as a tie-break.
         days_map: Dict[str, List[Dict[str, Any]]] = {}
         for p in range(-7, 14):
             days_map[(start + timedelta(days=p)).isoformat()] = (
