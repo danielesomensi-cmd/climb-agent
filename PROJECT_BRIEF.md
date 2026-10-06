@@ -18,9 +18,9 @@ Climbing training planning engine. Deterministic (same inputs → same outputs),
 <!-- STATUS_TABLE_START -->
 | Metric | Count |
 |--------|-------|
-| Tests (passing) | 4915 |
+| Tests (passing) | 4965 |
 | Exercises | 337 |
-| Sessions (active) | 39 |
+| Sessions (active) | 40 |
 | Templates | 19 |
 | API endpoints | 98 |
 | Frontend pages | 46 |
