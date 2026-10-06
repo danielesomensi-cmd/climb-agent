@@ -503,6 +503,20 @@ def _ladder_tokens() -> set:
     out |= {f["family"] for f in doc.get("families") or []}
     out |= {t["ladder"] for t in doc.get("technique_ladders") or []}
     return out
+
+
+def _session_tokens() -> set:
+    """C276: session catalog ids and their inline block ids (modules[].block_id),
+    backticked in the plan where it names a catalog session or block."""
+    out = set()
+    for f in sorted((REPO_ROOT / "backend/catalog/sessions/v1").glob("*.json")):
+        doc = json.loads(f.read_text(encoding="utf-8"))
+        if doc.get("id"):
+            out.add(doc["id"])
+        out |= {m["block_id"] for m in doc.get("modules") or [] if isinstance(m, dict) and m.get("block_id")}
+    return out
+
+
 _NON_EXERCISE_TOKENS = {
     "anchored_load", "working_loads", "tests.*", "baselines", "notes", "load_kg", "load_mode", "anchored",
     "week_plans[<lunedì>]", "custom_sessions",
@@ -522,7 +536,7 @@ class TestDocs:
         md = (REPO_ROOT / ac.ATHLETE_PLAN_PATH).read_text(encoding="utf-8")
         catalog = ac.load_exercise_catalog()
         tokens = set(re.findall(r"`([a-z][a-z0-9_]+)`", md))
-        allowed = _NEW_IDS | _NON_EXERCISE_TOKENS | _ladder_tokens() | {"library", "ladder", "technique_tryhard", "protocols", "technique_ladders"}
+        allowed = _NEW_IDS | _NON_EXERCISE_TOKENS | _ladder_tokens() | _session_tokens() | {"library", "ladder", "technique_tryhard", "protocols", "technique_ladders"}
         unknown = sorted(t for t in tokens if t not in catalog and t not in allowed and not t.startswith("test_"))
         assert unknown == []
         # Every NEW id is really absent today (else move it to the catalog table).
