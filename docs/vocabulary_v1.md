@@ -1504,7 +1504,9 @@ GuardWarning (backend/engine/guards_v1.py, computed at read, NEVER persisted):
                            counted) or an other-sport day is not. One warning: scope "week", date = the week's
                            Monday, slot / session_id null, + rest_days, min_rest_days, rest_dates. Dropped once the
                            week is over; involves() is always False for it; planner weeks carry it too. A294
-                           proposals ignore it (not a recovery guard).
+                           proposals ignore it (not a recovery guard). Returned ONLY by evaluate(...,
+                           include_week=True) / evaluate_week(), sent as GET /api/week `week_guard_warnings[]`
+                           (never in `guard_warnings`, A305 review).
   Only sessions that can still change are flagged (not done/skipped, not before `today`); history counts.
 
   B372 — outdoor days (stimulus.outdoor_fatigue_days(state, days, load_threshold=OUTDOOR_RIPPLE_THRESHOLD,

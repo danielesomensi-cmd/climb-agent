@@ -65,6 +65,7 @@ STALE_PLAN_DETAIL = "The plan was updated since you loaded it — reload it and 
 _SIBLING_KEYS = (
     "guard_warnings",
     "added_guard_warnings",
+    "week_guard_warnings",
     "key_status",
     "key_conflicts",
     "retest_status",

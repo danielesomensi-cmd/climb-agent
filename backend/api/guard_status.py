@@ -93,6 +93,26 @@ def build_guard_warnings(
         return []
 
 
+def build_week_guard_warnings(
+    state: Mapping[str, Any], plan: Optional[Mapping[str, Any]], today: Optional[str] = None,
+    *, user_id: Any = _NO_USER,
+) -> List[Dict[str, Any]]:
+    """A305: the WEEK-level alerts of *plan* (``low_rest_days``) — a separate
+    sibling (``week_guard_warnings``) so the session-level ``guard_warnings``
+    contract is unchanged. ``[]`` on failure."""
+    if not isinstance(plan, Mapping):
+        return []
+    try:
+        rows = None if user_id is _NO_USER else outdoor_rows_for(user_id, plan.get("start_date"))
+        return guards_v1.evaluate_week(
+            plan, prev_week_days(state or {}, plan.get("start_date")), resolve_today(today), state or {},
+            outdoor_rows=rows, next_days=next_week_days(state or {}, plan.get("start_date")),
+        )
+    except Exception:
+        logger.warning("A305: week guard alerts failed", exc_info=True)
+        return []
+
+
 def messages_for(warnings: List[Mapping[str, Any]], date_iso: Optional[str], slot: Optional[str] = None) -> List[str]:
     """The messages of the alerts that involve the session at *date_iso* /
     *slot* — the legacy ``warnings: [str]`` of quick-add and override."""

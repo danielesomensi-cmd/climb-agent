@@ -59,6 +59,8 @@ Codes (one warning per flagged session):
   ``scope: "week"``, dated on the week's first day, ``slot`` / ``session_id``
   None, ``rest_days`` / ``rest_dates`` attached. Planner-generated weeks carry
   it too: the planner fills the days the athlete declared, this only says it.
+  Returned only by ``evaluate(..., include_week=True)`` / ``evaluate_week``
+  (API: ``week_guard_warnings``), never in the session-level list.
 
 HIIT is not hard (C274 / A300: it never consumes the hard-day or finger cap),
 so it never appears under ``hard_cap`` / ``pre_trip``.
@@ -603,8 +605,17 @@ def evaluate(
     state: Optional[Mapping[str, Any]] = None,
     outdoor_rows: Optional[Sequence[Mapping[str, Any]]] = None,
     next_days: Optional[Sequence[Mapping[str, Any]]] = None,
+    *,
+    include_week: bool = False,
 ) -> List[Dict[str, Any]]:
     """What the guards object to in *plan* — alerts only, see the module doc.
+
+    *include_week* (A305): also return the WEEK-level alerts
+    (``low_rest_days``, ``scope: "week"``). Off by default: the session-level
+    ``guard_warnings`` contract read by the client (badges per session, toasts
+    on an action) predates them and treats a null slot / session as a
+    wildcard — week alerts travel apart, in ``evaluate_week`` /
+    ``week_guard_warnings``.
 
     *prev_days*: the previous week's days (cross-week finger gap, heavy-pull
     window, a big outdoor Sunday). *today*: ISO client-local day — days before
@@ -638,11 +649,27 @@ def evaluate(
         _pre_trip(plan, em, st)
     _post_outdoor(tl, em)
     _hard_back_to_back(tl, em)
-    _low_rest_days(plan, tl, em)
+    if include_week:
+        _low_rest_days(plan, tl, em)
 
     order = {c: i for i, c in enumerate(CODES)}
     return sorted(em.out, key=lambda w: (w["date"], _slot_index(w.get("slot")),
                                          order.get(w["code"], 99), str(w.get("session_id") or "")))
+
+
+def evaluate_week(
+    plan: Optional[Mapping[str, Any]],
+    prev_days: Optional[Sequence[Mapping[str, Any]]] = None,
+    today: Optional[str] = None,
+    state: Optional[Mapping[str, Any]] = None,
+    outdoor_rows: Optional[Sequence[Mapping[str, Any]]] = None,
+    next_days: Optional[Sequence[Mapping[str, Any]]] = None,
+) -> List[Dict[str, Any]]:
+    """A305: only the WEEK-level alerts of *plan* (``scope: "week"`` —
+    ``low_rest_days``). Returned to the client as ``week_guard_warnings``,
+    never mixed into the session-level ``guard_warnings``."""
+    return [w for w in evaluate(plan, prev_days, today, state, outdoor_rows, next_days, include_week=True)
+            if w.get("scope") == "week"]
 
 
 def involves(warning: Mapping[str, Any], date_iso: str, slot: Optional[str] = None) -> bool:
@@ -676,4 +703,4 @@ def new_warnings(before: Sequence[Mapping[str, Any]], after: Sequence[Mapping[st
     return [dict(w) for w in after if key(w) not in seen]
 
 
-__all__ = ["CODES", "MIN_REST_DAYS", "VERSION", "evaluate", "involves", "is_rest_day_session", "new_warnings"]
+__all__ = ["CODES", "MIN_REST_DAYS", "VERSION", "evaluate", "evaluate_week", "involves", "is_rest_day_session", "new_warnings"]

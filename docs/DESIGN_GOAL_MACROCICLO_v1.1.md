@@ -268,6 +268,13 @@ nel catalogo: oggi è la seduta normale.
 `low_rest_days` (solo segnalazione; un giorno con il solo pranzo complementare o
 solo recupero/prehab conta come riposo).
 
+**Review A305:** una sola seduta d'arrampicata o dura al giorno (mai impilata
+accanto a quella della sera, mai al posto di una sessione di uno slot extra); la
+settimana è letta come la ricostruisce il merge B369, quindi uno slot svuotato
+dall'utente non viene mai riempito; per una chiave critica (tecnica) può cedere il
+posto anche una sessione non dura che porta una chiave in eccesso, mai una dura
+(S&P tiene le sue due sedute dure a parete).
+
 ---
 
 ## 7. Outdoor nel piano

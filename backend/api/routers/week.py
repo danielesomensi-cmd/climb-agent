@@ -901,9 +901,12 @@ def get_week(
     # A301: the guard alerts of this week as it stands (finger gap, finger
     # test 72 h, heavy pulls, HIIT next to a max, hard cap, pre-trip, big
     # outdoor day) — a sibling of week_plan like key_status, never persisted.
-    from backend.api.guard_status import build_guard_warnings
+    from backend.api.guard_status import build_guard_warnings, build_week_guard_warnings
 
     result["guard_warnings"] = build_guard_warnings(state, week_plan, today, user_id=user_id)
+    # A305: week-level alerts (low_rest_days) travel apart — the client's
+    # per-session matching would read their null slot as a wildcard.
+    result["week_guard_warnings"] = build_week_guard_warnings(state, week_plan, today, user_id=user_id)
 
     return result
 

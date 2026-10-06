@@ -832,6 +832,8 @@ def _key_stimulus_pass(
     day_keys: List[str],
     day_sessions: List[List[Dict[str, Any]]],
     normalized: Dict[str, Dict[str, Dict[str, Any]]],
+    normalized_full: Optional[Dict[str, Dict[str, Dict[str, Any]]]],
+    planning_prefs: Optional[Dict[str, Any]],
     day_has_available_slot: List[bool],
     day_is_outdoor: List[bool],
     day_intensity_reduced: List[bool],
@@ -878,18 +880,25 @@ def _key_stimulus_pass(
 
     **Where**, least invasive first: an empty day the athlete kept for
     training, then in place of a VOLUME session (``KEY_PASS_VOLUME_VICTIMS``,
-    duplicates first — decision 3). Never in place of prehab / recovery, a
-    test, a complementary lunch, or a session that is itself the only carrier
-    of another key / of the week's pulling or finger stimulus.
+    duplicates first — decision 3), then conditioning, then (critical keys
+    only) a non-hard session whose every key is in surplus. Never in place of
+    prehab / recovery, a test, a complementary lunch, an extra-slot session
+    (``pass2.2:extra_slot``), or a session that is itself the only carrier of
+    another key / of the week's pulling or finger stimulus. A victim is
+    replaced in its own slot; a climbing / hard session is never stacked next
+    to the day's climbing / hard session.
 
     **Never against the engine's own guards** (decisions.md: the planner,
     generating on its own, keeps respecting them): hard-day cap, hard gap and
     finger gap (previous week, this week, next week's first days), no hard /
     finger key session in the ``KEY_PASS_PRE_TEST_DAYS`` before a test nor on a
     test day, no hard / max on a pre-trip day or an other-sport day, the A294
-    heavy-pull-before-limit rule, and no new ``guards_v1`` alert on the week.
-    The week is read as the B369 merge will rebuild it: the lived days and the
-    user's own sessions of ``existing_week_plan`` count, and are never touched.
+    heavy-pull-before-limit rule, no new ``guards_v1`` alert on the week, and
+    no max session that leaves the lunch rotation without a HIIT-safe day.
+    Every view of the week is the real B369 merge (``_merge_user_content``)
+    with ``existing_week_plan``: lived days, user-owned sessions and skipped
+    stubs count and are never touched, the slots the user emptied are blocked,
+    and a placement the merge would drop is refused.
 
     **Never silent**: a requirement that stays short (and could have been
     carried with the athlete's equipment) becomes an ``unmet_stimulus`` row.
@@ -917,31 +926,68 @@ def _key_stimulus_pass(
 
     from backend.engine import guards_v1
     from backend.engine.stimulus import is_test_session, session_flag
-    from backend.engine.user_owned import is_user_owned
+    from backend.engine.user_owned import is_preservable
 
     catalog = _load_exercise_catalog_file()
     pool_set = set(session_pool)
     slot_rank = {s: i for i, s in enumerate(SLOTS)}
+    week_iso = [d.isoformat() for d in day_dates]
+    today_iso = today_date.isoformat() if today_date is not None else None
+    req_by_key = {r["key"]: r for r in all_reqs}
 
     def _live(s: Any) -> bool:
         return isinstance(s, dict) and s.get("status") != "skipped"
 
-    # The week as the B369 merge will put it back: lived days + the user's own
-    # sessions of the plan being regenerated (never moved, only counted).
-    kept_ctx: Dict[int, List[Dict[str, Any]]] = {}
-    for day in _plan_days_list(existing_week_plan):
-        try:
-            o = (_parse_date(str(day.get("date"))[:10]) - start).days
-        except (TypeError, ValueError):
-            continue
-        if not 0 <= o < 7:
-            continue
-        past = today_date is not None and day_dates[o] < today_date
-        for s in day.get("sessions") or []:
-            if not _live(s):
+    # ── The week as the B369 merge will put it back (A305 review) ──
+    # Every view of the week is the REAL merge (`_merge_user_content`, the one
+    # GET /api/week runs) of the candidate days with the plan being
+    # regenerated: lived days copied wholesale, the user's sessions back in
+    # their slot, the engine sessions the user removed gone. A placement that
+    # does not survive that merge is not a placement. On top of it, the slots
+    # the user emptied (removals, whole-day / outdoor overrides) are blocked:
+    # the merge drops a removal by session id, so a NEW id would slip into the
+    # slot the user had emptied.
+    same_week = (isinstance(existing_week_plan, dict)
+                 and str(existing_week_plan.get("start_date") or "")[:10] == str(start_date)[:10])
+    blocked: Dict[int, set] = {}
+    if same_week:
+        from backend.engine.replanner_v1 import _merge_user_content
+        from backend.engine.user_owned import ref_matches, removal_records, whole_day_override_dates
+
+        for d_iso in whole_day_override_dates(existing_week_plan):
+            if str(d_iso)[:10] in week_iso:
+                blocked.setdefault(week_iso.index(str(d_iso)[:10]), set()).update(SLOTS)
+        for r in removal_records(existing_week_plan):
+            d_iso = str(r.get("date") or "")[:10]
+            if d_iso not in week_iso:
                 continue
-            if past or s.get("status") == "done" or is_user_owned(s):
-                kept_ctx.setdefault(o, []).append(s)
+            o = week_iso.index(d_iso)
+            if r.get("slot"):
+                blocked.setdefault(o, set()).add(r["slot"])
+            elif r.get("ref"):
+                for s in day_sessions[o]:
+                    if s.get("slot") and ref_matches(s, r["ref"], None):
+                        blocked.setdefault(o, set()).add(s["slot"])
+
+    def _week_view(day_override: Optional[Tuple[int, List[Dict[str, Any]]]] = None) -> List[List[Dict[str, Any]]]:
+        """Every session of each day (skipped stubs included), as the merge
+        returns them; *day_override* replaces one day's generated sessions."""
+        gen = [list(day_override[1]) if day_override and day_override[0] == o else list(day_sessions[o])
+               for o in range(7)]
+        if not same_week:
+            return gen
+        try:
+            merged = _merge_user_content(
+                existing_week_plan,
+                {"start_date": start_date,
+                 "weeks": [{"days": [{"date": week_iso[o], "sessions": gen[o]} for o in range(7)]}]},
+                today_iso,
+            )
+        except Exception:  # the pass must never break the week
+            logger.warning("A305: merge preview failed for week %s", start_date, exc_info=True)
+            return gen
+        by = {str(d.get("date"))[:10]: list(d.get("sessions") or []) for d in _plan_days_list(merged)}
+        return [by.get(week_iso[o], []) for o in range(7)]
 
     prev_days = _plan_days_list(prev_week_plan)
     next_days = _plan_days_list(next_week_plan)
@@ -960,13 +1006,19 @@ def _key_stimulus_pass(
     prev_by = _side(prev_days, -7)
     next_by = _side(next_days, 7)
 
-    def on(o: int, day_override: Optional[Tuple[int, List[Dict[str, Any]]]] = None) -> List[Dict[str, Any]]:
+    cache: Dict[str, Any] = {}
+
+    def _base_view() -> List[List[Dict[str, Any]]]:
+        if "view" not in cache:
+            cache["view"] = _week_view()
+        return cache["view"]
+
+    def on(o: int, view: Optional[List[List[Dict[str, Any]]]] = None) -> List[Dict[str, Any]]:
         if o < 0:
             return prev_by.get(o, [])
         if o >= 7:
             return next_by.get(o, [])
-        own = day_override[1] if day_override and day_override[0] == o else day_sessions[o]
-        return [s for s in own if _live(s)] + kept_ctx.get(o, [])
+        return [s for s in (view if view is not None else _base_view())[o] if _live(s)]
 
     def _count(req: Dict[str, Any]) -> int:
         return sum(1 for o in range(7) for s in on(o) if session_delivers(req, s, catalog))
@@ -975,23 +1027,30 @@ def _key_stimulus_pass(
         raw = req.get("floor_target", req.get("target_per_week", 1))
         return int(raw) if isinstance(raw, int) and not isinstance(raw, bool) and raw > 0 else 1
 
+    def _floor(req: Dict[str, Any]) -> int:
+        """What the week must keep of *req*: its A294 target, or its floor."""
+        t = int(req.get("target_per_week") or 1)
+        return max(t, _target(req)) if req.get("floor_candidates") else t
+
     def _sid_count(sid: str) -> int:
         return sum(1 for o in range(7) for s in on(o) if s.get("session_id") == sid)
 
-    def _guard_plan(day_override: Optional[Tuple[int, List[Dict[str, Any]]]] = None) -> Dict[str, Any]:
-        return {
+    def _alerts(view: Optional[List[List[Dict[str, Any]]]] = None) -> List[Dict[str, Any]]:
+        if view is None and "alerts" in cache:
+            return cache["alerts"]
+        plan = {
             "start_date": start_date,
             "profile_snapshot": {"hard_cap_per_week": effective_hard_cap,
                                  "recovery_multiplier": recovery_mult},
-            "weeks": [{"days": [{"date": day_dates[o].isoformat(), "sessions": on(o, day_override)}
-                                for o in range(7)]}],
+            "weeks": [{"days": [{"date": week_iso[o], "sessions": on(o, view)} for o in range(7)]}],
         }
+        out = guards_v1.evaluate(plan, prev_days or None, None, None)
+        if view is None:
+            cache["alerts"] = out
+        return out
 
-    def _alerts(day_override: Optional[Tuple[int, List[Dict[str, Any]]]] = None) -> List[Dict[str, Any]]:
-        return guards_v1.evaluate(_guard_plan(day_override), prev_days or None, None, None)
-
-    def _has(flag: str, o: int, day_override=None) -> bool:
-        return any(session_flag(s, flag) for s in on(o, day_override))
+    def _has(flag: str, o: int) -> bool:
+        return any(session_flag(s, flag) for s in on(o))
 
     def _equipment_feasible(cands: List[str]) -> bool:
         for sid in cands:
@@ -1007,16 +1066,64 @@ def _key_stimulus_pass(
                     return True
         return False
 
+    # A305 review: the days a max session would sit next to a complementary
+    # lunch that may turn out HIIT (guards_v1 `hiit_near_max`: HIIT on the day
+    # of, or the day before, a max). Only a tie-break — the lunch rotation runs
+    # after this pass and has its own penalties.
+    from backend.engine.complementary_v1 import resolve_rotation
+
+    rotation_has_hiit = "hiit" in (resolve_rotation(planning_prefs, phase_id) or [])
+    comp_days = {
+        o for o in range(7)
+        if any(((normalized_full or {}).get(day_keys[o]) or {}).get(sn, {}).get("role") == "complementary"
+               and ((normalized_full or {}).get(day_keys[o]) or {}).get(sn, {}).get("available")
+               for sn in SLOTS)
+    }
+
+    def _hiit_risk(o: int, sid: str) -> int:
+        if not rotation_has_hiit or not guards_v1._is_max({"session_id": sid}):
+            return 0
+        return 1 if (o in comp_days or (o - 1) in comp_days) else 0
+
+    def _hiit_safe_days(view: Optional[List[List[Dict[str, Any]]]] = None) -> int:
+        """Complementary-lunch days where a HIIT would raise no alert: not a
+        pre-trip day, no max session that day nor the next."""
+        return sum(
+            1 for o in comp_days
+            if day_dates[o] not in pretrip_set
+            and not any(guards_v1._is_max(s) for p in (o, o + 1) for s in on(p, view))
+        )
+
+    def _victim_rank(e: Dict[str, Any]) -> Optional[Tuple[int, int]]:
+        """Tier of a session the pass may replace, or None. Volume first,
+        then conditioning, then (A305 review) a session whose every key is in
+        SURPLUS of the week's target — `_victim_ok` checks the surplus."""
+        sid = str(e.get("session_id") or "")
+        if is_test_session(e) or is_preservable(e) or e.get("slot_role") == "complementary":
+            return None
+        if "pass2.2:extra_slot" in (e.get("explain") or []):
+            # An extra slot next to the day's session (B121): a complementary
+            # lunch in all but name (decision 3), never a victim.
+            return None
+        if sid in _VICTIM_RANK:
+            return _VICTIM_RANK[sid]
+        if sid in guards_v1.REST_DAY_SESSION_IDS or sid not in _SESSION_META:
+            return None
+        # A hard session is never thinned for another key (D154: an S&P week
+        # of three gym days keeps two on-wall hard sessions).
+        if not session_flag(e, "hard") and any(session_delivers(r, e, catalog) for r in all_reqs):
+            return (2, 0)
+        return None
+
     def _victim_ok(o: int, i: int, entry_after: Dict[str, Any]) -> bool:
         e = day_sessions[o][i]
         sid = str(e.get("session_id") or "")
-        if sid not in _VICTIM_RANK or is_test_session(e) or e.get("slot_role") == "complementary":
+        if _victim_rank(e) is None:
             return False
         # Removing it must not uncover a key of the phase it carries.
         for r in all_reqs:
             if session_delivers(r, e, catalog) and not session_delivers(r, entry_after, catalog):
-                if _count(r) - 1 < int(r.get("target_per_week") or 1) or \
-                        (r.get("floor_candidates") and _count(r) - 1 < _target(r)):
+                if _count(r) - 1 < _floor(r):
                     return False
         # Nor the week's only pulling / finger session (PASS 2.5 / 2.6 floors).
         for flag in ("pulling", "finger"):
@@ -1025,6 +1132,10 @@ def _key_stimulus_pass(
                 if sum(1 for p in range(7) for s in on(p) if session_flag(s, flag)) <= 1:
                     return False
         return True
+
+    def _is_entry(s: Dict[str, Any], sid: str, slot: str) -> bool:
+        return (s.get("session_id") == sid and s.get("slot") == slot
+                and "pass2.7:key_stimulus" in (s.get("explain") or []))
 
     def _attempt(o: int, victim: Optional[int], sid: str, key: str
                  ) -> Optional[Tuple[Dict[str, Any], List[Dict[str, Any]]]]:
@@ -1035,17 +1146,24 @@ def _key_stimulus_pass(
             return None
         hard = bool(meta.get("hard"))
         finger = bool(meta.get("finger"))
+        climbing = bool(meta.get("climbing"))
         if day_dates[o] in pretrip_set and (hard or meta.get("intensity") == "max"):
             return None
         if day_intensity_reduced[o] and hard:
             return None
+        if victim is not None and blocked.get(o) and day_sessions[o][victim].get("slot") in blocked[o]:
+            return None
         own = [e for j, e in enumerate(day_sessions[o]) if j != victim]
-        survivors = own + kept_ctx.get(o, [])
+        before_day = _week_view((o, own))[o] if same_week else own
+        survivors = [e for e in before_day if _live(e)]
         if any(is_test_session(e) for e in survivors):
             return None
+        # One climbing / hard session per day, as PASS 1 places them (review):
+        # never stacked next to the day's climbing session or a hard one.
+        if (hard or climbing) and any(session_flag(e, "hard") or session_flag(e, "climbing")
+                                      for e in survivors):
+            return None
         if hard:
-            if any(session_flag(e, "hard") for e in survivors):
-                return None
             if sum(1 for p in range(7) if p != o and _has("hard", p)) >= effective_hard_cap:
                 return None
             if any(_has("hard", p) for p in range(o - hard_gap_days, o + hard_gap_days + 1) if p != o):
@@ -1059,19 +1177,21 @@ def _key_stimulus_pass(
             if any(is_test_session(s) for p in range(o + 1, o + 1 + KEY_PASS_PRE_TEST_DAYS) for s in on(p)):
                 return None
         day_avail = normalized[day_keys[o]]
-        occupied = {e.get("slot") for e in survivors if e.get("slot")}
-        res = None
+        taken = {e.get("slot") for e in before_day if e.get("slot")} | blocked.get(o, set())
         if victim is not None:
+            # In the victim's own slot only (B121: no hard / climbing session
+            # moved into an extra slot of the day).
             vslot = day_sessions[o][victim].get("slot")
-            if vslot and vslot not in occupied:
-                res = _find_best_slot(day_avail, meta, locations, prefer_evening=True,
-                                      home_equipment=home_equipment, gyms=gyms,
-                                      default_gym_id=default_gym_id,
-                                      occupied_slots=set(SLOTS) - {vslot})
-        if res is None:
+            if not vslot or vslot in taken:
+                return None
             res = _find_best_slot(day_avail, meta, locations, prefer_evening=True,
                                   home_equipment=home_equipment, gyms=gyms,
-                                  default_gym_id=default_gym_id, occupied_slots=occupied)
+                                  default_gym_id=default_gym_id,
+                                  occupied_slots=set(SLOTS) - {vslot})
+        else:
+            res = _find_best_slot(day_avail, meta, locations, prefer_evening=True,
+                                  home_equipment=home_equipment, gyms=gyms,
+                                  default_gym_id=default_gym_id, occupied_slots=taken)
         if res is None:
             return None
         slot, slot_info = res
@@ -1086,16 +1206,23 @@ def _key_stimulus_pass(
                 return None
         new_day = list(own) + [entry]
         new_day.sort(key=lambda e: slot_rank.get(e.get("slot"), 99))
+        after = _week_view((o, new_day))
+        # The merge must keep it (a lived day, a slot the user holds…).
+        if not any(_is_entry(s, sid, slot) for s in after[o]):
+            return None
+        # A max session that leaves the lunch rotation no day for its HIIT
+        # would make the planner raise `hiit_near_max` on its own (review).
+        if (rotation_has_hiit and comp_days and guards_v1._is_max({"session_id": sid})
+                and _hiit_safe_days() >= 1 and _hiit_safe_days(after) == 0):
+            return None
         days_map: Dict[str, List[Dict[str, Any]]] = {}
         for p in range(-7, 14):
             days_map[(start + timedelta(days=p)).isoformat()] = (
-                [s for s in new_day if s is not entry] + kept_ctx.get(o, []) if p == o else on(p)
+                [s for s in on(p, after) if not _is_entry(s, sid, slot)] if 0 <= p < 7 else on(p)
             )
         if _heavy_pull_clash({}, days_map, day_dates[o], slot, sid):
             return None
-        fresh = [w for w in guards_v1.new_warnings(_alerts(), _alerts((o, new_day)))
-                 if w.get("code") != guards_v1.CODE_LOW_REST_DAYS]
-        if fresh:
+        if guards_v1.new_warnings(_alerts(), _alerts(after)):
             return None
         return entry, new_day
 
@@ -1129,33 +1256,38 @@ def _key_stimulus_pass(
             placed = None
             allowed = {c: max(int(_SESSION_META[c].get("max_per_week", 1)), target) for c in cands}
             usable = [c for c in cands if _sid_count(c) < allowed[c]]
-            # A victim that already carries this key would be a swap, not a
-            # gain (and could loop): never taken for it.
-            victims = [
-                (o, i) for o in range(7) for i, e in enumerate(day_sessions[o])
-                if str(e.get("session_id") or "") in _VICTIM_RANK
-                and not session_delivers(req, e, catalog)
-            ]
-            victims.sort(key=lambda v: (
-                _VICTIM_RANK[str(day_sessions[v[0]][v[1]].get("session_id"))][0],
-                -_sid_count(str(day_sessions[v[0]][v[1]].get("session_id"))),
-                _VICTIM_RANK[str(day_sessions[v[0]][v[1]].get("session_id"))][1],
-                v[0], v[1],
-            ))
             # Candidate first (the catalog's preference), then the least
             # invasive place for it: an empty day the athlete kept for
-            # training, else in place of a volume session — duplicates first.
+            # training, else in place of a volume session — duplicates first,
+            # then conditioning, then a surplus carrier of another key.
             for sid in usable:
-                for o in range(7):
-                    if not day_has_available_slot[o] or on(o):
-                        continue
+                empty = [o for o in range(7) if day_has_available_slot[o] and not on(o)]
+                empty.sort(key=lambda o: (_hiit_risk(o, sid), o))
+                for o in empty:
                     got = _attempt(o, None, sid, key)
                     if got:
                         placed = (o, None) + got
                         break
                 if placed:
                     break
-                for o, i in victims:
+                # A victim that already carries this key would be a swap, not
+                # a gain (and could loop): never taken for it.
+                victims = []
+                for o in range(7):
+                    for i, e in enumerate(day_sessions[o]):
+                        rk = _victim_rank(e)
+                        if rk is None or session_delivers(req, e, catalog):
+                            continue
+                        if rk[0] >= 2 and req.get("max_severity") != "critical":
+                            # A surplus carrier of another key gives way to a
+                            # CRITICAL key only (technique, PE, project): a
+                            # warning key (try-hard, PE limit) never thins
+                            # the strength / limit work.
+                            continue
+                        victims.append(((rk[0], -_sid_count(str(e.get("session_id"))), rk[1],
+                                         _hiit_risk(o, sid), o, i), o, i))
+                victims.sort(key=lambda v: v[0])
+                for _k, o, i in victims:
                     got = _attempt(o, i, sid, key)
                     if got:
                         placed = (o, i) + got
@@ -1166,6 +1298,7 @@ def _key_stimulus_pass(
                 break
             o, victim, entry, new_day = placed
             day_sessions[o][:] = new_day
+            cache.clear()
             if entry["tags"].get("hard") and o not in hard_day_offsets:
                 hard_day_offsets.append(o)
             if entry["tags"].get("finger") and o not in finger_day_offsets:
@@ -1178,15 +1311,15 @@ def _key_stimulus_pass(
             )
             unmet.append({
                 "stimulus": key,
-                "label": req.get("label") or key,
+                "label": req.get("label") or req_by_key.get(key, {}).get("label") or key,
                 "phase_id": phase_id,
                 "target": target,
                 "placed": have,
                 "source": "key_stimulus_pass",
                 "reason": (
                     "no session carrying it could be placed without breaching the hard-day cap, "
-                    "the recovery gaps, the days before a test or a trip, or replacing another "
-                    "key session"
+                    "the recovery gaps, the days before a test or a trip, the athlete's own "
+                    "sessions and removals, or replacing another key session"
                 ),
             })
     return unmet
@@ -2775,6 +2908,8 @@ def generate_phase_week(
         day_keys=day_keys,
         day_sessions=day_sessions,
         normalized=normalized,
+        normalized_full=normalized_full,
+        planning_prefs=planning_prefs,
         day_has_available_slot=day_has_available_slot,
         day_is_outdoor=day_is_outdoor,
         day_intensity_reduced=day_intensity_reduced,

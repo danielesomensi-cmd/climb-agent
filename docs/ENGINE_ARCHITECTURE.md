@@ -284,13 +284,22 @@ candidate the least invasive place: an empty day kept by `target_training_days_p
 victim — `KEY_PASS_VOLUME_VICTIMS` (`endurance_aerobic_gym`, `route_endurance_gym`, `boulder_circuit_gym`),
 the most duplicated first, then `KEY_PASS_SECONDARY_VICTIMS` (conditioning: core, handstand, weights…). Never
 prehab / recovery (`guards_v1.REST_DAY_SESSION_IDS`), a test, a complementary lunch (not in the primary view),
-a victim that carries the same key, or the last carrier of another key / of the week's pulling or finger
-stimulus. A rope candidate (`gym_routes`) is used only when the phase pool climbs routes (never for a
-boulder pool). Guards, all on the week as the B369 merge will rebuild it (lived days and user-owned sessions
-of `existing_week_plan` count, previous week and next week's first days too): hard cap, hard gap, finger
-gap, one hard / one finger session per day, no hard / finger key session in `KEY_PASS_PRE_TEST_DAYS` (3)
+a session PASS 2.2 put in an extra slot (`pass2.2:extra_slot`, B121), a victim that carries the same key, or
+the last carrier of another key / of the week's pulling or finger stimulus. Third tier (review): a NON-hard
+session whose every key is in surplus of its target, and only for a `critical` key (D154: S&P keeps its hard
+sessions; a warning key never thins the limit work). A rope candidate (`gym_routes`) is used only when the phase pool climbs routes (never for a
+boulder pool). Guards, all on the week as the B369 merge will rebuild it — every view is the real
+`replanner_v1._merge_user_content` of the candidate days with `existing_week_plan` (same week), so lived
+days, today with something done, user-owned sessions and skipped stubs count, and a placement the merge
+would drop is refused; the slots the user emptied (`removal_records`, a slot-less removal resolved to the
+slot of the fresh engine session it names, `whole_day_override_dates`) are blocked, because the merge filters
+a removal by session id and a NEW id would slip in. Previous week and next week's first days count too:
+hard cap, hard gap, finger gap, one climbing / hard session per day (a climbing or hard candidate is never
+stacked next to the day's climbing or hard session), a victim is replaced in its own slot only, a max
+session never leaves the lunch rotation without a HIIT-safe day (`hiit_near_max`; days next to a
+complementary lunch are also the last choice), no hard / finger key session in `KEY_PASS_PRE_TEST_DAYS` (3)
 before a test nor on a test day, no hard / max on pre-trip or other-sport days, A294 `_heavy_pull_clash`, and
-no new `guards_v1` alert (except `low_rest_days`). A requirement still short → `unmet_stimulus` row
+no new `guards_v1` alert. A requirement still short → `unmet_stimulus` row
 `{stimulus, label, phase_id, target, placed, source: "key_stimulus_pass", reason}`; a requirement no candidate
 can carry with the equipment (or the pool's discipline) is left to A294's hint. Entries carry
 `explain: ["pass2.7:key_stimulus", "key:<key>", "replaced:<victim>"]`.
@@ -748,8 +757,10 @@ alert") no user action rewrites a session the user did not touch. `apply_day_add
 `_protected_neighbor_guard` are gone. What the guards object to is computed at read time by
 **`guards_v1.evaluate(plan, prev_days, today, state)`** (pure, deterministic, never persisted) and returned as a
 `guard_warnings[]` sibling of `week_plan` on `GET /api/week` and every replanner response (codes `finger_gap`,
-`finger_test_72h`, `heavy_pull_7d`, `hiit_near_max`, `hard_cap`, `pre_trip`, `post_outdoor`, `hard_back_to_back`, and
-the week-level `low_rest_days` of A305 — see
+`finger_test_72h`, `heavy_pull_7d`, `hiit_near_max`, `hard_cap`, `pre_trip`, `post_outdoor`, `hard_back_to_back`).
+The week-level `low_rest_days` of A305 is NOT in that list: `evaluate(..., include_week=True)` /
+`guards_v1.evaluate_week()` return it, and `GET /api/week` sends it as a separate `week_guard_warnings[]`
+sibling — the client matches `guard_warnings` per session with a null slot as a wildcard. See
 `docs/vocabulary_v1.md` §5.7.1). Only sessions that can still change are flagged; history counts. Since B372
 an outdoor day (declared and still ahead, logged hard, big load, or completed without a route log —
 `stimulus.outdoor_fatigue_days`; the planner's bare `outdoor_slot` is availability and does not count) is a hard, finger-loading day for these alerts and for the `athlete_context`
