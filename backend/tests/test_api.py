@@ -879,7 +879,9 @@ class TestReplanner:
             if a["type"] == "day_override"
         )
         assert body["adjustments"] == entry["adjustments"]
-        assert body["warnings"] == entry["warnings"]
+        # A301: the response adds the guard alerts of the touched slot to the
+        # warnings recorded on the adaptation — equal only on alert-free days.
+        assert all(w in body["warnings"] for w in entry["warnings"])
 
     # --- B117: session_completion_log ---
 
