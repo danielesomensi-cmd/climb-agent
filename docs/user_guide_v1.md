@@ -121,7 +121,7 @@ profile without an account — nothing entered there is stored.
 
 ### Power Endurance (2–3 weeks)
 
-**What you'll do**: 4×4 intervals, linked boulders, route intervals, PE circuits. The pump is back.
+**What you'll do**: 4×4 intervals, linked boulders, route intervals, PE circuits. The pump is back. Every week holds **two power-endurance sessions** and **one short limit session** — limit boulders one week, power / contact the next — so the strength of the previous phase does not fade. With a low hard-day cap the plan keeps within it and tells you what did not fit.
 
 **What it feels like**: The hardest phase. High intensity AND high volume. You'll feel tired. That's the point — this phase teaches your body to perform while fatigued.
 
@@ -206,7 +206,7 @@ Each phase has a few **key stimuli** that matter more than everything else — t
 | Phase | Key sessions each week |
 |---|---|
 | Strength & Power | Finger max (a heavy hang session: home finger strength *or* the long strength session) · Limit (limit boulders / board / campus) · Max pulling (weighted pull-ups) |
-| Power Endurance | Power-endurance intervals · Finger maintenance · Limit at least every 12 days |
+| Power Endurance | Power-endurance intervals (two a week) · Finger maintenance · Limit (the plan puts one every week; the card asks for one at least every 12 days) |
 | Performance | Project |
 | Every phase | Technique (feet and body positioning near your limit) |
 | Strength & Power, Power Endurance, Performance | Try-hard (falls practice / full commitment — it rides on the limit session, on the project session in Performance) |
@@ -214,6 +214,8 @@ Each phase has a few **key stimuli** that matter more than everything else — t
 On **This Week** the grid shows a ★ on the days with a key session (red when it was skipped or turned into recovery), and each session card carries a badge: **Key · Finger max**, **Key ✓** once done, **Supporting** / **Optional** for the other sessions of the same stimulus (Optional in a re-entry week, when you have had fewer than two limit or finger sessions in the last three weeks), **Skipped key** or **Downgraded from …**.
 
 The **Key sessions this week** card lists every key stimulus with its status. A key session counts when it is done **at the dose of the phase**: a weighted pull-up or max hang well below your tested max shows as *only a partial dose* — it still helps, but the stimulus is not ticked. Outdoor days count too (a route near your redpoint is a finger-hard day and a try-hard day), and a free boulder session with at least two problems at your limit target (or marked *It was a limit session*) counts as limit and try-hard. An outdoor day does **not** tick the technique key: the app cannot tell whether you worked on your feet and positioning, so technique counts only for the technique session or at least two feet / positioning drills (pacing, breathing and route-reading drills do not count). The try-hard counts when a session holds a **fall-practice block** — the limit session being on the plan is not enough; the card tells you which session to add it to. **Gym projecting** always opens with 2-3 practice falls right after the warm-up, so a projecting session ticks the try-hard of the performance phase; if you remove the falls from it, it no longer does. Falls need rope routes: at a gym without them the fall block is not replaced by something else — the session shows it as missing. In Power Endurance the limit stimulus can be proposed even though the phase's own plan has no limit session.
+
+**The plan places the key sessions itself.** When the week is built, a key stimulus that would otherwise be missing — the lead try-hard session (falls + two committed routes) where your gym has rope routes, a limit session in Power Endurance, the second power-endurance session, technique, the project — is put on a day you train, in place of a **volume** session (aerobic or route endurance first, the duplicated one before the others, then conditioning work). Never in place of prehab or recovery, a test, a lunch extra, or another key session, and never against the recovery rules (hard-day cap, finger and hard-day gaps, the three days before a test, the days before a trip). If there is no safe place, the week says so in the *No room for …* card instead of staying quiet. Deload weeks are not touched; an athlete whose plan has no rope sessions (boulder only) is never handed a lead session.
 
 When a key session is missed, the card tells you what to do:
 
@@ -723,10 +725,11 @@ When you change the plan yourself — quick-add, replan a day, move a session, a
 - **After an outdoor day** — a hard or finger session the day after a day at the crag.
 
 - **Back-to-back hard days** — a hard session the day after another hard day, when at least one of the two is a session you added or changed.
+- **Few rest days** — the week has fewer than two true rest days. A day with only a lunch extra (legs, HIIT, Z2, push) or only recovery / prehab counts as rest; a day at the crag or with another sport does not. This one is about the whole week, so it appears in the week's alerts card, not on a single session — and since your training days are yours to choose, a week the app builds on your schedule can carry it too.
 
 **Outdoor days count.** A day at the crag is a hard, finger-loading day for every one of these rules: a finger session the day before it, or within the recovery gap around it, gets a *Finger gap* alert; another hard session the day before it, *Back-to-back hard days*; the day after it, *After an outdoor day*; it counts toward the hard-day cap, toward the 72 hours before a finger test, and as a max day for HIIT. An outdoor day you planned (with a spot, or replanned as outdoor) counts before it happens (the app cannot know yet how hard it will be); if the day goes by and you never complete or log it, it stops counting. A day that is only *available* for outdoor in your schedule is not a crag day until you plan or log one. Once it is done, your route log decides: a day with a route at or above your hard-climb grade (your redpoint minus two grades) counts, an easy day out — every route logged below that grade — does not. A completed outdoor day with no routes logged counts, to be safe. The outdoor day itself never carries the alert (it has no session to change): the alert sits on the session next to it and names the crag.
 
-Alerts are about what can still change: sessions already done, skipped or in the past are counted, never flagged. When the app builds a week on its own, it still follows every one of these rules.
+Alerts are about what can still change: sessions already done, skipped or in the past are counted, never flagged. When the app builds a week on its own, it still follows every one of these rules (the rest-day count excepted: it fills the days you made available).
 
 **Where you see them.** A session with an alert carries an orange **alert** badge with one line per rule it breaks; **This Week** opens with an alerts card listing every alert of the week (plus the lunch-rotation rules and any complementary slot left free), and **Today** shows the alerts of the day. Right after a quick-add, a replan or a custom session that trips a rule, a short note says so — the session is already in, as you picked it. There is no "Add hard anyway" step any more: nothing is ever eased, so there is nothing to force.
 

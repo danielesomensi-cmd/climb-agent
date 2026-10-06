@@ -197,8 +197,15 @@ class TestPlannerV2AntiRepetition(unittest.TestCase):
             from collections import Counter
             from backend.engine.planner_v2 import _SESSION_META
             counts = Counter(s["session_id"] for d in plan["weeks"][0]["days"] for s in d["sessions"])
+            # A305: a key-stimulus floor may raise the cap for its own
+            # candidates (power_endurance: 2 PE sessions a week, decision 5).
+            from backend.engine.key_sessions_v1 import phase_requirements
+            floor_cap = {}
+            for r in phase_requirements(phase_id):
+                for c in r.get("floor_candidates") or []:
+                    floor_cap[c] = max(floor_cap.get(c, 0), int(r.get("floor_target") or 1))
             for sid, count in counts.items():
-                max_pw = _SESSION_META.get(sid, {}).get("max_per_week", 1)
+                max_pw = max(_SESSION_META.get(sid, {}).get("max_per_week", 1), floor_cap.get(sid, 0))
                 self.assertLessEqual(count, max_pw,
                     f"[{phase_id}] {sid} appears {count}x but max_per_week={max_pw}")
 

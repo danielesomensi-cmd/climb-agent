@@ -1010,8 +1010,12 @@ def _propose_for(
             # be accepted with the neighbour declared as a side effect.
             if guards_before is None:
                 guards_before = _guard_view(state, plan, ws, archived_weeks, today, outdoor_rows)
-            fresh = _guards_mod.new_warnings(guards_before,
-                                             _guard_view(state, after, ws, archived_weeks, today, outdoor_rows))
+            # A305: the week-level density alert (low_rest_days) is not a
+            # recovery guard — the planner fills the declared days without it,
+            # so the proposal does not either (A294 proposals unchanged).
+            fresh = [w for w in _guards_mod.new_warnings(
+                guards_before, _guard_view(state, after, ws, archived_weeks, today, outdoor_rows))
+                if w.get("code") != _guards_mod.CODE_LOW_REST_DAYS]
             if fresh:
                 rejections.append({"date": d_iso, "session_id": sid, "reason": "guard_alert",
                                    "codes": sorted({w["code"] for w in fresh}),

@@ -376,7 +376,9 @@ class TestPlannerStillRespectsGuards:
                                                  "gym_routes"]}],
             home_equipment=["hangboard", "pullup_bar"],
         )
-        assert guards_v1.evaluate(week) == []
+        # A305: the week-level density alert is not a recovery guard — the
+        # planner fills the days the athlete made available and only says so.
+        assert [w for w in guards_v1.evaluate(week) if w["code"] != guards_v1.CODE_LOW_REST_DAYS] == []
 
 
 # ---------------------------------------------------------------------------

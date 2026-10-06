@@ -244,6 +244,30 @@ Il planner assegna le sessioni in base a:
 4. Vincoli hard (no finger consecutivi, recovery dopo hard day)
 5. Outdoor programmato/spontaneo
 
+### 6.3 Stimoli chiave garantiti (A305, 2026-10-06)
+
+I pesi rendono uno stimolo *probabile*, non *presente*. Dal 2026-10-06 il
+planner legge le chiavi di fase di A294 (`key_stimuli.json`, una sola fonte) e,
+se una manca, la mette al posto di una sessione di **volume** (aerobico / vie di
+resistenza prima, il doppione per primo; poi il condizionamento) — mai al posto
+di prehab/recupero, test, pranzi complementari o un'altra chiave, e mai contro le
+guardie (cap hard, gap dita e hard, 72 h prima di un test, pre-trip, tirata
+pesante prima del limit). Principio dal piano atleta §1: *tecnica e try-hard
+sostituiscono volume, non le chiavi di forza*. Se non c'è posto lo dice
+(`unmet_stimulus`). Il deload non cambia.
+
+**Power endurance — settimana tipo dal 2026-10-06:** **2 sedute PE** (4×4,
+intervalli su via) + **1 seduta limit breve ogni settimana**, a settimane alterne
+limit boulder / power-contact (mantenere la forza della fase precedente: il
+decadimento della forza massima è ~30 giorni), + tecnica, try-hard, mantenimento
+dita. Tre sedute dure su un cap di 4; con un cap più basso si resta nel cap e la
+settimana segnala ciò che non è entrato. Nessuna variante «corta» del limit esiste
+nel catalogo: oggi è la seduta normale.
+
+**Densità:** meno di 2 giorni di riposo veri nella settimana → alert
+`low_rest_days` (solo segnalazione; un giorno con il solo pranzo complementare o
+solo recupero/prehab conta come riposo).
+
 ---
 
 ## 7. Outdoor nel piano

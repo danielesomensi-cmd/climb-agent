@@ -120,6 +120,38 @@ _PHASE_TEST_MAP: Dict[str, Dict[str, bool]] = {
 }
 MAX_WEEKS_UNTESTED = 12  # Force maintenance retest if axis untested for 12+ weeks
 
+# A305 — PASS 2.7 (key stimuli). The only sessions the pass may REPLACE to make
+# room for a missing key stimulus: climbing volume (decision 3, 2026-10-06 —
+# "technique and try-hard replace volume, not the strength keys", athlete_plan
+# §1). Order = preference among equals; duplicates go first (see the pass).
+# Never prehab / recovery, never a test, never a complementary lunch (those
+# slots are not even in the primary view the pass works on).
+KEY_PASS_VOLUME_VICTIMS: Tuple[str, ...] = (
+    "endurance_aerobic_gym",
+    "route_endurance_gym",
+    "boulder_circuit_gym",
+)
+# A305: second tier, only once no volume session is left to take: conditioning
+# work that is neither recovery / prehab nor a key ("volume sessions FIRST",
+# decision 3). Recovery / prehab (`guards_v1.REST_DAY_SESSION_IDS`), tests,
+# finger and technique sessions are never victims.
+KEY_PASS_SECONDARY_VICTIMS: Tuple[str, ...] = (
+    "complementary_conditioning",
+    "core_training",
+    "handstand_practice",
+    "upper_body_weights",
+    "legs_strength",
+    "lower_body_gym",
+    "heavy_conditioning_gym",
+)
+_VICTIM_RANK: Dict[str, Tuple[int, int]] = {
+    **{sid: (0, i) for i, sid in enumerate(KEY_PASS_VOLUME_VICTIMS)},
+    **{sid: (1, i) for i, sid in enumerate(KEY_PASS_SECONDARY_VICTIMS)},
+}
+# A305: a hard / finger key session is never placed in the N days before a test
+# (the 72 h block of the retest policy, in whole days, inclusive).
+KEY_PASS_PRE_TEST_DAYS = 3
+
 # A282: a phase whose domain weight for a primary quality reaches this gets a
 # FLOOR on that quality — it may not be absent from the week. Deliberately a
 # floor and not a proportion: the planner places ~4 sessions across 6 domains,
@@ -773,6 +805,391 @@ def _pick_pulling_test_session(
     if max_pullups_bw is not None and max_pullups_bw >= 15:
         return "test_max_weighted_pullup"
     return "test_pullup_bw"
+
+
+def _plan_days_list(plan: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """The ``days`` of a single-week plan dict, or ``[]``."""
+    if not isinstance(plan, dict):
+        return []
+    weeks = plan.get("weeks") or [{}]
+    first = weeks[0] if weeks and isinstance(weeks[0], dict) else {}
+    return [d for d in (first.get("days") or []) if isinstance(d, dict)]
+
+
+def key_pass_week_index(start: date) -> int:
+    """A305: absolute index of the week starting on Monday ``start`` (0001-01-01
+    is a Monday). Its parity decides which limit session the power-endurance
+    week tries first — deterministic, from the date alone."""
+    return (start.toordinal() - 1) // 7
+
+
+def _key_stimulus_pass(
+    *,
+    phase_id: str,
+    start: date,
+    start_date: str,
+    day_dates: List[date],
+    day_keys: List[str],
+    day_sessions: List[List[Dict[str, Any]]],
+    normalized: Dict[str, Dict[str, Dict[str, Any]]],
+    day_has_available_slot: List[bool],
+    day_is_outdoor: List[bool],
+    day_intensity_reduced: List[bool],
+    pretrip_set: set,
+    session_pool: Sequence[str],
+    locations: Sequence[str],
+    home_equipment: Optional[List[str]],
+    gyms: Optional[List[Dict[str, Any]]],
+    default_gym_id: Optional[str],
+    effective_hard_cap: int,
+    hard_gap_days: int,
+    finger_gap_days: int,
+    recovery_mult: float,
+    prev_week_plan: Optional[Dict[str, Any]],
+    next_week_plan: Optional[Dict[str, Any]],
+    existing_week_plan: Optional[Dict[str, Any]],
+    today_date: Optional[date],
+    hard_day_offsets: List[int],
+    finger_day_offsets: List[int],
+) -> List[Dict[str, Any]]:
+    """PASS 2.7 (A305) — place the key stimuli the week is missing.
+
+    Before A305 the planner never read the key-stimuli catalog: the A294 card
+    could say "try-hard missing" every week of a phase, and a power-endurance
+    week of six climbing evenings had one hard session and four of volume.
+
+    **Requirements** come from ``key_sessions_v1.phase_requirements`` — the
+    same rows A294 reads, so the two cannot drift. Only the rows that declare
+    ``floor_candidates`` (phase-level data in ``key_stimuli.json``) are handled
+    here; finger / pulling keep their own floors (PASS 2.5 / 2.6). Fields:
+
+    - ``floor_candidates``: the sessions that may be placed, in order (sessions
+      of the phase pool first). Phase-declared, so they are trusted like a test
+      is: the limit row of power_endurance places a max session under the
+      phase's ``high`` cap on purpose (decision 4, 2026-10-06);
+    - ``floor_target`` (default ``target_per_week``): how many sessions the
+      week must hold (power_endurance: 2, decision 5);
+    - ``floor_alternate``: rotate the candidates by the parity of the absolute
+      week index (power_endurance limit: limit boulders one week, power /
+      contact the next, decision 4). ``max_gap_days`` is A294's business (its
+      "not due" reading); the planner places the stimulus every week.
+
+    ``propose`` is untouched: A294's proposals do not change.
+
+    **Where**, least invasive first: an empty day the athlete kept for
+    training, then in place of a VOLUME session (``KEY_PASS_VOLUME_VICTIMS``,
+    duplicates first — decision 3). Never in place of prehab / recovery, a
+    test, a complementary lunch, or a session that is itself the only carrier
+    of another key / of the week's pulling or finger stimulus.
+
+    **Never against the engine's own guards** (decisions.md: the planner,
+    generating on its own, keeps respecting them): hard-day cap, hard gap and
+    finger gap (previous week, this week, next week's first days), no hard /
+    finger key session in the ``KEY_PASS_PRE_TEST_DAYS`` before a test nor on a
+    test day, no hard / max on a pre-trip day or an other-sport day, the A294
+    heavy-pull-before-limit rule, and no new ``guards_v1`` alert on the week.
+    The week is read as the B369 merge will rebuild it: the lived days and the
+    user's own sessions of ``existing_week_plan`` count, and are never touched.
+
+    **Never silent**: a requirement that stays short (and could have been
+    carried with the athlete's equipment) becomes an ``unmet_stimulus`` row.
+    A requirement no candidate can carry with the equipment at all (no gym
+    with routes for the lead try-hard), or that only a rope session carries
+    while the phase pool has none (a boulder pool: a boulderer is never handed
+    a lead session by a floor), is left to A294's hint.
+
+    Returns the ``unmet_stimulus`` rows. Mutates ``day_sessions`` and appends
+    to ``hard_day_offsets`` / ``finger_day_offsets``. Deterministic.
+    """
+    if phase_id == "deload":
+        return []
+    from backend.engine.key_sessions_v1 import (
+        _heavy_pull_clash,
+        _load_exercise_catalog_file,
+        phase_requirements,
+        session_delivers,
+    )
+
+    all_reqs = phase_requirements(phase_id)
+    floor_reqs = [(i, r) for i, r in enumerate(all_reqs) if r.get("floor_candidates")]
+    if not floor_reqs:
+        return []
+
+    from backend.engine import guards_v1
+    from backend.engine.stimulus import is_test_session, session_flag
+    from backend.engine.user_owned import is_user_owned
+
+    catalog = _load_exercise_catalog_file()
+    pool_set = set(session_pool)
+    slot_rank = {s: i for i, s in enumerate(SLOTS)}
+
+    def _live(s: Any) -> bool:
+        return isinstance(s, dict) and s.get("status") != "skipped"
+
+    # The week as the B369 merge will put it back: lived days + the user's own
+    # sessions of the plan being regenerated (never moved, only counted).
+    kept_ctx: Dict[int, List[Dict[str, Any]]] = {}
+    for day in _plan_days_list(existing_week_plan):
+        try:
+            o = (_parse_date(str(day.get("date"))[:10]) - start).days
+        except (TypeError, ValueError):
+            continue
+        if not 0 <= o < 7:
+            continue
+        past = today_date is not None and day_dates[o] < today_date
+        for s in day.get("sessions") or []:
+            if not _live(s):
+                continue
+            if past or s.get("status") == "done" or is_user_owned(s):
+                kept_ctx.setdefault(o, []).append(s)
+
+    prev_days = _plan_days_list(prev_week_plan)
+    next_days = _plan_days_list(next_week_plan)
+
+    def _side(days: List[Dict[str, Any]], base: int) -> Dict[int, List[Dict[str, Any]]]:
+        out: Dict[int, List[Dict[str, Any]]] = {}
+        for day in days:
+            try:
+                o = (_parse_date(str(day.get("date"))[:10]) - start).days
+            except (TypeError, ValueError):
+                continue
+            if base <= o < base + 7:
+                out[o] = [s for s in day.get("sessions") or [] if _live(s)]
+        return out
+
+    prev_by = _side(prev_days, -7)
+    next_by = _side(next_days, 7)
+
+    def on(o: int, day_override: Optional[Tuple[int, List[Dict[str, Any]]]] = None) -> List[Dict[str, Any]]:
+        if o < 0:
+            return prev_by.get(o, [])
+        if o >= 7:
+            return next_by.get(o, [])
+        own = day_override[1] if day_override and day_override[0] == o else day_sessions[o]
+        return [s for s in own if _live(s)] + kept_ctx.get(o, [])
+
+    def _count(req: Dict[str, Any]) -> int:
+        return sum(1 for o in range(7) for s in on(o) if session_delivers(req, s, catalog))
+
+    def _target(req: Dict[str, Any]) -> int:
+        raw = req.get("floor_target", req.get("target_per_week", 1))
+        return int(raw) if isinstance(raw, int) and not isinstance(raw, bool) and raw > 0 else 1
+
+    def _sid_count(sid: str) -> int:
+        return sum(1 for o in range(7) for s in on(o) if s.get("session_id") == sid)
+
+    def _guard_plan(day_override: Optional[Tuple[int, List[Dict[str, Any]]]] = None) -> Dict[str, Any]:
+        return {
+            "start_date": start_date,
+            "profile_snapshot": {"hard_cap_per_week": effective_hard_cap,
+                                 "recovery_multiplier": recovery_mult},
+            "weeks": [{"days": [{"date": day_dates[o].isoformat(), "sessions": on(o, day_override)}
+                                for o in range(7)]}],
+        }
+
+    def _alerts(day_override: Optional[Tuple[int, List[Dict[str, Any]]]] = None) -> List[Dict[str, Any]]:
+        return guards_v1.evaluate(_guard_plan(day_override), prev_days or None, None, None)
+
+    def _has(flag: str, o: int, day_override=None) -> bool:
+        return any(session_flag(s, flag) for s in on(o, day_override))
+
+    def _equipment_feasible(cands: List[str]) -> bool:
+        for sid in cands:
+            meta = _SESSION_META.get(sid)
+            if meta is None:
+                continue
+            for o in range(7):
+                if not day_has_available_slot[o] or day_is_outdoor[o]:
+                    continue
+                if _find_best_slot(normalized[day_keys[o]], meta, locations, prefer_evening=True,
+                                   home_equipment=home_equipment, gyms=gyms,
+                                   default_gym_id=default_gym_id) is not None:
+                    return True
+        return False
+
+    def _victim_ok(o: int, i: int, entry_after: Dict[str, Any]) -> bool:
+        e = day_sessions[o][i]
+        sid = str(e.get("session_id") or "")
+        if sid not in _VICTIM_RANK or is_test_session(e) or e.get("slot_role") == "complementary":
+            return False
+        # Removing it must not uncover a key of the phase it carries.
+        for r in all_reqs:
+            if session_delivers(r, e, catalog) and not session_delivers(r, entry_after, catalog):
+                if _count(r) - 1 < int(r.get("target_per_week") or 1) or \
+                        (r.get("floor_candidates") and _count(r) - 1 < _target(r)):
+                    return False
+        # Nor the week's only pulling / finger session (PASS 2.5 / 2.6 floors).
+        for flag in ("pulling", "finger"):
+            if _SESSION_META.get(sid, {}).get(flag) and not _SESSION_META.get(
+                    str(entry_after.get("session_id")), {}).get(flag):
+                if sum(1 for p in range(7) for s in on(p) if session_flag(s, flag)) <= 1:
+                    return False
+        return True
+
+    def _attempt(o: int, victim: Optional[int], sid: str, key: str
+                 ) -> Optional[Tuple[Dict[str, Any], List[Dict[str, Any]]]]:
+        meta = _SESSION_META.get(sid)
+        if meta is None or day_is_outdoor[o]:
+            return None
+        if today_date is not None and day_dates[o] < today_date:
+            return None
+        hard = bool(meta.get("hard"))
+        finger = bool(meta.get("finger"))
+        if day_dates[o] in pretrip_set and (hard or meta.get("intensity") == "max"):
+            return None
+        if day_intensity_reduced[o] and hard:
+            return None
+        own = [e for j, e in enumerate(day_sessions[o]) if j != victim]
+        survivors = own + kept_ctx.get(o, [])
+        if any(is_test_session(e) for e in survivors):
+            return None
+        if hard:
+            if any(session_flag(e, "hard") for e in survivors):
+                return None
+            if sum(1 for p in range(7) if p != o and _has("hard", p)) >= effective_hard_cap:
+                return None
+            if any(_has("hard", p) for p in range(o - hard_gap_days, o + hard_gap_days + 1) if p != o):
+                return None
+        if finger:
+            if any(session_flag(e, "finger") for e in survivors):
+                return None
+            if any(_has("finger", p) for p in range(o - finger_gap_days, o + finger_gap_days + 1) if p != o):
+                return None
+        if hard or finger:
+            if any(is_test_session(s) for p in range(o + 1, o + 1 + KEY_PASS_PRE_TEST_DAYS) for s in on(p)):
+                return None
+        day_avail = normalized[day_keys[o]]
+        occupied = {e.get("slot") for e in survivors if e.get("slot")}
+        res = None
+        if victim is not None:
+            vslot = day_sessions[o][victim].get("slot")
+            if vslot and vslot not in occupied:
+                res = _find_best_slot(day_avail, meta, locations, prefer_evening=True,
+                                      home_equipment=home_equipment, gyms=gyms,
+                                      default_gym_id=default_gym_id,
+                                      occupied_slots=set(SLOTS) - {vslot})
+        if res is None:
+            res = _find_best_slot(day_avail, meta, locations, prefer_evening=True,
+                                  home_equipment=home_equipment, gyms=gyms,
+                                  default_gym_id=default_gym_id, occupied_slots=occupied)
+        if res is None:
+            return None
+        slot, slot_info = res
+        entry = _make_session_entry(
+            slot, sid, meta, slot_info, locations, phase_id, day_keys[o],
+            default_gym_id, gyms or [], "pass2.7:key_stimulus", home_equipment=home_equipment,
+        )
+        entry["explain"].append(f"key:{key}")
+        if victim is not None:
+            entry["explain"].append(f"replaced:{day_sessions[o][victim].get('session_id')}")
+            if not _victim_ok(o, victim, entry):
+                return None
+        new_day = list(own) + [entry]
+        new_day.sort(key=lambda e: slot_rank.get(e.get("slot"), 99))
+        days_map: Dict[str, List[Dict[str, Any]]] = {}
+        for p in range(-7, 14):
+            days_map[(start + timedelta(days=p)).isoformat()] = (
+                [s for s in new_day if s is not entry] + kept_ctx.get(o, []) if p == o else on(p)
+            )
+        if _heavy_pull_clash({}, days_map, day_dates[o], slot, sid):
+            return None
+        fresh = [w for w in guards_v1.new_warnings(_alerts(), _alerts((o, new_day)))
+                 if w.get("code") != guards_v1.CODE_LOW_REST_DAYS]
+        if fresh:
+            return None
+        return entry, new_day
+
+    unmet: List[Dict[str, Any]] = []
+    week_parity = key_pass_week_index(start) % 2
+    pool_uses_routes = any(
+        "gym_routes" in (_SESSION_META.get(p, {}).get("required_equipment") or []) for p in session_pool
+    )
+    for _idx, req in sorted(floor_reqs, key=lambda x: (x[1].get("priority") or 9, x[0])):
+        key = req["key"]
+        cands = [c for c in req.get("floor_candidates") or [] if c in _SESSION_META]
+        # A rope session is placed only for an athlete whose phase pool climbs
+        # routes at all: the boulder pools have none, and a boulderer is not
+        # handed a lead session by a floor (left to A294, like equipment).
+        if not pool_uses_routes:
+            cands = [c for c in cands
+                     if "gym_routes" not in (_SESSION_META[c].get("required_equipment") or [])]
+        if req.get("floor_alternate") and len(cands) > 1 and week_parity:
+            cands = cands[1:] + cands[:1]
+        cands.sort(key=lambda c: 0 if c in pool_set else 1)  # stable: pool sessions first
+        target = _target(req)
+        if _count(req) >= target:
+            continue
+        if not _equipment_feasible(cands):
+            logger.info("A305: %s not placeable with this equipment in week %s — left to A294",
+                        key, start_date)
+            continue
+        for _round in range(target):
+            if _count(req) >= target:
+                break
+            placed = None
+            allowed = {c: max(int(_SESSION_META[c].get("max_per_week", 1)), target) for c in cands}
+            usable = [c for c in cands if _sid_count(c) < allowed[c]]
+            # A victim that already carries this key would be a swap, not a
+            # gain (and could loop): never taken for it.
+            victims = [
+                (o, i) for o in range(7) for i, e in enumerate(day_sessions[o])
+                if str(e.get("session_id") or "") in _VICTIM_RANK
+                and not session_delivers(req, e, catalog)
+            ]
+            victims.sort(key=lambda v: (
+                _VICTIM_RANK[str(day_sessions[v[0]][v[1]].get("session_id"))][0],
+                -_sid_count(str(day_sessions[v[0]][v[1]].get("session_id"))),
+                _VICTIM_RANK[str(day_sessions[v[0]][v[1]].get("session_id"))][1],
+                v[0], v[1],
+            ))
+            # Candidate first (the catalog's preference), then the least
+            # invasive place for it: an empty day the athlete kept for
+            # training, else in place of a volume session — duplicates first.
+            for sid in usable:
+                for o in range(7):
+                    if not day_has_available_slot[o] or on(o):
+                        continue
+                    got = _attempt(o, None, sid, key)
+                    if got:
+                        placed = (o, None) + got
+                        break
+                if placed:
+                    break
+                for o, i in victims:
+                    got = _attempt(o, i, sid, key)
+                    if got:
+                        placed = (o, i) + got
+                        break
+                if placed:
+                    break
+            if not placed:
+                break
+            o, victim, entry, new_day = placed
+            day_sessions[o][:] = new_day
+            if entry["tags"].get("hard") and o not in hard_day_offsets:
+                hard_day_offsets.append(o)
+            if entry["tags"].get("finger") and o not in finger_day_offsets:
+                finger_day_offsets.append(o)
+        have = _count(req)
+        if have < target:
+            logger.warning(
+                "unmet stimulus: key %s (%d/%d) could not be placed in week %s (phase %s) "
+                "without breaching a recovery guard", key, have, target, start_date, phase_id,
+            )
+            unmet.append({
+                "stimulus": key,
+                "label": req.get("label") or key,
+                "phase_id": phase_id,
+                "target": target,
+                "placed": have,
+                "source": "key_stimulus_pass",
+                "reason": (
+                    "no session carrying it could be placed without breaching the hard-day cap, "
+                    "the recovery gaps, the days before a test or a trip, or replacing another "
+                    "key session"
+                ),
+            })
+    return unmet
 
 
 def generate_phase_week(
@@ -2347,6 +2764,38 @@ def generate_phase_week(
     if _rd_skipped:
         skipped_tests = list(skipped_tests) + _rd_skipped
 
+    # ── PASS 2.7 (A305): key stimuli ──
+    # Runs after the tests (3a / 3) so it sees the week as it really is, and
+    # before the A281 sweep and the complementary pass. See `_key_stimulus_pass`.
+    _key_unmet = _key_stimulus_pass(
+        phase_id=phase_id,
+        start=start,
+        start_date=start_date,
+        day_dates=day_dates,
+        day_keys=day_keys,
+        day_sessions=day_sessions,
+        normalized=normalized,
+        day_has_available_slot=day_has_available_slot,
+        day_is_outdoor=day_is_outdoor,
+        day_intensity_reduced=day_intensity_reduced,
+        pretrip_set=pretrip_set,
+        session_pool=session_pool,
+        locations=locations,
+        home_equipment=home_equipment,
+        gyms=gyms,
+        default_gym_id=default_gym_id,
+        effective_hard_cap=effective_hard_cap,
+        hard_gap_days=hard_gap_days,
+        finger_gap_days=finger_gap_days,
+        recovery_mult=recovery_mult,
+        prev_week_plan=prev_week_plan,
+        next_week_plan=next_week_plan,
+        existing_week_plan=existing_week_plan,
+        today_date=today_date,
+        hard_day_offsets=hard_day_offsets,
+        finger_day_offsets=finger_day_offsets,
+    )
+
     # ── A281: no-hard sweep (closes B-PRETRIP-PASS1-ONLY) ──
     #
     # The pre-trip gate lived in PASS 1 only (`:953`), so every later pass could
@@ -2463,7 +2912,7 @@ def generate_phase_week(
         # the normal case. Reported rather than swallowed — an undelivered
         # "guaranteed" stimulus that fails silently is the exact bug class D263
         # took months to surface.
-        "unmet_stimulus": unmet_stimulus + _unmet_floor,
+        "unmet_stimulus": unmet_stimulus + _unmet_floor + _key_unmet,
     }
 
     if retest_decisions:

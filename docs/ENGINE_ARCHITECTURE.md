@@ -267,6 +267,34 @@ Tests bypass the phase intensity cap. Placement is **two-pass** (B297 / D211-F9)
 
 Any test that still cannot be placed is recorded in `week_plan.skipped_tests` with `reason="no_placement_slot"` (plus `required`), instead of being silently dropped. The `/week` view surfaces the `required` ones so the user can free up a day.
 
+#### PASS 2.7 — Key stimuli (A305, `planner_v2._key_stimulus_pass`)
+
+Runs after the tests (3a / 3), before the A281 no-hard sweep, the deload transform and the complementary pass.
+Requirements come from `key_sessions_v1.phase_requirements` — the rows A294 reads — restricted to those that
+declare **`floor_candidates`** (phase-level fields of `key_stimuli.json`, ignored by A294: status and proposals
+unchanged). `floor_target` overrides the count (power_endurance: 2 PE sessions), `floor_alternate` rotates the
+candidates by the parity of `key_pass_week_index(start)` = `(Monday.toordinal() - 1) // 7` (power_endurance
+limit: `limit_boulder_gym` / `power_contact_gym` week by week; the planner places it every week, A294 keeps its
+12-day `max_gap_days` for "not due"). Phase-declared candidates bypass the phase intensity cap (the PE limit is
+`max` under a `high` cap) like tests do. Rows: base technique; SP limit / technique / try-hard; PE power
+endurance (×2) / limit / technique / try-hard; performance project / technique / try-hard; deload none.
+
+Order: requirements by `priority`, candidates in catalog order with phase-pool sessions first, then for each
+candidate the least invasive place: an empty day kept by `target_training_days_per_week`, else in place of a
+victim — `KEY_PASS_VOLUME_VICTIMS` (`endurance_aerobic_gym`, `route_endurance_gym`, `boulder_circuit_gym`),
+the most duplicated first, then `KEY_PASS_SECONDARY_VICTIMS` (conditioning: core, handstand, weights…). Never
+prehab / recovery (`guards_v1.REST_DAY_SESSION_IDS`), a test, a complementary lunch (not in the primary view),
+a victim that carries the same key, or the last carrier of another key / of the week's pulling or finger
+stimulus. A rope candidate (`gym_routes`) is used only when the phase pool climbs routes (never for a
+boulder pool). Guards, all on the week as the B369 merge will rebuild it (lived days and user-owned sessions
+of `existing_week_plan` count, previous week and next week's first days too): hard cap, hard gap, finger
+gap, one hard / one finger session per day, no hard / finger key session in `KEY_PASS_PRE_TEST_DAYS` (3)
+before a test nor on a test day, no hard / max on pre-trip or other-sport days, A294 `_heavy_pull_clash`, and
+no new `guards_v1` alert (except `low_rest_days`). A requirement still short → `unmet_stimulus` row
+`{stimulus, label, phase_id, target, placed, source: "key_stimulus_pass", reason}`; a requirement no candidate
+can carry with the equipment (or the pool's discipline) is left to A294's hint. Entries carry
+`explain: ["pass2.7:key_stimulus", "key:<key>", "replaced:<victim>"]`.
+
 #### Complementary pass (A300, `complementary_v1.place_complementary`)
 
 Runs **last**, after the deload transform. A slot with `role: "complementary"` is hidden from every pass above
@@ -720,7 +748,8 @@ alert") no user action rewrites a session the user did not touch. `apply_day_add
 `_protected_neighbor_guard` are gone. What the guards object to is computed at read time by
 **`guards_v1.evaluate(plan, prev_days, today, state)`** (pure, deterministic, never persisted) and returned as a
 `guard_warnings[]` sibling of `week_plan` on `GET /api/week` and every replanner response (codes `finger_gap`,
-`finger_test_72h`, `heavy_pull_7d`, `hiit_near_max`, `hard_cap`, `pre_trip`, `post_outdoor`, `hard_back_to_back` — see
+`finger_test_72h`, `heavy_pull_7d`, `hiit_near_max`, `hard_cap`, `pre_trip`, `post_outdoor`, `hard_back_to_back`, and
+the week-level `low_rest_days` of A305 — see
 `docs/vocabulary_v1.md` §5.7.1). Only sessions that can still change are flagged; history counts. Since B372
 an outdoor day (declared and still ahead, logged hard, big load, or completed without a route log —
 `stimulus.outdoor_fatigue_days`; the planner's bare `outdoor_slot` is availability and does not count) is a hard, finger-loading day for these alerts and for the `athlete_context`

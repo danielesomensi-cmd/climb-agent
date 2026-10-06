@@ -1,6 +1,6 @@
 {
   "version": "key_stimuli.v1",
-  "_doc": "A294 (R5) — the key stimuli of each phase. Data only: backend/engine/key_sessions_v1.py derives the weekly key status from it at read time (never persisted). A stimulus is satisfied by a session that delivers it (families from backend/engine/stimulus.py, session_ids, technique drills, try-hard exercises, outdoor-hard days) — by DOSE, not by presence, for the anchored families. Decisions 2026-10-04 + GOAL REFRAME (technique in every phase, try-hard attached to the limit key — to the project key in performance, absent in base where there is no limit key). A294 review: outdoor days no longer count as technique (not verifiable), a limit session alone no longer counts as try-hard (a fall-practice block, outdoor near RP or a free limit session do), deload technique is info only. C272: the try-hard library drills (fall_ladder, three_attempt_comp, no_take_lead_onsight, commit_map) count for try_hard like fall_practice; they are role 'library' (composed by hand, never by the engine), so only sessions that contain them are affected. C276: two catalog sessions carry a pinned fall block — lead_tryhard_gym (falls + 2 committed routes) and route_projecting_gym (2-3 falls after the warm-up). try_hard.session_ids lets them count while still unresolved; once resolved, the fall exercise itself is checked (a session whose falls were removed does not count).",
+  "_doc": "A294 (R5) — the key stimuli of each phase. Data only: backend/engine/key_sessions_v1.py derives the weekly key status from it at read time (never persisted). A stimulus is satisfied by a session that delivers it (families from backend/engine/stimulus.py, session_ids, technique drills, try-hard exercises, outdoor-hard days) — by DOSE, not by presence, for the anchored families. Decisions 2026-10-04 + GOAL REFRAME (technique in every phase, try-hard attached to the limit key — to the project key in performance, absent in base where there is no limit key). A294 review: outdoor days no longer count as technique (not verifiable), a limit session alone no longer counts as try-hard (a fall-practice block, outdoor near RP or a free limit session do), deload technique is info only. C272: the try-hard library drills (fall_ladder, three_attempt_comp, no_take_lead_onsight, commit_map) count for try_hard like fall_practice; they are role 'library' (composed by hand, never by the engine), so only sessions that contain them are affected. C276: two catalog sessions carry a pinned fall block — lead_tryhard_gym (falls + 2 committed routes) and route_projecting_gym (2-3 falls after the warm-up). try_hard.session_ids lets them count while still unresolved; once resolved, the fall exercise itself is checked (a session whose falls were removed does not count). A305: phase rows may declare floor_candidates / floor_target / floor_alternate — read ONLY by the planner PASS 2.7 (planner_v2._key_stimulus_pass), which places a missing key stimulus in place of a volume session; A294 (status, proposals) ignores them.",
   "stimuli": {
     "finger_max": {
       "label": "Finger max",
@@ -85,26 +85,26 @@
   },
   "phases": {
     "base": [
-      {"stimulus": "technique", "target_per_week": 1, "priority": 2, "max_severity": "critical"}
+      {"stimulus": "technique", "target_per_week": 1, "priority": 2, "max_severity": "critical", "floor_candidates": ["technique_focus_gym"]}
     ],
     "strength_power": [
       {"stimulus": "finger_max", "target_per_week": 1, "priority": 1, "max_severity": "critical"},
-      {"stimulus": "limit_power", "target_per_week": 1, "priority": 1, "max_severity": "critical"},
+      {"stimulus": "limit_power", "target_per_week": 1, "priority": 1, "max_severity": "critical", "floor_candidates": ["limit_boulder_gym", "power_contact_gym"]},
       {"stimulus": "pulling_max", "target_per_week": 1, "priority": 3, "max_severity": "warning"},
-      {"stimulus": "technique", "target_per_week": 1, "priority": 2, "max_severity": "critical"},
-      {"stimulus": "try_hard", "target_per_week": 1, "priority": 3, "max_severity": "warning"}
+      {"stimulus": "technique", "target_per_week": 1, "priority": 2, "max_severity": "critical", "floor_candidates": ["technique_focus_gym"]},
+      {"stimulus": "try_hard", "target_per_week": 1, "priority": 3, "max_severity": "warning", "floor_candidates": ["lead_tryhard_gym"]}
     ],
     "power_endurance": [
-      {"stimulus": "power_endurance", "target_per_week": 1, "priority": 1, "max_severity": "critical"},
+      {"stimulus": "power_endurance", "target_per_week": 1, "priority": 1, "max_severity": "critical", "floor_candidates": ["power_endurance_gym", "boulder_circuit_gym"], "floor_target": 2},
       {"stimulus": "finger_maintenance", "target_per_week": 1, "priority": 2, "max_severity": "warning"},
-      {"stimulus": "limit_power", "target_per_week": 1, "priority": 3, "max_severity": "warning", "max_gap_days": 12},
-      {"stimulus": "technique", "target_per_week": 1, "priority": 2, "max_severity": "critical"},
-      {"stimulus": "try_hard", "target_per_week": 1, "priority": 3, "max_severity": "warning"}
+      {"stimulus": "limit_power", "target_per_week": 1, "priority": 3, "max_severity": "warning", "max_gap_days": 12, "floor_candidates": ["limit_boulder_gym", "power_contact_gym"], "floor_alternate": true},
+      {"stimulus": "technique", "target_per_week": 1, "priority": 2, "max_severity": "critical", "floor_candidates": ["technique_focus_gym"]},
+      {"stimulus": "try_hard", "target_per_week": 1, "priority": 3, "max_severity": "warning", "floor_candidates": ["lead_tryhard_gym"]}
     ],
     "performance": [
-      {"stimulus": "project", "target_per_week": 1, "priority": 1, "max_severity": "critical"},
-      {"stimulus": "technique", "target_per_week": 1, "priority": 2, "max_severity": "critical"},
-      {"stimulus": "try_hard", "target_per_week": 1, "priority": 3, "max_severity": "warning", "attached_to": "project"}
+      {"stimulus": "project", "target_per_week": 1, "priority": 1, "max_severity": "critical", "floor_candidates": ["route_projecting_gym"]},
+      {"stimulus": "technique", "target_per_week": 1, "priority": 2, "max_severity": "critical", "floor_candidates": ["technique_focus_gym"]},
+      {"stimulus": "try_hard", "target_per_week": 1, "priority": 3, "max_severity": "warning", "attached_to": "project", "floor_candidates": ["lead_tryhard_gym"]}
     ],
     "deload": [
       {"stimulus": "technique", "target_per_week": 1, "priority": 3, "max_severity": "info"}

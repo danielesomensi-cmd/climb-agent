@@ -53,6 +53,13 @@ Codes (one warning per flagged session):
   days" warning, now an alert. A pair the planner made on its own is not
   flagged (the planner's spacing is its own business).
 
+- ``low_rest_days`` (A305) — WEEK-level: fewer than ``MIN_REST_DAYS`` true
+  rest days in the week (a day with only a complementary lunch or recovery /
+  prehab counts as rest; an outdoor or other-sport day does not). One warning,
+  ``scope: "week"``, dated on the week's first day, ``slot`` / ``session_id``
+  None, ``rest_days`` / ``rest_dates`` attached. Planner-generated weeks carry
+  it too: the planner fills the days the athlete declared, this only says it.
+
 HIIT is not hard (C274 / A300: it never consumes the hard-day or finger cap),
 so it never appears under ``hard_cap`` / ``pre_trip``.
 
@@ -85,7 +92,7 @@ from backend.engine.stimulus import (
     session_flag,
 )
 
-VERSION = "b372.1"
+VERSION = "a305.1"
 
 CODE_FINGER_GAP = "finger_gap"
 CODE_FINGER_TEST = "finger_test_72h"
@@ -95,11 +102,25 @@ CODE_HARD_CAP = "hard_cap"
 CODE_PRE_TRIP = "pre_trip"
 CODE_POST_OUTDOOR = "post_outdoor"
 CODE_HARD_BACK_TO_BACK = "hard_back_to_back"
+CODE_LOW_REST_DAYS = "low_rest_days"
 
 CODES = (
     CODE_FINGER_GAP, CODE_FINGER_TEST, CODE_HEAVY_PULL, CODE_HIIT_NEAR_MAX,
     CODE_HARD_CAP, CODE_PRE_TRIP, CODE_POST_OUTDOOR, CODE_HARD_BACK_TO_BACK,
+    CODE_LOW_REST_DAYS,
 )
+
+#: A305 — the density alert (decision 6, 2026-10-06; athlete_plan §5 "≥ 2 true
+#: rest days"): a week with fewer true rest days than this raises one
+#: week-level ``low_rest_days`` warning.
+MIN_REST_DAYS = 2
+
+#: A305 — sessions that leave a day a rest day: recovery / prehab work. A
+#: complementary lunch (A300 ``slot_role`` or a C274 focus-family session)
+#: counts too ("il pranzo vale poco").
+REST_DAY_SESSION_IDS = frozenset({
+    "prehab_maintenance", "flexibility_full", "yoga_recovery", "deload_recovery", "regeneration_easy",
+})
 
 #: Codes whose ``with`` lists every other day of a weekly / rolling count:
 #: adding a session elsewhere changes ``with`` without changing the alert.
@@ -519,6 +540,62 @@ def _hard_back_to_back(tl: _Timeline, em: _Emitter) -> None:
                     outdoor=_outdoor_info(o))
 
 
+def is_rest_day_session(s: Mapping[str, Any]) -> bool:
+    """A305: a session that does not stop a day from being a true rest day —
+    recovery / prehab (``REST_DAY_SESSION_IDS``) or a complementary lunch.
+    Tests never are."""
+    from backend.engine.complementary_v1 import _is_complementary_like
+
+    if is_test_session(s):
+        return False
+    if _is_complementary_like(s):
+        return True
+    return str(s.get("session_id") or "") in REST_DAY_SESSION_IDS
+
+
+def _low_rest_days(plan: Mapping[str, Any], tl: _Timeline, em: _Emitter) -> None:
+    """A305 — ``low_rest_days``: fewer than ``MIN_REST_DAYS`` true rest days in
+    the week (decision 6). Week-level: one warning, ``scope: "week"``, dated on
+    the plan's first day, no session (``slot`` / ``session_id`` are None). A
+    rest day holds no live session but recovery / prehab or a complementary
+    lunch; an outdoor day or an other-sport day is not a rest day. What already
+    happened counts; the alert is dropped once the week is over."""
+    from backend.engine.stimulus import is_declared_outdoor_day
+
+    days = _days_of(plan)
+    if len(days) != 7:
+        return
+    dates = sorted(str(d["date"])[:10] for d in days)
+    if em.today and dates[-1] < em.today:
+        return
+    rest: List[str] = []
+    for day in days:
+        d_iso = str(day["date"])[:10]
+        if is_declared_outdoor_day(day) or d_iso in tl.outdoor or day.get("other_activities"):
+            continue
+        if all(is_rest_day_session(s) for s in day.get("sessions") or [] if _live(s)):
+            rest.append(d_iso)
+    if len(rest) >= MIN_REST_DAYS:
+        return
+    em.out.append({
+        "code": CODE_LOW_REST_DAYS,
+        "severity": "warning",
+        "scope": "week",
+        "date": dates[0],
+        "slot": None,
+        "session_id": None,
+        "name": None,
+        "user_owned": False,
+        "with": [],
+        "rest_days": len(rest),
+        "min_rest_days": MIN_REST_DAYS,
+        "rest_dates": sorted(rest),
+        "message": (f"The week of {dates[0]} has {len(rest)} true rest day"
+                    f"{'' if len(rest) == 1 else 's'} (fewer than {MIN_REST_DAYS}): "
+                    "a day with only a complementary lunch or recovery work counts as rest."),
+    })
+
+
 def evaluate(
     plan: Optional[Mapping[str, Any]],
     prev_days: Optional[Sequence[Mapping[str, Any]]] = None,
@@ -561,6 +638,7 @@ def evaluate(
         _pre_trip(plan, em, st)
     _post_outdoor(tl, em)
     _hard_back_to_back(tl, em)
+    _low_rest_days(plan, tl, em)
 
     order = {c: i for i, c in enumerate(CODES)}
     return sorted(em.out, key=lambda w: (w["date"], _slot_index(w.get("slot")),
@@ -569,7 +647,10 @@ def evaluate(
 
 def involves(warning: Mapping[str, Any], date_iso: str, slot: Optional[str] = None) -> bool:
     """Does *warning* name the session at ``date_iso`` (/``slot``) — flagged
-    or as the other side (``with``)?"""
+    or as the other side (``with``)? A week-level warning (A305
+    ``low_rest_days``, ``scope: "week"``) names no session: never."""
+    if warning.get("scope") == "week":
+        return False
     def hit(d: Any, s: Any) -> bool:
         return str(d) == str(date_iso) and (slot is None or s is None or s == slot)
 
@@ -595,4 +676,4 @@ def new_warnings(before: Sequence[Mapping[str, Any]], after: Sequence[Mapping[st
     return [dict(w) for w in after if key(w) not in seen]
 
 
-__all__ = ["CODES", "VERSION", "evaluate", "involves", "new_warnings"]
+__all__ = ["CODES", "MIN_REST_DAYS", "VERSION", "evaluate", "involves", "is_rest_day_session", "new_warnings"]

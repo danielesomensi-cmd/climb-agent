@@ -1178,6 +1178,7 @@ Top-level keys: `version` (`a293.1`), `as_of`, `constants`, `athlete_plan`, `pos
 `backend/engine/key_sessions_v1.compute_key_status(state, today, archived_weeks=, outdoor_rows=, week_start=, with_proposals=True)` — pure, derived at read, **never persisted**. Returned as `key_status`, a **sibling** of `week_plan`, by `GET /api/week/{n}`, `POST /api/replanner/events|quick-add|override`. Catalog: `backend/catalog/key_stimuli/v1/key_stimuli.json` (`stimuli` + `phases`).
 
 - **Stimulus** (`KeyStimulus`): `finger_max` | `finger_maintenance` | `limit_power` | `pulling_max` | `power_endurance` | `project` | `technique` | `try_hard`. Per phase: SP `finger_max` p1, `limit_power` p1, `pulling_max` p3 (max severity warning); PE `power_endurance` p1, `finger_maintenance` p2, `limit_power` p3 with `max_gap_days` 12; performance `project` p1; `technique` in every phase (deload: max severity `info`); `try_hard` in SP, PE and performance only — it rides on its host key (`attached_to`: `limit_power`, `project` in performance) and goes `not_due` with it (A294 review: removed from base, no limit key there).
+- **Planner floor fields (A305)** on a phase row of `key_stimuli.json`, read ONLY by `planner_v2._key_stimulus_pass` (PASS 2.7), ignored by A294: `floor_candidates[]` (sessions the planner may place for that key, pool sessions first), `floor_target` (int, default `target_per_week`; PE `power_endurance` = 2), `floor_alternate` (bool: rotate the candidates by `key_pass_week_index % 2`; PE `limit_power`). A key the pass cannot place → `unmet_stimulus[]` row `{stimulus: <key>, label, phase_id, target, placed, source: "key_stimulus_pass", reason}` (B308/A282 rows have no `source`).
 - **Requirement row**: `{key, label, why, priority, max_severity, target, status, resolution, severity, debt, done[], partial[], planned[], skipped[], lost[], exposures_21d?, last_full_date?, due_by?, next_key?, hint?, rejections?}`. `debt = max(0, target − full-dose done days − valid planned days)`.
   - `status`: `done` | `planned` | `partial` (only partial-dose sessions: no ✓, debt stays, severity ≤ warning) | `missing` | `not_due` (max-gap requirement due after the week) | `unplaceable` (`unmet_stimulus` finger_strength: debt 0, the B361 card speaks).
   - `resolution` (debt only): `proposal` | `deferred_next` (catch-up would break next week's key → `next_key`) | `deferred_fatigue` (very_hard feedback or adaptive replan in the last 72 h) | `let_go` | `missed` (past week) | `null` + `hint` (no catalog session can carry it with the athlete's equipment — A294 review, never a false `let_go`).
@@ -1496,6 +1497,14 @@ GuardWarning (backend/engine/guards_v1.py, computed at read, NEVER persisted):
        | hard_back_to_back hard session (HIIT is not hard) the day after a hard day, when at least one of the two
                            is user-owned (a pair the planner made alone is not flagged); the later one is
                            flagged, the earlier when the later is done/past (A301 review)
+       | low_rest_days     (A305) WEEK-level: < MIN_REST_DAYS (2) true rest days in the 7 days. A rest day holds
+                           no live session but recovery / prehab (REST_DAY_SESSION_IDS: prehab_maintenance,
+                           flexibility_full, yoga_recovery, deload_recovery, regeneration_easy) or a complementary
+                           lunch (slot_role complementary / C274 family); an outdoor day (is_outdoor_day or
+                           counted) or an other-sport day is not. One warning: scope "week", date = the week's
+                           Monday, slot / session_id null, + rest_days, min_rest_days, rest_dates. Dropped once the
+                           week is over; involves() is always False for it; planner weeks carry it too. A294
+                           proposals ignore it (not a recovery guard).
   Only sessions that can still change are flagged (not done/skipped, not before `today`); history counts.
 
   B372 — outdoor days (stimulus.outdoor_fatigue_days(state, days, load_threshold=OUTDOOR_RIPPLE_THRESHOLD,
