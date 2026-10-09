@@ -7,6 +7,7 @@ import { unlockAudio } from "@/lib/audio-unlock";
 import { confirmFeedback, tapFeedback } from "@/lib/haptics";
 import { countdownTick, transitionBeep } from "@/lib/beep";
 import { speakPhaseTransition } from "@/lib/voice-cues";
+import { SoundToggle } from "@/components/guided/sound-toggle";
 import { OVERHOLD_CAP_S, OVERHOLD_TAP_LATENCY_S } from "@/lib/measured-feedback";
 import {
   PHASE_RING,
@@ -798,6 +799,8 @@ function ExerciseTimerImpl({
           >
             <X className="size-6" />
           </button>
+          {/* A306: mute reachable from the fullscreen timer too. */}
+          <SoundToggle className="absolute left-4 top-[calc(1rem+env(safe-area-inset-top))] w-12 h-12" />
 
           {/* Main tap area for play/pause */}
           <div

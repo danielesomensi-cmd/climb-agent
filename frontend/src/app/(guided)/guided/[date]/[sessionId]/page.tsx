@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
+import { SoundToggle } from "@/components/guided/sound-toggle";
 import { Button } from "@/components/ui/button";
 import { SessionTimer } from "@/components/guided/session-timer";
 import { GuidedProgressBar } from "@/components/guided/guided-progress-bar";
@@ -544,7 +545,10 @@ export default function GuidedSessionPage() {
             <ArrowLeft className="size-4" />
             {confirmLeave ? "Tap again to leave" : "Back"}
           </button>
-          <SessionTimer startedAt={state.startedAt} />
+          <div className="flex items-center gap-2">
+            <SessionTimer startedAt={state.startedAt} />
+            <SoundToggle />
+          </div>
         </div>
         <p className="text-sm font-medium">{sessionName}</p>
 

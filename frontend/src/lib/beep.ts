@@ -1,6 +1,7 @@
 "use client";
 
 import { getAudioContext } from "@/lib/audio-unlock";
+import { isSoundMuted } from "@/lib/sound-pref";
 
 /**
  * A245 F-1 (F53) — the one implementation of the timer beeps.
@@ -20,6 +21,8 @@ import { getAudioContext } from "@/lib/audio-unlock";
  * timer's, which is the most used surface.
  */
 export async function beep(freq: number, duration: number, volume: number): Promise<void> {
+  // A306: the session's mute switch silences every beep.
+  if (isSoundMuted()) return;
   try {
     const ctx = getAudioContext();
     // Must come before creating nodes: on iOS the context is suspended

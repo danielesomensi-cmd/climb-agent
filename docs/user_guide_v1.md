@@ -245,6 +245,7 @@ The guided session is your in-gym companion. It walks you through every exercise
 - **Timers** count down rest periods, hang times, and work intervals automatically
 - **Beeps** alert you at 3-2-1 before each work phase starts
 - **Voice cues** provide encouragement and phase transitions
+- **Mute**: the speaker button at the top of the guided session (and in the fullscreen timer) silences every beep and voice cue; the phone still vibrates. It stays muted on that device until you tap it again.
 - A **process cue** banner reminds you what to focus on today (e.g., "Place every foot so silently that no sound is audible")
 - On the **Plan** page, each phase has an expandable "About this phase" section explaining *why* you're in this phase and what to expect
 

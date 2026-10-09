@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Trophy } from "lucide-react";
+import { SoundToggle } from "@/components/guided/sound-toggle";
 import { Button } from "@/components/ui/button";
 import { useCustomSession, useBuilderExercises } from "@/lib/hooks/queries";
 import { useWakeLock } from "@/lib/hooks/use-wake-lock";
@@ -531,9 +532,12 @@ export default function SessionPlayPage() {
             <ArrowLeft className="size-4" />
             {confirmBack ? "Tap again to leave" : "Back"}
           </button>
-          <span className="text-[10px] font-medium px-2 py-0.5 rounded border border-primary/40 bg-primary/10 text-primary uppercase tracking-wider">
-            Custom
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-medium px-2 py-0.5 rounded border border-primary/40 bg-primary/10 text-primary uppercase tracking-wider">
+              Custom
+            </span>
+            <SoundToggle />
+          </div>
         </div>
         <p className="text-base font-semibold truncate">{session.name}</p>
         {stage !== "completed" && currentExercise && (

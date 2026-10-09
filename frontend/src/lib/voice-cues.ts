@@ -1,3 +1,5 @@
+import { isSoundMuted } from "@/lib/sound-pref";
+
 const STORAGE_KEY = "climb_voice_cues";
 
 export function isVoiceCuesEnabled(): boolean {
@@ -11,6 +13,8 @@ export function setVoiceCuesEnabled(enabled: boolean): void {
 }
 
 function speak(text: string, lang?: string): void {
+  // A306: the session's mute switch silences the voice too.
+  if (isSoundMuted()) return;
   try {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
     speechSynthesis.cancel();
