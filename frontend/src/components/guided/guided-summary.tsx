@@ -3,8 +3,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, SkipForward, AlertTriangle, Send } from "lucide-react";
-import { SessionTimer } from "@/components/guided/session-timer";
+import { useState } from "react";
+import { Check, SkipForward, AlertTriangle, Send, Timer } from "lucide-react";
+import { formatDuration } from "@/components/guided/session-timer";
 import type { GuidedExercise, SessionPain } from "@/lib/types";
 import { PainPicker } from "@/components/training/measured-feedback-inputs";
 
@@ -48,6 +49,11 @@ export function GuidedSummary({
   );
   const doneCount = exercises.filter((ex) => ex.status === "done").length;
   const skippedCount = exercises.filter((ex) => ex.status === "skipped").length;
+  // A307: the session is over — show how long it took, frozen on arrival,
+  // instead of a clock that keeps running while you fill the summary.
+  const [duration] = useState(() =>
+    formatDuration(Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000))),
+  );
 
   return (
     <div className="space-y-4">
@@ -55,8 +61,13 @@ export function GuidedSummary({
       <Card className="gap-0 py-0">
         <CardHeader className="py-4">
           <div className="flex items-center justify-between gap-2">
-            <CardTitle className="text-lg">Session complete!</CardTitle>
-            <SessionTimer startedAt={startedAt} />
+            <CardTitle className="text-lg">
+              {pendingExercises.length > 0 ? "Finish session?" : "Session complete"}
+            </CardTitle>
+            <span className="flex items-center gap-1 text-sm text-muted-foreground tabular-nums">
+              <Timer className="size-3.5" />
+              {duration}
+            </span>
           </div>
           <p className="text-sm text-muted-foreground">{sessionName}</p>
         </CardHeader>
@@ -64,9 +75,9 @@ export function GuidedSummary({
         <CardContent className="pb-4">
           {/* Summary stats */}
           <div className="flex items-center gap-3 text-sm mb-4">
-            <span className="text-green-400">{doneCount} done</span>
+            <span className="text-success">{doneCount} done</span>
             {skippedCount > 0 && (
-              <span className="text-red-400">{skippedCount} skipped</span>
+              <span className="text-muted-foreground">{skippedCount} skipped</span>
             )}
             {pendingExercises.length > 0 && (
               <span className="text-muted-foreground">{pendingExercises.length} remaining</span>
@@ -82,10 +93,10 @@ export function GuidedSummary({
               >
                 <div className="flex items-center gap-2 min-w-0">
                   {ex.status === "done" && (
-                    <Check className="size-4 text-green-500 shrink-0" />
+                    <Check className="size-4 text-success shrink-0" />
                   )}
                   {ex.status === "skipped" && (
-                    <SkipForward className="size-4 text-red-400 shrink-0" />
+                    <SkipForward className="size-4 text-muted-foreground shrink-0" />
                   )}
                   {ex.status === "pending" && (
                     <div className="size-4 rounded-full border border-muted-foreground/30 shrink-0" />
@@ -112,10 +123,10 @@ export function GuidedSummary({
 
       {/* Pending exercises action */}
       {nonWarmupPending.length > 0 && (
-        <Card className="gap-0 py-0 border-yellow-500/30">
+        <Card className="gap-0 py-0 border-warning/30">
           <CardContent className="py-4 space-y-3">
             <div className="flex items-start gap-2">
-              <AlertTriangle className="size-4 text-yellow-500 mt-0.5 shrink-0" />
+              <AlertTriangle className="size-4 text-warning mt-0.5 shrink-0" />
               <p className="text-sm">
                 {nonWarmupPending.length} exercise{nonWarmupPending.length > 1 ? "s" : ""} not completed.
                 Mark remaining as done (not rated) or skip them:
@@ -123,21 +134,20 @@ export function GuidedSummary({
             </div>
             <div className="flex items-center gap-2">
               <Button
-                size="sm"
                 variant="outline"
+                className="min-h-[44px] flex-1"
                 onClick={onMarkRemainingOk}
               >
                 <Check className="size-4 mr-1" />
-                Done
+                Mark done
               </Button>
               <Button
-                size="sm"
                 variant="outline"
-                className="text-muted-foreground"
+                className="min-h-[44px] flex-1 text-muted-foreground"
                 onClick={onSkipRemaining}
               >
                 <SkipForward className="size-4 mr-1" />
-                Skip all
+                Skip remaining
               </Button>
             </div>
           </CardContent>
@@ -155,13 +165,13 @@ export function GuidedSummary({
 
       {/* Submit button */}
       <Button
-        className="w-full bg-green-600 hover:bg-green-700 text-white"
+        className="w-full min-h-[52px] text-base bg-success hover:bg-success/90 text-black"
         size="lg"
         onClick={onSubmit}
         disabled={submitting}
       >
         {submitting ? (
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent mr-2" />
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-black border-t-transparent mr-2" />
         ) : (
           <Send className="size-4 mr-2" />
         )}

@@ -535,22 +535,25 @@ export default function GuidedSessionPage() {
     <div className="mx-auto max-w-2xl">
       {/* Sticky header */}
       <div ref={headerRef} className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 space-y-3">
-        {/* Top row: back + timer + session name */}
-        <div className="flex items-center justify-between gap-2">
+        {/* A307: one row — back | session name | timer + sound */}
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={handleBack}
-            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className={`-ml-2 flex min-h-[44px] min-w-[44px] shrink-0 items-center gap-1 px-2 text-sm transition-colors ${
+              confirmLeave ? "text-warning font-medium" : "text-muted-foreground hover:text-foreground"
+            }`}
           >
             <ArrowLeft className="size-4" />
             {confirmLeave ? "Tap again to leave" : "Back"}
           </button>
-          <div className="flex items-center gap-2">
-            <SessionTimer startedAt={state.startedAt} />
+          <p className="flex-1 truncate text-center text-sm font-semibold">{sessionName}</p>
+          <div className="flex shrink-0 items-center gap-2">
+            {/* A307: the summary shows a frozen duration instead. */}
+            {!showSummary && <SessionTimer startedAt={state.startedAt} />}
             <SoundToggle />
           </div>
         </div>
-        <p className="text-sm font-medium">{sessionName}</p>
 
         {/* Progress bar */}
         {!showSummary && (
@@ -559,6 +562,11 @@ export default function GuidedSessionPage() {
             currentIndex={state.currentIndex}
             onNavigate={handleNavigate}
           />
+        )}
+
+        {/* A307: past the first step the focus shrinks to one line */}
+        {state.processCue && !showSummary && state.currentIndex > 0 && (
+          <p className="truncate text-xs text-warning">Focus: {state.processCue.text}</p>
         )}
       </div>
 
@@ -584,16 +592,16 @@ export default function GuidedSessionPage() {
           </div>
         )}
 
-        {/* A141: Process cue banner */}
-        {state.processCue && !showSummary && (
-          <div className="rounded-xl bg-gradient-to-r from-amber-900/30 to-amber-800/20 border border-amber-700/30 p-4">
+        {/* A141: Process cue banner — A307: full card on the first step only */}
+        {state.processCue && !showSummary && state.currentIndex === 0 && (
+          <div className="rounded-xl bg-warning-muted border border-warning/30 p-4">
             <div className="flex items-start gap-3">
-              <svg className="h-5 w-5 text-amber-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <svg className="h-5 w-5 text-warning mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
               </svg>
               <div>
-                <p className="text-xs font-medium text-amber-400 mb-1">Today&apos;s focus</p>
-                <p className="text-sm text-zinc-200 leading-relaxed">{state.processCue.text}</p>
+                <p className="text-xs font-medium text-warning mb-1">Today&apos;s focus</p>
+                <p className="text-sm text-foreground leading-relaxed">{state.processCue.text}</p>
               </div>
             </div>
           </div>
@@ -627,6 +635,10 @@ export default function GuidedSessionPage() {
                 onSkip={handleSkip}
                 onSetChange={handleSetChange}
                 onNotesChange={handleNotesChange}
+                nextExerciseName={(() => {
+                  const next = state.exercises[state.currentIndex + 1];
+                  return next ? next.name || next.exerciseId.replace(/_/g, " ") : undefined;
+                })()}
               />
             </div>
 

@@ -37,6 +37,12 @@ interface ExerciseTimerProps {
    */
   overholdLastRep?: boolean;
   onOverholdResult?: (heldSeconds: number) => void;
+  /**
+   * A307 — what follows this rest ("Set 2 of 3 · LEFT", the next exercise's
+   * name). Shown as "Next · …" during set rest and on completion; a rep rest
+   * shows the next rep, which only the timer knows.
+   */
+  nextLabel?: string;
 }
 
 type Phase = "idle" | "get_ready" | "work" | "overhold" | "rep_rest" | "set_rest" | "complete";
@@ -57,6 +63,9 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
  * elapsed with nobody watching.
  */
 const RESUME_GAP_MS = 2000;
+
+/** A307 — how long the first tap on Reset stays armed. */
+const RESET_CONFIRM_MS = 3000;
 
 /**
  * A286 — B7: le cinque fasi di questo timer sulle quattro della palette
@@ -159,6 +168,7 @@ function ExerciseTimerImpl({
   onSetChange,
   overholdLastRep = false,
   onOverholdResult,
+  nextLabel,
 }: ExerciseTimerProps) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [currentSet, setCurrentSet] = useState(initialSet);
@@ -574,6 +584,28 @@ function ExerciseTimerImpl({
     setPaused(false);
   }
 
+  // A307: Reset sits next to the controls a chalky thumb aims for, so it takes
+  // two taps: the first arms it for RESET_CONFIRM_MS, the second resets.
+  const [resetArmed, setResetArmed] = useState(false);
+  const resetArmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (resetArmTimerRef.current) clearTimeout(resetArmTimerRef.current);
+  }, []);
+
+  /** Returns true when this tap actually reset the timer. */
+  function handleResetTap(): boolean {
+    if (resetArmTimerRef.current) clearTimeout(resetArmTimerRef.current);
+    if (!resetArmed) {
+      setResetArmed(true);
+      resetArmTimerRef.current = setTimeout(() => setResetArmed(false), RESET_CONFIRM_MS);
+      return false;
+    }
+    resetArmTimerRef.current = null;
+    setResetArmed(false);
+    handleReset();
+    return true;
+  }
+
   function handleCircleTap() {
     // A295: during the overhold the circle is "I let go".
     if (phase === "overhold") {
@@ -778,10 +810,18 @@ function ExerciseTimerImpl({
   // lavoro, perché è una richiesta di azione, non un errore.
   const phaseColor = overdue ? PHASE_TEXT.work : PHASE_TEXT[playerPhaseOf(phase)];
 
+  // A307: "Next · …" — a rep rest knows its next rep itself; a set rest and
+  // the completed state read the label the step computed.
+  const nextText = (() => {
+    if (phase === "rep_rest") return `Rep ${Math.min(currentRep + 1, reps)} of ${reps}`;
+    if (phase === "set_rest" || phase === "complete") return nextLabel ?? null;
+    return null;
+  })();
+
   // --- Render ---
 
   return (
-    <div className="flex flex-col items-center gap-3">
+    <div className="relative flex flex-col items-center gap-3">
       {/* Enlarged overlay */}
       {enlarged && (
         <div
@@ -801,6 +841,28 @@ function ExerciseTimerImpl({
           </button>
           {/* A306: mute reachable from the fullscreen timer too. */}
           <SoundToggle className="absolute left-4 top-[calc(1rem+env(safe-area-inset-top))] w-12 h-12" />
+          {/* A307: two-tap reset, top-center — clear of SoundToggle (left) and
+              X (right). It still closes the overlay once it resets: the idle
+              overlay has no Start control. */}
+          {phase !== "idle" && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (handleResetTap()) setEnlarged(false);
+              }}
+              onPointerDown={tapFeedback}
+              className={cn(
+                "absolute left-1/2 -translate-x-1/2 top-[calc(1rem+env(safe-area-inset-top))] flex items-center justify-center gap-2 h-12 min-w-12 rounded-lg border px-3 text-sm transition-colors active:scale-95 motion-reduce:active:scale-100",
+                resetArmed
+                  ? "border-warning/50 bg-warning/10 text-warning font-medium"
+                  : "border-muted-foreground/40 text-muted-foreground hover:text-foreground hover:border-foreground/50"
+              )}
+              aria-label="Reset timer"
+            >
+              <RotateCcw className="size-5" />
+              {resetArmed && <span className="whitespace-nowrap">Tap again to reset</span>}
+            </button>
+          )}
 
           {/* Main tap area for play/pause */}
           <div
@@ -859,6 +921,13 @@ function ExerciseTimerImpl({
               </span>
             )}
 
+            {/* A307: what follows this rest */}
+            {nextText && (
+              <span className="text-xl text-muted-foreground text-center px-6">
+                Next · {nextText}
+              </span>
+            )}
+
             {/* Set/rep counter */}
             {isActive && (
               <span className="text-lg text-muted-foreground tabular-nums">
@@ -910,23 +979,10 @@ function ExerciseTimerImpl({
               <button
                 onClick={(e) => { e.stopPropagation(); handleDoneManual(); }}
                 onPointerDown={tapFeedback}
-                className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-6 py-3 text-base font-medium text-white hover:bg-green-700 active:scale-95 active:brightness-95 motion-reduce:active:scale-100 transition-colors"
+                className="inline-flex items-center gap-2 rounded-lg bg-success px-6 py-3 text-base font-medium text-black hover:bg-success/90 active:scale-95 active:brightness-95 motion-reduce:active:scale-100 transition-colors"
               >
                 <CheckCircle2 className="size-5" />
                 {hasManualRepLoop ? "Done rep" : "Done set"}
-              </button>
-            )}
-
-            {/* Reset */}
-            {phase !== "idle" && (
-              <button
-                onClick={(e) => { e.stopPropagation(); handleReset(); setEnlarged(false); }}
-                onPointerDown={tapFeedback}
-                className="inline-flex items-center gap-2 rounded-lg border border-muted-foreground/30 px-4 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:border-foreground/50 active:scale-95 motion-reduce:active:scale-100 transition-colors"
-                aria-label="Reset timer"
-              >
-                <RotateCcw className="size-5" />
-                Reset
               </button>
             )}
 
@@ -948,6 +1004,30 @@ function ExerciseTimerImpl({
           </div>
         </div>
       )}
+      {/* A307: two-tap reset, icon-only in the block's top-right corner. */}
+      {phase !== "idle" && (
+        <div className="absolute right-0 top-0 z-10 flex flex-col items-end gap-0.5">
+          <button
+            onClick={handleResetTap}
+            onPointerDown={tapFeedback}
+            className={cn(
+              "flex items-center justify-center size-11 rounded-full border transition-colors active:scale-95 motion-reduce:active:scale-100",
+              resetArmed
+                ? "border-warning/50 bg-warning/10 text-warning"
+                : "border-muted-foreground/30 text-muted-foreground hover:text-foreground hover:border-foreground/50"
+            )}
+            aria-label="Reset timer"
+          >
+            <RotateCcw className="size-5" />
+          </button>
+          {resetArmed && (
+            <span className="whitespace-nowrap text-[11px] font-medium text-warning" aria-live="polite">
+              Tap again to reset
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Unilateral side badge */}
       {altSides && phase !== "complete" && currentSide && (
         <div className={cn(
@@ -1163,6 +1243,47 @@ function ExerciseTimerImpl({
         </button>
       </div>
 
+      {/* A307: what follows this rest */}
+      {nextText && (
+        <p className="text-sm text-muted-foreground text-center">
+          Next · {nextText}
+        </p>
+      )}
+
+      {/* A307: the tap that moves the counter sits right under the circle,
+          full-width so a chalky thumb finds it without looking. */}
+      {overdue && (
+        // B332: held phase — the counter moves only from here
+        <button
+          onClick={(e) => { e.stopPropagation(); handleRestDone(); }}
+          onPointerDown={tapFeedback}
+          className="inline-flex w-full max-w-xs min-h-[48px] items-center justify-center gap-2 rounded-lg bg-warning px-6 text-base font-medium text-black hover:bg-warning/90 active:scale-95 active:brightness-95 motion-reduce:active:scale-100 transition-colors"
+        >
+          <CheckCircle2 className="size-5" />
+          {overdueCta}
+        </button>
+      )}
+      {!overdue && phase === "work" && isManual && (
+        <button
+          onClick={(e) => { e.stopPropagation(); handleDoneManual(); }}
+          onPointerDown={tapFeedback}
+          className="inline-flex w-full max-w-xs min-h-[48px] items-center justify-center gap-2 rounded-lg bg-success px-6 text-base font-medium text-black hover:bg-success/90 active:scale-95 active:brightness-95 motion-reduce:active:scale-100 transition-colors"
+        >
+          <CheckCircle2 className="size-5" />
+          {hasManualRepLoop ? "Done rep" : "Done set"}
+        </button>
+      )}
+
+      {/* Set/rep counter */}
+      {isActive && (
+        <span className="text-xs text-muted-foreground tabular-nums">
+          Set {displaySet} / {sets}
+          {(hasRepLoop || hasManualRepLoop) && (
+            <> &mdash; Rep {currentRep} / {reps}</>
+          )}
+        </span>
+      )}
+
       {/* Expand button — visible when timer is active */}
       {isActive && (
         <button
@@ -1175,52 +1296,6 @@ function ExerciseTimerImpl({
           <span>Expand</span>
         </button>
       )}
-
-      {/* Set/rep counter + controls */}
-      <div className="flex flex-col items-center gap-2">
-        {isActive && (
-          <span className="text-xs text-muted-foreground tabular-nums">
-            Set {displaySet} / {sets}
-            {(hasRepLoop || hasManualRepLoop) && (
-              <> &mdash; Rep {currentRep} / {reps}</>
-            )}
-          </span>
-        )}
-        <div className="flex items-center gap-3">
-          {/* B332: held phase — the counter moves only from here */}
-          {overdue && (
-            <button
-              onClick={(e) => { e.stopPropagation(); handleRestDone(); }}
-              onPointerDown={tapFeedback}
-              className="inline-flex items-center gap-1.5 rounded-md bg-warning px-4 py-2 text-sm font-medium text-black hover:bg-warning/90 active:scale-95 active:brightness-95 motion-reduce:active:scale-100 transition-colors"
-            >
-              <CheckCircle2 className="size-4" />
-              {overdueCta}
-            </button>
-          )}
-          {!overdue && phase === "work" && isManual && (
-            <button
-              onClick={(e) => { e.stopPropagation(); handleDoneManual(); }}
-              onPointerDown={tapFeedback}
-              className="inline-flex items-center gap-1.5 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 active:scale-95 active:brightness-95 motion-reduce:active:scale-100 transition-colors"
-            >
-              <CheckCircle2 className="size-4" />
-              {hasManualRepLoop ? "Done rep" : "Done set"}
-            </button>
-          )}
-          {phase !== "idle" && (
-            <button
-              onClick={handleReset}
-              onPointerDown={tapFeedback}
-              className="inline-flex items-center gap-1.5 rounded-md border border-muted-foreground/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:border-foreground/50 active:scale-95 motion-reduce:active:scale-100 transition-colors"
-              aria-label="Reset timer"
-            >
-              <RotateCcw className="size-4" />
-              Reset
-            </button>
-          )}
-        </div>
-      </div>
     </div>
   );
 }

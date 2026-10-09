@@ -6,13 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle, Check, SkipForward, Lightbulb, Film, Info, Timer, Play, Square, MessageSquare } from "lucide-react";
+import { AlertTriangle, Check, ChevronDown, SkipForward, Lightbulb, Film, Info, Timer, Play, Square, MessageSquare } from "lucide-react";
 import type { GuidedExercise, HangMargin, LimitProblem, LimitProblemDraft } from "@/lib/types";
 import { ExerciseTimer } from "@/components/guided/exercise-timer";
+import { FeedbackPills } from "@/components/guided/feedback-pills";
+import { guidedNextLabel } from "@/lib/guided-next-label";
 import { MeasureInput } from "@/components/training/measured-feedback-inputs";
 import { LadderBadge } from "@/components/training/ladder-badge";
 import { OVERHOLD_CAP_S, type MeasureValues } from "@/lib/measured-feedback";
-import { FEEDBACK_OPTIONS } from "@/lib/format";
 import { tapFeedback } from "@/lib/haptics";
 import { displayPrescribedGrade } from "@/lib/gradeUtils";
 import { LimitProblemLogger } from "@/components/training/limit-problem-logger";
@@ -27,6 +28,8 @@ interface GuidedExerciseStepProps {
   onSkip: () => void;
   onSetChange?: (completedSets: number) => void;
   onNotesChange?: (notes: string) => void;
+  /** A307: name of the exercise after this one, for "Next · …" during rest. */
+  nextExerciseName?: string;
 }
 
 
@@ -97,6 +100,7 @@ export function GuidedExerciseStep({
   onSkip,
   onSetChange,
   onNotesChange,
+  nextExerciseName,
 }: GuidedExerciseStepProps) {
   // A295: nothing pre-selected — an untouched exercise is "not rated".
   const [feedback, setFeedback] = useState<string | null>(exercise.feedbackLabel ?? null);
@@ -106,8 +110,6 @@ export function GuidedExerciseStep({
   const [overhold, setOverhold] = useState(false);
   const measure = exercise.suggested.measure;
   const measures: MeasureValues = { lastSetReps, hangMargin, hangHeldS };
-  /** Tap a selected chip again to clear it (back to "not rated"). */
-  const toggleFeedback = (value: string) => setFeedback((prev) => (prev === value ? null : value));
   const [loadInput, setLoadInput] = useState("");
   const [loadInputRight, setLoadInputRight] = useState("");
   const [loadInputLeft, setLoadInputLeft] = useState("");
@@ -125,6 +127,9 @@ export function GuidedExerciseStep({
   const [repsInputLeft, setRepsInputLeft] = useState("");
   const [notesInput, setNotesInput] = useState(exercise.notes ?? "");
   const [notesExpanded, setNotesExpanded] = useState(false);
+  // A307: "How to" opens on arrival, before the first set; collapsed when
+  // coming back to an exercise already under way. The athlete can toggle it.
+  const [howToOpen, setHowToOpen] = useState(!(exercise.completedSets && exercise.completedSets > 0));
 
   // B156: countup stopwatch for timed test_measurement exercises (e.g. L-sit hold)
   const [stopwatchRunning, setStopwatchRunning] = useState(false);
@@ -307,6 +312,39 @@ export function GuidedExerciseStep({
   }, [exercise]);
 
   const prescriptionLines = formatPrescription(exercise);
+  // A307: hero row = the main scheme + the load/target beside it; rest and
+  // tempo collapse into one muted line underneath.
+  const heroTarget: string | null = (() => {
+    if (isTestMeasurement) return null;
+    const left = exercise.suggested.leftHand?.externalLoadKg;
+    const right = exercise.suggested.rightHand?.externalLoadKg;
+    if ((isPerHandLoad || isUnilateralTestMeasurement) && (left != null || right != null)) {
+      return `L +${left ?? 0} · R +${right ?? 0} kg`;
+    }
+    if (isUnilateralTestMeasurement) return null;
+    if (exercise.suggested.externalLoadKg != null) return `+${exercise.suggested.externalLoadKg} kg`;
+    if (exercise.prescription.loadKg) return `${exercise.prescription.loadKg} kg`;
+    if (shownGrade) {
+      return shownGradeLow && shownGradeLow !== shownGrade
+        ? `${displayPrescribedGrade(shownGradeLow, exercise.suggested.gradeScale)} – ${displayPrescribedGrade(shownGrade, exercise.suggested.gradeScale)}`
+        : displayPrescribedGrade(shownGrade, exercise.suggested.gradeScale);
+    }
+    return null;
+  })();
+  const heroLine = prescriptionLines[0] ?? null;
+  // The "Load: X kg" line is dropped only when the hero already shows that load.
+  const heroShowsPrescribedLoad =
+    heroTarget != null && !!exercise.prescription.loadKg && heroTarget === `${exercise.prescription.loadKg} kg`;
+  const detailLines = prescriptionLines
+    .slice(1)
+    .filter((line) => !(heroShowsPrescribedLoad && line.startsWith("Load: ")));
+  const showTimer =
+    !isTestMeasurement &&
+    !isUnilateralTestMeasurement &&
+    (((exercise.prescription.workSeconds ?? 0) > 0) ||
+      ((exercise.prescription.sets ?? 1) > 1 && (exercise.prescription.restSeconds ?? 0) > 0));
+  const cueCount = exercise.cues?.length ?? 0;
+  const hasHowTo = cueCount > 0 || !!exercise.prescription.notes || !!exercise.videoUrl;
   const isAlreadyDone = exercise.status === "done";
   const isAlreadySkipped = exercise.status === "skipped";
 
@@ -321,7 +359,7 @@ export function GuidedExerciseStep({
               <CardTitle className="text-base">{exercise.name}</CardTitle>
             </div>
             {isAlreadyDone && (
-              <Badge className="bg-green-600 text-white text-[10px]">Done</Badge>
+              <Badge className="bg-success text-black text-[10px]">Done</Badge>
             )}
           </div>
           {exercise.category && (
@@ -371,7 +409,7 @@ export function GuidedExerciseStep({
           <div className="flex items-center gap-2 pt-2">
             <Button
               size="sm"
-              className="bg-green-600 hover:bg-green-700 text-white flex-1"
+              className="min-h-[44px] bg-success hover:bg-success/90 text-black flex-1"
               onClick={() => onDone(null)}
             >
               <Check className="size-4 mr-1" />
@@ -464,10 +502,13 @@ export function GuidedExerciseStep({
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-base">{exercise.name || exercise.exerciseId.replace(/_/g, " ")}</CardTitle>
           {isAlreadyDone && (
-            <Badge className="bg-green-600 text-white text-[10px]">Done</Badge>
+            <Badge className="bg-success text-black text-[10px]">Done</Badge>
           )}
           {isAlreadySkipped && (
-            <Badge className="bg-red-400 text-white text-[10px]">Skipped</Badge>
+            <Badge variant="outline" className="text-muted-foreground text-[10px]">
+              <SkipForward className="size-3" />
+              Skipped
+            </Badge>
           )}
         </div>
         {exercise.category && (
@@ -508,47 +549,103 @@ export function GuidedExerciseStep({
           </div>
         )}
 
-        {/* Prescription */}
-        {prescriptionLines.length > 0 && (
-          <div className="space-y-1">
-            {prescriptionLines.map((line, i) => (
-              <p key={i} className="text-sm">{line}</p>
-            ))}
+        {/* A295: pain block active on this zone — safety, above the hero */}
+        {!isTestMeasurement && !isUnilateralTestMeasurement && exercise.suggested.painFlag && (
+          <div className="flex items-start gap-2 rounded-md px-3 py-2 text-xs bg-orange-500/15 text-orange-400 border border-orange-500/30">
+            <AlertTriangle className="size-3.5 shrink-0 mt-0.5" />
+            <span>Pain reported recently — loads on this zone are reduced. Keep it sub-max.</span>
           </div>
         )}
 
-        {exercise.prescription.notes && (
-          <p className="text-xs text-muted-foreground italic">
-            {exercise.prescription.notes}
-          </p>
-        )}
-
-        {/* Cues */}
-        {exercise.cues && exercise.cues.length > 0 && (
+        {/* A307: prescription + load/target are the hero of the card */}
+        {(heroLine || heroTarget) && (
           <div className="space-y-1">
-            <p className="text-xs font-medium text-muted-foreground">Cues:</p>
-            <ul className="space-y-0.5">
-              {exercise.cues.map((cue, i) => (
-                <li key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
-                  <span className="mt-1.5 block h-1 w-1 shrink-0 rounded-full bg-muted-foreground" />
-                  {cue}
-                </li>
-              ))}
-            </ul>
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              {heroLine && <p className="text-2xl font-semibold tabular-nums">{heroLine}</p>}
+              {heroTarget && (
+                <p className="text-xl font-semibold text-primary tabular-nums">{heroTarget}</p>
+              )}
+            </div>
+            {detailLines.length > 0 && (
+              <p className="text-sm text-muted-foreground">{detailLines.join(" · ")}</p>
+            )}
           </div>
         )}
 
-        {/* Video link */}
-        {exercise.videoUrl && (
-          <a
-            href={exercise.videoUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+        {/* Exercise timer — shown for timed exercises AND multi-set rep-based exercises */}
+        {showTimer && (
+          <ExerciseTimer
+            workSeconds={exercise.prescription.workSeconds ?? 0}
+            restBetweenRepsSeconds={exercise.prescription.restBetweenRepsSeconds ?? 0}
+            restBetweenSetsSeconds={exercise.prescription.restSeconds ?? 0}
+            sets={exercise.prescription.sets ?? 1}
+            reps={typeof exercise.prescription.reps === "number" ? exercise.prescription.reps : 1}
+            altSides={exercise.altSides ?? false}
+            overholdLastRep={measure === "hang_margin" && overhold}
+            onOverholdResult={setHangHeldS}
+            initialSet={(() => {
+              const prescSets = exercise.prescription.sets ?? 1;
+              const totalSets = (exercise.altSides ?? false) ? prescSets * 2 : prescSets;
+              if (exercise.completedSets != null && exercise.completedSets < totalSets) {
+                return Math.min(exercise.completedSets + 1, totalSets);
+              }
+              return 1;
+            })()}
+            onSetChange={onSetChange}
+            nextLabel={guidedNextLabel({
+              completedSets: exercise.completedSets,
+              sets: exercise.prescription.sets,
+              altSides: exercise.altSides ?? false,
+              nextExerciseName,
+            })}
+          />
+        )}
+
+        {/* A307: cues, notes and video folded under one "How to" */}
+        {hasHowTo && (
+          <details
+            open={howToOpen}
+            onToggle={(e) => setHowToOpen(e.currentTarget.open)}
+            className="group rounded-md border border-border"
           >
-            <Film className="size-3.5" />
-            Watch video
-          </a>
+            <summary
+              onPointerDown={tapFeedback}
+              className="flex min-h-[44px] cursor-pointer list-none items-center justify-between gap-2 px-3 text-sm font-medium text-muted-foreground [&::-webkit-details-marker]:hidden"
+            >
+              <span>
+                How to{cueCount > 0 && ` · ${cueCount} cue${cueCount === 1 ? "" : "s"}`}
+              </span>
+              <ChevronDown className="size-4 shrink-0 transition-transform group-open:rotate-180 motion-reduce:transition-none" />
+            </summary>
+            <div className="space-y-2 px-3 pb-3">
+              {exercise.prescription.notes && (
+                <p className="text-sm text-muted-foreground italic">
+                  {exercise.prescription.notes}
+                </p>
+              )}
+              {cueCount > 0 && (
+                <ul className="space-y-1">
+                  {(exercise.cues ?? []).map((cue, i) => (
+                    <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                      <span className="mt-2 block h-1 w-1 shrink-0 rounded-full bg-muted-foreground" />
+                      {cue}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {exercise.videoUrl && (
+                <a
+                  href={exercise.videoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-[44px] items-center gap-1.5 text-sm text-primary hover:underline"
+                >
+                  <Film className="size-4" />
+                  Watch video
+                </a>
+              )}
+            </div>
+          </details>
         )}
 
         {/* Test measurement: single value input, no feedback/timer */}
@@ -565,7 +662,7 @@ export function GuidedExerciseStep({
                 {!stopwatchRunning && stopwatchElapsed === 0 && (
                   <Button
                     size="lg"
-                    className="bg-green-600 hover:bg-green-700 text-white gap-2 w-40"
+                    className="bg-success hover:bg-success/90 text-black gap-2 w-40"
                     onClick={startStopwatch}
                   >
                     <Play className="size-5" />
@@ -594,7 +691,7 @@ export function GuidedExerciseStep({
             )}
 
             <div className="space-y-1.5">
-              <Label htmlFor="measurement-input" className="text-xs text-muted-foreground">
+              <Label htmlFor="measurement-input" className="text-sm text-muted-foreground">
                 Result ({exercise.testUnit ?? "value"}) *
               </Label>
               <Input
@@ -605,7 +702,7 @@ export function GuidedExerciseStep({
                 min="0"
                 value={measurementInput}
                 onChange={(e) => setMeasurementInput(e.target.value)}
-                className="w-40 h-9"
+                className="w-full max-w-[10rem] h-11 text-lg md:text-lg tabular-nums"
                 placeholder={exercise.testUnit === "seconds" ? "e.g. 65" : exercise.testUnit === "cm" ? "e.g. 120" : ""}
                 required
               />
@@ -637,7 +734,7 @@ export function GuidedExerciseStep({
               <p className="text-xs font-medium text-primary">Record your test result</p>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label htmlFor="test-left-meas" className="text-xs text-muted-foreground">
+                  <Label htmlFor="test-left-meas" className="text-sm text-muted-foreground">
                     Left hand ({exercise.testUnit}) *
                   </Label>
                   <Input
@@ -648,13 +745,13 @@ export function GuidedExerciseStep({
                     min="0"
                     value={loadInputLeft}
                     onChange={(e) => setLoadInputLeft(e.target.value)}
-                    className="h-9"
+                    className="h-11 text-lg md:text-lg tabular-nums"
                     placeholder="e.g. 65"
                     required
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="test-right-meas" className="text-xs text-muted-foreground">
+                  <Label htmlFor="test-right-meas" className="text-sm text-muted-foreground">
                     Right hand ({exercise.testUnit}) *
                   </Label>
                   <Input
@@ -665,7 +762,7 @@ export function GuidedExerciseStep({
                     min="0"
                     value={loadInputRight}
                     onChange={(e) => setLoadInputRight(e.target.value)}
-                    className="h-9"
+                    className="h-11 text-lg md:text-lg tabular-nums"
                     placeholder="e.g. 65"
                     required
                   />
@@ -674,25 +771,8 @@ export function GuidedExerciseStep({
             </div>
             {/* Feedback selector */}
             <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">How did it feel?</Label>
-              <div className="flex flex-wrap gap-1.5">
-                {FEEDBACK_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => toggleFeedback(opt.value)}
-                    aria-pressed={feedback === opt.value}
-                    onPointerDown={tapFeedback}
-                    className={`min-h-[44px] rounded-full px-4 text-sm font-medium transition-all active:scale-95 motion-reduce:active:scale-100 ${
-                      feedback === opt.value
-                        ? `${opt.color} text-black ring-2 ring-offset-1 ring-offset-background ${opt.ring}`
-                        : "border border-border bg-muted text-foreground hover:bg-accent"
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
+              <Label className="text-sm text-muted-foreground">How did it feel?</Label>
+              <FeedbackPills value={feedback} onChange={setFeedback} />
             </div>
           </div>
         ) : (
@@ -775,14 +855,6 @@ export function GuidedExerciseStep({
               <LadderBadge ladder={exercise.suggested.ladder} customSessionId={exercise.suggested.customSessionId} />
             )}
 
-            {/* A295: pain block active on this zone */}
-            {exercise.suggested.painFlag && (
-              <div className="flex items-start gap-2 rounded-md px-3 py-2 text-xs bg-orange-500/15 text-orange-400 border border-orange-500/30">
-                <AlertTriangle className="size-3.5 shrink-0 mt-0.5" />
-                <span>Pain reported recently — loads on this zone are reduced. Keep it sub-max.</span>
-              </div>
-            )}
-
             {/* A295: opt-in timed overhold of the LAST rep of the LAST set
                 (max hangs only): the timer keeps running past the target, up
                 to +6 s, and records how long you really held. */}
@@ -812,36 +884,12 @@ export function GuidedExerciseStep({
               </p>
             )}
 
-            {/* Exercise timer — shown for timed exercises AND multi-set rep-based exercises */}
-            {(((exercise.prescription.workSeconds ?? 0) > 0) ||
-              ((exercise.prescription.sets ?? 1) > 1 && (exercise.prescription.restSeconds ?? 0) > 0)) && (
-              <ExerciseTimer
-                workSeconds={exercise.prescription.workSeconds ?? 0}
-                restBetweenRepsSeconds={exercise.prescription.restBetweenRepsSeconds ?? 0}
-                restBetweenSetsSeconds={exercise.prescription.restSeconds ?? 0}
-                sets={exercise.prescription.sets ?? 1}
-                reps={typeof exercise.prescription.reps === "number" ? exercise.prescription.reps : 1}
-                altSides={exercise.altSides ?? false}
-                overholdLastRep={measure === "hang_margin" && overhold}
-                onOverholdResult={setHangHeldS}
-                initialSet={(() => {
-                  const prescSets = exercise.prescription.sets ?? 1;
-                  const totalSets = (exercise.altSides ?? false) ? prescSets * 2 : prescSets;
-                  if (exercise.completedSets != null && exercise.completedSets < totalSets) {
-                    return Math.min(exercise.completedSets + 1, totalSets);
-                  }
-                  return 1;
-                })()}
-                onSetChange={onSetChange}
-              />
-            )}
-
             {/* Repeater test: reps completed to failure + optional load */}
             {isRepeaterTest && (
               <div className="space-y-3 rounded-md border border-primary/30 bg-primary/5 p-3">
                 <p className="text-xs font-medium text-primary">Record your test result</p>
                 <div className="space-y-1.5">
-                  <Label htmlFor="sets-input" className="text-xs text-muted-foreground">
+                  <Label htmlFor="sets-input" className="text-sm text-muted-foreground">
                     Reps completed (full 7s hangs) *
                   </Label>
                   <Input
@@ -858,13 +906,13 @@ export function GuidedExerciseStep({
                         onSetChange(parsed);
                       }
                     }}
-                    className="w-40 h-9"
+                    className="w-full max-w-[10rem] h-11 text-lg md:text-lg tabular-nums"
                     placeholder="e.g. 12"
                     required
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="repeater-load-input" className="text-xs text-muted-foreground">
+                  <Label htmlFor="repeater-load-input" className="text-sm text-muted-foreground">
                     External load added (kg)
                   </Label>
                   <Input
@@ -875,7 +923,7 @@ export function GuidedExerciseStep({
                     min="0"
                     value={loadInput}
                     onChange={(e) => setLoadInput(e.target.value)}
-                    className="w-40 h-9"
+                    className="w-full max-w-[10rem] h-11 text-lg md:text-lg tabular-nums"
                     placeholder="e.g. 0"
                   />
                 </div>
@@ -908,7 +956,7 @@ export function GuidedExerciseStep({
                 )}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label htmlFor="lp-rep-reps-right" className="text-xs text-muted-foreground">
+                    <Label htmlFor="lp-rep-reps-right" className="text-sm text-muted-foreground">
                       Right hand reps *
                     </Label>
                     <Input
@@ -919,13 +967,13 @@ export function GuidedExerciseStep({
                       min="0"
                       value={repsInputRight}
                       onChange={(e) => setRepsInputRight(e.target.value)}
-                      className="h-9"
+                      className="h-11 text-lg md:text-lg tabular-nums"
                       placeholder="e.g. 14"
                       required
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="lp-rep-reps-left" className="text-xs text-muted-foreground">
+                    <Label htmlFor="lp-rep-reps-left" className="text-sm text-muted-foreground">
                       Left hand reps *
                     </Label>
                     <Input
@@ -936,7 +984,7 @@ export function GuidedExerciseStep({
                       min="0"
                       value={repsInputLeft}
                       onChange={(e) => setRepsInputLeft(e.target.value)}
-                      className="h-9"
+                      className="h-11 text-lg md:text-lg tabular-nums"
                       placeholder="e.g. 12"
                       required
                     />
@@ -944,7 +992,7 @@ export function GuidedExerciseStep({
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label htmlFor="lp-rep-load-right" className="text-xs text-muted-foreground">
+                    <Label htmlFor="lp-rep-load-right" className="text-sm text-muted-foreground">
                       Right hand load (kg)
                     </Label>
                     <Input
@@ -955,12 +1003,12 @@ export function GuidedExerciseStep({
                       min="0"
                       value={loadInputRight}
                       onChange={(e) => setLoadInputRight(e.target.value)}
-                      className="h-9"
+                      className="h-11 text-lg md:text-lg tabular-nums"
                       placeholder="kg"
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="lp-rep-load-left" className="text-xs text-muted-foreground">
+                    <Label htmlFor="lp-rep-load-left" className="text-sm text-muted-foreground">
                       Left hand load (kg)
                     </Label>
                     <Input
@@ -971,7 +1019,7 @@ export function GuidedExerciseStep({
                       min="0"
                       value={loadInputLeft}
                       onChange={(e) => setLoadInputLeft(e.target.value)}
-                      className="h-9"
+                      className="h-11 text-lg md:text-lg tabular-nums"
                       placeholder="kg"
                     />
                   </div>
@@ -985,7 +1033,7 @@ export function GuidedExerciseStep({
                 <p className="text-xs font-medium text-primary">Record your test result</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label htmlFor="test-left" className="text-xs text-muted-foreground">
+                    <Label htmlFor="test-left" className="text-sm text-muted-foreground">
                       Left hand (kg) *
                     </Label>
                     <Input
@@ -996,13 +1044,13 @@ export function GuidedExerciseStep({
                       min="0"
                       value={loadInputLeft}
                       onChange={(e) => setLoadInputLeft(e.target.value)}
-                      className="h-9"
+                      className="h-11 text-lg md:text-lg tabular-nums"
                       placeholder="e.g. 42"
                       required
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="test-right" className="text-xs text-muted-foreground">
+                    <Label htmlFor="test-right" className="text-sm text-muted-foreground">
                       Right hand (kg) *
                     </Label>
                     <Input
@@ -1013,7 +1061,7 @@ export function GuidedExerciseStep({
                       min="0"
                       value={loadInputRight}
                       onChange={(e) => setLoadInputRight(e.target.value)}
-                      className="h-9"
+                      className="h-11 text-lg md:text-lg tabular-nums"
                       placeholder="e.g. 47"
                       required
                     />
@@ -1024,25 +1072,8 @@ export function GuidedExerciseStep({
 
             {/* Feedback selector */}
             <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">How did it feel?</Label>
-              <div className="flex flex-wrap gap-1.5">
-                {FEEDBACK_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => toggleFeedback(opt.value)}
-                    aria-pressed={feedback === opt.value}
-                    onPointerDown={tapFeedback}
-                    className={`min-h-[44px] rounded-full px-4 text-sm font-medium transition-all active:scale-95 motion-reduce:active:scale-100 ${
-                      feedback === opt.value
-                        ? `${opt.color} text-black ring-2 ring-offset-1 ring-offset-background ${opt.ring}`
-                        : "border border-border bg-muted text-foreground hover:bg-accent"
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
+              <Label className="text-sm text-muted-foreground">How did it feel?</Label>
+              <FeedbackPills value={feedback} onChange={setFeedback} />
             </div>
 
             {/* A295: optional measure — last-set reps / seconds left on the last hang */}
@@ -1064,7 +1095,7 @@ export function GuidedExerciseStep({
               <div className="space-y-3 rounded-md border border-primary/30 bg-primary/5 p-3">
                 <p className="text-xs font-medium text-primary">Record your test result</p>
                 <div className="space-y-1.5">
-                  <Label htmlFor="external-load-input" className="text-xs text-muted-foreground">
+                  <Label htmlFor="external-load-input" className="text-sm text-muted-foreground">
                     External load added (kg) *
                   </Label>
                   <Input
@@ -1075,7 +1106,7 @@ export function GuidedExerciseStep({
                     min="0"
                     value={loadInput}
                     onChange={(e) => setLoadInput(e.target.value)}
-                    className="w-40 h-9"
+                    className="w-full max-w-[10rem] h-11 text-lg md:text-lg tabular-nums"
                     placeholder="e.g. 15"
                     required
                   />
@@ -1097,12 +1128,12 @@ export function GuidedExerciseStep({
             {/* Editable load fields — per-hand (finger loading-pin), not shown for unilateral tests or bodyweight exercises */}
             {isPerHandLoad && !isTestMeasurement && !isUnilateralTest && exercise.loadModel !== "bodyweight_only" && (
               <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">
+                <Label className="text-sm text-muted-foreground">
                   Actual load used (kg)
                 </Label>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label htmlFor="load-left" className="text-[11px] text-muted-foreground">Left hand</Label>
+                    <Label htmlFor="load-left" className="text-sm font-medium text-muted-foreground">Left hand</Label>
                     <Input
                       id="load-left"
                       type="number"
@@ -1110,12 +1141,12 @@ export function GuidedExerciseStep({
                       step="0.5"
                       value={loadInputLeft}
                       onChange={(e) => setLoadInputLeft(e.target.value)}
-                      className="h-9"
+                      className="h-11 text-lg md:text-lg tabular-nums"
                       placeholder="kg"
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="load-right" className="text-[11px] text-muted-foreground">Right hand</Label>
+                    <Label htmlFor="load-right" className="text-sm font-medium text-muted-foreground">Right hand</Label>
                     <Input
                       id="load-right"
                       type="number"
@@ -1123,7 +1154,7 @@ export function GuidedExerciseStep({
                       step="0.5"
                       value={loadInputRight}
                       onChange={(e) => setLoadInputRight(e.target.value)}
-                      className="h-9"
+                      className="h-11 text-lg md:text-lg tabular-nums"
                       placeholder="kg"
                     />
                   </div>
@@ -1134,7 +1165,7 @@ export function GuidedExerciseStep({
             {/* Editable load field — single (bilateral + unilateral leg accessories, non-test) */}
             {hasLoadField && !isPerHandLoad && (
               <div className="space-y-1.5">
-                <Label htmlFor="load-input" className="text-xs text-muted-foreground">
+                <Label htmlFor="load-input" className="text-sm text-muted-foreground">
                   {exercise.allowLoadLogging ? "Weight used (kg) — optional" : "Actual load used (kg)"}
                 </Label>
                 <Input
@@ -1145,7 +1176,7 @@ export function GuidedExerciseStep({
                   min={0}
                   value={loadInput}
                   onChange={(e) => setLoadInput(e.target.value)}
-                  className="w-32 h-9"
+                  className="w-full max-w-[10rem] h-11 text-lg md:text-lg tabular-nums"
                   placeholder={exercise.allowLoadLogging ? "kg — leave empty if using a band" : "kg"}
                 />
               </div>
@@ -1168,7 +1199,7 @@ export function GuidedExerciseStep({
             {/* Editable grade field */}
             {hasGradeField && !hasProblemLog && (
               <div className="space-y-1.5">
-                <Label htmlFor="grade-input" className="text-xs text-muted-foreground">
+                <Label htmlFor="grade-input" className="text-sm text-muted-foreground">
                   Actual grade used
                 </Label>
                 <Input
@@ -1176,7 +1207,7 @@ export function GuidedExerciseStep({
                   type="text"
                   value={gradeInput}
                   onChange={(e) => setGradeInput(e.target.value)}
-                  className="w-32 h-9"
+                  className="w-full max-w-[10rem] h-11 text-lg md:text-lg tabular-nums"
                   placeholder="e.g. 7A"
                 />
               </div>
@@ -1226,7 +1257,7 @@ export function GuidedExerciseStep({
             Skip
           </Button>
           <Button
-            className="min-h-[44px] bg-green-600 hover:bg-green-700 text-white flex-1"
+            className="min-h-[44px] bg-success hover:bg-success/90 text-black flex-1"
             onClick={handleDone}
           >
             <Check className="size-4 mr-1" />

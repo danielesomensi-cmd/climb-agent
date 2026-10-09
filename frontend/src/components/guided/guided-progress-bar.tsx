@@ -32,8 +32,8 @@ export function GuidedProgressBar({
             <span
               className={cn(
                 "block size-3 rounded-full transition-all group-active:scale-125 motion-reduce:group-active:scale-100",
-                ex.status === "done" && "bg-green-500",
-                ex.status === "skipped" && "bg-red-400",
+                ex.status === "done" && "bg-success",
+                ex.status === "skipped" && "bg-muted-foreground",
                 ex.status === "pending" && i === currentIndex && "bg-primary ring-2 ring-primary/40",
                 ex.status === "pending" && i !== currentIndex && "bg-muted-foreground/30",
               )}

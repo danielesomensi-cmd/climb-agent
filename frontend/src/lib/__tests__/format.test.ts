@@ -62,10 +62,13 @@ describe("FEEDBACK_OPTIONS", () => {
   });
 
   it("no component derives a ring class at runtime", () => {
-    const chips = readFileSync(
-      join(process.cwd(), "src/components/guided/guided-exercise-step.tsx"),
-      "utf8",
-    );
-    expect(chips).not.toMatch(/ring-\$\{/);
+    // A307: the chips now live in feedback-pills.tsx.
+    for (const rel of [
+      "src/components/guided/guided-exercise-step.tsx",
+      "src/components/guided/feedback-pills.tsx",
+    ]) {
+      const chips = readFileSync(join(process.cwd(), rel), "utf8");
+      expect(chips).not.toMatch(/ring-\$\{/);
+    }
   });
 });

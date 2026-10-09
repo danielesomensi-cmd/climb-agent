@@ -12,12 +12,11 @@ import { useSubscription } from "@/lib/hooks/use-subscription";
 import { queryKeys } from "@/lib/query-keys";
 import { applyEvents, postFeedback } from "@/lib/api";
 import type { WeekPlan, CustomSessionExercise } from "@/lib/types";
-import { cn } from "@/lib/utils";
 import { CustomExerciseStep } from "@/components/session-play/custom-exercise-step";
 import { CustomRestTimer } from "@/components/session-play/custom-rest-timer";
 import { displaySetNumber, sideForSet, totalSetsWithSides } from "@/lib/alt-sides";
 import { unlockAudio } from "@/lib/audio-unlock";
-import { FEEDBACK_OPTIONS } from "@/lib/format";
+import { FeedbackPills } from "@/components/guided/feedback-pills";
 import { measureFields, withFeedbackContract, type MeasureValues } from "@/lib/measured-feedback";
 import type { LimitProblemDraft, SessionPain } from "@/lib/types";
 import { MeasureInput, PainPicker } from "@/components/training/measured-feedback-inputs";
@@ -98,24 +97,8 @@ function ExerciseFeedbackCard({
       )}
       {/* A298: ladder level + promotion proposal (custom 'ladder' rows) */}
       <LadderBadge ladder={exercise.ladder} customSessionId={customSessionId} date={date} compact />
-      <div className="flex flex-wrap gap-1.5">
-        {FEEDBACK_OPTIONS.map((opt) => (
-          <button
-            key={opt.value}
-            type="button"
-            onClick={() => onFeedbackChange(feedbackLabel === opt.value ? undefined : opt.value)}
-            aria-pressed={feedbackLabel === opt.value}
-            className={cn(
-              "px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors",
-              feedbackLabel === opt.value
-                ? `${opt.color} text-white border-transparent`
-                : "border-muted-foreground/30 text-muted-foreground hover:border-muted-foreground/60",
-            )}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
+      {/* A307: same 44px pills as the guided player */}
+      <FeedbackPills value={feedbackLabel} onChange={(v) => onFeedbackChange(v ?? undefined)} />
       {/* A295: optional measure (last-set reps / hang margin) */}
       {exercise.measure && (
         <MeasureInput
@@ -142,7 +125,7 @@ function ExerciseFeedbackCard({
         />
       )}
       {showLoadInput && !exercise.log_problems && (
-        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+        <label className="flex items-center gap-2 text-sm text-muted-foreground">
           <span className="shrink-0">Used load</span>
           <input
             type="number"
@@ -152,7 +135,7 @@ function ExerciseFeedbackCard({
             value={loadKg}
             onChange={(e) => onLoadChange(e.target.value)}
             placeholder="optional"
-            className="w-24 rounded-md border bg-background px-2 py-1 text-sm text-foreground tabular-nums"
+            className="h-11 w-full max-w-[10rem] rounded-md border bg-background px-3 text-lg text-foreground tabular-nums"
           />
           <span className="shrink-0">kg</span>
         </label>
@@ -725,7 +708,7 @@ export default function SessionPlayPage() {
               <Button
                 onClick={handleFinish}
                 disabled={submitting}
-                className="bg-green-600 hover:bg-green-700 text-white min-w-[140px]"
+                className="bg-success hover:bg-success/90 text-black min-h-[52px] text-base min-w-[140px]"
               >
                 {submitting ? "Saving\u2026" : "Done"}
               </Button>

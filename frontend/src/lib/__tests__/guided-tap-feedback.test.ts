@@ -104,6 +104,7 @@ describe("guided raw buttons (not on the base Button) get the same treatment", (
     "components/guided/exercise-timer.tsx",
     "components/guided/guided-exercise-step.tsx",
     "components/guided/guided-progress-bar.tsx",
+    "components/guided/feedback-pills.tsx",
   ])("%s wires tapFeedback on pointerdown", (rel) => {
     const file = src(rel);
     expect(file).toContain('from "@/lib/haptics"');
