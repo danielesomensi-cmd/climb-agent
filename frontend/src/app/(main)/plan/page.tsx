@@ -1,14 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
+import { ChevronDown, Info } from "lucide-react";
 import { TopBar } from "@/components/layout/top-bar";
 import { RadarChart } from "@/components/onboarding/radar-chart";
 import { MacrocycleTimeline } from "@/components/training/macrocycle-timeline";
 import { MilestonesCard } from "@/components/training/milestones-card";
 import { PausedBanner } from "@/components/training/paused-banner";
 import { useUserState } from "@/lib/hooks/use-state";
+import { useCatalogSessions } from "@/lib/hooks/queries/use-catalog";
 import { generateMacrocycle, getStateStatus, getWeek } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,28 +30,44 @@ import {
 } from "@/lib/eliteScoring";
 import { getPhaseName } from "@/lib/phase-labels";
 import { computeCurrentWeek } from "@/lib/phase-progress";
+import {
+  domainWeightRows,
+  formatCycleHeadline,
+  getCyclePosition,
+  getIntensityCapLabel,
+  getSessionLabel,
+} from "@/lib/plan-labels";
+import { cn } from "@/lib/utils";
 import type { Phase } from "@/lib/types";
 import { parseISODateLocal } from "@/lib/dates";
 
-/** Domain labels */
-const DOMAIN_LABELS: Record<string, string> = {
-  finger_strength: "Finger strength",
-  pulling_strength: "Pulling strength",
-  power_endurance: "Power endurance",
-  technique: "Technique",
-  endurance: "Endurance",
-  power: "Power",
-  strength: "Strength",
-  conditioning: "Conditioning",
-  flexibility: "Flexibility",
-  prehab: "Prehab",
-};
+/** A311 — placeholder shaped like the page (hero card, radar, phase rows). */
+function PlanSkeleton() {
+  return (
+    <div className="space-y-6" aria-hidden="true">
+      <div className="space-y-3 rounded-xl border border-border p-4">
+        <div className="h-3 w-20 animate-pulse rounded bg-muted/40" />
+        <div className="h-5 w-3/4 animate-pulse rounded bg-muted/40" />
+        <div className="h-10 animate-pulse rounded-lg bg-muted/25" />
+      </div>
+      <div className="h-64 animate-pulse rounded-xl border border-border bg-muted/20" />
+      <div className="space-y-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-14 animate-pulse rounded-xl border border-border bg-muted/20" />
+        ))}
+      </div>
+      <span className="sr-only">Loading your plan…</span>
+    </div>
+  );
+}
 
 
 export default function PlanPage() {
   const { isLoaded: authReady } = useAuth();
   const { state, loading, error, refresh } = useUserState(authReady);
-  const [expandedPhase, setExpandedPhase] = useState<string | null>(null);
+  // A311: `undefined` = the user has not toggled anything yet, so the current
+  // phase shows expanded on load. Derived at render, no effect needed.
+  const [expandedPhase, setExpandedPhase] = useState<string | null | undefined>(undefined);
   const [expandedRationale, setExpandedRationale] = useState<string | null>(null);
   const [aboutPlanOpen, setAboutPlanOpen] = useState(false);
   const [isStale, setIsStale] = useState(false);
@@ -62,6 +80,19 @@ export default function PlanPage() {
   const profile = state?.assessment?.profile ?? null;
   const currentWeek = macrocycle ? computeCurrentWeek(macrocycle) : undefined;
   const discipline = getDiscipline((state?.goal as Record<string, unknown>)?.goal_type as string | undefined);
+  const cyclePosition =
+    macrocycle && currentWeek != null
+      ? getCyclePosition(macrocycle, currentWeek, discipline)
+      : null;
+  const currentPhaseId = cyclePosition?.phaseId ?? null;
+  const openPhaseId = expandedPhase === undefined ? currentPhaseId : expandedPhase;
+
+  // A311: session_pool ids → catalog names (cached for the session, A187).
+  const catalogSessions = useCatalogSessions(authReady && !!macrocycle);
+  const sessionNames = useMemo(
+    () => new Map((catalogSessions.data?.sessions ?? []).map((s) => [s.id, s.name])),
+    [catalogSessions.data],
+  );
   // B304: axis scores are readiness-for-goal, not absolute — surface the goal
   // grade so every number on the radar reads in context.
   const goalObj = (state?.goal as Record<string, unknown>) ?? {};
@@ -93,7 +124,7 @@ export default function PlanPage() {
   }, [checkStale, authReady]);
 
   function togglePhase(phaseId: string) {
-    setExpandedPhase((prev) => (prev === phaseId ? null : phaseId));
+    setExpandedPhase(openPhaseId === phaseId ? null : phaseId);
   }
 
   async function handleRegenMacro(option: RegenerateStartOption) {
@@ -125,67 +156,37 @@ export default function PlanPage() {
         <PausedBanner since={macrocycle?.pause?.active_since} />
 
         {/* Loading state */}
-        {loading && (
-          <div className="flex items-center justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          </div>
-        )}
+        {loading && <PlanSkeleton />}
 
         {/* Error state */}
         {error && !loading && (
           <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center">
-            <p className="text-sm text-destructive">{error}</p>
-            <button
-              onClick={refresh}
-              className="mt-2 text-sm font-medium text-primary underline"
-            >
+            <p className="text-sm font-medium text-destructive">
+              Couldn&rsquo;t load your plan
+            </p>
+            <p className="mt-1 text-xs text-fg-muted">{error}</p>
+            <Button variant="outline" className="mt-3 h-11" onClick={refresh}>
               Retry
-            </button>
+            </Button>
           </div>
         )}
 
         {/* No macrocycle generated */}
         {!loading && !error && !macrocycle && (
           <div className="rounded-lg border border-dashed p-8 text-center space-y-4">
-            <p className="text-muted-foreground text-lg">
-              No plan generated
-            </p>
+            <p className="text-lg font-semibold">No plan yet</p>
             <p className="text-sm text-muted-foreground">
               Complete the onboarding process to generate your personalized training plan.
             </p>
-            <Link href="/onboarding/welcome">
-              <Button>Start onboarding</Button>
-            </Link>
+            <Button asChild className="h-11">
+              <Link href="/onboarding/welcome">Start onboarding</Link>
+            </Button>
           </div>
         )}
 
         {/* Main content */}
         {!loading && !error && macrocycle && (
           <>
-            {/* Assessment profile radar chart */}
-            {profile && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Assessment profile</CardTitle>
-                  {targetGrade && !showsEliteToggle && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Readiness for {targetGrade}
-                    </p>
-                  )}
-                </CardHeader>
-                <CardContent className="flex justify-center">
-                  <RadarChart
-                    profile={profile}
-                    discipline={discipline}
-                    targetGrade={targetGrade}
-                    eliteInputs={eliteInputs}
-                  />
-                </CardContent>
-              </Card>
-            )}
-
-            <Separator />
-
             {/* Dirty-state banner — mutually exclusive with the standalone button below */}
             {showStaleBanner && (
               <div className="rounded-lg border border-warning/30 bg-warning/15 p-4 space-y-3">
@@ -196,14 +197,14 @@ export default function PlanPage() {
                 </p>
                 <div className="flex gap-2">
                   <Button
-                    size="sm"
+                    className="h-11"
                     onClick={() => setRegenDialogOpen(true)}
                     disabled={regenerating}
                   >
                     {regenerating ? "Processing..." : "Update remaining plan"}
                   </Button>
                   <Button
-                    size="sm"
+                    className="h-11"
                     variant="ghost"
                     onClick={() => setStaleDismissed(true)}
                   >
@@ -216,7 +217,15 @@ export default function PlanPage() {
             {/* Macrocycle timeline */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Macrocycle</CardTitle>
+                <CardTitle className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Macrocycle
+                </CardTitle>
+                {/* A311: lead with where the athlete is in the cycle. */}
+                {cyclePosition && (
+                  <p className="text-lg font-semibold leading-snug">
+                    {formatCycleHeadline(cyclePosition)}
+                  </p>
+                )}
                 <p className="text-sm text-muted-foreground">
                   {macrocycle.total_weeks} weeks starting from{" "}
                   {parseISODateLocal(macrocycle.start_date).toLocaleDateString("en-US", {
@@ -241,7 +250,7 @@ export default function PlanPage() {
               <div className="flex flex-col items-center gap-1">
                 <Button
                   variant="outline"
-                  size="sm"
+                  className="h-11"
                   onClick={() => setRegenDialogOpen(true)}
                   disabled={regenerating}
                 >
@@ -254,8 +263,6 @@ export default function PlanPage() {
               </div>
             )}
 
-            <Separator />
-
             {/* Regen error */}
             {regenError && (
               <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-center">
@@ -263,19 +270,43 @@ export default function PlanPage() {
               </div>
             )}
 
+            {/* Assessment profile radar chart */}
+            {profile && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Assessment profile</CardTitle>
+                  {targetGrade && !showsEliteToggle && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Readiness for {targetGrade}
+                    </p>
+                  )}
+                </CardHeader>
+                <CardContent className="flex justify-center">
+                  <RadarChart
+                    profile={profile}
+                    discipline={discipline}
+                    targetGrade={targetGrade}
+                    eliteInputs={eliteInputs}
+                  />
+                </CardContent>
+              </Card>
+            )}
+
+            <Separator />
+
             {/* About your plan — expandable */}
             <button
               type="button"
-              className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              className="flex min-h-11 items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
               onClick={() => setAboutPlanOpen((prev) => !prev)}
+              aria-expanded={aboutPlanOpen}
             >
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <Info className="size-3.5" aria-hidden="true" />
               <span>{aboutPlanOpen ? "Hide" : "About your plan"}</span>
-              <svg className={`h-3.5 w-3.5 transition-transform ${aboutPlanOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
+              <ChevronDown
+                className={cn("size-3.5 transition-transform", aboutPlanOpen && "rotate-180")}
+                aria-hidden="true"
+              />
             </button>
             {aboutPlanOpen && (
               <Card>
@@ -297,56 +328,69 @@ export default function PlanPage() {
               </div>
 
               {macrocycle.phases.map((phase: Phase) => {
-                const isExpanded = expandedPhase === phase.phase_id;
+                const isExpanded = openPhaseId === phase.phase_id;
+                const isCurrent = currentPhaseId === phase.phase_id;
                 const label = getPhaseName(phase.phase_id, discipline);
+                const intensity = getIntensityCapLabel(phase.intensity_cap);
+                const weightRows = domainWeightRows(phase.domain_weights);
 
                 return (
                   <Card
                     key={phase.phase_id}
-                    className="cursor-pointer transition-colors hover:bg-muted/50"
-                    onClick={() => togglePhase(phase.phase_id)}
+                    className={cn("gap-0 py-0", isCurrent && "border-primary")}
                   >
-                    <CardHeader className="pb-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <CardTitle className="text-sm">{label}</CardTitle>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-[10px]">
-                            {phase.duration_weeks} wk
-                          </Badge>
-                          <Badge variant="secondary" className="text-[10px]">
-                            {phase.intensity_cap}
-                          </Badge>
-                        </div>
-                      </div>
-                    </CardHeader>
+                    <button
+                      type="button"
+                      className="flex min-h-14 w-full items-center justify-between gap-2 rounded-xl px-6 py-3 text-left transition-colors hover:bg-muted/50"
+                      onClick={() => togglePhase(phase.phase_id)}
+                      aria-expanded={isExpanded}
+                    >
+                      <span className="min-w-0 space-y-0.5">
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-semibold">{label}</span>
+                          {isCurrent && <Badge className="text-[10px]">Current</Badge>}
+                        </span>
+                        <span className="block text-xs text-muted-foreground">
+                          {phase.duration_weeks} {phase.duration_weeks === 1 ? "week" : "weeks"}
+                          {intensity && ` · ${intensity}`}
+                        </span>
+                      </span>
+                      <ChevronDown
+                        className={cn(
+                          "size-4 shrink-0 text-muted-foreground transition-transform",
+                          isExpanded && "rotate-180",
+                        )}
+                        aria-hidden="true"
+                      />
+                    </button>
 
                     {isExpanded && (
-                      <CardContent className="space-y-4 pt-3">
-                        {/* Domain weights */}
-                        {Object.keys(phase.domain_weights).length > 0 && (
+                      <CardContent className="space-y-4 pb-4">
+                        {/* Domain weights — A311: thin bars, heaviest first */}
+                        {weightRows.length > 0 && (
                           <div>
                             <p className="text-xs font-medium text-muted-foreground mb-2">
-                              Domain weights
+                              Training focus
                             </p>
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                              {Object.entries(phase.domain_weights).map(
-                                ([domain, weight]) => (
-                                  <div
-                                    key={domain}
-                                    className="flex items-center justify-between text-xs"
-                                  >
-                                    <span className="text-muted-foreground">
-                                      {DOMAIN_LABELS[domain] ?? domain}
-                                    </span>
-                                    <span className="font-mono font-semibold">
-                                      {typeof weight === "number"
-                                        ? `${Math.round(weight * 100)}%`
-                                        : weight}
-                                    </span>
-                                  </div>
-                                )
-                              )}
-                            </div>
+                            <ul className="space-y-1.5">
+                              {weightRows.map((row) => (
+                                <li
+                                  key={row.domain}
+                                  className="grid grid-cols-[7.5rem_1fr_2.5rem] items-center gap-2 text-xs"
+                                >
+                                  <span className="truncate text-muted-foreground">{row.label}</span>
+                                  <span className="h-1.5 overflow-hidden rounded-full bg-muted">
+                                    <span
+                                      className="block h-full rounded-full bg-primary"
+                                      style={{ width: `${row.pct}%` }}
+                                    />
+                                  </span>
+                                  <span className="text-right font-medium tabular-nums">
+                                    {row.pct}%
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
                           </div>
                         )}
 
@@ -361,9 +405,9 @@ export default function PlanPage() {
                                 <Badge
                                   key={sessionId}
                                   variant="outline"
-                                  className="text-[10px]"
+                                  className="text-[11px]"
                                 >
-                                  {sessionId.replace(/_/g, " ")}
+                                  {getSessionLabel(sessionId, sessionNames)}
                                 </Badge>
                               ))}
                             </div>
@@ -375,26 +419,28 @@ export default function PlanPage() {
                           <div>
                             <button
                               type="button"
-                              className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                              onClick={(e) => {
-                                e.stopPropagation();
+                              className="flex min-h-11 items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                              onClick={() =>
                                 setExpandedRationale((prev) =>
                                   prev === phase.phase_id ? null : phase.phase_id
-                                );
-                              }}
+                                )
+                              }
+                              aria-expanded={expandedRationale === phase.phase_id}
                             >
-                              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
+                              <Info className="size-3.5" aria-hidden="true" />
                               <span>About this phase</span>
-                              <svg className={`h-3.5 w-3.5 transition-transform ${expandedRationale === phase.phase_id ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                              </svg>
+                              <ChevronDown
+                                className={cn(
+                                  "size-3.5 transition-transform",
+                                  expandedRationale === phase.phase_id && "rotate-180",
+                                )}
+                                aria-hidden="true"
+                              />
                             </button>
                             {expandedRationale === phase.phase_id && (() => {
                               const r = PHASE_RATIONALES[phase.phase_id];
                               return (
-                                <div className="mt-2 text-xs text-muted-foreground space-y-2 pl-5">
+                                <div className="mt-1 text-xs text-muted-foreground space-y-2 pl-5">
                                   <p className="leading-relaxed">{r.text}</p>
                                   {r.duration_note && (
                                     <p className="text-warning">{r.duration_note}</p>

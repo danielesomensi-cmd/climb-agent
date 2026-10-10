@@ -30,6 +30,21 @@ const PHASE_STYLE: Record<string, string> = {
 const PHASE_STYLE_FALLBACK = "bg-muted text-muted-foreground";
 
 /**
+ * A311 — the segment the athlete is in: stronger tint plus an inset ring in
+ * the phase colour (ring-current), so "where am I" reads without the marker.
+ * Literal classes — Tailwind cannot see interpolated ones.
+ */
+const PHASE_STYLE_CURRENT: Record<string, string> = {
+  base: "bg-phase-aerobic/35 text-phase-aerobic",
+  strength_power: "bg-phase-anaerobic-alactic/35 text-phase-anaerobic-alactic",
+  power_endurance: "bg-phase-anaerobic-lactic/35 text-phase-anaerobic-lactic",
+  performance: "bg-phase-specific/35 text-phase-specific",
+  deload: "bg-phase-recovery/35 text-phase-recovery",
+};
+
+const PHASE_STYLE_CURRENT_FALLBACK = "bg-muted text-foreground";
+
+/**
  * B355 — offset di inizio di ogni fase (prefix-sum delle durate precedenti).
  * Era un accumulatore mutato dentro `.map()`: riassegnare una variabile di
  * render viola react-hooks/immutability. Il risultato è identico — la prima
@@ -64,14 +79,23 @@ export function MacrocycleTimeline({
   const currentWeekPct =
     currentWeek != null ? ((currentWeek - 0.5) / totalWeeks) * 100 : null;
 
+  // currentWeek is 1-based; phase.startWeek is the 0-based offset.
+  const isCurrentPhase = (phase: { startWeek: number; duration_weeks: number }) =>
+    currentWeek != null &&
+    currentWeek > phase.startWeek &&
+    currentWeek <= phase.startWeek + phase.duration_weeks;
+
   return (
-    <div className="w-full space-y-2">
+    <div className={cn("w-full space-y-2", currentWeekPct != null && "pt-5")}>
       {/* Horizontal phase bar */}
       <div className="relative">
         <div className="flex h-10 w-full overflow-hidden rounded-lg">
           {phasesWithOffset.map((phase) => {
             const widthPct = (phase.duration_weeks / totalWeeks) * 100;
-            const phaseStyle = PHASE_STYLE[phase.phase_id] ?? PHASE_STYLE_FALLBACK;
+            const isCurrent = isCurrentPhase(phase);
+            const phaseStyle = isCurrent
+              ? PHASE_STYLE_CURRENT[phase.phase_id] ?? PHASE_STYLE_CURRENT_FALLBACK
+              : PHASE_STYLE[phase.phase_id] ?? PHASE_STYLE_FALLBACK;
             const label =
               getPhaseNameShort(phase.phase_id, discipline);
 
@@ -82,6 +106,7 @@ export function MacrocycleTimeline({
                   "flex items-center justify-center text-[10px] sm:text-xs font-medium px-0.5 sm:px-1 leading-tight text-center",
                   // Sottile separatore fra fasi adiacenti, che ora hanno fondi tenui.
                   "border-r border-surface-base/40 last:border-r-0",
+                  isCurrent && "font-semibold ring-1 ring-inset ring-current",
                   phaseStyle
                 )}
                 style={{ width: `${widthPct}%` }}
@@ -93,14 +118,22 @@ export function MacrocycleTimeline({
           })}
         </div>
 
-        {/* Current week marker */}
+        {/* A311: current week — full-height line + "Now" label (was a 5px triangle). */}
         {currentWeekPct != null && (
-          <div
-            className="absolute -bottom-3 -translate-x-1/2"
-            style={{ left: `${currentWeekPct}%` }}
-          >
-            <div className="w-0 h-0 border-l-[5px] border-r-[5px] border-b-[6px] border-l-transparent border-r-transparent border-b-primary" />
-          </div>
+          <>
+            <div
+              className="pointer-events-none absolute -top-1 -bottom-1 w-0.5 -translate-x-1/2 rounded-full bg-primary"
+              style={{ left: `${currentWeekPct}%` }}
+              aria-hidden="true"
+            />
+            <span
+              className="pointer-events-none absolute -top-5 -translate-x-1/2 text-[11px] font-semibold leading-none text-primary"
+              // Clamped so the label never spills past the card edge in week 1 / last week.
+              style={{ left: `clamp(0.875rem, ${currentWeekPct}%, calc(100% - 0.875rem))` }}
+            >
+              Now
+            </span>
+          </>
         )}
       </div>
 
@@ -116,6 +149,7 @@ export function MacrocycleTimeline({
             showProgress &&
             currentWeek != null &&
             phase.startWeek + phase.duration_weeks < currentWeek;
+          const isCurrent = isCurrentPhase(phase);
 
           return (
             <div
@@ -123,7 +157,12 @@ export function MacrocycleTimeline({
               className="text-center"
               style={{ width: `${widthPct}%` }}
             >
-              <p className="text-[10px] font-medium text-muted-foreground leading-tight break-words">
+              <p
+                className={cn(
+                  "text-[10px] sm:text-xs leading-tight break-words",
+                  isCurrent ? "font-semibold text-foreground" : "font-medium text-muted-foreground",
+                )}
+              >
                 {label}
                 {isComplete && (
                   <span className="ml-0.5 text-success" aria-label="Phase complete">
@@ -143,8 +182,8 @@ export function MacrocycleTimeline({
       {currentWeek != null && (
         <p className="text-xs text-muted-foreground text-center mt-1">
           {showProgress ? (
+            // A311: "Week N of M" now leads the /plan card as its hero line.
             <>
-              Week {currentWeek} of {totalWeeks} ·{" "}
               {Math.round(((currentWeek - 1) / totalWeeks) * 100)}% of cycle
               complete
             </>
