@@ -3,6 +3,7 @@
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { useBuilderBlocks } from "@/lib/hooks/queries";
+import { BuilderSkeleton } from "./builder-skeleton";
 import type { CustomSessionExercise } from "@/lib/types";
 
 interface WarmupCooldownPickerProps {
@@ -46,9 +47,7 @@ export function WarmupCooldownPicker({ type, open, onOpenChange, onSelect }: War
         </DrawerHeader>
 
         <div className="px-4 pb-4 space-y-2">
-          {isLoading && (
-            <p className="text-sm text-muted-foreground text-center py-4">Loading...</p>
-          )}
+          {isLoading && <BuilderSkeleton rows={3} withInput={false} />}
           {blocks.map((block, i) => (
             <button
               key={block.template_id}

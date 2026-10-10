@@ -11,7 +11,7 @@
 
 ## Open
 
-- **DESIGN-D284** (P2, da [[D284]] 2026-10-09, `docs/audit/D284_design_audit.md`): tre brief frontend proposti, da scegliere con Daniele. (1) Player guidato → A307. (2) /today e /week → A308 (/plan ancora da fare: «dove sono nel ciclo» in testa, fase corrente marcata). (3) Builder e Coach: Play avvia il player vero, barra azioni fissa, card ad-hoc vecchie senza «Add to today».
+- **DESIGN-D284** (P2, da [[D284]] 2026-10-09, `docs/audit/D284_design_audit.md`): tre brief frontend proposti, da scegliere con Daniele. (1) Player guidato → A307. (2) /today e /week → A308 (/plan ancora da fare: «dove sono nel ciclo» in testa, fase corrente marcata). (3) Builder e Coach → A309 / A310.
 
 **B369-P6-residui — dopo [[B371]]: riconciliazione post-rigenerazione e `change_gym` (da [[B369]], 2026-10-05)** 🟡 P3 — [[B371]] ha chiuso il controllo di versione; restano i due punti collegati, entrambi nel motore (`replanner_v1`, Fase 1 + STOP): (1) dopo una rigenerazione le sessioni del motore non vengono riconciliate contro quelle dell'utente conservate — oggi solo segnalazione (`regeneration_guard_warnings`, coerente con A301); (2) `change_gym` non marca la sessione come dell'utente, quindi una rigenerazione successiva riporta la sessione del motore alla palestra di default. Non «banalmente sicuro»: un nuovo marker in `USER_MARKERS` cambia cosa vedono `retest_policy._locked_by_merge`, la rotazione dei complementari (A300) e gli alert di A301. (3) **corsa residua di B371**: il lock per utente vale nel singolo processo uvicorn (Procfile attuale); con più worker/repliche, o con gli scrittori senza lock (rigenerazione in `GET /api/week`, `PUT /api/state`), resta una finestra stretta di lost update — la chiusura vera è un salvataggio condizionato sulla revisione salvata (PATCH/RPC Supabase filtrato).
 
@@ -148,6 +148,8 @@ la sola fonte di verità.
 ---
 
 ## Recently closed (2026-10-06)
+
+- **A309 — session builder (parte di DESIGN-D284 brief 3)** ✅ (frontend, unito direttamente su richiesta di Daniele). «Start» in My Sessions e nell'anteprima avvia il player custom vero: se la sessione non è nel piano di oggi la aggiunge nel primo slot libero come «Add to today & run» del coach (dry run chiavi = conferma, mai blocco; già fatta → avviso; giornata piena → messaggio), perché `/play` salva solo una sessione presente nel piano (`start-custom-session.ts`). /view anteprima di sola lettura con barra Edit / Start. Editor: sezioni Warmup / Main / Cooldown (`builder-groups.ts`, riordino nel gruppo), barra fissa con durata / load / Save, riga intera tocca per modificare, Undo sulla rimozione; drawer parametri con −/+ 44 px e valore digitabile (`stepper-value.ts`), Auto / Fixed kg e Progress / Fixed invariati; picker con guardia sul doppio inserimento; scheletri al posto di «Loading...». 35 vitest nuovi.
 
 - **A310 — coach e cornice globale (parte di DESIGN-D284 brief 3)** ✅ (frontend, unito direttamente su richiesta di Daniele). /coach: l'ultimo messaggio resta sopra il composer (`--composer-h`); card ad-hoc con avvisi sulle sessioni chiave in evidenza, esercizi su due righe, conferma con AlertDialog; separatori di giorno; **una card composta per un altro giorno non offre più «Add to today & run»** («Composed for <data>» + «Ask again for today», che rimanda la richiesta originale senza riusare il payload); invio fallito → testo di nuovo nel campo + Retry (non su 429/402); chip 44 px; TopBar compatta; scheletri di caricamento. Bottom nav /85 e drawer More con `DrawerTitle`. Logica pura in `lib/coach-chat.ts` (17 vitest).
 

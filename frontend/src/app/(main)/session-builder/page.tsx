@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { TopBar } from "@/components/layout/top-bar";
 import { SessionBuilder } from "@/components/session-builder/session-builder";
 import { DiscardChangesDialog } from "@/components/session-builder/discard-changes-dialog";
+import { BuilderSkeleton } from "@/components/session-builder/builder-skeleton";
 
 const BACK_HREF = "/free-session";
 
@@ -24,7 +25,7 @@ export default function SessionBuilderPage() {
     <>
       <TopBar title="Session Builder" onBack={handleBack} />
       <main className="px-4 py-4">
-        <Suspense fallback={<p className="text-sm text-muted-foreground text-center py-8">Loading...</p>}>
+        <Suspense fallback={<BuilderSkeleton />}>
           <SessionBuilder sessionId={null} onDirtyChange={setDirty} />
         </Suspense>
       </main>
