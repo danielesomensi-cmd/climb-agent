@@ -143,6 +143,8 @@ profile without an account — nothing entered there is stored.
 
 **Don't**: "Just do a quick session" at full intensity. Deload means deload.
 
+The lunch strength sessions keep their lifts in a deload week, with one set fewer already in the plan (goblet squat 3 sets, Romanian deadlift 2, bench press 3, triceps and curl 2) — stop every set at RIR 3.
+
 ---
 
 ## 3. Your Weekly Routine

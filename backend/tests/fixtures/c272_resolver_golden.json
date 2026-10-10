@@ -533,7 +533,7 @@
     "romanian_deadlift",
     "toe_flexor_isometric"
    ],
-   "digest": "60104b123679933c499bc9237e6fcb83ec96701885ba9349e117113e536de038"
+   "digest": "aa93a6b12d843c30f1661f3dda7f97ca75ccd16bc79ff14c55ecaaec5bd9fd75"
   },
   "advanced|2026-10-07|legs_strength": {
    "digest": "148beb2add86deae245c5501c4abea06c000252a2dc60ebe984a8f69f2183175",
@@ -773,7 +773,7 @@
     "dumbbell_fly",
     "incline_pushup"
    ],
-   "digest": "62dc11486d1adb42482202eb029c04a3ba3a03935db7f1a15caf783d24f5c13a"
+   "digest": "dfe410346c3734436c53ac1682cacce31615dc0ba7bd8541748a91a902d15144"
   },
   "advanced|2026-10-07|yoga_recovery": {
    "digest": "dd41ad6abf93d50bc8904f6b0cd1f232aa06f7d91a777e86a62b83aaa0f2543a",
@@ -1020,7 +1020,7 @@
     "romanian_deadlift",
     "toe_flexor_isometric"
    ],
-   "digest": "03e78b4bed2384321b454b10f6874e6255341b942937a3c284524045dcefdc49"
+   "digest": "e0ab7899d44ebab76acf0a0ec2b6ea9cb2710ce6cb9a760c672da0d2e73b160f"
   },
   "advanced|2026-10-21|legs_strength": {
    "digest": "be04a1e7343042574eceba5d84bedd35bda7da1085d4c1a5baf4c4e5143682c8",
@@ -1255,7 +1255,7 @@
     "handstand_pushup_wall",
     "incline_pushup"
    ],
-   "digest": "013eb6f9445ca2585cf4e458c7be54fc823a4ec7cd938d11fb2bbf9c62f6a5d7"
+   "digest": "13e09557e32c8f607b9de253853290b5abbba0df043ac5ade91c7fff8efb706a"
   },
   "advanced|2026-10-21|yoga_recovery": {
    "digest": "93018eb2015dc548a6aac1ad379a026105539ab1684846b17d63a007f60c8525",
@@ -1506,7 +1506,7 @@
     "romanian_deadlift",
     "toe_flexor_isometric"
    ],
-   "digest": "0f420896df285476fd700d52fc64a5b23e024acb3cddfe06599757f2171b125a"
+   "digest": "f914c303af012070f3c558ce5617814c9e23a1b994687cfcea0e752f74781aa0"
   },
   "intermediate|2026-10-07|legs_strength": {
    "digest": "0bb8a337ccbeb54eeaf14b86c1cddb900d5e222107caf51be9ea39f99b3ee397",
@@ -1746,7 +1746,7 @@
     "dumbbell_fly",
     "incline_pushup"
    ],
-   "digest": "9806704bb1415d7dd5f39e7729fe6918661543ebf9f8bb9b93d25c8519ed71d3"
+   "digest": "df86f3568eaf9d9b8e3aae1dcd43d5fb2d050240370839bf15b91abc806ff36b"
   },
   "intermediate|2026-10-07|yoga_recovery": {
    "digest": "dd41ad6abf93d50bc8904f6b0cd1f232aa06f7d91a777e86a62b83aaa0f2543a",
@@ -1993,7 +1993,7 @@
     "romanian_deadlift",
     "toe_flexor_isometric"
    ],
-   "digest": "de30446a9181c79d35f6a53f719d822e17f5fb1904c10742632894e860e6a7f3"
+   "digest": "3f6ce7b02f37345ab0206df422597041f2d8710c77601074d82a0fd5b44d288c"
   },
   "intermediate|2026-10-21|legs_strength": {
    "digest": "79519e10d4d1e9388d32a43f0e5d9814a1e6addc979bf1811a54e42278ca49df",
@@ -2228,7 +2228,7 @@
     "handstand_pushup_wall",
     "incline_pushup"
    ],
-   "digest": "067c522319e75fd19d3de903d03c8a3c7d33adfcb6c89429dea249f16d1ff451"
+   "digest": "c6d26f3a74cb11d6073b18e2c963b22d4fc2f716c312431a996e3e7b4fa8f635"
   },
   "intermediate|2026-10-21|yoga_recovery": {
    "digest": "93018eb2015dc548a6aac1ad379a026105539ab1684846b17d63a007f60c8525",
@@ -2479,7 +2479,7 @@
     "romanian_deadlift",
     "toe_flexor_isometric"
    ],
-   "digest": "e09511dc2b8cf4f4529bac775af67b54be24d6c84b30d1bdaad0573ebe3d493a"
+   "digest": "933a9c2bb65790fb2ad0dc8bce7a1393fc57a92c9f77dad38aed423c951f8d80"
   },
   "untested|2026-10-07|legs_strength": {
    "digest": "0bb8a337ccbeb54eeaf14b86c1cddb900d5e222107caf51be9ea39f99b3ee397",
@@ -2719,7 +2719,7 @@
     "dumbbell_fly",
     "incline_pushup"
    ],
-   "digest": "6dc2505c917941c52b4e5785e5baa380161bddff0dea3c85d008f85313fe43e2"
+   "digest": "128969204040e90bf413ae26e3c94f6c8239a622e65790635b094bb957060e08"
   },
   "untested|2026-10-07|yoga_recovery": {
    "digest": "dd41ad6abf93d50bc8904f6b0cd1f232aa06f7d91a777e86a62b83aaa0f2543a",
@@ -2966,7 +2966,7 @@
     "romanian_deadlift",
     "toe_flexor_isometric"
    ],
-   "digest": "cd3ce8fee4a88d6da05d9048037d1bf2220faf152d140a09123d8233b98af2f1"
+   "digest": "42f201986a122cf48e80d81807c6facbfa05dc39bb94909b2919cb2697c7952d"
   },
   "untested|2026-10-21|legs_strength": {
    "digest": "79519e10d4d1e9388d32a43f0e5d9814a1e6addc979bf1811a54e42278ca49df",
@@ -3201,7 +3201,7 @@
     "handstand_pushup_wall",
     "incline_pushup"
    ],
-   "digest": "15db36c7ae862655c02034549a032812beb4e9dbb1992a1a7a3e5e34d2e6cecd"
+   "digest": "72ba9b470d864205a80c7af601c907842675a93b243f0d37a12bb45bc84e6bd8"
   },
   "untested|2026-10-21|yoga_recovery": {
    "digest": "93018eb2015dc548a6aac1ad379a026105539ab1684846b17d63a007f60c8525",

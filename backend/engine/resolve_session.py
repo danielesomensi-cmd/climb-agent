@@ -75,6 +75,38 @@ def norm_str(x: Any) -> str:
 def _round_to_step(x: float, step: float = 0.5) -> float:
     return round(x / step) * step
 
+def _apply_deload_sets(
+    prescription: Dict[str, Any],
+    *,
+    user_state: Optional[Dict[str, Any]],
+    target_date: Any,
+) -> Dict[str, Any]:
+    """A312: a catalog block may declare ``deload_sets`` in its
+    ``prescription_overrides``. In a deload week (the macrocycle phase of
+    ``target_date``, progression_v1's own reading) ``sets`` becomes that value
+    and the catalog one moves to ``stored_sets``. The key itself never reaches
+    the output, so a session without it — or outside a deload — is unchanged.
+    """
+    if "deload_sets" not in prescription:
+        return prescription
+    out = dict(prescription)
+    deload_sets = out.pop("deload_sets")
+    if not user_state or not target_date:
+        return out
+    from backend.engine.progression_v1 import _get_current_phase_id
+
+    if _get_current_phase_id(user_state, str(target_date)[:10]) != "deload":
+        return out
+    try:
+        n = int(deload_sets)
+    except (TypeError, ValueError):
+        return out
+    if n >= 1 and out.get("sets") != n:
+        out["stored_sets"] = out.get("sets")
+        out["sets"] = n
+        out["deload_sets_applied"] = True
+    return out
+
 def _apply_load_override(
     prescription: Dict[str, Any],
     *,
@@ -1331,6 +1363,8 @@ def _resolve_inline_block(
         # A290: phase-specific dose of a phase anchor (e.g. PE max hangs, 3 sets)
         if rot_plan and chosen_by == "p0_inline_block" and rot_plan.get("prescription_overrides"):
             merged.update(rot_plan["prescription_overrides"])
+        # A312: a deload week drops the set the catalog declares (`deload_sets`).
+        merged = _apply_deload_sets(merged, user_state=user_state, target_date=target_date)
 
         merged = _apply_load_override(
             merged,

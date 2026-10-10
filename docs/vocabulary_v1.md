@@ -1317,6 +1317,9 @@ Top-level keys of a template block or an inline session module — **never insid
 - `heavy_slot`: `true` on the weighted-pull blocks (weekly heavy-pull slot).
 - `ab_pool`: `[ids]` preferred A/B pool; `unloaded_only`: `true` → no `total_load` / `external_load` exercise.
 - `rotation_exclude`: `[ids]` soft exclusion for athletes above a tested threshold on either axis (core floor: plank, dead_bug, plank_shoulder_tap).
+- `prescription_overrides.deload_sets` (A312): integer — the sets of that block in a deload week (macrocycle phase of the
+  session date). The resolver moves the catalog value to `stored_sets` and marks `deload_sets_applied: true`; the key
+  itself never reaches the output. Bodyweight-ladder rows ignore it (the ladder already drops a set in deload).
 - `spacing_step_down`: `{domain: [..], pattern: [..], priority: [ids], prescription_overrides?}` — the sub-maximal
   selection used after a max-hang exposure < 72 h (finger_max_strength main). Max-load finger exercises are a hard
   exclusion there; the block prescription is dropped.

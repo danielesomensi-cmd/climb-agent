@@ -1,7 +1,7 @@
 {
   "id": "upper_push_arms_lunch",
   "name": "Upper Push + Arms (Lunch)",
-  "version": "1.1",
+  "version": "1.2",
   "supplementary": true,
   "intent": {
     "primary_goal": "strength_general",
@@ -9,7 +9,7 @@
       "joint_health",
       "core"
     ],
-    "notes": "Lunch-break antagonist strength at a weights gym: bench press 4x6, a ring push-up that follows your bodyweight ladder, triceps and a biceps curl, all at RIR 1-2 (one or two clean reps left in the tank), plus one rotating core exercise. Loads come from your working loads and move with your feedback. About 35 min. Balances the pull-dominant climbing pattern without touching the fingers. Biceps are elbow-flexor work: keep them away from the 24 h before a heavy pulling session. In a deload week drop one set per exercise and stop at RIR 3."
+    "notes": "Lunch-break antagonist strength at a weights gym: bench press 4x6, a ring push-up that follows your bodyweight ladder, triceps and a biceps curl, all at RIR 1-2 (one or two clean reps left in the tank), plus one rotating core exercise. Loads come from your working loads and move with your feedback. About 35 min. Balances the pull-dominant climbing pattern without touching the fingers. Biceps are elbow-flexor work: keep them away from the 24 h before a heavy pulling session. In a deload week the app already drops one set from the bench press, triceps and curl (the ring push-up follows its ladder, which drops one too): stop every set at RIR 3."
   },
   "compatibility": {
     "slot": [
@@ -65,6 +65,7 @@
           "exercise_id": "bench_press",
           "prescription_overrides": {
             "sets": 4,
+            "deload_sets": 3,
             "reps": 6,
             "rest_between_sets_seconds": 120,
             "notes": "Strength dose: 4 x 6 at RIR 1-2 with a 3 s lowering phase. If every set felt like RIR 3 or more, log the session as easy and the next load goes up."
@@ -126,6 +127,7 @@
         "primary": {
           "prescription_overrides": {
             "sets": 3,
+            "deload_sets": 2,
             "reps": 10,
             "rest_between_sets_seconds": 60,
             "notes": "3 x 10 at RIR 1-2, elbows pinned to your sides. If every set felt like RIR 3 or more, log it as easy and the load goes up."
@@ -159,6 +161,7 @@
           "exercise_id": "bicep_curl",
           "prescription_overrides": {
             "sets": 3,
+            "deload_sets": 2,
             "reps": 8,
             "rest_between_sets_seconds": 75,
             "notes": "3 x 8 at RIR 1-2, 3 s lowering phase, no swing. If every set felt like RIR 3 or more, log it as easy and the load goes up."
