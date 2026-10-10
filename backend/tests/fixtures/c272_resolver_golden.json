@@ -773,7 +773,7 @@
     "dumbbell_fly",
     "incline_pushup"
    ],
-   "digest": "dfe410346c3734436c53ac1682cacce31615dc0ba7bd8541748a91a902d15144"
+   "digest": "4d182da1c1cb8a7e84a89c7392c36220e34249a63a4a5902ca479097190601e0"
   },
   "advanced|2026-10-07|yoga_recovery": {
    "digest": "dd41ad6abf93d50bc8904f6b0cd1f232aa06f7d91a777e86a62b83aaa0f2543a",
@@ -1255,7 +1255,7 @@
     "handstand_pushup_wall",
     "incline_pushup"
    ],
-   "digest": "13e09557e32c8f607b9de253853290b5abbba0df043ac5ade91c7fff8efb706a"
+   "digest": "0bd62b880873b9f1816fffd35d170b46d95fc7972eb985e29cd75c678144ebe2"
   },
   "advanced|2026-10-21|yoga_recovery": {
    "digest": "93018eb2015dc548a6aac1ad379a026105539ab1684846b17d63a007f60c8525",
@@ -1746,7 +1746,7 @@
     "dumbbell_fly",
     "incline_pushup"
    ],
-   "digest": "df86f3568eaf9d9b8e3aae1dcd43d5fb2d050240370839bf15b91abc806ff36b"
+   "digest": "fcea83521bceef7d0320e64b252da9364fa1f403357b9bba66fa2415a889f645"
   },
   "intermediate|2026-10-07|yoga_recovery": {
    "digest": "dd41ad6abf93d50bc8904f6b0cd1f232aa06f7d91a777e86a62b83aaa0f2543a",
@@ -2228,7 +2228,7 @@
     "handstand_pushup_wall",
     "incline_pushup"
    ],
-   "digest": "c6d26f3a74cb11d6073b18e2c963b22d4fc2f716c312431a996e3e7b4fa8f635"
+   "digest": "98be6ca6d0086868968636282106b20f56faaa22d12f216b5fbb6e631544ab19"
   },
   "intermediate|2026-10-21|yoga_recovery": {
    "digest": "93018eb2015dc548a6aac1ad379a026105539ab1684846b17d63a007f60c8525",
@@ -2719,7 +2719,7 @@
     "dumbbell_fly",
     "incline_pushup"
    ],
-   "digest": "128969204040e90bf413ae26e3c94f6c8239a622e65790635b094bb957060e08"
+   "digest": "61e98a837eb07de5cc532ded2db8f65329ee86c5ffc2116480b900ce2f5f8898"
   },
   "untested|2026-10-07|yoga_recovery": {
    "digest": "dd41ad6abf93d50bc8904f6b0cd1f232aa06f7d91a777e86a62b83aaa0f2543a",
@@ -3201,7 +3201,7 @@
     "handstand_pushup_wall",
     "incline_pushup"
    ],
-   "digest": "72ba9b470d864205a80c7af601c907842675a93b243f0d37a12bb45bc84e6bd8"
+   "digest": "e20954cc5689a83c256f8e92fe860c2b07334d2fac951cc25a404880e8ccd5a8"
   },
   "untested|2026-10-21|yoga_recovery": {
    "digest": "93018eb2015dc548a6aac1ad379a026105539ab1684846b17d63a007f60c8525",

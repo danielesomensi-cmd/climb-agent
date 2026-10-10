@@ -23,7 +23,7 @@ from copy import deepcopy
 import pytest
 
 from backend.engine.resolve_session import _apply_deload_sets
-from backend.tests.test_c275_lunch_harder import _by_block, _module, _resolve, _tested_state
+from backend.tests.test_c275_lunch_harder import EQUIPMENT_SETS, _by_block, _module, _resolve, _tested_state
 
 DELOAD_SETS = {
     "legs_maintenance_lunch": {"squat_main": (4, 3), "hinge": (3, 2)},
@@ -31,8 +31,8 @@ DELOAD_SETS = {
 }
 
 
-def _state_in(phase: str, date: str = "2026-10-14") -> dict:
-    st = _tested_state(date)
+def _state_in(phase: str, date: str = "2026-10-14", equipment=None) -> dict:
+    st = _tested_state(date) if equipment is None else _tested_state(date, equipment)
     st["macrocycle"] = {"start_date": "2026-10-12",
                         "phases": [{"phase_id": phase, "duration_weeks": 1},
                                    {"phase_id": "base", "duration_weeks": 4}]}
@@ -91,3 +91,35 @@ class TestResolve:
         a = _resolve("legs_maintenance_lunch", _state_in("deload"), "deload")
         b = _resolve("legs_maintenance_lunch", _state_in("deload"), "deload")
         assert a == b
+
+
+class TestPushBlock:
+    """A313: the push block declares ``deload_sets`` too. Without rings its
+    substitute (dumbbell fly) loses the set; a row the ladder takes over keeps
+    the ladder's own deload dose and never carries the A312 flags."""
+
+    def test_catalog_declares_it(self):
+        ov = _module("upper_push_arms_lunch", "push_bodyweight")["selection"]["primary"]["prescription_overrides"]
+        assert (ov["sets"], ov["deload_sets"]) == (3, 2)
+
+    @pytest.mark.parametrize("eq", ["c274_work", "dumbbell_cable"])
+    def test_without_rings_the_substitute_loses_the_set(self, eq):
+        st = _state_in("deload", equipment=EQUIPMENT_SETS[eq])
+        push = _by_block(_resolve("upper_push_arms_lunch", st, "deload"))["push_bodyweight"]
+        rx = push["prescription"]
+        assert rx.get("source") != "bw_ladder", push["exercise_id"]
+        assert (rx["sets"], rx["stored_sets"], rx["deload_sets_applied"]) == (2, 3, True)
+
+    def test_without_rings_outside_deload_three_sets(self):
+        st = _state_in("strength_power", equipment=EQUIPMENT_SETS["c274_work"])
+        rx = _by_block(_resolve("upper_push_arms_lunch", st, "strength_power"))["push_bodyweight"]["prescription"]
+        assert rx["sets"] == 3 and not {"deload_sets", "stored_sets", "deload_sets_applied"} & set(rx)
+
+    def test_ladder_row_keeps_the_ladder_dose(self):
+        from backend.engine import bw_progression
+
+        st = _state_in("deload")
+        bw_progression.set_level(st, "push_horizontal", 3, "2026-10-14", confirm=True)
+        rx = _by_block(_resolve("upper_push_arms_lunch", st, "deload"))["push_bodyweight"]["prescription"]
+        assert rx["source"] == "bw_ladder"
+        assert not {"deload_sets", "stored_sets", "deload_sets_applied"} & set(rx)

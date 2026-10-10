@@ -1,7 +1,7 @@
 {
   "id": "upper_push_arms_lunch",
   "name": "Upper Push + Arms (Lunch)",
-  "version": "1.2",
+  "version": "1.3",
   "supplementary": true,
   "intent": {
     "primary_goal": "strength_general",
@@ -9,7 +9,7 @@
       "joint_health",
       "core"
     ],
-    "notes": "Lunch-break antagonist strength at a weights gym: bench press 4x6, a ring push-up that follows your bodyweight ladder, triceps and a biceps curl, all at RIR 1-2 (one or two clean reps left in the tank), plus one rotating core exercise. Loads come from your working loads and move with your feedback. About 35 min. Balances the pull-dominant climbing pattern without touching the fingers. Biceps are elbow-flexor work: keep them away from the 24 h before a heavy pulling session. In a deload week the app already drops one set from the bench press, triceps and curl (the ring push-up follows its ladder, which drops one too): stop every set at RIR 3."
+    "notes": "Lunch-break antagonist strength at a weights gym: bench press 4x6, a ring push-up that follows your bodyweight ladder, triceps and a biceps curl, all at RIR 1-2 (one or two clean reps left in the tank), plus one rotating core exercise. Loads come from your working loads and move with your feedback. About 35 min. Balances the pull-dominant climbing pattern without touching the fingers. Biceps are elbow-flexor work: keep them away from the 24 h before a heavy pulling session. In a deload week the app already drops one set from every exercise (the ring push-up through its ladder; its substitute without rings, 3 to 2 sets): stop every set at RIR 3."
   },
   "compatibility": {
     "slot": [
@@ -95,6 +95,7 @@
         "primary": {
           "prescription_overrides": {
             "sets": 3,
+            "deload_sets": 2,
             "reps": 8,
             "rest_between_sets_seconds": 90,
             "notes": "Stop each set at RIR 1-2, body rigid as a plank, 2 s pause at the top. When the ladder sets the dose, follow its sets and reps."

@@ -1364,7 +1364,12 @@ def _resolve_inline_block(
         if rot_plan and chosen_by == "p0_inline_block" and rot_plan.get("prescription_overrides"):
             merged.update(rot_plan["prescription_overrides"])
         # A312: a deload week drops the set the catalog declares (`deload_sets`).
-        merged = _apply_deload_sets(merged, user_state=user_state, target_date=target_date)
+        # A313: a row the ladder takes over gets the ladder's own deload dose
+        # (stage_prescription below), so only the key is dropped there.
+        if _bw_plan is None:
+            merged = _apply_deload_sets(merged, user_state=user_state, target_date=target_date)
+        else:
+            merged.pop("deload_sets", None)
 
         merged = _apply_load_override(
             merged,
