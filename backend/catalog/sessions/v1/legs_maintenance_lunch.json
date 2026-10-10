@@ -1,14 +1,15 @@
 {
   "id": "legs_maintenance_lunch",
-  "name": "Legs Maintenance + Foot Strength (Lunch)",
-  "version": "1.0",
+  "name": "Legs Strength + Foot Strength (Lunch)",
+  "version": "1.1",
   "supplementary": true,
   "intent": {
     "primary_goal": "strength_general",
     "secondary_goals": [
-      "joint_health"
+      "joint_health",
+      "core"
     ],
-    "notes": "Lunch-break leg maintenance at a weights gym: goblet squat and Romanian deadlift, plus two short foot-strength exercises (toe flexors and big-toe calf raises) for edging. The engine orders them with the generic phase sort, so they are not necessarily contiguous or at the end. About 35 min. Keep heavy legs out of the 48 h before a limit or outdoor day."
+    "notes": "Lunch-break leg strength at a weights gym: goblet squat 4x6 and Romanian deadlift 3x6, both at RIR 1-2 (one or two clean reps left in the tank), one rotating core exercise and two short foot-strength exercises (toe flexors and big-toe calf raises) for edging. The load of the two lifts comes from your working load and moves with your feedback. The engine orders the exercises with the generic phase sort, so they are not necessarily contiguous. About 35 min. Keep heavy legs out of the 48 h before a limit or outdoor day. In a deload week drop one set per lift and stop at RIR 3."
   },
   "compatibility": {
     "slot": [
@@ -36,7 +37,7 @@
       "required": true,
       "priority": 110,
       "module_role": "general_warmup",
-      "notes": "Short pulse raise before loading the legs.",
+      "notes": "Short pulse raise before loading the legs. Do one or two light ramp-up sets of the squat before the first working set.",
       "selection": {
         "primary": {
           "exercise_id": "general_pulse_raise",
@@ -57,10 +58,16 @@
       "required": true,
       "priority": 100,
       "module_role": "primary",
-      "notes": "Knee-dominant squat: goblet squat, the same movement every time so the load can progress from feedback.",
+      "notes": "Knee-dominant squat for strength: goblet squat, the same movement every time so the load can progress from feedback.",
       "selection": {
         "primary": {
           "exercise_id": "goblet_squat",
+          "prescription_overrides": {
+            "sets": 4,
+            "reps": 6,
+            "rest_between_sets_seconds": 120,
+            "notes": "Strength dose: 4 x 6 at RIR 1-2 - the last rep is slow but clean, with one or two more left. If every set felt like RIR 3 or more, log the session as easy and the next load goes up."
+          },
           "filters": {
             "role": [
               "accessory"
@@ -85,6 +92,12 @@
       "selection": {
         "primary": {
           "exercise_id": "romanian_deadlift",
+          "prescription_overrides": {
+            "sets": 3,
+            "reps": 6,
+            "rest_between_sets_seconds": 120,
+            "notes": "Strength dose: 3 x 6 at RIR 1-2 with a 3 s lowering phase. Stop at hamstring end-range, before the lower back rounds. All sets at RIR 3 or more: log it as easy and the load goes up."
+          },
           "filters": {
             "role": [
               "accessory"
@@ -96,6 +109,43 @@
               "hinge"
             ],
             "intensity_max": "medium"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "core_rotation",
+      "required": false,
+      "priority": 75,
+      "module_role": "accessory",
+      "rotation": "ab",
+      "ab_pool": [
+        "copenhagen_plank",
+        "core_l_sit"
+      ],
+      "rotation_exclude": [
+        "plank",
+        "dead_bug",
+        "plank_shoulder_tap",
+        "pallof_press",
+        "kneeling_superman"
+      ],
+      "notes": "One floor core exercise, rotated week by week (tested athletes alternate the Copenhagen plank and the L-sit, each at the level of its bodyweight ladder). No hanging and no front lever here: this lunch can sit on the same day as a heavy evening session.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": [
+              "accessory"
+            ],
+            "domain": [
+              "core"
+            ],
+            "pattern": [
+              "anti_lateral_flexion",
+              "anti_rotation",
+              "anti_extension"
+            ],
+            "intensity_max": "high"
           }
         }
       }
@@ -115,7 +165,7 @@
             "work_seconds": 5,
             "rest_between_reps_seconds": 15,
             "rest_between_sets_seconds": 30,
-            "notes": "Short lunch dose: 2 sets of 3 x 5 s per foot at about 90% effort, big toe first, then the lesser toes."
+            "notes": "Short lunch dose: 2 sets of 3 x 5 s per foot at about 90% effort, big toe first, then the lesser toes. Fits in the rests of the squat."
           },
           "filters": {
             "role": [

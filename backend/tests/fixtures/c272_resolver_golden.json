@@ -525,14 +525,15 @@
    ]
   },
   "advanced|2026-10-07|legs_maintenance_lunch": {
-   "digest": "a04bbada0873903233a7b16b48d79946e650f709cb8711329f0cb9ac8e8586f7",
    "exercise_ids": [
     "general_pulse_raise",
+    "copenhagen_plank",
     "edge_calf_raise_bigtoe",
     "goblet_squat",
     "romanian_deadlift",
     "toe_flexor_isometric"
-   ]
+   ],
+   "digest": "60104b123679933c499bc9237e6fcb83ec96701885ba9349e117113e536de038"
   },
   "advanced|2026-10-07|legs_strength": {
    "digest": "148beb2add86deae245c5501c4abea06c000252a2dc60ebe984a8f69f2183175",
@@ -764,13 +765,15 @@
    ]
   },
   "advanced|2026-10-07|upper_push_arms_lunch": {
-   "digest": "ad8185faeaba87dafd6e38d4f340851e0656b2d3f35bbbf41fa550a29cd8f04e",
    "exercise_ids": [
     "general_pulse_raise",
+    "ab_wheel_rollout",
     "bench_press",
     "bicep_curl",
+    "dumbbell_fly",
     "incline_pushup"
-   ]
+   ],
+   "digest": "62dc11486d1adb42482202eb029c04a3ba3a03935db7f1a15caf783d24f5c13a"
   },
   "advanced|2026-10-07|yoga_recovery": {
    "digest": "dd41ad6abf93d50bc8904f6b0cd1f232aa06f7d91a777e86a62b83aaa0f2543a",
@@ -1009,14 +1012,15 @@
    ]
   },
   "advanced|2026-10-21|legs_maintenance_lunch": {
-   "digest": "a2e955e3a36412712be394d3847382bc42365142621e00028df712a092baa664",
    "exercise_ids": [
     "general_pulse_raise",
+    "copenhagen_plank",
     "edge_calf_raise_bigtoe",
     "goblet_squat",
     "romanian_deadlift",
     "toe_flexor_isometric"
-   ]
+   ],
+   "digest": "03e78b4bed2384321b454b10f6874e6255341b942937a3c284524045dcefdc49"
   },
   "advanced|2026-10-21|legs_strength": {
    "digest": "be04a1e7343042574eceba5d84bedd35bda7da1085d4c1a5baf4c4e5143682c8",
@@ -1243,13 +1247,15 @@
    ]
   },
   "advanced|2026-10-21|upper_push_arms_lunch": {
-   "digest": "0fd9652ab69e84208d3cb512f887978291136f7e32a3da69b5cb39b258318029",
    "exercise_ids": [
     "general_pulse_raise",
+    "suitcase_carry",
     "bench_press",
-    "incline_pushup",
-    "reverse_barbell_curl"
-   ]
+    "bicep_curl",
+    "handstand_pushup_wall",
+    "incline_pushup"
+   ],
+   "digest": "013eb6f9445ca2585cf4e458c7be54fc823a4ec7cd938d11fb2bbf9c62f6a5d7"
   },
   "advanced|2026-10-21|yoga_recovery": {
    "digest": "93018eb2015dc548a6aac1ad379a026105539ab1684846b17d63a007f60c8525",
@@ -1492,14 +1498,15 @@
    ]
   },
   "intermediate|2026-10-07|legs_maintenance_lunch": {
-   "digest": "f6b5a888cd4642b0bde32e7dcd517e4b1524a337ea0a5ef71663b4f0b314fe37",
    "exercise_ids": [
     "general_pulse_raise",
+    "copenhagen_plank",
     "edge_calf_raise_bigtoe",
     "goblet_squat",
     "romanian_deadlift",
     "toe_flexor_isometric"
-   ]
+   ],
+   "digest": "0f420896df285476fd700d52fc64a5b23e024acb3cddfe06599757f2171b125a"
   },
   "intermediate|2026-10-07|legs_strength": {
    "digest": "0bb8a337ccbeb54eeaf14b86c1cddb900d5e222107caf51be9ea39f99b3ee397",
@@ -1731,13 +1738,15 @@
    ]
   },
   "intermediate|2026-10-07|upper_push_arms_lunch": {
-   "digest": "a2ec0f4862babbb5777597dc5eca3c6518c78e8d2f740b44506d4f87b296f7af",
    "exercise_ids": [
     "general_pulse_raise",
+    "ab_wheel_rollout",
     "bench_press",
     "bicep_curl",
+    "dumbbell_fly",
     "incline_pushup"
-   ]
+   ],
+   "digest": "9806704bb1415d7dd5f39e7729fe6918661543ebf9f8bb9b93d25c8519ed71d3"
   },
   "intermediate|2026-10-07|yoga_recovery": {
    "digest": "dd41ad6abf93d50bc8904f6b0cd1f232aa06f7d91a777e86a62b83aaa0f2543a",
@@ -1976,14 +1985,15 @@
    ]
   },
   "intermediate|2026-10-21|legs_maintenance_lunch": {
-   "digest": "fe10014ce7c9962720a1584a2fdb472e2f9d17f4f6d09b4bac4eafe2ad75662c",
    "exercise_ids": [
     "general_pulse_raise",
+    "copenhagen_plank",
     "edge_calf_raise_bigtoe",
     "goblet_squat",
     "romanian_deadlift",
     "toe_flexor_isometric"
-   ]
+   ],
+   "digest": "de30446a9181c79d35f6a53f719d822e17f5fb1904c10742632894e860e6a7f3"
   },
   "intermediate|2026-10-21|legs_strength": {
    "digest": "79519e10d4d1e9388d32a43f0e5d9814a1e6addc979bf1811a54e42278ca49df",
@@ -2210,13 +2220,15 @@
    ]
   },
   "intermediate|2026-10-21|upper_push_arms_lunch": {
-   "digest": "645af0bc4766c0cd48c6493f66fc0b28b5d5eb7dbb0c0df047d520aa7f300a9c",
    "exercise_ids": [
     "general_pulse_raise",
+    "suitcase_carry",
     "bench_press",
-    "incline_pushup",
-    "reverse_barbell_curl"
-   ]
+    "bicep_curl",
+    "handstand_pushup_wall",
+    "incline_pushup"
+   ],
+   "digest": "067c522319e75fd19d3de903d03c8a3c7d33adfcb6c89429dea249f16d1ff451"
   },
   "intermediate|2026-10-21|yoga_recovery": {
    "digest": "93018eb2015dc548a6aac1ad379a026105539ab1684846b17d63a007f60c8525",
@@ -2459,14 +2471,15 @@
    ]
   },
   "untested|2026-10-07|legs_maintenance_lunch": {
-   "digest": "f6b5a888cd4642b0bde32e7dcd517e4b1524a337ea0a5ef71663b4f0b314fe37",
    "exercise_ids": [
     "general_pulse_raise",
+    "side_plank",
     "edge_calf_raise_bigtoe",
     "goblet_squat",
     "romanian_deadlift",
     "toe_flexor_isometric"
-   ]
+   ],
+   "digest": "e09511dc2b8cf4f4529bac775af67b54be24d6c84b30d1bdaad0573ebe3d493a"
   },
   "untested|2026-10-07|legs_strength": {
    "digest": "0bb8a337ccbeb54eeaf14b86c1cddb900d5e222107caf51be9ea39f99b3ee397",
@@ -2698,13 +2711,15 @@
    ]
   },
   "untested|2026-10-07|upper_push_arms_lunch": {
-   "digest": "a2ec0f4862babbb5777597dc5eca3c6518c78e8d2f740b44506d4f87b296f7af",
    "exercise_ids": [
     "general_pulse_raise",
+    "side_plank",
     "bench_press",
     "bicep_curl",
+    "dumbbell_fly",
     "incline_pushup"
-   ]
+   ],
+   "digest": "6dc2505c917941c52b4e5785e5baa380161bddff0dea3c85d008f85313fe43e2"
   },
   "untested|2026-10-07|yoga_recovery": {
    "digest": "dd41ad6abf93d50bc8904f6b0cd1f232aa06f7d91a777e86a62b83aaa0f2543a",
@@ -2943,14 +2958,15 @@
    ]
   },
   "untested|2026-10-21|legs_maintenance_lunch": {
-   "digest": "fe10014ce7c9962720a1584a2fdb472e2f9d17f4f6d09b4bac4eafe2ad75662c",
    "exercise_ids": [
     "general_pulse_raise",
+    "plank",
     "edge_calf_raise_bigtoe",
     "goblet_squat",
     "romanian_deadlift",
     "toe_flexor_isometric"
-   ]
+   ],
+   "digest": "cd3ce8fee4a88d6da05d9048037d1bf2220faf152d140a09123d8233b98af2f1"
   },
   "untested|2026-10-21|legs_strength": {
    "digest": "79519e10d4d1e9388d32a43f0e5d9814a1e6addc979bf1811a54e42278ca49df",
@@ -3177,13 +3193,15 @@
    ]
   },
   "untested|2026-10-21|upper_push_arms_lunch": {
-   "digest": "645af0bc4766c0cd48c6493f66fc0b28b5d5eb7dbb0c0df047d520aa7f300a9c",
    "exercise_ids": [
     "general_pulse_raise",
+    "plank",
     "bench_press",
-    "incline_pushup",
-    "reverse_barbell_curl"
-   ]
+    "bicep_curl",
+    "handstand_pushup_wall",
+    "incline_pushup"
+   ],
+   "digest": "15db36c7ae862655c02034549a032812beb4e9dbb1992a1a7a3e5e34d2e6cecd"
   },
   "untested|2026-10-21|yoga_recovery": {
    "digest": "93018eb2015dc548a6aac1ad379a026105539ab1684846b17d63a007f60c8525",

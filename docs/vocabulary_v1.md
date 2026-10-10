@@ -946,7 +946,7 @@ Sessions live in `backend/catalog/sessions/v1/`. Each produces a full resolved s
 - `flexibility_full` *(flexibility, home)*
 - `handstand_practice` *(handstand_skill, home)*
 - `heavy_conditioning_gym` *(strength_general, gym)*
-- `legs_maintenance_lunch` *(strength_general, gym — C274 lunch: goblet squat, RDL, foot-strength block)*
+- `legs_maintenance_lunch` *(strength_general, gym — C274 lunch: goblet squat, RDL, foot-strength block; C275: strength dose 4×6 / 3×6 at RIR 1-2 + A/B core block)*
 - `lead_tryhard_gym` *(technique_lead, gym — C276: falls 8-10' + 2 lead routes with a declared rule, pinned, needs `gym_routes`, not hard / not finger, in no phase pool)*
 - `legs_strength` *(strength_general, home)*
 - `limit_boulder_gym` *(limit_projecting, gym)*
@@ -970,7 +970,7 @@ Sessions live in `backend/catalog/sessions/v1/`. Each produces a full resolved s
 - `test_pullup_bw` *(pulling_strength, test)*
 - `test_repeater_7_3` *(finger_strength_endurance, test)*
 - `upper_body_weights` *(strength_general, home)*
-- `upper_push_arms_lunch` *(strength_general, gym — C274 lunch: chest press, triceps, biceps)*
+- `upper_push_arms_lunch` *(strength_general, gym — C274 lunch: chest press, triceps, biceps; C275: bench 4×6, pinned dumbbell curl, optional ring push-up on the push ladder, A/B core block)*
 - `yoga_recovery` *(flexibility, home)*
 
 #### Session-level optional fields
