@@ -101,11 +101,21 @@ function AxisLine({ s }: { s: RetestAxisStatus }) {
   );
 }
 
-export function RetestStatusCard({ status }: { status?: RetestStatus | null }) {
-  if (!status) return null;
-  const axes = (["finger", "pulling"] as RetestAxis[])
+function retestAxes(status?: RetestStatus | null): RetestAxisStatus[] {
+  if (!status) return [];
+  return (["finger", "pulling"] as RetestAxis[])
     .map((a) => status.axes[a])
     .filter((s): s is RetestAxisStatus => Boolean(s));
+}
+
+/** A308 — whether the card renders anything (the /week notes count). */
+export function retestStatusVisible(status?: RetestStatus | null): boolean {
+  return retestAxes(status).length > 0;
+}
+
+export function RetestStatusCard({ status }: { status?: RetestStatus | null }) {
+  if (!status) return null;
+  const axes = retestAxes(status);
   if (axes.length === 0) return null;
 
   return (

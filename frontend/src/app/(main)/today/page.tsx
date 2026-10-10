@@ -8,7 +8,6 @@ import { useCanStartNewCycle } from "@/lib/hooks/use-can-start-new-cycle";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { useQueryClient } from "@tanstack/react-query";
-import Image from "next/image";
 import Link from "next/link";
 import { TopBar } from "@/components/layout/top-bar";
 import { DayCard } from "@/components/training/day-card";
@@ -16,13 +15,14 @@ import { WeekAlertsCard } from "@/components/training/week-alerts-card";
 import { KeySessionsCard } from "@/components/training/key-sessions-card";
 import { KeyConflictDialog } from "@/components/training/key-conflict-dialog";
 import { useKeyConflictGate } from "@/lib/hooks/use-key-conflict-gate";
-import { DailyCueBanner } from "@/components/training/daily-cue-banner";
 import { DailyTipCard } from "@/components/training/daily-tip-card";
 import { FounderNoteCard, type FounderNote } from "@/components/training/founder-note-card";
 import { PhaseCelebration } from "@/components/training/phase-celebration";
 import { MilestoneToast } from "@/components/training/milestone-toast";
 import { WeatherCard } from "@/components/training/weather-card";
 import { CoachCard } from "@/components/training/coach-card";
+import { Banner } from "@/components/training/banner";
+import { Button } from "@/components/ui/button";
 const FeedbackDialog = dynamic(() => import("@/components/training/feedback-dialog").then((m) => m.FeedbackDialog), { ssr: false });
 const QuickAddDialog = dynamic(() => import("@/components/training/quick-add-dialog").then((m) => m.QuickAddDialog), { ssr: false });
 const ReplanDialog = dynamic(() => import("@/components/training/replan-dialog").then((m) => m.ReplanDialog), { ssr: false });
@@ -1129,45 +1129,20 @@ function TodayContent() {
       <TopBar title={title} subtitle={subtitle} />
 
       <main className="relative z-10 mx-auto max-w-2xl space-y-4 p-4">
-        {/* A264: hand-written note from the founder to this specific athlete.
-            Renders only when user_state.founder_note exists and is undismissed,
-            and only on the live "today" view — a note about your training is
-            noise when you are looking back at last Tuesday. */}
-        <FounderNoteCard
-          note={stateQuery.data?.founder_note as FounderNote | undefined}
-          isViewingToday={isViewingToday}
-        />
+        {/* A308 — above the day's session only what is time-critical: the
+            checkout confirmation, a session in progress, the retest reminder
+            and the weekly check-in. The rest follows the session. */}
 
         {/* Checkout success banner */}
         {checkoutSuccess && (
-          <div className="rounded-lg border border-success/30 bg-success/10 p-3 text-sm text-success">
+          <Banner tone="success" className="text-success">
             Your subscription is active. Welcome to climb-agent Pro!
-          </div>
-        )}
-
-        {/* A-NEW-MACRO: end-of-cycle CTA — only on the live "today" view */}
-        {isViewingToday && cycleStatus.canShow && (
-          <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
-            <p className="text-sm font-medium">
-              {cycleStatus.isPastEndDate
-                ? "Your macrocycle is complete."
-                : "Final week — ready to plan your next cycle?"}
-            </p>
-            <button
-              type="button"
-              className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-              onClick={() => setNewCycleDialogOpen(true)}
-            >
-              {cycleStatus.isPastEndDate
-                ? "Plan your next cycle →"
-                : "Start new macrocycle →"}
-            </button>
-          </div>
+          </Banner>
         )}
 
         {/* Resume in-progress session banner */}
         {resumeSession && (
-          <div className="rounded-lg border border-warning/30 bg-warning/10 p-3 space-y-2">
+          <Banner tone="warning" className="space-y-2">
             <p className="text-sm font-medium text-warning">
               You have a session in progress — exercise {resumeSession.completedCount} of {resumeSession.totalCount}
             </p>
@@ -1193,7 +1168,7 @@ function TodayContent() {
                 Discard
               </button>
             </div>
-          </div>
+          </Banner>
         )}
 
         {/* Loading state */}
@@ -1204,13 +1179,16 @@ function TodayContent() {
         {/* Error state */}
         {(error || queryError) && !loading && (
           <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center">
-            <p className="text-sm text-destructive">{error ?? (queryError instanceof Error ? queryError.message : "Failed to load data")}</p>
-            <button
-              onClick={refetchAll}
-              className="mt-2 text-sm font-medium text-primary underline"
-            >
+            {/* A308 — a sentence first; the raw message stays, small, for support. */}
+            <p className="text-sm font-medium text-destructive">
+              {error ? "Something went wrong." : "Couldn\u2019t load today\u2019s plan. Check your connection."}
+            </p>
+            <p className="mt-1 text-xs text-fg-muted">
+              {error ?? (queryError instanceof Error ? queryError.message : "Failed to load data")}
+            </p>
+            <Button variant="outline" className="mt-3 min-h-[44px]" onClick={refetchAll}>
               Retry
-            </button>
+            </Button>
           </div>
         )}
 
@@ -1259,7 +1237,7 @@ function TodayContent() {
 
         {/* B257: macrocycle exists but the current week resolves to a past,
             immutable week (cycle ended) — explain instead of showing onboarding.
-            The "Plan your next cycle" CTA above provides the action. */}
+            The "Plan your next cycle" CTA below provides the action. */}
         {!loading && !error && !weekPlan && hasMacrocycle && pastWeekUnavailable && (
           <div className="rounded-lg border border-dashed p-8 text-center">
             <p className="font-medium">Nothing scheduled for today</p>
@@ -1284,24 +1262,22 @@ function TodayContent() {
           <WeeklyCheckinCard weekPlan={weekPlan} onPlanUpdated={refetchAll} />
         )}
 
-        {/* A220: standalone "Focus di oggi" cue section above the day's cards */}
-        {!loading && !error && dayPlan && !heroState && dayPlan.sessions.length > 0 && (
-          <DailyCueBanner
-            sessions={dayPlan.sessions}
-            date={dayPlan.date}
-            isToday={isViewingToday}
-          />
-        )}
-
         {/* A294 — only when a key session of this week is owed or at risk. */}
         {!loading && !error && isViewingToday && !isPaused && (
-          <KeySessionsCard status={keyStatus} compact onApplyProposal={handleApplyKeyProposal} />
+          <KeySessionsCard status={keyStatus} compact collapsible onApplyProposal={handleApplyKeyProposal} />
         )}
 
         {/* A301 — the alerts of the day shown (recovery guards + lunch rules):
-            a heads-up, the sessions stay as planned. */}
+            a heads-up, the sessions stay as planned. A308: only those that no
+            session card below shows inline, so each alert is said once. */}
         {!loading && !error && !isPaused && dayPlan && (
-          <WeekAlertsCard guardWarnings={guardWarnings} weekPlan={weekPlan} date={dayPlan.date} compact />
+          <WeekAlertsCard
+            guardWarnings={guardWarnings}
+            weekPlan={weekPlan}
+            date={dayPlan.date}
+            compact
+            excludeSessionAlerts={!heroState}
+          />
         )}
 
         {/* A223: plan paused — replaces today's sessions until resumed.
@@ -1314,6 +1290,10 @@ function TodayContent() {
         {!loading && !error && !isPaused && dayPlan && !heroState && (
           <DayCard
             day={dayPlan}
+            // A308 — TopBar already says "Today" and the date; the cue moves
+            // inside the session it belongs to.
+            hideHeader={isViewingToday}
+            showDailyCue
             keyStatus={keyStatus}
             guardWarnings={guardWarnings}
             gyms={gyms}
@@ -1403,6 +1383,36 @@ function TodayContent() {
           <WeekProgressBar weekPlan={weekPlan} freeSessions={weekFreeSessions} freeSessionsLoaded={weekFreeSessionsLoaded} outdoorLoad={weekOutdoorLoad} />
         )}
 
+        {/* A-NEW-MACRO: end-of-cycle CTA — only on the live "today" view */}
+        {isViewingToday && cycleStatus.canShow && (
+          <Banner tone="primary" className="space-y-2">
+            <p className="text-sm font-medium">
+              {cycleStatus.isPastEndDate
+                ? "Your macrocycle is complete."
+                : "Final week — ready to plan your next cycle?"}
+            </p>
+            <button
+              type="button"
+              className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+              onClick={() => setNewCycleDialogOpen(true)}
+            >
+              {cycleStatus.isPastEndDate
+                ? "Plan your next cycle →"
+                : "Start new macrocycle →"}
+            </button>
+          </Banner>
+        )}
+
+        {/* A264: hand-written note from the founder to this specific athlete.
+            Renders only when user_state.founder_note exists and is undismissed,
+            and only on the live "today" view — a note about your training is
+            noise when you are looking back at last Tuesday. A308: below the
+            session, with the other notes. */}
+        <FounderNoteCard
+          note={stateQuery.data?.founder_note as FounderNote | undefined}
+          isViewingToday={isViewingToday}
+        />
+
         {/* A224: live weather card — current location, today view only */}
         {!loading && !error && isViewingToday && <WeatherCard />}
 
@@ -1411,73 +1421,39 @@ function TodayContent() {
 
         {/* C203: boulder phase tip — discipline-gated, dismissible per-phase */}
         {!loading && !error && dayPlan && boulderPhaseTip && !phaseTipDismissed && (
-          <div className="relative rounded-lg border border-info/30 bg-info/5 p-3 pr-12 text-sm">
+          <Banner tone="info" onDismiss={dismissPhaseTip}>
             <p className="font-medium text-info capitalize">
               {phaseId?.replace(/_/g, " ")} phase
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
               {boulderPhaseTip}
             </p>
-            <button
-              type="button"
-              onClick={dismissPhaseTip}
-              aria-label="Dismiss"
-              className="absolute right-1 top-1 flex h-11 w-11 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              ×
-            </button>
-          </div>
+          </Banner>
         )}
 
         {/* A202: feedback loop education banner */}
         {!loading && !error && dayPlan && hasDoneSession && !feedbackEduDismissed && (
-          <div className="relative rounded-lg border border-primary/30 bg-primary/5 p-3 pr-12 text-sm">
+          <Banner tone="primary" onDismiss={dismissFeedbackEdu}>
             <p className="font-medium text-primary">
               Your feedback adapts your training
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
               After each exercise, your rating (easy/ok/hard) automatically adjusts weight and volume in future sessions. The more feedback you give, the more precise your plan becomes.
             </p>
-            <button
-              type="button"
-              onClick={dismissFeedbackEdu}
-              aria-label="Dismiss"
-              className="absolute right-1 top-1 flex h-11 w-11 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              ×
-            </button>
-          </div>
+          </Banner>
         )}
 
-        {/* A217: daily motivational quote inside hero card */}
+        {/* A217: daily motivational quote. A308: a text row — the 4:5 stock
+            photo was the tallest thing on the page and the same every day. */}
         {quote && !loading && (
-          <div className="relative mt-6 overflow-hidden rounded-xl border border-border-subtle shadow-md">
-            <div className="relative aspect-[4/5] w-full">
-              <Image
-                src="/hero/today_hero.webp"
-                alt="Climber chalking up before an indoor route"
-                fill
-                sizes="(max-width: 768px) 100vw, 768px"
-                className="object-cover"
-              />
-              <div
-                className="pointer-events-none absolute inset-0"
-                style={{
-                  background:
-                    "linear-gradient(to bottom, transparent 40%, hsl(var(--surface-base) / 0.95) 100%)",
-                }}
-                aria-hidden="true"
-              />
-              <div className="absolute inset-x-0 bottom-0 p-5">
-                <p className="text-base italic leading-relaxed text-fg">
-                  &ldquo;{quote.text}&rdquo;
-                </p>
-                <p className="mt-2 text-right text-sm text-fg-secondary">
-                  — {quote.author}
-                </p>
-              </div>
-            </div>
-          </div>
+          <figure className="rounded-xl border border-border-subtle bg-surface-raised p-4">
+            <blockquote className="text-sm italic leading-relaxed text-fg">
+              &ldquo;{quote.text}&rdquo;
+            </blockquote>
+            <figcaption className="mt-2 text-right text-xs text-fg-muted">
+              — {quote.author}
+            </figcaption>
+          </figure>
         )}
 
         {/* A234: daily feature-discovery tip below the quote */}

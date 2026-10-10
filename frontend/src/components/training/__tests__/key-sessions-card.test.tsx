@@ -72,6 +72,26 @@ describe("KeySessionsCard", () => {
     expect(r2.container.innerHTML).toBe("");
   });
 
+  it("collapsible (A308, /today): open when something is critical or proposed", () => {
+    render(<KeySessionsCard status={status()} compact collapsible onApplyProposal={() => {}} />);
+    expect(screen.getByRole("button", { expanded: true })).toBeTruthy();
+    expect(screen.getByText("Add to my week")).toBeTruthy();
+  });
+
+  it("collapsible (A308, /today): a one-line summary otherwise, opening on tap", () => {
+    const mild = status({
+      requirements: [{ ...status().requirements[0], severity: "warning" }, status().requirements[1]],
+      proposals: [],
+      summary: { ...status().summary, max_severity: "warning" },
+    });
+    render(<KeySessionsCard status={mild} compact collapsible />);
+    const toggle = screen.getByRole("button", { expanded: false });
+    expect(toggle.textContent).toContain("1/2 on track");
+    expect(screen.queryByText("Finger max")).toBeNull();
+    fireEvent.click(toggle);
+    expect(screen.getByText("Finger max")).toBeTruthy();
+  });
+
   it("a dismissed row disappears for the week", () => {
     render(<KeySessionsCard status={status()} />);
     fireEvent.click(screen.getByLabelText("Hide Finger max for this week"));

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   alertsForSession,
+  alertsOffSessions,
   describeActionAlerts,
   describeKeptPreview,
   describeKeptSessions,
@@ -94,6 +95,28 @@ describe("alertsForSession", () => {
   it("tolerates missing inputs", () => {
     expect(alertsForSession(null, null, "2026-10-06", session({}))).toEqual([]);
     expect(alertsForSession(undefined, undefined, "2026-10-06", session({}))).toEqual([]);
+  });
+});
+
+describe("alertsOffSessions (A308: /today says each alert once)", () => {
+  it("leaves out what a planned session card shows inline, keeps the rest", () => {
+    const p = plan([
+      { date: "2026-10-06", sessions: [session({}), session({ session_id: "lunch_legs", slot: "lunch", status: "done" })] },
+    ]);
+    const onCard = gw({});
+    const onDoneSession = gw({ code: "hard_cap", slot: "lunch", session_id: "lunch_legs" });
+    const out = alertsOffSessions([onCard, onDoneSession], p, "2026-10-06");
+    expect(out.map((a) => a.code)).toEqual(["hard_cap"]);
+    // together with the inline lines, every alert of the day is said exactly once
+    const inline = alertsForSession([onCard, onDoneSession], p, "2026-10-06", session({}));
+    expect([...inline, ...out].map((a) => a.code).sort()).toEqual(
+      weekAlerts([onCard, onDoneSession], p, "2026-10-06").map((a) => a.code).sort(),
+    );
+  });
+
+  it("keeps everything on a day without sessions", () => {
+    const p = plan([{ date: "2026-10-06", sessions: [] }]);
+    expect(alertsOffSessions([gw({})], p, "2026-10-06")).toHaveLength(1);
   });
 });
 

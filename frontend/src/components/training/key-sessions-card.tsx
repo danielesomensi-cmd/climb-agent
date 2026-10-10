@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, CheckCircle2, CircleDashed, Info, Star, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronRight, CircleDashed, Info, Star, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -26,19 +26,24 @@ import type { KeyProposal, KeyRequirement, KeyStatus } from "@/lib/types";
  * catching up is often the right call, never an alarm.
  *
  * `compact` (on /today): renders nothing when the week is on track.
+ * `collapsible` (A308, /today): a one-line summary that opens on tap — open
+ * from the start only when there is a re-schedule to accept or a critical row.
  */
 export function KeySessionsCard({
   status,
   compact = false,
+  collapsible = false,
   onApplyProposal,
 }: {
   status?: KeyStatus | null;
   compact?: boolean;
+  collapsible?: boolean;
   onApplyProposal?: (p: KeyProposal) => Promise<void> | void;
 }) {
   const [busy, setBusy] = useState<string | null>(null);
   // Dismissed this session (works without storage too: private mode).
   const [dismissed, setDismissed] = useState<string[]>([]);
+  const [open, setOpen] = useState<boolean | null>(null);
   if (!status || !status.requirements?.length || status.is_past_week) return null;
   const issues = hasKeyIssues(status);
   if (compact && !issues) return null;
@@ -56,75 +61,102 @@ export function KeySessionsCard({
       ? "border-warning/30 bg-warning/5"
       : "border-border";
 
+  const urgent =
+    status.proposals.length > 0 || status.requirements.some((r) => r.severity === "critical");
+  const expanded = !collapsible || (open ?? urgent);
+
+  const header = (
+    <>
+      <Star className="size-4 shrink-0 text-primary" aria-hidden="true" />
+      <p className="text-sm font-semibold">Key sessions this week</p>
+      <span className="ml-auto text-xs text-muted-foreground tabular-nums">
+        {status.summary.covered}/{status.summary.required} on track
+      </span>
+    </>
+  );
+
   return (
     <Card className={cn("gap-0", tone)} data-testid="key-sessions-card">
-      <CardContent className="space-y-2 py-3">
-        <div className="flex items-center gap-2">
-          <Star className="size-4 shrink-0 text-primary" aria-hidden="true" />
-          <p className="text-sm font-semibold">Key sessions this week</p>
-          <span className="ml-auto text-xs text-muted-foreground tabular-nums">
-            {status.summary.covered}/{status.summary.required} on track
-          </span>
-        </div>
-
-        <ul className="space-y-1.5">
-          {rows.map((r) => (
-            <RequirementRow
-              key={r.key}
-              r={r}
-              onDismiss={r.debt > 0 ? () => { writeDismissed(weekStart, r.key); setDismissed((d) => [...d, r.key]); } : undefined}
+      <CardContent className={cn("space-y-2", collapsible ? "py-1" : "py-3")}>
+        {collapsible ? (
+          <button
+            type="button"
+            aria-expanded={expanded}
+            onClick={() => setOpen(!expanded)}
+            className="flex min-h-11 w-full items-center gap-2 text-left"
+          >
+            {header}
+            <ChevronRight
+              className={cn("size-4 shrink-0 text-muted-foreground transition-transform", expanded && "rotate-90")}
+              aria-hidden="true"
             />
-          ))}
-        </ul>
+          </button>
+        ) : (
+          <div className="flex items-center gap-2">{header}</div>
+        )}
 
-        {status.proposals.map((p) => (
-          <div key={`${p.date}-${p.slot}-${p.session_id}`} className="rounded-md border border-primary/30 bg-primary/5 p-2 space-y-1">
-            <p className="text-sm">
-              Re-schedule <span className="font-medium">{p.session_name || formatSessionId(p.session_id)}</span>{" "}
-              on <span className="font-medium">{shortDay(p.date)}</span> ({p.slot})
-            </p>
-            {p.reduced_reentry_dose && (
-              <p className="text-xs text-muted-foreground">Re-entry week: limit boulders only, no campus.</p>
-            )}
-            {p.side_effects.length > 0 ? (
-              <p className="text-xs text-warning">
-                Also changes:{" "}
-                {p.side_effects
-                  .map((s) => `${shortDay(s.date)} ${formatSessionId(s.from)} → ${formatSessionId(s.to)}`)
-                  .join("; ")}
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground">Nothing else in your week changes.</p>
-            )}
-            {onApplyProposal && (
-              <Button
-                size="sm"
-                className="h-8"
-                disabled={busy !== null}
-                onClick={async () => {
-                  setBusy(p.date);
-                  try {
-                    await onApplyProposal(p);
-                  } finally {
-                    setBusy(null);
-                  }
-                }}
-              >
-                {busy === p.date ? "Adding…" : "Add to my week"}
-              </Button>
-            )}
-          </div>
-        ))}
+        {expanded && (
+          <>
+            <ul className="space-y-1.5">
+              {rows.map((r) => (
+                <RequirementRow
+                  key={r.key}
+                  r={r}
+                  onDismiss={r.debt > 0 ? () => { writeDismissed(weekStart, r.key); setDismissed((d) => [...d, r.key]); } : undefined}
+                />
+              ))}
+            </ul>
 
-        {status.conflicts.length > 0 && (
-          <ul className="space-y-1">
-            {status.conflicts.map((c, i) => (
-              <li key={`${c.code}-${c.date}-${i}`} className="flex gap-2 text-xs text-warning">
-                <AlertTriangle className="size-3.5 shrink-0 mt-0.5" aria-hidden="true" />
-                <span>{c.message}</span>
-              </li>
+            {status.proposals.map((p) => (
+              <div key={`${p.date}-${p.slot}-${p.session_id}`} className="rounded-md border border-primary/30 bg-primary/5 p-2 space-y-1">
+                <p className="text-sm">
+                  Re-schedule <span className="font-medium">{p.session_name || formatSessionId(p.session_id)}</span>{" "}
+                  on <span className="font-medium">{shortDay(p.date)}</span> ({p.slot})
+                </p>
+                {p.reduced_reentry_dose && (
+                  <p className="text-xs text-muted-foreground">Re-entry week: limit boulders only, no campus.</p>
+                )}
+                {p.side_effects.length > 0 ? (
+                  <p className="text-xs text-warning">
+                    Also changes:{" "}
+                    {p.side_effects
+                      .map((s) => `${shortDay(s.date)} ${formatSessionId(s.from)} → ${formatSessionId(s.to)}`)
+                      .join("; ")}
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Nothing else in your week changes.</p>
+                )}
+                {onApplyProposal && (
+                  <Button
+                    size="sm"
+                    className="min-h-[44px]"
+                    disabled={busy !== null}
+                    onClick={async () => {
+                      setBusy(p.date);
+                      try {
+                        await onApplyProposal(p);
+                      } finally {
+                        setBusy(null);
+                      }
+                    }}
+                  >
+                    {busy === p.date ? "Adding…" : "Add to my week"}
+                  </Button>
+                )}
+              </div>
             ))}
-          </ul>
+
+            {status.conflicts.length > 0 && (
+              <ul className="space-y-1">
+                {status.conflicts.map((c, i) => (
+                  <li key={`${c.code}-${c.date}-${i}`} className="flex gap-2 text-xs text-warning">
+                    <AlertTriangle className="size-3.5 shrink-0 mt-0.5" aria-hidden="true" />
+                    <span>{c.message}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
         )}
       </CardContent>
     </Card>
@@ -156,7 +188,7 @@ function RequirementRow({ r, onDismiss }: { r: KeyRequirement; onDismiss?: () =>
         <button
           type="button"
           onClick={onDismiss}
-          className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted"
+          className="-my-2 -mr-2 flex size-11 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted"
           aria-label={`Hide ${r.label} for this week`}
         >
           <X className="size-3.5" />

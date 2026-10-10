@@ -50,6 +50,7 @@ import { focusLabel, type SessionAlert } from "@/lib/week-alerts";
 import { expandEquipment, isExerciseCompatible } from "@/lib/equipment-filter";
 import { walkResolvedBlocks } from "@/lib/session-blocks";
 import { formatSessionName } from "@/lib/format";
+import { DailyCueLine } from "@/components/training/daily-cue-banner";
 
 interface Gym {
   gym_id?: string;
@@ -81,6 +82,8 @@ interface SessionCardProps {
    * session stays exactly as planned.
    */
   alerts?: SessionAlert[];
+  /** A308 — the day's process cue, when this is the session it belongs to (/today). */
+  focusCue?: string;
 }
 
 
@@ -531,7 +534,7 @@ function AddExerciseDialog({
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm font-medium">{ex.name}</span>
                       {incompatible && (
-                        <Badge variant="outline" className="text-[10px] text-yellow-500 border-yellow-500/30">
+                        <Badge variant="outline" className="text-[10px] text-warning border-warning/30">
                           Missing equipment
                         </Badge>
                       )}
@@ -616,7 +619,7 @@ function AddExerciseDialog({
               </div>
             )}
 
-            {error && <p className="text-xs text-red-500">{error}</p>}
+            {error && <p className="text-xs text-destructive">{error}</p>}
 
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => setSelected(null)}>
@@ -676,6 +679,7 @@ export function SessionCard({
   onSessionUpdated,
   keyRole,
   alerts,
+  focusCue,
 }: SessionCardProps) {
   const [expanded, setExpanded] = useState(false);
   // F6 — un secondo tap su Done/Skip prima che il primo abbia risposto partiva
@@ -855,18 +859,18 @@ export function SessionCard({
     <>
       <div className="relative">
       {boulderOverrideActive && (
-        <div className="mb-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-100 flex items-start gap-2">
+        <div className="mb-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-fg flex items-start gap-2">
           <Mountain className="size-4 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="font-medium">Boulder only — session adapted for today.</p>
             {boulderCopyVariant === "volume_swap" && (
-              <p className="mt-0.5 text-amber-200/70">
+              <p className="mt-0.5 text-fg-secondary">
                 Volume climbing replaces aerobic endurance. Aerobic stimulus is not replicable without rope.
               </p>
             )}
           </div>
           <button
-            className="text-amber-200 hover:text-white underline text-xs shrink-0 disabled:opacity-50"
+            className="text-warning hover:text-fg underline text-xs shrink-0 disabled:opacity-50"
             disabled={boulderOverrideLoading}
             onClick={handleUndoBoulderOverride}
           >
@@ -875,7 +879,7 @@ export function SessionCard({
         </div>
       )}
       {boulderOverrideError && (
-        <div className="mb-2 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+        <div className="mb-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
           {boulderOverrideError}
         </div>
       )}
@@ -889,20 +893,22 @@ export function SessionCard({
           className="cursor-pointer select-none py-3"
           onClick={() => setExpanded((prev) => !prev)}
         >
-          <div className="flex items-center justify-between gap-2">
-            <CardTitle className="text-sm flex items-center gap-1.5">
+          <div className="flex items-start justify-between gap-2">
+            {/* A308 — the session name is the headline (was text-sm, the same
+                size as the coach card subtitle). */}
+            <CardTitle className="flex flex-wrap items-center gap-1.5 text-lg font-semibold leading-tight">
               <span>
                 {session.is_custom
                   ? (session.name || formatSessionName(session.session_id))
                   : ((session.resolved as Record<string, Record<string, string>> | undefined)?.session?.session_name || formatSessionName(session.session_id))}
               </span>
               {session.is_custom && (
-                <Badge className="bg-primary/20 text-primary border-primary/40 text-[10px]">
+                <Badge className="bg-primary/20 text-primary border-primary/40 text-[11px]">
                   Custom
                 </Badge>
               )}
               {boulderOverrideActive && (
-                <Badge variant="outline" className="text-[10px] gap-1 px-1.5 py-0 border-warning/30 bg-warning/15 text-warning">
+                <Badge variant="outline" className="text-[11px] gap-1 px-1.5 py-0 border-warning/30 bg-warning/15 text-warning">
                   <Mountain className="size-2.5" />
                   Boulder
                 </Badge>
@@ -911,7 +917,7 @@ export function SessionCard({
             <div className="flex items-center gap-1.5">
               {/* Edit actions button */}
               <button
-                className="flex items-center justify-center min-w-[44px] min-h-[44px] bg-white/10 rounded-lg p-1.5 text-slate-300 hover:bg-white/20 transition-colors"
+                className="flex items-center justify-center min-w-[44px] min-h-[44px] bg-surface-elevated rounded-lg p-1.5 text-fg-secondary hover:text-fg transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
                   setDrawerOpen(true);
@@ -921,122 +927,107 @@ export function SessionCard({
                 <Pencil className="size-[18px]" />
               </button>
               <ChevronDown
-                className={`size-5 shrink-0 text-slate-300 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+                className={`size-5 shrink-0 text-fg-secondary transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
               />
             </div>
           </div>
 
-          {/* Badge row */}
-          <div className="flex flex-wrap items-center gap-1.5 mt-1">
-            {/* A294 — key-session role */}
-            <KeyRoleBadge role={keyRole} />
-            {/* A300 — a complementary (lunch) session placed by the rotation */}
-            {session.slot_role === "complementary" && (
-              <Badge variant="outline" className="text-[10px] text-muted-foreground">
-                {focusLabel(session.focus)}
-              </Badge>
-            )}
-            {/* A301 — guards are alerts: the session is kept as planned */}
-            {alerts && alerts.length > 0 && (
-              <Badge
-                variant="outline"
-                className="text-[10px] gap-1 border-warning/40 bg-warning/15 text-warning"
-                title={alerts.map((a) => a.message).join("\n")}
-                data-testid="session-alert-badge"
-              >
-                <AlertTriangle className="size-2.5" aria-hidden="true" />
-                {alerts.length === 1 ? "1 alert" : `${alerts.length} alerts`}
-              </Badge>
-            )}
-            <Badge variant="secondary" className="text-[10px]">
-              {locationLabel}
-            </Badge>
-            <Badge variant="outline" className="text-[10px]">
-              {formatSlot(session.slot)}
-            </Badge>
-            {/* A286 — bianco su 500 saturo era sotto AA: testo colorato su
-                fondo tenue dello stesso colore. */}
-            {isHard && (
-              <Badge variant="outline" className="text-[10px] border-danger/30 bg-danger/15 text-danger">
-                Hard
-              </Badge>
-            )}
-            {isFinger && (
-              <Badge variant="outline" className="text-[10px] border-orange-500/30 bg-orange-500/15 text-orange-300">
-                Finger
-              </Badge>
-            )}
-            {hasLoadingPin && (
-              <Badge variant="outline" className="text-[10px] border-purple-500/30 bg-purple-500/15 text-purple-300">
-                Loading Pin
-              </Badge>
-            )}
-            {session.estimated_load_score != null && (
-              <Badge variant="outline" className="text-[10px]">
-                Load: {session.estimated_load_score}
-              </Badge>
-            )}
-            {!isDone && !isSkipped && (() => {
-              // B298: custom/adhoc sessions carry their estimate at the top level
-              // (`target_duration_min`), not under resolved.session — read that as
-              // a fallback so the custom card shows the duration badge too instead
-              // of looking impoverished next to planned cards.
-              const targetMin =
-                ((effectiveResolved as Record<string, Record<string, unknown>> | undefined)?.session?.target_duration_min as number | undefined)
-                ?? (session.is_custom ? session.target_duration_min : undefined);
-              if (!targetMin) return null;
-              return (
-                <Badge variant="outline" className="text-[10px] text-slate-400">
-                  ~{targetMin} min
+          {/* A308 — one plain meta line instead of a row of same-weight chips. */}
+          {(() => {
+            // B298: custom/adhoc sessions carry their estimate at the top level
+            // (`target_duration_min`), not under resolved.session — read that as
+            // a fallback so the custom card shows the duration too.
+            const targetMin = !isDone && !isSkipped
+              ? ((effectiveResolved as Record<string, Record<string, unknown>> | undefined)?.session?.target_duration_min as number | undefined)
+                ?? (session.is_custom ? session.target_duration_min : undefined)
+              : undefined;
+            const parts = [
+              formatSlot(session.slot),
+              // A300 — a complementary (lunch) session placed by the rotation
+              session.slot_role === "complementary" ? focusLabel(session.focus) : null,
+              locationLabel,
+              targetMin ? `~${targetMin} min` : null,
+            ].filter(Boolean);
+            return (
+              <p className="mt-1 text-xs text-fg-secondary">{parts.join(" \u00b7 ")}</p>
+            );
+          })()}
+
+          {/* At most three chips: key role, one intensity, the status. */}
+          {(keyRole || isHard || isFinger || isDone || isSkipped) && (
+            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+              {/* A294 — key-session role */}
+              <KeyRoleBadge role={keyRole} />
+              {/* A286 — testo colorato su fondo tenue dello stesso colore.
+                  A308 — Finger implies hard: one intensity chip, not two. */}
+              {isFinger ? (
+                <Badge variant="outline" className="text-[11px] border-axis-finger/30 bg-axis-finger/15 text-axis-finger">
+                  Finger
                 </Badge>
-              );
-            })()}
-            {isDone && (() => {
-              // B217: only show a duration when we have a measured one. No
-              // slot-table fallback — "Completed" alone is the honest signal.
-              const hasReal = session.session_duration_seconds != null && session.session_duration_seconds > 0;
-              return (
-                // A286 — bianco su verde saturo era ~3:1: colore nel testo,
-                // fondo tenue dello stesso colore.
+              ) : isHard ? (
+                <Badge variant="outline" className="text-[11px] border-danger/30 bg-danger/15 text-danger">
+                  Hard
+                </Badge>
+              ) : null}
+              {isDone && (() => {
+                // B217: only show a duration when we have a measured one. No
+                // slot-table fallback — "Completed" alone is the honest signal.
+                const hasReal = session.session_duration_seconds != null && session.session_duration_seconds > 0;
+                return (
+                  <Badge
+                    variant="outline"
+                    className="text-[11px] border-success/30 bg-success/15 text-success"
+                  >
+                    <span>Completed</span>
+                    {hasReal && (
+                      <span>{` · ${Math.round(session.session_duration_seconds! / 60)} min`}</span>
+                    )}
+                  </Badge>
+                );
+              })()}
+              {isSkipped && (
                 <Badge
                   variant="outline"
-                  className="text-[10px] border-success/30 bg-success/15 text-success"
+                  className="text-[11px] border-warning/30 bg-warning/15 text-warning"
                 >
-                  <span>Completed</span>
-                  {hasReal && (
-                    <span>{` · ${Math.round(session.session_duration_seconds! / 60)} min`}</span>
-                  )}
+                  Skipped
                 </Badge>
-              );
-            })()}
-            {isSkipped && (
-              <Badge
-                variant="outline"
-                className="text-[10px] border-warning/30 bg-warning/15 text-warning"
-              >
-                Skipped
-              </Badge>
-            )}
-            {isDone && session.feedback_summary && (
-              <Badge
-                variant="outline"
-                className={`text-[10px] ${FEEDBACK_CHIP[session.feedback_summary] ?? ""}`}
-              >
-                {session.feedback_summary.replace(/_/g, " ")}
-              </Badge>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
-          {/* A301 — what the recovery / lunch rules flag on this session. */}
+          {/* Post-session feedback — part of the status, said as text. */}
+          {isDone && session.feedback_summary && (
+            <p className="mt-1 text-xs text-fg-secondary">
+              Felt{" "}
+              <span className={`rounded px-1 font-medium ${FEEDBACK_CHIP[session.feedback_summary] ?? ""}`}>
+                {session.feedback_summary.replace(/_/g, " ")}
+              </span>
+            </p>
+          )}
+
+          {/* A301 — what the recovery / lunch rules flag on this session.
+              A308 — the only place /today says it (no badge, no repeat in the
+              day's alerts card). */}
           {alerts && alerts.length > 0 && (
-            <ul className="mt-1.5 space-y-0.5" aria-label="Alerts">
+            <ul className="mt-1.5 space-y-0.5" aria-label="Alerts" data-testid="session-alerts">
               {alerts.map((a, i) => (
-                <li key={`${a.source}-${a.code}-${i}`} className="text-[11px] leading-snug text-warning">
-                  <span className="font-medium">{a.title}:</span>{" "}
-                  <span className="text-muted-foreground">{a.message}</span>
+                <li key={`${a.source}-${a.code}-${i}`} className="flex items-start gap-1.5 text-xs leading-snug text-warning">
+                  <AlertTriangle className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
+                  <span>
+                    <span className="font-medium">{a.title}:</span>{" "}
+                    <span className="text-muted-foreground">{a.message}</span>
+                  </span>
                 </li>
               ))}
             </ul>
+          )}
+
+          {/* A308 — the day's focus (was its own amber card above the day). */}
+          {focusCue && (
+            <div className="mt-2">
+              <DailyCueLine text={focusCue} />
+            </div>
           )}
 
           {/* B136: Test results summary in header (visible without expanding) */}
@@ -1059,7 +1050,7 @@ export function SessionCard({
             return (
               <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
                 {results.map((r) => (
-                  <p key={r.label} className="text-[11px] text-amber-400 font-medium">
+                  <p key={r.label} className="text-[11px] text-brand-secondary font-medium">
                     {r.label}: {r.value}
                   </p>
                 ))}
@@ -1122,6 +1113,22 @@ export function SessionCard({
         {/* Expanded content */}
         {expanded && (
           <CardContent className="pt-0 pb-3 space-y-3">
+            {/* A308 — details that used to crowd the header chips. */}
+            {(hasLoadingPin || session.estimated_load_score != null) && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {hasLoadingPin && (
+                  <Badge variant="outline" className="text-[11px] border-axis-finger/30 bg-axis-finger/15 text-axis-finger">
+                    Loading Pin
+                  </Badge>
+                )}
+                {session.estimated_load_score != null && (
+                  <Badge variant="outline" className="text-[11px] text-fg-muted">
+                    Load: {session.estimated_load_score}
+                  </Badge>
+                )}
+              </div>
+            )}
+
             {/* A207: custom sessions have exercises inline — no resolved blocks to render. */}
             {session.is_custom ? (
               (session.exercises ?? []).length === 0 ? (
@@ -1286,14 +1293,9 @@ export function SessionCard({
             })()}
 
             {/* A286 — Start/Done/Skip sono risaliti sotto la testata: erano in
-                fondo alla card espansa, dopo tutta la lista esercizi. */}
-
-            {/* Hint text for planned sessions with exercises */}
-            {!isFinalized && hasExercises && (
-              <p className="text-[11px] text-muted-foreground/60">
-                Tap Start session to begin your guided workout
-              </p>
-            )}
+                fondo alla card espansa, dopo tutta la lista esercizi.
+                A308 — the "Tap Start session…" hint went too: it repeated the
+                visible button. */}
           </CardContent>
         )}
       </Card>
@@ -1386,7 +1388,7 @@ export function SessionCard({
             {!isFinalized && onRemove && (
               <DrawerClose asChild>
                 <button
-                  className="flex items-center gap-3 w-full px-3 py-3 rounded-md hover:bg-accent transition-colors text-left text-red-500"
+                  className="flex items-center gap-3 w-full px-3 py-3 rounded-md hover:bg-accent transition-colors text-left text-destructive"
                   onClick={() => {
                     setDrawerOpen(false);
                     setTimeout(() => setConfirmRemove(true), 150);
@@ -1485,7 +1487,7 @@ function KeyRoleBadge({ role }: { role?: KeySessionRole | null }) {
     return (
       <Badge
         variant="outline"
-        className={`text-[10px] gap-1 ${done ? "border-success/40 bg-success/15 text-success" : "border-primary/40 bg-primary/15 text-primary"}`}
+        className={`text-[11px] gap-1 ${done ? "border-success/40 bg-success/15 text-success" : "border-primary/40 bg-primary/15 text-primary"}`}
         title={role.keys.map(keyLabel).join(", ")}
       >
         <Star className="size-2.5" aria-hidden="true" />
@@ -1495,20 +1497,20 @@ function KeyRoleBadge({ role }: { role?: KeySessionRole | null }) {
   }
   if (role.role === "skipped") {
     return (
-      <Badge variant="outline" className="text-[10px] border-danger/30 bg-danger/15 text-danger">
+      <Badge variant="outline" className="text-[11px] border-danger/30 bg-danger/15 text-danger">
         Skipped key
       </Badge>
     );
   }
   if (role.role === "downgraded") {
     return (
-      <Badge variant="outline" className="text-[10px] border-warning/30 bg-warning/15 text-warning">
+      <Badge variant="outline" className="text-[11px] border-warning/30 bg-warning/15 text-warning">
         Downgraded from {formatSessionId(role.downgraded_from)}
       </Badge>
     );
   }
   return (
-    <Badge variant="outline" className="text-[10px] text-muted-foreground" title={role.supporting.map(keyLabel).join(", ")}>
+    <Badge variant="outline" className="text-[11px] text-muted-foreground" title={role.supporting.map(keyLabel).join(", ")}>
       {role.role === "optional" ? "Optional" : "Supporting"}
     </Badge>
   );

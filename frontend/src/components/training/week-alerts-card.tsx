@@ -2,7 +2,7 @@
 
 import { AlertTriangle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { describeUnmetSecondary, weekAlerts } from "@/lib/week-alerts";
+import { alertsOffSessions, describeUnmetSecondary, weekAlerts } from "@/lib/week-alerts";
 import type { GuardWarning, WeekPlan } from "@/lib/types";
 
 /**
@@ -21,14 +21,22 @@ export function WeekAlertsCard({
   weekPlan,
   date,
   compact = false,
+  excludeSessionAlerts = false,
 }: {
   guardWarnings?: GuardWarning[] | null;
   weekPlan?: WeekPlan | null;
   /** Only the alerts of this day (/today). */
   date?: string;
   compact?: boolean;
+  /**
+   * A308 — with `date`: leave out the alerts a session card of that day
+   * already shows inline, so /today says each alert once.
+   */
+  excludeSessionAlerts?: boolean;
 }) {
-  const alerts = weekAlerts(guardWarnings, weekPlan, date);
+  const alerts = date && excludeSessionAlerts
+    ? alertsOffSessions(guardWarnings, weekPlan, date)
+    : weekAlerts(guardWarnings, weekPlan, date);
   const unmet = date
     ? (weekPlan?.unmet_secondary ?? []).filter((u) => u.date === date)
     : (weekPlan?.unmet_secondary ?? []);

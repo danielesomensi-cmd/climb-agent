@@ -227,6 +227,25 @@ export function weekAlerts(
     .map(({ a }) => a);
 }
 
+/**
+ * A308 — the alerts of *date* that no session card of that day shows inline
+ * (`alertsForSession`). /today lists only these in the day's alerts card, so
+ * each alert is said once: next to its session when it has one, in the card
+ * otherwise.
+ */
+export function alertsOffSessions(
+  guardWarnings: GuardWarning[] | null | undefined,
+  plan: WeekPlan | null | undefined,
+  date: string,
+): SessionAlert[] {
+  const key = (a: SessionAlert) => `${a.source}|${a.code}|${a.date}|${a.slot ?? ""}|${a.session_id ?? ""}`;
+  const day = days(plan).find((d) => d.date === date);
+  const inline = new Set(
+    (day?.sessions ?? []).flatMap((s) => alertsForSession(guardWarnings, plan, date, s)).map(key),
+  );
+  return weekAlerts(guardWarnings, plan, date).filter((a) => !inline.has(key(a)));
+}
+
 /** The guard alerts a mutation response carries, if any (undefined = not in the response). */
 export function guardWarningsOf(result: unknown): GuardWarning[] | undefined {
   if (!result || typeof result !== "object") return undefined;

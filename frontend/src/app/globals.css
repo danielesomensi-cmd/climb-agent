@@ -103,6 +103,9 @@
   --color-phase-specific: hsl(var(--phase-specific));
   --color-phase-recovery: hsl(var(--phase-recovery));
 
+  /* A308 — free-climbing sessions logged on a day (DayCard) */
+  --color-activity-free: hsl(var(--activity-free));
+
   /* Fonts */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -207,6 +210,9 @@
   --phase-anaerobic-lactic: 25 90% 58%;
   --phase-specific: 285 75% 60%;
   --phase-recovery: 145 55% 55%;
+
+  /* A308 — free-climbing blocks on the day card (was raw purple-500/400) */
+  --activity-free: 270 70% 68%;
 
   /* Glow (sparingly on CTAs / highlighted cards only) */
   --glow-primary: 340 85% 58% / 0.35;

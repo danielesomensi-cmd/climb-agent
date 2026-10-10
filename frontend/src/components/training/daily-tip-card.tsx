@@ -33,25 +33,25 @@ export function DailyTipCard({ date }: DailyTipCardProps) {
   return (
     <section
       aria-label="Tip of the day"
-      className="relative mt-6 rounded-xl border border-sky-800/40 bg-gradient-to-r from-sky-950/40 to-sky-900/20 p-4"
+      className="relative rounded-xl border border-info/30 bg-info/5 p-4"
     >
       <button
         type="button"
         onClick={handleDismiss}
         aria-label="Dismiss tip"
-        className="absolute right-1 top-1 flex h-11 w-11 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:text-zinc-300"
+        className="absolute right-1 top-1 flex h-11 w-11 items-center justify-center rounded-lg text-fg-muted transition-colors hover:text-fg"
       >
         <X className="h-4 w-4" aria-hidden="true" />
       </button>
       <div className="flex items-start gap-3 pr-8">
-        <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-sky-400" aria-hidden="true" />
+        <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-info" aria-hidden="true" />
         <div className="min-w-0">
-          <p className="mb-1 text-xs font-medium text-sky-400">Did you know?</p>
-          <p className="text-sm leading-relaxed text-zinc-200">{tip.text}</p>
+          <p className="mb-1 text-xs font-medium text-info">Did you know?</p>
+          <p className="text-sm leading-relaxed text-fg">{tip.text}</p>
           {tip.cta_url && tip.cta_label && (
             <Link
               href={tip.cta_url}
-              className="mt-2 inline-block text-sm font-medium text-sky-400 underline-offset-4 hover:underline"
+              className="mt-2 inline-block text-sm font-medium text-info underline-offset-4 hover:underline"
             >
               {tip.cta_label} →
             </Link>

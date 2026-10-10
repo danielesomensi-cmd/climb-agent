@@ -13,9 +13,11 @@ interface WeekProgressBarProps {
   /** B278: total completed outdoor load for the week (kept coherent with the
    *  Week header + weekly report, which both include outdoor load). */
   outdoorLoad?: number;
+  /** A308 — false on /week, whose header already says the week and the phase. */
+  showHeading?: boolean;
 }
 
-export function WeekProgressBar({ weekPlan, freeSessions, freeSessionsLoaded = true, outdoorLoad = 0 }: WeekProgressBarProps) {
+export function WeekProgressBar({ weekPlan, freeSessions, freeSessionsLoaded = true, outdoorLoad = 0, showHeading = true }: WeekProgressBarProps) {
   const days = weekPlan.weeks?.[0]?.days ?? [];
   const allSessions = days.flatMap((d) => d.sessions ?? []).filter((s) => s.session_id);
   const totalSessions = allSessions.length;
@@ -65,12 +67,14 @@ export function WeekProgressBar({ weekPlan, freeSessions, freeSessionsLoaded = t
 
   return (
     <div className="space-y-1.5">
-      <div className="flex items-baseline justify-between text-sm text-fg-secondary">
-        <span>
-          {weekLabel && <>{weekLabel} &middot; </>}
-          {phaseLabel}
-        </span>
-      </div>
+      {showHeading && (
+        <div className="flex items-baseline justify-between text-sm text-fg-secondary">
+          <span>
+            {weekLabel && <>{weekLabel} &middot; </>}
+            {phaseLabel}
+          </span>
+        </div>
+      )}
       <div className="h-2 w-full rounded-full bg-surface-inset overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-500 ${

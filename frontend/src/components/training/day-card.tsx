@@ -2,12 +2,19 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { MapPin, Mountain, Pencil, Plus, RefreshCw, Check, Undo2, ClipboardList, X, ChevronDown, ChevronUp, Clock, Grip } from "lucide-react";
+import { MapPin, Mountain, Pencil, Plus, RefreshCw, Check, Undo2, ClipboardList, X, ChevronDown, ChevronUp, Clock, Grip, MoreHorizontal, Zap, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SessionCard } from "@/components/training/session-card";
+import { pickDailyCue } from "@/components/training/daily-cue-banner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { FEEDBACK_CHIP } from "@/components/training/feedback-colors";
 import { PitchLadderCard } from "@/components/outdoor/pitch-ladder-card";
 import type {
@@ -84,6 +91,13 @@ interface DayCardProps {
   showActions?: boolean;
   weekPlan?: WeekPlan | null;
   onSessionUpdated?: (updatedWeekPlan?: WeekPlan) => void;
+  /**
+   * A308 — skip the weekday/date header (/today: the TopBar already says it).
+   * The overflow menu then moves to the action row.
+   */
+  hideHeader?: boolean;
+  /** A308 — show the day's process cue inside its session card (/today). */
+  showDailyCue?: boolean;
 }
 
 // A286 — colori dalla mappa condivisa (feedback-colors.ts), non più una quarta copia.
@@ -182,8 +196,8 @@ function OtherActivityBlock({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-2 rounded-lg border border-dashed border-amber-500/40 p-3 text-sm">
-        <span className="text-amber-500">🏃</span>
+      <div className="flex items-center gap-2 rounded-lg border border-dashed border-warning/40 p-3 text-sm">
+        <Activity className="size-4 shrink-0 text-warning" aria-hidden="true" />
         <span className="font-medium">
           {activity.name ?? "Other activity"}
         </span>
@@ -196,7 +210,8 @@ function OtherActivityBlock({
           <Button
             size="icon"
             variant="ghost"
-            className="ml-auto size-6 text-muted-foreground hover:text-red-400"
+            aria-label="Remove activity"
+            className="-m-2.5 ml-auto size-11 text-muted-foreground hover:text-danger"
             onClick={() => onRemove(date, slot)}
           >
             <X className="size-3.5" />
@@ -409,6 +424,8 @@ export function DayCard({
   // bottone "View day"; la prop resta nell'interface perché /week la passa.
   weekPlan,
   onSessionUpdated,
+  hideHeader = false,
+  showDailyCue = false,
 }: DayCardProps) {
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [outdoorExpanded, setOutdoorExpanded] = useState(false);
@@ -419,6 +436,36 @@ export function DayCard({
   const statusCfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.planned;
   const hasExpandableOutdoor = day.outdoor_session_status === "done" && (outdoorRoutes?.length ?? 0) > 0;
   const routeLabel = day.outdoor_discipline === "boulder" ? "problems" : "routes";
+  const dailyCue = showDailyCue ? pickDailyCue(day.sessions, day.date) : null;
+
+  // A308 — one primary action ("Change plan") on the card; the other two day
+  // actions live in an overflow menu (was a row of three 32px buttons, ×7 on /week).
+  const hasOverflow = !!(onQuickAdd || onChangeGym);
+  const overflowMenu = hasOverflow ? (
+    // modal={false} + no focus return: each item opens a dialog, and a modal
+    // menu closing under it would steal its focus / leave the body inert.
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="size-11 shrink-0 text-muted-foreground" aria-label="More day actions">
+          <MoreHorizontal className="size-5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" onCloseAutoFocus={(e) => e.preventDefault()}>
+        {onQuickAdd && (
+          <DropdownMenuItem onSelect={() => onQuickAdd(day.date)}>
+            <Plus />
+            Add session
+          </DropdownMenuItem>
+        )}
+        {onChangeGym && (
+          <DropdownMenuItem onSelect={() => onChangeGym(day.date)}>
+            <MapPin />
+            Change location
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  ) : null;
 
   return (
     <Card
@@ -427,24 +474,29 @@ export function DayCard({
         today && "border-primary ring-1 ring-primary/30"
       )}
     >
-      <CardHeader className="pb-0">
-        <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-base">
-            {weekdayLabel}{" "}
-            <span className="text-sm font-normal text-muted-foreground">
-              {formatDateShort(day.date)}
-            </span>
-          </CardTitle>
-          <Badge variant={statusCfg.variant} className={cn("text-[10px]", statusCfg.className)}>
-            {statusCfg.label}
-          </Badge>
-        </div>
-      </CardHeader>
+      {!hideHeader && (
+        <CardHeader className="pb-0">
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="text-base">
+              {weekdayLabel}{" "}
+              <span className="text-sm font-normal text-muted-foreground">
+                {formatDateShort(day.date)}
+              </span>
+            </CardTitle>
+            <div className={cn("flex items-center gap-1", overflowMenu && "-my-2 -mr-2")}>
+              <Badge variant={statusCfg.variant} className={cn("text-[10px]", statusCfg.className)}>
+                {statusCfg.label}
+              </Badge>
+              {overflowMenu}
+            </div>
+          </div>
+        </CardHeader>
+      )}
 
       <CardContent className="space-y-2">
         {day.prev_other_activity_reduce && !hasOtherActivity(day) && (
-          <div className="flex items-center gap-2 rounded-lg border border-dashed border-yellow-500/40 p-3 text-xs text-muted-foreground">
-            <span className="text-yellow-500">⚡</span>
+          <div className="flex items-center gap-2 rounded-lg border border-dashed border-warning/40 p-3 text-xs text-muted-foreground">
+            <Zap className="size-3.5 shrink-0 text-warning" aria-hidden="true" />
             Other activity yesterday — consider going easy today
           </div>
         )}
@@ -467,7 +519,7 @@ export function DayCard({
               <div className="space-y-2">
                 <div
                   className={cn(
-                    "flex items-center gap-2 rounded-lg border border-dashed border-green-500/40 p-3 text-sm",
+                    "flex items-center gap-2 rounded-lg border border-dashed border-success/40 p-3 text-sm",
                     hasExpandableOutdoor && "cursor-pointer"
                   )}
                   onClick={hasExpandableOutdoor ? () => setOutdoorExpanded(v => !v) : undefined}
@@ -485,7 +537,7 @@ export function DayCard({
                     },
                   })}
                 >
-                  <Mountain className="size-4 text-green-500" />
+                  <Mountain className="size-4 text-success" />
                   <span className="font-medium">{day.outdoor_spot_name}</span>
                   <Badge variant="outline" className="text-[10px]">
                     {day.outdoor_discipline ?? "outdoor"}
@@ -575,10 +627,10 @@ export function DayCard({
                       {onRemoveOutdoor && confirmRemove && (
                         <div className="flex items-center gap-1">
                           <span className="text-xs text-muted-foreground">Remove from plan?</span>
-                          <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => setConfirmRemove(false)}>
+                          <Button size="sm" variant="ghost" className="min-h-[44px] px-3 text-xs" onClick={() => setConfirmRemove(false)}>
                             Cancel
                           </Button>
-                          <Button size="sm" variant="destructive" className="h-6 px-2 text-xs" onClick={() => { setConfirmRemove(false); onRemoveOutdoor(day.date); }}>
+                          <Button size="sm" variant="destructive" className="min-h-[44px] px-3 text-xs" onClick={() => { setConfirmRemove(false); onRemoveOutdoor(day.date); }}>
                             Remove
                           </Button>
                         </div>
@@ -588,7 +640,7 @@ export function DayCard({
                 </div>
                 {/* Expanded outdoor route details */}
                 {outdoorExpanded && hasExpandableOutdoor && (
-                  <div className="space-y-1.5 rounded-lg border border-green-500/20 bg-green-500/5 p-3">
+                  <div className="space-y-1.5 rounded-lg border border-success/20 bg-success/5 p-3">
                     {outdoorRoutes!.map((route, idx) => {
                       const hasNotes = route.attempts.some(a => a.notes);
                       return (
@@ -604,7 +656,7 @@ export function DayCard({
                                   title={isSend ? "Sent" : "Fell"}
                                   className={cn(
                                     "inline-block size-2 rounded-full",
-                                    isSend ? "bg-green-500" : "bg-red-500"
+                                    isSend ? "bg-success" : "bg-danger"
                                   )}
                                 />
                               );
@@ -616,7 +668,7 @@ export function DayCard({
                         </div>
                       );
                     })}
-                    <div className="text-[10px] text-muted-foreground pt-1.5 mt-1 border-t border-green-500/20">
+                    <div className="text-[10px] text-muted-foreground pt-1.5 mt-1 border-t border-success/20">
                       {outdoorRoutes!.length} {routeLabel}
                       {(() => {
                         const maxR = outdoorRoutes!.reduce((best, r) => {
@@ -654,11 +706,11 @@ export function DayCard({
 
             {/* Outdoor slot placeholder — planner-generated, no details yet */}
             {!day.outdoor_spot_name && day.outdoor_slot && (
-              <div className="flex items-center gap-2 rounded-lg border border-dashed p-3 text-sm">
-                <Mountain className="size-4 text-green-500" />
+              <div className="flex items-center gap-2 rounded-lg border border-dashed border-success/40 p-3 text-sm">
+                <Mountain className="size-4 text-success" />
                 <span className="font-medium">Outdoor day</span>
                 <span className="text-xs text-muted-foreground">
-                  Tap &quot;Add session&quot; to set your spot
+                  {onQuickAdd ? "Use ⋯ › Add session to set your spot" : "Set your spot with Add session"}
                 </span>
               </div>
             )}
@@ -697,6 +749,7 @@ export function DayCard({
                   onSessionUpdated={onSessionUpdated}
                   keyRole={keyRoleFor(keyStatus, day.date, session.slot)}
                   alerts={alertsForSession(guardWarnings, weekPlan, day.date, session)}
+                  focusCue={dailyCue?.session === session ? dailyCue.text : undefined}
                 />
               ))}
 
@@ -722,8 +775,8 @@ export function DayCard({
               const maxAttempted = fs.summary?.max_grade_attempted;
               const showTriedGrade = maxAttempted && maxAttempted !== maxSent;
               return (
-                <div key={fs.id} className="flex items-center gap-2 rounded-lg border border-dashed border-purple-500/40 p-3 text-sm">
-                  <Grip className="size-4 text-purple-400 shrink-0" />
+                <div key={fs.id} className="flex items-center gap-2 rounded-lg border border-dashed border-activity-free/40 p-3 text-sm">
+                  <Grip className="size-4 text-activity-free shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="font-medium truncate">Free: {surfaceName} {presetLabel}</span>
@@ -734,7 +787,8 @@ export function DayCard({
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="ml-auto size-6 text-muted-foreground hover:text-red-400 shrink-0"
+                          aria-label="Delete free session"
+                          className="-m-2.5 ml-auto size-11 text-muted-foreground hover:text-danger shrink-0"
                           onClick={() => {
                             if (confirm("Delete this free session?")) {
                               onDeleteFreeSession(fs.id);
@@ -797,45 +851,25 @@ export function DayCard({
               </p>
             )}
 
-        {/* Action buttons */}
-        {(onReplan || onQuickAdd || onChangeGym) && (
-          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+        {/* Action buttons — A308: one primary action; Add session and Change
+            location sit in the overflow menu (header, or here when the header
+            is hidden). */}
+        {(onReplan || (hideHeader && hasOverflow)) && (
+          <div className="flex items-center gap-1.5 pt-1">
             {/* A283 — il gate `day.sessions.length <= 1` faceva sparire "Change
                 plan" proprio sui giorni a due sessioni, che con l'allenamento
                 spezzato sono la norma e non l'eccezione. */}
             {onReplan && (
               <Button
-                size="sm"
-                variant="outline"
-                className="text-xs px-2 py-1"
+                variant="ghost"
+                className="h-11 flex-1 justify-start px-3 text-sm"
                 onClick={() => onReplan(day.date)}
               >
-                <RefreshCw className="size-3 mr-1" />
+                <RefreshCw className="size-4 mr-1.5" />
                 Change plan
               </Button>
             )}
-            {onQuickAdd && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="text-xs px-2 py-1"
-                onClick={() => onQuickAdd(day.date)}
-              >
-                <Plus className="size-3 mr-1" />
-                Add session
-              </Button>
-            )}
-            {onChangeGym && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="text-xs px-2 py-1"
-                onClick={() => onChangeGym(day.date)}
-              >
-                <MapPin className="size-3 mr-1" />
-                Change location
-              </Button>
-            )}
+            {hideHeader && <div className="ml-auto">{overflowMenu}</div>}
           </div>
         )}
       </CardContent>

@@ -10,12 +10,14 @@ import { WeekGrid } from "@/components/training/week-grid";
 import { PausedBanner } from "@/components/training/paused-banner";
 import { WeekSkeleton } from "@/components/training/week-skeleton";
 import { DayCard } from "@/components/training/day-card";
-import { SkippedTestsCard } from "@/components/training/skipped-tests-card";
-import { RetestStatusCard } from "@/components/training/retest-status-card";
+import { SkippedTestsCard, skippedTestsVisible } from "@/components/training/skipped-tests-card";
+import { RetestStatusCard, retestStatusVisible } from "@/components/training/retest-status-card";
+import { WeekProgressBar } from "@/components/training/week-progress-bar";
 import { KeySessionsCard } from "@/components/training/key-sessions-card";
 import { KeyConflictDialog } from "@/components/training/key-conflict-dialog";
 import { useKeyConflictGate } from "@/lib/hooks/use-key-conflict-gate";
-import { keyDays } from "@/lib/key-sessions";
+import { hasKeyIssues, keyDays } from "@/lib/key-sessions";
+import { computeCurrentWeek } from "@/lib/phase-progress";
 import { UnmetStimulusCard } from "@/components/training/unmet-stimulus-card";
 import { WeekAlertsCard } from "@/components/training/week-alerts-card";
 const QuickAddDialog = dynamic(() => import("@/components/training/quick-add-dialog").then((m) => m.QuickAddDialog), { ssr: false });
@@ -25,7 +27,7 @@ const GymPickerDialog = dynamic(() => import("@/components/training/gym-picker-d
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, ChevronDown, BarChart3, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, BarChart3, Check, NotebookText } from "lucide-react";
 const FeedbackDialog = dynamic(() => import("@/components/training/feedback-dialog").then((m) => m.FeedbackDialog), { ssr: false });
 import { useRouter } from "next/navigation";
 import { applyOverride, quickAddSession,
@@ -53,7 +55,6 @@ import {
 import type { WeekPlan, DayPlan, Macrocycle, OutdoorSpot, OutdoorSession, Phase, OutdoorDayType, OutdoorPitchLadder, KeyStatus, KeyProposal, SessionPain, LimitProblemDraft } from "@/lib/types";
 import { boulderGradeSystemOf } from "@/lib/gradeUtils";
 import { withFeedbackContract, type MeasureValues } from "@/lib/measured-feedback";
-import { normalizeOtherActivities } from "@/lib/other-activity";
 import {
   Drawer,
   DrawerContent,
@@ -172,6 +173,14 @@ export default function WeekPage() {
     });
   }, []);
 
+  // A308 — notes section open/closed per week (undefined = the default) and a
+  // tick that re-counts the notes after a dismiss.
+  const [notesOpen, setNotesOpen] = useState<Record<string, boolean>>({});
+  const [, setNotesTick] = useState(0);
+  // A308 — land on today's card the first time the current week loads. Once
+  // only, and never if the user has already scrolled.
+  const autoScrolledRef = useRef(false);
+
   // React Query handles fetching via useUserState + useWeekPlan(weekNum).
   // Changing weekNum swaps the cache key; RQ shows cached data instantly and refetches in background.
 
@@ -189,6 +198,7 @@ export default function WeekPage() {
     routesMap: outdoorRoutesMap,
     durationMap: outdoorDurationMap,
     loadMap: outdoorLoadMap,
+    totalLoad: weekOutdoorLoad,
   } = useOutdoorDoneDays(outdoorDoneDates, !!weekPlan);
 
   // A245 F-5 (F15): was a hand-rolled Promise.all over 7 days in an effect
@@ -212,6 +222,12 @@ export default function WeekPage() {
   }, [allFreeSessions]);
 
   const totalWeeks = macrocycle?.total_weeks ?? 0;
+  /**
+   * A308 — the athlete's real week in the cycle, computed as /plan does
+   * (pause-aware). The week picker used the *viewed* week as "current", so
+   * after browsing back to week 3 it looked like week 3 was now.
+   */
+  const currentMacroWeek = macrocycle ? computeCurrentWeek(macrocycle) : null;
 
   /** Build array mapping week number (1-based) to phase info */
   const weekPhaseMap: Array<{ weekNum: number; phase: Phase }> = (() => {
@@ -800,6 +816,26 @@ export default function WeekPage() {
 
   const today = todayISO();
   const days: DayPlan[] = weekPlan?.weeks.flatMap((w) => w.days) ?? [];
+  const isCurrentWeekView = weekNum === 0 || (currentMacroWeek != null && displayWeekNum === currentMacroWeek);
+  const todayInWeek = days.some((d) => d.date === today);
+  useEffect(() => {
+    if (autoScrolledRef.current || loading || !weekPlan) return;
+    autoScrolledRef.current = true;
+    if (!isCurrentWeekView || !todayInWeek) return;
+    if (typeof window !== "undefined" && window.scrollY > 8) return;
+    dayRefs.current[today]?.scrollIntoView({ block: "start" });
+  }, [loading, weekPlan, isCurrentWeekView, todayInWeek, today]);
+
+  // A308 — the secondary cards, gathered after the day list.
+  const weekKey = weekPlan?.weeks[0]?.days[0]?.date ?? String(weekNum);
+  const keyInNotes = !!(keyStatus?.requirements?.length && !keyStatus.is_past_week && !hasKeyIssues(keyStatus));
+  const notesCount =
+    (keyInNotes ? 1 : 0) +
+    (skippedTestsVisible(weekPlan?.skipped_tests, weekKey) ? 1 : 0) +
+    (retestStatusVisible(weekQuery.data?.retest_status) ? 1 : 0) +
+    ((weekPlan?.unmet_stimulus?.length ?? 0) > 0 ? 1 : 0);
+  const weekStarted = !!days[0] && days[0].date <= today;
+  const notesExpanded = notesOpen[weekKey] ?? !weekStarted;
   const discipline = (weekPlan?.profile_snapshot?.discipline as string) ?? "lead";
   const phaseLabel = phaseId
     ? getPhaseName(phaseId, discipline as "lead" | "boulder" | "all_round")
@@ -821,60 +857,59 @@ export default function WeekPage() {
       <main className="mx-auto max-w-2xl space-y-6 p-4">
         <PausedBanner since={macrocycle?.pause?.active_since} />
 
-        {/* Week navigation — A286: resta montata anche mentre la settimana carica */}
-        {(weekPlan || macrocycle) && (
-          <div className="flex items-center justify-between">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handlePrevWeek}
-              disabled={displayWeekNum <= 1}
-            >
-              <ChevronLeft className="size-4 mr-1" />
-              Previous
-            </Button>
-            <div className="flex items-center gap-2 flex-wrap justify-center">
+        {/* Week navigation — A286: resta montata anche mentre la settimana carica.
+            A308: 44px icon chevrons and a centre that is always two lines, so
+            the header no longer jumps between one and two rows. */}
+        {(weekPlan || macrocycle) && (() => {
+          const firstDay = weekPlan?.weeks[0]?.days[0]?.date;
+          const reportHref = !loading && !error && firstDay ? `/reports/weekly?week_start=${firstDay}` : null;
+          return (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-11"
+                onClick={handlePrevWeek}
+                disabled={displayWeekNum <= 1}
+                aria-label="Previous week"
+              >
+                <ChevronLeft className="size-5" />
+              </Button>
+              {/* Keeps the centre centred when the report button is on the right. */}
+              {reportHref && <span className="size-11 shrink-0" aria-hidden="true" />}
               <button
                 type="button"
                 onClick={() => totalWeeks > 0 && setWeekPickerOpen(true)}
-                className="flex items-center gap-1 text-sm font-medium hover:text-primary transition-colors rounded-md px-2 py-1 -mx-2 -my-1 active:bg-muted"
+                className="flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center rounded-md px-2 transition-colors hover:text-primary active:bg-muted"
               >
-                Week {displayWeekNum}{totalWeeks > 0 ? ` / ${totalWeeks}` : ""}
-                {totalWeeks > 0 && <ChevronDown className="size-3.5 opacity-60" />}
+                <span className="flex items-center gap-1 text-base font-semibold leading-tight">
+                  Week {displayWeekNum}{totalWeeks > 0 ? ` of ${totalWeeks}` : ""}
+                  {totalWeeks > 0 && <ChevronDown className="size-4 opacity-60" aria-hidden="true" />}
+                </span>
+                <span className="truncate text-xs leading-tight text-muted-foreground">
+                  {phaseLabel ?? "\u00a0"}
+                </span>
               </button>
-              {phaseLabel && (
-                <Badge variant="secondary">{phaseLabel}</Badge>
-              )}
-              {(weekPlan?.weekly_load_summary?.planned_load ?? weekPlan?.weekly_load_summary?.total_load) != null && (
-                <Badge variant="outline">
-                  Load: {weekPlan!.weekly_load_summary!.planned_load ?? weekPlan!.weekly_load_summary!.total_load}
-                  {" · Done: "}
-                  {freeSessionsLoaded
-                    ? days.reduce((sum, d) =>
-                        sum
-                        + d.sessions
-                            .filter((s) => s.status === "done")
-                            .reduce((acc, s) => acc + (s.session_load_score ?? s.estimated_load_score ?? 0), 0)
-                        + normalizeOtherActivities(d).reduce((a, oa) => a + (oa.load ?? 0), 0)
-                        + ((freeSessionsByDate[d.date] ?? []).reduce((a, fs) => a + ((fs.load_score as number) ?? 0), 0))
-                        + (outdoorLoadMap[d.date] ?? 0),
-                        0,
-                      )
-                    : "—"}
-                </Badge>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-11"
+                onClick={handleNextWeek}
+                disabled={totalWeeks > 0 && displayWeekNum >= totalWeeks}
+                aria-label="Next week"
+              >
+                <ChevronRight className="size-5" />
+              </Button>
+              {reportHref && (
+                <Button asChild variant="ghost" size="icon" className="size-11">
+                  <Link href={reportHref} aria-label="Weekly report">
+                    <BarChart3 className="size-5" />
+                  </Link>
+                </Button>
               )}
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleNextWeek}
-              disabled={totalWeeks > 0 && displayWeekNum >= totalWeeks}
-            >
-              Next
-              <ChevronRight className="size-4 ml-1" />
-            </Button>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Loading state — A286: skeleton al posto dello spinner (vedi WeekSkeleton) */}
         {loading && <WeekSkeleton />}
@@ -882,13 +917,15 @@ export default function WeekPage() {
         {/* Error state */}
         {(error || queryError) && !loading && (
           <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center">
-            <p className="text-sm text-destructive">{error ?? (queryError instanceof Error ? queryError.message : "Failed to load data")}</p>
-            <button
-              onClick={refetchAll}
-              className="mt-2 text-sm font-medium text-primary underline"
-            >
+            <p className="text-sm font-medium text-destructive">
+              {error ? "Something went wrong" : "Couldn\u2019t load this week"}
+            </p>
+            <p className="mt-1 text-xs text-fg-muted">
+              {error ?? (queryError instanceof Error ? queryError.message : "Failed to load data")}
+            </p>
+            <Button variant="outline" className="mt-3 h-11" onClick={refetchAll}>
               Retry
-            </button>
+            </Button>
           </div>
         )}
 
@@ -902,50 +939,28 @@ export default function WeekPage() {
           />
         )}
 
+        {/* A308 — the week's load, moved out of the header (was "Load: X · Done: Y"). */}
+        {!loading && !error && weekPlan && (
+          <WeekProgressBar
+            weekPlan={weekPlan}
+            freeSessions={allFreeSessions as Array<Record<string, unknown>>}
+            freeSessionsLoaded={freeSessionsLoaded}
+            outdoorLoad={weekOutdoorLoad}
+            showHeading={false}
+          />
+        )}
+
+        {/* A294 — key sessions of the week, here only when something is owed
+            (A308: on track, the full card sits in the week notes below). */}
+        {!loading && !error && (
+          <KeySessionsCard status={keyStatus} compact onApplyProposal={handleApplyKeyProposal} />
+        )}
+
         {/* A300 / A301 — alerts of the week: recovery guards, lunch-rotation
             rules, complementary slots left free. Heads-up only. */}
         {!loading && !error && weekPlan && (
           <WeekAlertsCard guardWarnings={guardWarnings} weekPlan={weekPlan} />
         )}
-
-        {/* A294 — key sessions of the week: what is covered, what is owed. */}
-        {!loading && !error && (
-          <KeySessionsCard status={keyStatus} onApplyProposal={handleApplyKeyProposal} />
-        )}
-
-        {/* B297 (D211-F9): tests the planner couldn't fit this week */}
-        {!loading && !error && weekPlan?.skipped_tests?.length ? (
-          <SkippedTestsCard
-            skipped={weekPlan.skipped_tests}
-            weekKey={weekPlan.weeks[0]?.days[0]?.date ?? String(weekNum)}
-          />
-        ) : null}
-
-        {/* A289 — massimali testati, confidenza, trend e prossimo test (dal vivo). */}
-        {!loading && !error && (
-          <RetestStatusCard status={weekQuery.data?.retest_status} />
-        )}
-
-        {/* B361 — accanto ai test non collocati, gli stimoli non collocati:
-            il planner li segnalava solo nei log di Railway. */}
-        {!loading && !error && (
-          <UnmetStimulusCard items={weekPlan?.unmet_stimulus} />
-        )}
-
-        {/* Weekly report link */}
-        {!loading && !error && weekPlan && (() => {
-          const firstDay = weekPlan.weeks[0]?.days[0]?.date;
-          return firstDay ? (
-            <div className="flex justify-center">
-              <Link href={`/reports/weekly?week_start=${firstDay}`}>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <BarChart3 className="size-4" />
-                  Weekly Report
-                </Button>
-              </Link>
-            </div>
-          ) : null;
-        })()}
 
         {/* Detailed day list */}
         {!loading && !error && days.length > 0 && (
@@ -956,6 +971,7 @@ export default function WeekPage() {
             {days.map((day) => (
               <div
                 key={day.date}
+                className="scroll-mt-16"
                 ref={(el) => {
                   dayRefs.current[day.date] = el;
                 }}
@@ -1011,6 +1027,54 @@ export default function WeekPage() {
           </div>
         )}
 
+        {/* A308 — week notes: retest status, unplaced stimuli and tests, and the
+            key sessions when on track. Collapsed once the week has started. */}
+        {!loading && !error && weekPlan && notesCount > 0 && (
+          <section className="space-y-3" aria-label="Week notes">
+            <button
+              type="button"
+              aria-expanded={notesExpanded}
+              onClick={() => setNotesOpen((o) => ({ ...o, [weekKey]: !notesExpanded }))}
+              className="flex min-h-11 w-full items-center gap-2 text-left"
+            >
+              <NotebookText className="size-4 text-muted-foreground" aria-hidden="true" />
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                Week notes
+              </h2>
+              <Badge variant="secondary" className="text-[11px]">
+                {notesCount === 1 ? "1 note" : `${notesCount} notes`}
+              </Badge>
+              <ChevronDown
+                className={`ml-auto size-4 text-muted-foreground transition-transform ${notesExpanded ? "rotate-180" : ""}`}
+                aria-hidden="true"
+              />
+            </button>
+            {notesExpanded && (
+              <div className="space-y-3">
+                {keyInNotes && (
+                  <KeySessionsCard status={keyStatus} onApplyProposal={handleApplyKeyProposal} />
+                )}
+
+                {/* B297 (D211-F9): tests the planner couldn't fit this week */}
+                {weekPlan.skipped_tests?.length ? (
+                  <SkippedTestsCard
+                    skipped={weekPlan.skipped_tests}
+                    weekKey={weekKey}
+                    onDismiss={() => setNotesTick((t) => t + 1)}
+                  />
+                ) : null}
+
+                {/* A289 — massimali testati, confidenza, trend e prossimo test (dal vivo). */}
+                <RetestStatusCard status={weekQuery.data?.retest_status} />
+
+                {/* B361 — accanto ai test non collocati, gli stimoli non collocati:
+                    il planner li segnalava solo nei log di Railway. */}
+                <UnmetStimulusCard items={weekPlan.unmet_stimulus} />
+              </div>
+            )}
+          </section>
+        )}
+
         {/* No plan */}
         {!loading && !error && !weekPlan && (
           <div className="rounded-lg border border-dashed p-8 text-center">
@@ -1023,9 +1087,12 @@ export default function WeekPage() {
                 </p>
               </>
             ) : (
-              <p className="text-muted-foreground">
-                No weekly plan available.
-              </p>
+              <>
+                <p className="font-medium">No plan for this week yet</p>
+                <Button asChild variant="outline" className="mt-3 h-11">
+                  <Link href="/plan">Go to your plan</Link>
+                </Button>
+              </>
             )}
           </div>
         )}
@@ -1144,32 +1211,39 @@ export default function WeekPage() {
           <div className="px-4 pb-6 max-h-[60vh] overflow-y-auto">
             <div className="space-y-1">
               {weekPhaseMap.map(({ weekNum: wn, phase }) => {
-                const isCurrent = wn === displayWeekNum;
-                const isPast = wn < displayWeekNum;
+                // A308 — "current" and "past" against the real week of the cycle
+                // (as /plan computes it); the viewed week gets its own highlight.
+                const isCurrent = currentMacroWeek != null && wn === currentMacroWeek;
+                const isPast = currentMacroWeek != null && wn < currentMacroWeek;
+                const isViewing = wn === displayWeekNum;
                 const label = getPhaseName(phase.phase_id, discipline as "lead" | "boulder" | "all_round");
                 return (
                   <button
                     key={wn}
                     type="button"
                     onClick={() => handleGoToWeek(wn)}
-                    className={`w-full flex items-center justify-between rounded-lg px-3 py-2.5 text-sm transition-colors ${
-                      isCurrent
+                    aria-current={isViewing ? "page" : undefined}
+                    className={`w-full flex min-h-11 items-center justify-between rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                      isViewing
                         ? "bg-primary/15 text-primary font-medium"
                         : "hover:bg-muted active:bg-muted"
                     }`}
                   >
                     <span className="flex items-center gap-2">
-                      <span className={isPast && !isCurrent ? "text-muted-foreground" : ""}>
+                      <span className={isPast && !isViewing ? "text-muted-foreground" : ""}>
                         Week {wn}
                       </span>
                       <span className="text-muted-foreground">&mdash;</span>
-                      <span className={isPast && !isCurrent ? "text-muted-foreground" : ""}>
+                      <span className={isPast && !isViewing ? "text-muted-foreground" : ""}>
                         {label}
                       </span>
                     </span>
                     <span className="flex items-center gap-1.5">
-                      {isPast && !isCurrent && (
-                        <Check className="size-3.5 text-muted-foreground" />
+                      {isViewing && !isCurrent && (
+                        <span className="text-[11px] text-primary">viewing</span>
+                      )}
+                      {isPast && (
+                        <Check className="size-3.5 text-muted-foreground" aria-label="Past week" />
                       )}
                       {isCurrent && (
                         <Badge variant="secondary" className="text-[10px] px-1.5 py-0">

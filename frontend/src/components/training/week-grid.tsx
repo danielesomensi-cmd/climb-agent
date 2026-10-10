@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Star } from "lucide-react";
+import { Check, Moon, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import type { WeekPlan, DayPlan } from "@/lib/types";
@@ -32,17 +32,17 @@ function formatDateCompact(dateStr: string): string {
   return `${parts[2]}/${parts[1]}`;
 }
 
-/** Status indicator color (A286 — token, non più grigi da light-mode) */
-function getStatusColor(status: DayPlan["status"]): string {
-  switch (status) {
-    case "done":
-      return "bg-success";
-    case "skipped":
-      return "bg-danger";
-    default:
-      return "bg-muted-foreground/50";
-  }
-}
+/**
+ * A308 — one bar per session, in the colour of the week's phase (same
+ * --phase-* tokens as the macrocycle timeline).
+ */
+const PHASE_BAR: Record<string, string> = {
+  base: "bg-phase-aerobic",
+  strength_power: "bg-phase-anaerobic-alactic",
+  power_endurance: "bg-phase-anaerobic-lactic",
+  performance: "bg-phase-specific",
+  deload: "bg-phase-recovery",
+};
 
 export function WeekGrid({ weekPlan, currentDate, onDayClick, keyDays }: WeekGridProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -50,6 +50,8 @@ export function WeekGrid({ weekPlan, currentDate, onDayClick, keyDays }: WeekGri
   // Flatten: take the first week (or all if needed)
   const days: DayPlan[] =
     weekPlan.weeks.length > 0 ? weekPlan.weeks[0].days : [];
+  const phaseId = (weekPlan.profile_snapshot?.phase_id as string | undefined) ?? "";
+  const barColor = PHASE_BAR[phaseId] ?? "bg-muted-foreground/50";
 
   // A286 — 7 colonne vere anche a 375px: prima a max-sm diventava 4+3 e la
   // settimana smetteva di leggersi come una settimana.
@@ -67,7 +69,7 @@ export function WeekGrid({ weekPlan, currentDate, onDayClick, keyDays }: WeekGri
           <Card
             key={day.date}
             className={cn(
-              "gap-0.5 py-2 px-0.5 sm:px-2 cursor-pointer transition-colors text-center select-none",
+              "relative min-h-16 gap-0.5 py-2 px-0.5 sm:px-2 cursor-pointer transition-colors text-center select-none",
               // Il giorno corrente si distingue per anello + bordo, non solo colore.
               isToday && "ring-2 ring-primary border-primary",
               isSelected && "bg-accent",
@@ -95,27 +97,49 @@ export function WeekGrid({ weekPlan, currentDate, onDayClick, keyDays }: WeekGri
               <span className="max-sm:hidden">{formatDateCompact(day.date)}</span>
             </p>
 
-            {/* Status indicator (colored dot + session count) */}
+            {/* A308 — what the day holds: a bar per session (up to 2), dimmed
+                when skipped, ticked when done; a moon on a rest day. Was a
+                grey/green/red dot + count, the same grey for planned and rest. */}
             <div
-              className="flex items-center justify-center gap-1 mt-0.5"
+              className="mt-1 flex flex-col items-center gap-1 px-1"
               title={`${sessionCount} session${sessionCount !== 1 ? "s" : ""} · ${status}`}
             >
-              <span
-                className={cn(
-                  "inline-block size-2 rounded-full",
-                  getStatusColor(status)
-                )}
-              />
-              {sessionCount > 0 && (
-                <span className="text-[10px] text-muted-foreground">
-                  {sessionCount}
-                  <span className="sr-only"> sessions</span>
-                </span>
+              {sessionCount === 0 ? (
+                <>
+                  <Moon className="size-3 text-muted-foreground/60" aria-hidden="true" />
+                  <span className="sr-only">Rest</span>
+                </>
+              ) : (
+                <>
+                  {day.sessions.slice(0, 2).map((s, i) => (
+                    <span
+                      key={`${s.session_id}-${i}`}
+                      className={cn(
+                        "relative flex h-1.5 w-full max-w-8 items-center justify-center rounded-full",
+                        barColor,
+                        s.status === "skipped" && "opacity-40",
+                      )}
+                    >
+                      {s.status === "done" && (
+                        <Check className="absolute size-3 rounded-full bg-success p-px text-surface-base" strokeWidth={3} aria-hidden="true" />
+                      )}
+                    </span>
+                  ))}
+                  {sessionCount > 2 && (
+                    <span className="text-[10px] leading-none text-muted-foreground" aria-hidden="true">
+                      +{sessionCount - 2}
+                    </span>
+                  )}
+                  <span className="sr-only">
+                    {sessionCount} session{sessionCount !== 1 ? "s" : ""}, {status}
+                  </span>
+                </>
               )}
             </div>
-            {/* A294 — key session marker (red when the key was lost) */}
+            {/* A294 — key session marker (red when the key was lost); A308: in
+                the corner, so every cell keeps the same height. */}
             {keyDays?.[day.date] && (
-              <div className="flex justify-center" title={keyDays[day.date] === "lost" ? "Key session lost" : "Key session"}>
+              <div className="absolute right-0.5 top-0.5" title={keyDays[day.date] === "lost" ? "Key session lost" : "Key session"}>
                 <Star
                   className={cn(
                     "size-3",

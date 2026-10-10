@@ -39,21 +39,41 @@ function axisLabel(axis: string | null): string {
   return AXIS_LABEL[axis] ?? axis;
 }
 
+function storageKeyOf(weekKey: string): string {
+  return `skipped-tests-dismissed:${weekKey}`;
+}
+
+function placementFailures(skipped: SkippedTest[] | null | undefined): SkippedTest[] {
+  return (skipped ?? []).filter((s) => s.required && PLACEMENT_FAILURES.has(s.reason));
+}
+
+function readDismissed(weekKey: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(storageKeyOf(weekKey)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+/** A308 — whether the card renders anything (the /week notes count). */
+export function skippedTestsVisible(skipped: SkippedTest[] | null | undefined, weekKey: string): boolean {
+  return placementFailures(skipped).length > 0 && !readDismissed(weekKey);
+}
+
 export function SkippedTestsCard({
   skipped,
   weekKey,
+  onDismiss,
 }: {
   skipped: SkippedTest[];
   weekKey: string;
+  /** A308 — lets the page update its notes count. */
+  onDismiss?: () => void;
 }) {
-  const placement = skipped.filter(
-    (s) => s.required && PLACEMENT_FAILURES.has(s.reason),
-  );
-  const storageKey = `skipped-tests-dismissed:${weekKey}`;
-  const [dismissed, setDismissed] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.localStorage.getItem(storageKey) === "1";
-  });
+  const placement = placementFailures(skipped);
+  const storageKey = storageKeyOf(weekKey);
+  const [dismissed, setDismissed] = useState(() => readDismissed(weekKey));
 
   if (dismissed || placement.length === 0) return null;
 
@@ -64,15 +84,16 @@ export function SkippedTestsCard({
       // best-effort — a private-mode failure just means it reappears next load
     }
     setDismissed(true);
+    onDismiss?.();
   }
 
   const axes = Array.from(new Set(placement.map((s) => axisLabel(s.axis))));
 
   return (
-    <Card className="border-amber-500/30 bg-amber-500/5">
+    <Card className="border-warning/30 bg-warning/10">
       <CardContent className="flex items-start gap-3 px-4 py-4">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500/10">
-          <CalendarX2 className="h-5 w-5 text-amber-600 dark:text-amber-500" aria-hidden="true" />
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-warning/10">
+          <CalendarX2 className="h-5 w-5 text-warning" aria-hidden="true" />
         </div>
         <div className="min-w-0 flex-1 space-y-1">
           <p className="text-sm font-semibold">Couldn&apos;t schedule a test this week</p>
@@ -85,7 +106,7 @@ export function SkippedTestsCard({
         <Button
           variant="ghost"
           size="icon"
-          className="-mr-1 -mt-1 size-8 shrink-0 text-muted-foreground"
+          className="-mr-2 -mt-2 size-11 shrink-0 text-muted-foreground"
           onClick={dismiss}
           aria-label="Dismiss"
         >

@@ -24,6 +24,8 @@ import type { MeasureValues } from "@/lib/measured-feedback";
 import type { BoulderGradeSystem } from "@/lib/gradeUtils";
 import type { LimitProblemDraft, SessionPain } from "@/lib/types";
 import { MeasureInput, PainPicker } from "@/components/training/measured-feedback-inputs";
+import { FEEDBACK_CHIP } from "@/components/training/feedback-colors";
+import { cn } from "@/lib/utils";
 import { LimitProblemLogger } from "@/components/training/limit-problem-logger";
 
 interface FeedbackDialogProps {
@@ -173,25 +175,31 @@ export function FeedbackDialog({
                 onValueChange={(v) =>
                   handleValueChange(exercise.exercise_id, v)
                 }
-                className="grid grid-cols-5 gap-1"
+                className="grid grid-cols-5 gap-1.5"
               >
-                {DIFFICULTY_LEVELS.map((level) => (
-                  <div
-                    key={level.value}
-                    className="flex flex-col items-center gap-1"
-                  >
-                    <RadioGroupItem
-                      value={level.value}
-                      id={`${exercise.exercise_id}-${level.value}`}
-                    />
+                {/* A308 — the whole tile is the target (was a 16px circle over
+                    a small label): mis-taps here feed the closed loop. */}
+                {DIFFICULTY_LEVELS.map((level) => {
+                  const checked = feedback[exercise.exercise_id] === level.value;
+                  return (
                     <Label
-                      htmlFor={`${exercise.exercise_id}-${level.value}`}
-                      className="text-xs text-center leading-tight cursor-pointer text-muted-foreground"
+                      key={level.value}
+                      className={cn(
+                        "flex min-h-[44px] cursor-pointer items-center justify-center rounded-md border px-1 text-center text-xs font-medium leading-tight transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
+                        checked
+                          ? FEEDBACK_CHIP[level.value]
+                          : "border-border-default text-muted-foreground",
+                      )}
                     >
+                      <RadioGroupItem
+                        value={level.value}
+                        id={`${exercise.exercise_id}-${level.value}`}
+                        className="sr-only"
+                      />
                       {level.label}
                     </Label>
-                  </div>
-                ))}
+                  );
+                })}
               </RadioGroup>
 
               {/* A295: optional measure (last-set reps / hang margin) */}
