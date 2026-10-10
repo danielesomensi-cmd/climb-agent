@@ -7,6 +7,7 @@ import {
   Drawer,
   DrawerContent,
   DrawerClose,
+  DrawerTitle,
 } from "@/components/ui/drawer";
 
 const tabs = [
@@ -52,7 +53,7 @@ const moreItems = [
   },
   {
     href: "/whats-next",
-    label: "Next steps & Support",
+    label: "Support",
     icon: "M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09zM12 15l-3-3a22 22 0 012-3.95A12.88 12.88 0 0122 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 01-4 2zM9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5",
   },
   {
@@ -91,7 +92,7 @@ export function BottomNav() {
     <>
       <nav
         aria-label="Main"
-        className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-[env(safe-area-inset-bottom)]"
+        className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85 pb-[env(safe-area-inset-bottom)]"
       >
         <div className="mx-auto flex max-w-3xl items-center justify-around">
           {tabs.map((tab) => {
@@ -167,7 +168,10 @@ export function BottomNav() {
 
       {/* More drawer */}
       <Drawer open={moreOpen} onOpenChange={setMoreOpen}>
-        <DrawerContent>
+        {/* A310 — senza un titolo il dialog era senza nome per VoiceOver (e
+            Radix lo segnala in console); nessuna descrizione da collegare. */}
+        <DrawerContent aria-describedby={undefined}>
+          <DrawerTitle className="sr-only">More</DrawerTitle>
           {/* A286 — l'ultima riga di icone finiva sotto l'home indicator su
               iPhone: pb-6 fisso non tiene conto della safe area. */}
           <div className="p-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
@@ -178,7 +182,7 @@ export function BottomNav() {
                   <DrawerClose key={item.href} asChild>
                     <Link
                       href={item.href}
-                      className={`flex flex-col items-center gap-2 rounded-xl p-3 transition-colors ${
+                      className={`flex min-h-[72px] flex-col items-center justify-center gap-2 rounded-xl p-3 transition-colors ${
                         active
                           ? "bg-primary/10 text-primary"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"

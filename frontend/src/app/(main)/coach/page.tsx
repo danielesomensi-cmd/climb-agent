@@ -9,7 +9,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
+import { AlertTriangle } from "lucide-react";
 import { TopBar } from "@/components/layout/top-bar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   ApiError,
   applyEvents,
@@ -29,20 +40,25 @@ import { MarkdownLite } from "@/components/shared/markdown-lite";
 import { buildGuidedStateFromExercises, saveGuidedState } from "@/lib/guided-session-utils";
 import { shouldRouteToAdhoc } from "@/lib/adhoc-gate";
 import { findDay, firstFreeSlot } from "@/lib/day-slots";
-import { blockingConflicts } from "@/lib/key-sessions";
+import { blockingConflicts, localToday } from "@/lib/key-sessions";
 import { boulderGradeSystemOf } from "@/lib/gradeUtils";
 import { previewLimitTarget } from "@/lib/adhoc-preview";
+import {
+  adhocCardDate,
+  dayDividers,
+  dayLabel,
+  dropFailedUserTurn,
+  isRetryableStatus,
+  isStaleAdhocCard,
+  requestBefore,
+} from "@/lib/coach-chat";
 import { useUserState } from "@/lib/hooks/queries/use-user-state";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 
 const PAGE_SIZE = 50;
 
-/** Local (not UTC) YYYY-MM-DD — matches how the app dates "today" elsewhere. */
-function localToday(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
+const DISCLAIMER = "AI coach — suggestions only, it never changes your plan. Not medical advice.";
 
 // B282/B306 — gate logic lives in lib/adhoc-gate.ts (unit-tested); B306 adds
 // short-follow-up routing ("Si", "Crea!") when the recent turns are
@@ -66,59 +82,91 @@ function exerciseLine(ex: AdhocSessionPreview["exercises"][number]): string {
 
 function AdhocSessionCard({
   session,
+  createdAt,
   onAddAndRun,
+  onAskAgain,
   busy,
 }: {
   session: AdhocSessionPreview;
+  createdAt?: string;
   onAddAndRun: (s: AdhocSessionPreview) => void;
+  /** Stale cards only: re-sends the original request (a NEW composition for today). */
+  onAskAgain: (() => void) | null;
   busy: boolean;
 }) {
   const authReady = useAuth().isLoaded;
   const gradeSystem = boulderGradeSystemOf(useUserState(authReady).data);
   const today = localToday();
+  // A310 — a card composed on another day keeps that day's loads and key
+  // check: adding it to today would play the wrong numbers, so it has no add CTA.
+  const stale = isStaleAdhocCard(session.resolved_for_date, createdAt, today);
+  const builtFor = adhocCardDate(session.resolved_for_date, createdAt);
   return (
-    <div className="max-w-[92%] space-y-3 rounded-xl rounded-bl-md border border-primary/30 bg-card px-4 py-3 text-sm shadow-sm">
+    <div
+      className={`max-w-[92%] space-y-3 rounded-xl rounded-bl-md border bg-card px-4 py-3 text-sm shadow-sm ${
+        stale ? "border-border opacity-80" : "border-primary/30"
+      }`}
+    >
       <div>
         <p className="font-semibold">{session.name}</p>
         <p className="mt-0.5 text-xs text-muted-foreground">
           ~{session.estimated_duration_minutes} min · load {session.estimated_load_score}
+          {stale && builtFor && ` · Composed for ${dayLabel(builtFor, today).replace(/^Yesterday$/, "yesterday")}`}
         </p>
       </div>
+      {session.key_warnings && session.key_warnings.length > 0 && (
+        <div className="flex gap-2 rounded-lg border border-warning/40 bg-warning-muted px-3 py-2">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
+          <ul className="space-y-1">
+            {session.key_warnings.map((w, i) => (
+              <li key={`${w.code}-${i}`} className="text-sm text-warning">{w.message}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       {session.effort_band && (
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           <span className="font-medium text-foreground/80">This phase:</span> {session.effort_band}
         </p>
       )}
-      {session.key_warnings && session.key_warnings.length > 0 && (
-        <ul className="space-y-1 rounded-md border border-warning/30 bg-warning/10 px-2 py-1.5">
-          {session.key_warnings.map((w, i) => (
-            <li key={`${w.code}-${i}`} className="text-[11px] text-warning">{w.message}</li>
-          ))}
-        </ul>
-      )}
-      <ul className="space-y-1.5">
+      <ul className="space-y-2">
         {session.exercises.map((ex, i) => (
-          <li key={`${ex.exercise_id}-${i}`} className="flex items-baseline justify-between gap-3">
-            <span className="min-w-0 truncate">{ex.name}</span>
-            <span className="shrink-0 tabular-nums text-xs text-muted-foreground">
+          <li key={`${ex.exercise_id}-${i}`}>
+            <p className="text-sm font-medium">{ex.name}</p>
+            <p className="text-xs tabular-nums text-fg-secondary">
               {[exerciseLine(ex), previewLimitTarget(ex, session.resolved_for_date, today, gradeSystem)]
                 .filter(Boolean)
                 .join(" · ")}
-            </span>
+            </p>
           </li>
         ))}
       </ul>
-      <button
-        type="button"
-        onClick={() => onAddAndRun(session)}
-        disabled={busy}
-        className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-40"
-      >
-        {busy ? "Adding…" : "Add to today & run"}
-      </button>
-      <p className="text-[10px] leading-tight text-muted-foreground">
-        Adds an off-plan session to today — never changes your planned training.
-      </p>
+      {stale ? (
+        onAskAgain && (
+          <button
+            type="button"
+            onClick={onAskAgain}
+            disabled={busy}
+            className="min-h-[44px] w-full rounded-xl border border-border px-4 py-3 text-sm font-medium text-foreground hover:border-primary disabled:opacity-40"
+          >
+            Ask again for today
+          </button>
+        )
+      ) : (
+        <>
+          <button
+            type="button"
+            onClick={() => onAddAndRun(session)}
+            disabled={busy}
+            className="min-h-[44px] w-full rounded-xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground disabled:opacity-40"
+          >
+            {busy ? "Adding…" : "Add to today & run"}
+          </button>
+          <p className="text-xs leading-snug text-muted-foreground">
+            Adds an off-plan session to today — never changes your planned training. Not medical advice.
+          </p>
+        </>
+      )}
     </div>
   );
 }
@@ -137,10 +185,12 @@ function friendlyError(e: unknown): string {
 function MessageBubble({
   msg,
   onAddAndRun,
+  onAskAgain,
   busy,
 }: {
   msg: CoachMessage;
   onAddAndRun: (s: AdhocSessionPreview) => void;
+  onAskAgain: (() => void) | null;
   busy: boolean;
 }) {
   const isUser = msg.role === "user";
@@ -148,7 +198,13 @@ function MessageBubble({
   if (msg.adhocSession) {
     return (
       <div className="flex justify-start">
-        <AdhocSessionCard session={msg.adhocSession} onAddAndRun={onAddAndRun} busy={busy} />
+        <AdhocSessionCard
+          session={msg.adhocSession}
+          createdAt={msg.created_at}
+          onAddAndRun={onAddAndRun}
+          onAskAgain={onAskAgain}
+          busy={busy}
+        />
       </div>
     );
   }
@@ -169,25 +225,47 @@ function MessageBubble({
   );
 }
 
-function ThinkingIndicator() {
+function DayDivider({ label }: { label: string }) {
   return (
-    <div className="flex justify-start">
+    <div className="flex items-center gap-3 pt-2" role="separator" aria-label={label}>
+      <span className="h-px flex-1 bg-border-subtle" />
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="h-px flex-1 bg-border-subtle" />
+    </div>
+  );
+}
+
+function ThinkingIndicator({ label }: { label: string }) {
+  return (
+    <div className="flex justify-start" role="status">
       <div className="flex items-center gap-2 rounded-xl rounded-bl-md border border-border bg-card px-4 py-3">
-        <span className="flex gap-1">
-          {[0, 150, 300].map((delay) => (
-            <span
-              key={delay}
-              className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground"
-              style={{ animationDelay: `${delay}ms` }}
-            />
-          ))}
-        </span>
-        <span className="text-xs text-muted-foreground">
-          Coach is thinking…
-        </span>
+        <span className="h-2 w-2 animate-pulse rounded-full bg-primary" aria-hidden="true" />
+        <span className="text-xs text-muted-foreground">{label}</span>
       </div>
     </div>
   );
+}
+
+function HistorySkeleton() {
+  return (
+    <div className="space-y-3 pt-4" aria-label="Loading conversation" role="status">
+      <div className="flex justify-end">
+        <div className="h-10 w-2/3 animate-pulse rounded-xl bg-muted" />
+      </div>
+      <div className="flex justify-start">
+        <div className="h-16 w-2/3 animate-pulse rounded-xl bg-muted" />
+      </div>
+      <div className="flex justify-end">
+        <div className="h-10 w-2/3 animate-pulse rounded-xl bg-muted" />
+      </div>
+    </div>
+  );
+}
+
+interface ChatError {
+  message: string;
+  /** Set only for a failed send that can succeed on a second try. */
+  retryText?: string;
 }
 
 export default function CoachPage() {
@@ -198,11 +276,14 @@ export default function CoachPage() {
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [loadingEarlier, setLoadingEarlier] = useState(false);
   const [sending, setSending] = useState(false);
+  const [thinkingAdhoc, setThinkingAdhoc] = useState(false);
   const [input, setInput] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ChatError | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const coordsRef = useRef<{ lat: number; lon: number } | null>(null);
 
+  const pageRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -212,7 +293,7 @@ export default function CoachPage() {
         setMessages(data.messages.map(hydrateAdhocCard));
         setHasMore(data.has_more);
       })
-      .catch((e) => setError(friendlyError(e)))
+      .catch((e) => setError({ message: friendlyError(e) }))
       .finally(() => setLoadingHistory(false));
   }, []);
 
@@ -239,10 +320,23 @@ export default function CoachPage() {
     );
   }, []);
 
+  // A310 — the sticky composer's real height (chips appear and go, the
+  // textarea grows) as --composer-h, so the auto-scroll stops above it.
+  useEffect(() => {
+    const composer = composerRef.current;
+    const page = pageRef.current;
+    if (!composer || !page || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => {
+      page.style.setProperty("--composer-h", `${composer.offsetHeight}px`);
+    });
+    ro.observe(composer);
+    return () => ro.disconnect();
+  }, []);
+
   // Keep the view pinned to the latest message.
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
-  }, [messages, sending]);
+  }, [messages, sending, error]);
 
   const loadEarlier = useCallback(async () => {
     const oldest = messages[0]?.created_at;
@@ -253,7 +347,7 @@ export default function CoachPage() {
       setMessages((prev) => [...data.messages.map(hydrateAdhocCard), ...prev]);
       setHasMore(data.has_more);
     } catch (e) {
-      setError(friendlyError(e));
+      setError({ message: friendlyError(e) });
     } finally {
       setLoadingEarlier(false);
     }
@@ -266,16 +360,18 @@ export default function CoachPage() {
       setError(null);
       setInput("");
       setMessages((prev) => [...prev, { role: "user", content: text }]);
+      // A243/B306: route plausibly-adhoc turns (and short follow-ups in an
+      // adhoc-flavored conversation) to the deterministic composer. The
+      // backend is the authority — {adhoc:false} means fall back to chat.
+      const gateContext = messages.map((m) => ({
+        content: m.content,
+        hasAdhocCard: Boolean(m.adhocSession),
+      }));
+      const adhocTurn = shouldRouteToAdhoc(text, gateContext);
+      setThinkingAdhoc(adhocTurn);
       setSending(true);
       try {
-        // A243/B306: route plausibly-adhoc turns (and short follow-ups in an
-        // adhoc-flavored conversation) to the deterministic composer. The
-        // backend is the authority — {adhoc:false} means fall back to chat.
-        const gateContext = messages.map((m) => ({
-          content: m.content,
-          hasAdhocCard: Boolean(m.adhocSession),
-        }));
-        if (shouldRouteToAdhoc(text, gateContext)) {
+        if (adhocTurn) {
           const res = await coachAdhocSession(text);
           if (res.adhoc && res.session) {
             setMessages((prev) => [
@@ -291,7 +387,16 @@ export default function CoachPage() {
           { role: "assistant", content: reply },
         ]);
       } catch (e) {
-        setError(friendlyError(e));
+        // A310 — the question goes back into the composer (nothing to retype
+        // on a phone) and its unanswered bubble goes away, so a Retry never
+        // shows it twice.
+        setMessages((prev) => dropFailedUserTurn(prev, text));
+        setInput(text);
+        const status = e instanceof ApiError ? e.status : undefined;
+        setError({
+          message: friendlyError(e),
+          retryText: isRetryableStatus(status) ? text : undefined,
+        });
       } finally {
         setSending(false);
         inputRef.current?.focus();
@@ -301,6 +406,25 @@ export default function CoachPage() {
   );
 
   const send = useCallback(() => sendText(input), [input, sendText]);
+
+  // A310 — the key-session conflict confirm is an in-app AlertDialog (was
+  // window.confirm); handleAddAndRun awaits the user's answer.
+  const [conflictPrompt, setConflictPrompt] = useState<{
+    messages: string[];
+    resolve: (ok: boolean) => void;
+  } | null>(null);
+  const askConflictConfirm = useCallback(
+    (msgs: string[]) =>
+      new Promise<boolean>((resolve) => setConflictPrompt({ messages: msgs, resolve })),
+    []
+  );
+  const settleConflict = useCallback(
+    (ok: boolean) => {
+      conflictPrompt?.resolve(ok);
+      setConflictPrompt(null);
+    },
+    [conflictPrompt]
+  );
 
   // A243: persist-on-accept + insert into today + open the Phase-1 player.
   const [addingAdhoc, setAddingAdhoc] = useState(false);
@@ -338,9 +462,7 @@ export default function CoachPage() {
             custom_session_payload: { id: "preview", name: session.name, exercises: session.exercises },
           }),
         );
-        if (conflicts.length > 0 && !window.confirm(
-          `${conflicts.map((c) => c.message).join("\n\n")}\n\nAdd it anyway?`,
-        )) {
+        if (conflicts.length > 0 && !(await askConflictConfirm(conflicts.map((c) => c.message)))) {
           setAddingAdhoc(false);
           return;
         }
@@ -390,29 +512,30 @@ export default function CoachPage() {
         const msg = e instanceof Error ? e.message : friendlyError(e);
         // B309: the engine's raw slot-conflict text is not actionable for a
         // user who never picked a slot — mirror what /week and /today show.
-        setError(
-          msg.includes("already occupied")
+        setError({
+          message: msg.includes("already occupied")
             ? "Today is fully booked. Free a slot from This Week, then retry."
-            : msg
-        );
+            : msg,
+        });
         setAddingAdhoc(false);
       }
     },
-    [addingAdhoc, router, qc]
+    [addingAdhoc, router, qc, askConflictConfirm]
   );
+
+  const today = localToday();
+  const dividers = dayDividers(messages, today);
+  const isEmpty = !loadingHistory && messages.length === 0;
 
   return (
     // A286 — 100dvh: con 100vh su iOS la barra URL mangiava l'ultima riga.
-    <div className="flex min-h-[calc(100dvh-5rem)] flex-col">
-      <TopBar title="Coach" subtitle="Your AI climbing coach" />
+    // A310 — the height left above the nav is the --nav-h token, not 5rem.
+    <div ref={pageRef} className="flex min-h-[calc(100dvh-var(--nav-h))] flex-col">
+      <TopBar title="Coach" compact />
 
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pt-4">
         <div className="flex-1 space-y-3">
-          {loadingHistory && (
-            <p className="pt-8 text-center text-sm text-muted-foreground">
-              Loading conversation…
-            </p>
-          )}
+          {loadingHistory && <HistorySkeleton />}
 
           {!loadingHistory && hasMore && (
             <div className="flex justify-center">
@@ -420,58 +543,114 @@ export default function CoachPage() {
                 type="button"
                 onClick={loadEarlier}
                 disabled={loadingEarlier}
-                className="rounded-full border border-border px-4 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+                className="min-h-[44px] rounded-full border border-border px-4 text-xs text-muted-foreground hover:text-foreground"
               >
                 {loadingEarlier ? "Loading…" : "Load earlier messages"}
               </button>
             </div>
           )}
 
-          {!loadingHistory && messages.length === 0 && (
-            <div className="space-y-3 pt-8 text-center">
-              <p className="text-lg font-semibold">Ask your coach anything</p>
-              <p className="mx-auto max-w-sm text-sm text-muted-foreground">
-                The coach knows your plan, today&apos;s session, and your
-                recent training. Try: &ldquo;I don&apos;t feel like going to
-                the gym today — what can I do instead?&rdquo;
-              </p>
+          {isEmpty && (
+            <div className="space-y-4 pt-8">
+              <div className="space-y-2 text-center">
+                <p className="text-lg font-semibold">Ask your coach anything</p>
+                <p className="mx-auto max-w-sm text-sm text-muted-foreground">
+                  The coach knows your plan, today&apos;s session, and your
+                  recent training.
+                  {suggestions.length === 0 && (
+                    <>
+                      {" "}Try: &ldquo;I don&apos;t feel like going to the gym
+                      today — what can I do instead?&rdquo;
+                    </>
+                  )}
+                </p>
+              </div>
+              {suggestions.length > 0 && (
+                <div className="space-y-2">
+                  {suggestions.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => sendText(s)}
+                      disabled={sending}
+                      className="min-h-[48px] w-full rounded-lg border border-border bg-card px-4 py-3 text-left text-sm text-foreground transition-colors hover:border-primary disabled:opacity-40"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <p className="text-center text-xs text-muted-foreground">{DISCLAIMER}</p>
             </div>
           )}
 
           {messages.map((m, i) => (
-            <MessageBubble
-              key={m.id ?? `${m.created_at ?? "local"}-${i}`}
-              msg={m}
-              onAddAndRun={handleAddAndRun}
-              busy={addingAdhoc}
-            />
+            <div key={m.id ?? `${m.created_at ?? "local"}-${i}`} className="space-y-3">
+              {dividers[i] && <DayDivider label={dividers[i]} />}
+              <MessageBubble
+                msg={m}
+                onAddAndRun={handleAddAndRun}
+                onAskAgain={(() => {
+                  const request = m.adhocSession ? requestBefore(messages, i) : null;
+                  return request ? () => sendText(request) : null;
+                })()}
+                busy={addingAdhoc}
+              />
+            </div>
           ))}
 
-          {sending && <ThinkingIndicator />}
+          {sending && (
+            <ThinkingIndicator label={thinkingAdhoc ? "Building your session…" : "Coach is thinking…"} />
+          )}
 
           {error && (
-            <div className="rounded-xl border border-danger/30 bg-danger/15 px-4 py-2.5 text-sm text-danger">
-              {error}
+            <div className="flex justify-start">
+              <div
+                role="alert"
+                className="max-w-[85%] space-y-2 rounded-xl rounded-bl-md border border-danger/40 bg-danger-muted px-4 py-2.5 text-sm text-danger"
+              >
+                <p>{error.message}</p>
+                {error.retryText && (
+                  <button
+                    type="button"
+                    onClick={() => error.retryText && sendText(error.retryText)}
+                    disabled={sending}
+                    className="min-h-[44px] rounded-lg border border-danger/40 px-4 text-sm font-medium text-foreground hover:bg-danger/10 disabled:opacity-40"
+                  >
+                    Retry
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
-          <div ref={bottomRef} />
+          {/* A310 — scroll margin = nav + composer: scrolled "to the end" the
+              newest reply stops above the sticky composer, not under it. */}
+          <div
+            ref={bottomRef}
+            className="scroll-mb-[calc(var(--nav-h)+var(--composer-h,9rem))]"
+          />
         </div>
 
-        {/* Composer + disclaimer — sticky above the bottom nav.
+        {/* Composer — sticky above the bottom nav.
             A286: l'offset era `bottom-20` (5rem) a occhio; la bottom nav è alta
             3.5rem + safe-area, quindi su iPhone col notch il composer finiva
-            sotto la nav. Ora l'offset la misura davvero. */}
-        <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] -mx-4 mt-3 border-t border-border bg-background/95 px-4 pb-2 pt-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-          {/* A-COACH-V1b: suggested-question chips — shown while composing */}
-          {suggestions.length > 0 && !input.trim() && !sending && (
+            sotto la nav. A310: l'offset è il token --nav-h, e lo sfondo è lo
+            stesso della nav, così composer e nav si leggono come una sola barra. */}
+        <div
+          ref={composerRef}
+          className="sticky bottom-[var(--nav-h)] -mx-4 mt-3 border-t border-border-subtle bg-background/95 px-4 pb-2 pt-2 backdrop-blur supports-[backdrop-filter]:bg-background/85"
+        >
+          {/* A-COACH-V1b: suggested-question chips — shown while composing.
+              A310: in the empty state they are the full-width list above. */}
+          {suggestions.length > 0 && messages.length > 0 && !input.trim() && !sending && (
             <div className="scrollbar-none -mx-1 mb-2 flex gap-2 overflow-x-auto px-1 pb-0.5">
               {suggestions.map((s) => (
                 <button
                   key={s}
                   type="button"
                   onClick={() => sendText(s)}
-                  className="shrink-0 rounded-full border border-border bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
+                  className="min-h-[44px] shrink-0 rounded-full border border-border bg-muted/40 px-4 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
                 >
                   {s}
                 </button>
@@ -492,6 +671,7 @@ export default function CoachPage() {
               rows={1}
               maxLength={4000}
               placeholder="Ask your coach…"
+              aria-label="Message the coach"
               /* A286 — text-base (16px): sotto i 16px iOS zooma al focus e non torna indietro. */
               className="max-h-32 min-h-[44px] flex-1 resize-none rounded-xl border border-border bg-muted/50 px-4 py-2.5 text-base outline-none placeholder:text-muted-foreground focus:border-primary"
             />
@@ -517,12 +697,27 @@ export default function CoachPage() {
               </svg>
             </button>
           </div>
-          <p className="pt-2 text-center text-[10px] leading-tight text-muted-foreground">
-            AI coach — suggestions only, it never changes your plan. Not
-            medical advice.
-          </p>
         </div>
       </main>
+
+      <AlertDialog open={!!conflictPrompt} onOpenChange={(open) => { if (!open) settleConflict(false); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Add it anyway?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                {conflictPrompt?.messages.map((m, i) => (
+                  <p key={i}>{m}</p>
+                ))}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => settleConflict(true)}>Add anyway</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

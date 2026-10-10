@@ -12,6 +12,11 @@ interface TopBarProps {
    * su `backHref`; senza di esso il comportamento resta identico a prima.
    */
   onBack?: () => void;
+  /**
+   * A310 — barra bassa (py-2, titolo text-base) per le schermate a tutta
+   * altezza come /coach, dove ogni riga tolta va alla conversazione.
+   */
+  compact?: boolean;
 }
 
 const BACK_BTN_CLASS =
@@ -25,10 +30,10 @@ function BackChevron() {
   );
 }
 
-export function TopBar({ title, subtitle, backHref, onBack }: TopBarProps) {
+export function TopBar({ title, subtitle, backHref, onBack, compact = false }: TopBarProps) {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex items-center px-4 py-3">
+      <div className={`flex items-center px-4 ${compact ? "py-2" : "py-3"}`}>
         <div className="flex items-center gap-3">
           {/* F40 — era un <a> nativo: navigazione con full reload della PWA e
               nessun nome accessibile (solo SVG). */}
@@ -44,7 +49,7 @@ export function TopBar({ title, subtitle, backHref, onBack }: TopBarProps) {
             )
           )}
           <div>
-            <h1 className="text-lg font-semibold">{title}</h1>
+            <h1 className={`${compact ? "text-base" : "text-lg"} font-semibold`}>{title}</h1>
             {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
           </div>
         </div>
