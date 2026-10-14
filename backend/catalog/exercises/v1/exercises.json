@@ -1766,14 +1766,13 @@
         "cns": "medium",
         "skin": "none"
       },
-      "description": "Horizontal barbell or dumbbell pressing. Comprehensive horizontal push pattern targeting pectorals, anterior deltoid, and triceps. Most load-measurable of all pressing movements, making progressive overload easy to track. Useful for climbers needing significant upper-body push antagonist work to address strength imbalances.",
+      "description": "Horizontal barbell pressing (barbell only: the dumbbell version is dumbbell_bench_press, whose load is per hand and must never be logged here). Comprehensive horizontal push pattern targeting pectorals, anterior deltoid, and triceps. Most load-measurable of all pressing movements, making progressive overload easy to track. Useful for climbers needing significant upper-body push antagonist work to address strength imbalances.",
       "cues": [
         "Feet flat on floor, slight arch in lower back — retract and depress scapulae against bench",
         "Grip width: slightly outside shoulder width — wrists stacked over elbows at bottom",
         "Lower bar to lower sternum with control — 3-second eccentric",
         "Drive feet through floor and squeeze glutes on the press",
-        "Elbows at 45-75° flare — avoid flaring fully to protect shoulder",
-        "Dumbbells: allow natural arc rather than forcing a straight bar path"
+        "Elbows at 45-75° flare — avoid flaring fully to protect shoulder"
       ],
       "video_url": "https://www.hoopersbeta.com/library/antagonist-training",
       "load_model": "external_load",
