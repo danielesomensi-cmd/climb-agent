@@ -18,6 +18,7 @@ from backend.api.plan_revision import (
 )
 from backend.api.guard_status import build_guard_warnings, messages_for
 from backend.api.key_status import build_key_conflicts, build_key_status, resolve_today
+from backend.api import auto_reschedule as _auto
 from backend.engine.outdoor_log import compute_outdoor_load_score, load_outdoor_sessions, remove_outdoor_session
 from backend.engine.planner_v2 import _SESSION_META
 from backend.engine.replanner_v1 import (
@@ -314,6 +315,8 @@ def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)
     # B96: pass gyms so override can check equipment compatibility
     equipment = state.get("equipment", {})
     gyms = equipment.get("gyms", [])
+    # A315: the week's key debts before the override.
+    _debts_before = _auto.debts_before(state, user_id, week_plan, req.today)
 
     # B366: only the adaptations THIS call appends are reported back.
     _n_adapt_before = len(week_plan.get("adaptations") or [])
@@ -343,6 +346,9 @@ def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)
     except Exception as e:
         logger.error("Override failed: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Override failed. Please try again.")
+
+    # A315: an override that took a key session away → automatic re-schedule.
+    updated, auto_reschedules = _auto.apply(state, user_id, updated, _debts_before, today=req.today)
 
     persist_week_plan(updated, state, user_id)
 
@@ -376,7 +382,8 @@ def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)
             "guard_warnings": guard_warnings,
             # A294: sibling, never inside week_plan (nothing can persist it).
             "key_status": build_key_status(state, user_id, week_start=updated.get("start_date"),
-                                           today=req.today)}
+                                           today=req.today),
+            "auto_reschedules": auto_reschedules}
 
 
 @router.get("/suggest-sessions")
@@ -549,6 +556,9 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
     # A294: dry run — the events go through the same apply_events on a COPY;
     # nothing below (outdoor store, outdoor log, closed loop, completion log,
     # persist) runs, and the caller's events are not mutated.
+    # A315: the week's key debts before the events (None → nothing automatic).
+    _debts_before = _auto.debts_before(state, user_id, week_plan, req.today)
+
     if req.dry_run:
         try:
             res = build_key_conflicts(
@@ -570,6 +580,10 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
             # events ADD to it.
             "guard_warnings": build_guard_warnings(state, res["week_plan"], req.today, user_id=user_id),
             "added_guard_warnings": res.get("added_guard_warnings") or [],
+            # A315: what a real call would re-schedule automatically.
+            "would_auto_reschedule": _auto.apply(
+                state, user_id, res["week_plan"], _debts_before, today=req.today,
+                custom_sessions=custom_sessions, dry_run=True)[1],
         }
 
     # For complete_outdoor events, compute the day's outdoor load score from
@@ -749,6 +763,11 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
             ]
             completion_log = state["session_completion_log"]
 
+    # A315: a key requirement the events made owe more → its validated
+    # proposal is applied now (declared in the response, undoable).
+    updated, auto_reschedules = _auto.apply(state, user_id, updated, _debts_before, today=req.today,
+                                            custom_sessions=custom_sessions)
+
     freeze_played_customs(updated, _before_events, state)
     persist_week_plan(updated, state, user_id)
 
@@ -774,4 +793,5 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
         "warnings": warnings,
         "guard_warnings": build_guard_warnings(state, updated, req.today, user_id=user_id),
         "key_status": build_key_status(state, user_id, week_start=updated.get("start_date"), today=req.today),
+        "auto_reschedules": auto_reschedules,
     }

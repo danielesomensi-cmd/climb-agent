@@ -1,3 +1,4 @@
+import type { AutoReschedule } from "@/lib/auto-reschedule";
 import type {
   OnboardingData,
   OnboardingDefaults,
@@ -537,7 +538,9 @@ export const applyOverride = (data: {
   // `warnings` = its own notes + the alerts involving the overridden session;
   // `guard_warnings` = the alerts of the whole week.
   // A294 review: client-local today for the key status (the server is UTC).
-  revisionedWrite<{ week_plan: WeekPlan; adjustments?: QuickAddAdjustment[]; warnings?: string[]; guard_warnings?: GuardWarning[]; key_status?: KeyStatus | null }>(
+  // A315: `auto_reschedules` = a key session the override took away, put back
+  // elsewhere by the engine (toast + Undo).
+  revisionedWrite<{ week_plan: WeekPlan; adjustments?: QuickAddAdjustment[]; warnings?: string[]; guard_warnings?: GuardWarning[]; key_status?: KeyStatus | null; auto_reschedules?: AutoReschedule[] }>(
     "/api/replanner/override",
     { ...data, today: localToday() },
   );
@@ -556,6 +559,10 @@ export type EventsResponse = {
   /** A294 — dry run only. */
   dry_run?: boolean;
   key_conflicts?: KeyConflict[];
+  /** A315 — key sessions the engine re-scheduled automatically after these events. */
+  auto_reschedules?: AutoReschedule[];
+  /** A315 — dry run: what a real call would re-schedule automatically. */
+  would_auto_reschedule?: AutoReschedule[];
 };
 
 export const applyEvents = (data: {

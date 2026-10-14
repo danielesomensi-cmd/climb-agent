@@ -172,7 +172,10 @@ def test_api_undo_removes_the_skipped_log_entry(isolated_state):
         "week_plan": r.json()["week_plan"], "today": today,
         "events": [{"event_type": "mark_planned", "date": today, "session_ref": "regeneration_easy"}]})
     assert r2.status_code == 200, r2.text
-    restored = r2.json()["week_plan"]["weeks"][0]["days"][offset]["sessions"][0]
-    assert restored["session_id"] == "technique_focus_gym" and "status" not in restored
+    # A315: the skip may also have re-scheduled a key session automatically on
+    # the same day (another slot) — look the restored session up by id.
+    restored = next(s for s in r2.json()["week_plan"]["weeks"][0]["days"][offset]["sessions"]
+                    if s["session_id"] == "technique_focus_gym")
+    assert "status" not in restored
     log = deps.load_state(None).get("session_completion_log") or []
     assert not any(e["date"] == today and e["session_id"] == "technique_focus_gym" for e in log)

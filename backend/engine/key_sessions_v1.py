@@ -859,15 +859,57 @@ def _added_present(after: Mapping[str, Any], d_iso: str, slot: str, session_id: 
     return False
 
 
+def _replaceable(s: Mapping[str, Any]) -> bool:
+    """A315: a planned engine session a key re-schedule may take the slot of —
+    never history (done/skipped), never the user's (custom, forced, edited,
+    quick-added, moved, overridden, an earlier re-schedule). The key role is
+    checked by the caller (``key_index``)."""
+    from backend.engine import user_owned as _uo
+
+    if not isinstance(s, Mapping) or s.get("status") in ("done", "skipped"):
+        return False
+    return not _uo.is_preservable(s)
+
+
+def _state_with_plan(state: Mapping[str, Any], ws: date, plan: Mapping[str, Any]) -> Dict[str, Any]:
+    st = dict(state)
+    st["week_plans"] = {**(state.get("week_plans") or {}), ws.isoformat(): plan}
+    cur = state.get("current_week_plan")
+    if isinstance(cur, Mapping) and str(cur.get("start_date") or "") == ws.isoformat():
+        st["current_week_plan"] = plan
+    return st
+
+
+def _week_debts(state: Mapping[str, Any], today: date, ws: date, plan: Mapping[str, Any],
+                archived_weeks: ArchivedWeeks, outdoor_rows: Optional[Sequence[Mapping[str, Any]]],
+                exercise_catalog: Optional[Mapping[str, Mapping[str, Any]]],
+                key_catalog: Optional[Mapping[str, Any]]) -> Dict[str, int]:
+    """A315: ``{key: debt}`` of the week with *plan* in place (no proposals)."""
+    st = compute_key_status(_state_with_plan(state, ws, plan), today, archived_weeks=archived_weeks,
+                            outdoor_rows=outdoor_rows, week_start=ws, exercise_catalog=exercise_catalog,
+                            key_catalog=key_catalog, with_proposals=False)
+    return {r["key"]: int(r.get("debt") or 0) for r in st.get("requirements") or []}
+
+
 def _propose_for(
     state: Mapping[str, Any], reqs: Sequence[Dict[str, Any]], *, today: date, ws: date,
     plan: Mapping[str, Any], key_index: Mapping[Tuple[str, str], List[str]],
     archived_weeks: ArchivedWeeks, outdoor_rows: Optional[Sequence[Mapping[str, Any]]],
     reentry: Mapping[str, bool], next_week_keys: Mapping[str, List[Dict[str, Any]]],
+    exercise_catalog: Optional[Mapping[str, Mapping[str, Any]]] = None,
+    key_catalog: Optional[Mapping[str, Any]] = None,
 ) -> Tuple[Optional[Dict[str, Any]], Dict[str, Any]]:
     """The first valid re-schedule covering ``reqs`` (greedy: catalog order of
     ``propose``, then date, then the planner's slot preference), or None with
-    the reasons the candidates were rejected."""
+    the reasons the candidates were rejected.
+
+    A315: two passes. Pass 1 (free slots only) is the A294 search, unchanged,
+    over the whole week. Only when it finds nothing, pass 2 tries to REPLACE a
+    planned session that carries no key role and that the user does not own
+    (never custom, done/skipped, forced, edited, quick-added, moved): the
+    replacement is a declared side effect of the proposal, and it is rejected
+    when any other key requirement of the week would end up with more debt
+    (a supporting session may carry a stimulus another key counts on)."""
     from backend.engine.macrocycle_v1 import _build_session_pool
     from backend.engine.planner_v2 import (
         WEEKDAYS,
@@ -935,9 +977,13 @@ def _propose_for(
                     and any(s["skipped_session_id"] in (r.get("propose") or []) + (r.get("session_ids") or [])
                             for r in reqs)}
     guards_before: Optional[List[Dict[str, Any]]] = None
+    base_debts: Optional[Dict[str, int]] = None
+    group_keys = {r["key"] for r in reqs}
     start = max(today, ws)
-    d = start
-    while d <= we:
+    # A315: (free slot, None) first over the whole week; then the replacements.
+    for replace_mode in (False, True):
+      d = start
+      while d <= we:
         d_iso = d.isoformat()
         day = plan_days.get(d_iso)
         if day is None or d_iso in outdoor_days or d_iso in skipped_days \
@@ -949,8 +995,14 @@ def _propose_for(
             d += timedelta(days=1)
             continue
         wd = WEEKDAYS[d.weekday()]
-        occupied = _slot_occupied(day)
-        for sid in candidates:
+        occupied_all = _slot_occupied(day)
+        if replace_mode:
+            targets = [(s.get("slot"), s) for s in day.get("sessions") or []
+                       if _replaceable(s) and s.get("slot") and not key_index.get((d_iso, str(s.get("slot"))))]
+        else:
+            targets = [(None, None)]
+        for (rep_slot, rep_session), sid in [(t_, c_) for t_ in targets for c_ in candidates]:
+            occupied = (occupied_all - {rep_slot}) if replace_mode else occupied_all
             meta = _SESSION_META[sid]
             finger = bool(meta.get("finger")) or primary.get("finger_hard")
             hard = bool(meta.get("hard"))
@@ -983,6 +1035,8 @@ def _propose_for(
                 rejections.append({"date": d_iso, "session_id": sid, "reason": "no_slot"})
                 continue
             slot, slot_info = res
+            if replace_mode and slot != rep_slot:
+                continue
             pull_clash = _heavy_pull_clash(state, days_all, d, slot, sid)
             if pull_clash:
                 rejections.append({"date": d_iso, "session_id": sid, "reason": pull_clash["reason"],
@@ -994,6 +1048,8 @@ def _propose_for(
             gym_id = _select_gym_id(slot_info, default_gym, gyms) if location == "gym" else None
             event = {"event_type": "add_planned_session", "session_id": sid, "target_date": d_iso,
                      "slot": slot, "location": location, "gym_id": gym_id}
+            if replace_mode:
+                event["replace_session_ref"] = rep_session.get("session_id")
             try:
                 after, changes = _simulate_add(state, plan, event, ws, archived_weeks, today=today)
             except ValueError as exc:
@@ -1038,6 +1094,22 @@ def _propose_for(
                 rejections.append({"date": d_iso, "session_id": sid, "reason": "touches_protected",
                                    "sessions": [f"{c['date']} {c['before'].get('session_id')}" for c in bad]})
                 continue
+            if replace_mode:
+                # A315: the replacement must pay for itself — the group's debt
+                # goes down and no other key of the week gets more debt.
+                if base_debts is None:
+                    base_debts = _week_debts(state, today, ws, plan, archived_weeks, outdoor_rows,
+                                             exercise_catalog, key_catalog)
+                after_debts = _week_debts(state, today, ws, after, archived_weeks, outdoor_rows,
+                                          exercise_catalog, key_catalog)
+                worse = sorted(k for k, v in after_debts.items()
+                               if k not in group_keys and v > base_debts.get(k, 0))
+                gain = any(after_debts.get(k, 0) < base_debts.get(k, 0) for k in group_keys)
+                if worse or not gain:
+                    rejections.append({"date": d_iso, "session_id": sid,
+                                       "reason": "key_worse" if worse else "no_gain",
+                                       "with": worse or [f"{d_iso} {rep_session.get('session_id')}"]})
+                    continue
             hard_after = sum(
                 1 for w in after.get("weeks") or [] for dd in w.get("days") or []
                 if any((s.get("tags") or {}).get("hard") and s.get("status") != "done" for s in dd.get("sessions") or [])
@@ -1052,6 +1124,10 @@ def _propose_for(
                 "gym_id": gym_id,
                 "reduced_reentry_dose": bool(reentry.get(primary["key"])) and bool(primary.get("reentry_excluded")),
                 "side_effects": side,
+                # A315: the session this proposal takes the slot of (pass 2), or None.
+                "replaces": ({"date": d_iso, "slot": slot, "session_id": rep_session.get("session_id"),
+                              "session_name": _session_name(rep_session.get("session_id"))}
+                             if replace_mode else None),
                 "checks": {"finger_gap_ok": True, "pre_test_ok": True, "heavy_pulling_ok": True,
                            "hard_days_after": hard_after,
                            "hard_cap": int(hard_cap_raw) if _num(hard_cap_raw) is not None else None},
@@ -1355,7 +1431,8 @@ def compute_key_status(
                 group_try = [dict(req, propose=["strength_long"]), pull_req]
                 prop, info = _propose_for(work_st, group_try, today=td, ws=ws, plan=work_plan,
                                           key_index=work_index, archived_weeks=arch, outdoor_rows=rows,
-                                          reentry=reentry_arg, next_week_keys=next_week_keys)
+                                          reentry=reentry_arg, next_week_keys=next_week_keys,
+                                          exercise_catalog=cat, key_catalog=key_catalog)
                 if prop:
                     group = group_try
                 else:
@@ -1365,7 +1442,8 @@ def compute_key_status(
             if prop is None:
                 prop, info = _propose_for(work_st, group, today=td, ws=ws, plan=work_plan,
                                           key_index=work_index, archived_weeks=arch, outdoor_rows=rows,
-                                          reentry=reentry_arg, next_week_keys=next_week_keys)
+                                          reentry=reentry_arg, next_week_keys=next_week_keys,
+                                          exercise_catalog=cat, key_catalog=key_catalog)
             if prop:
                 after_plan = prop.pop("_after", None)
                 if proposals:
