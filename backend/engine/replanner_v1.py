@@ -1131,7 +1131,9 @@ def apply_events(
     *prev_days* and *today* are kept in the signature for the callers (they
     feed those alerts on the router side); they no longer change the plan.
     """
-    del prev_days, today  # A301: alerts only, computed by the caller.
+    # A301: alerts only, computed by the caller. A315: *today* still bounds
+    # undo_auto_reschedule (a past re-schedule is never taken back).
+    del prev_days
     updated = deepcopy(plan)
     updated.setdefault("adaptations", [])
 
@@ -1621,11 +1623,31 @@ def apply_events(
             if not target_date:
                 raise ValueError("add_planned_session requires 'target_date'")
             day = _find_day(updated, target_date)
+            # A315: a key re-schedule may take the slot of a planned engine
+            # session (``replace_session_ref``) — checked here again, whoever
+            # sent the event: never history, never a session the user owns.
+            replace_ref = event.get("replace_session_ref")
+            replaced_original = None
             for existing in day.get("sessions", []):
-                if existing.get("slot") == slot:
+                if existing.get("slot") != slot:
+                    continue
+                if not replace_ref or existing.get("session_id") != replace_ref:
                     raise ValueError(f"Slot '{slot}' already occupied on {target_date}")
+                if existing.get("status") in ("done", "skipped") or _uo.is_preservable(existing):
+                    raise ValueError(
+                        f"add_planned_session: '{replace_ref}' on {target_date} {slot} cannot be replaced"
+                    )
+                replaced_original = existing
+                break
+            else:
+                if replace_ref:
+                    raise ValueError(
+                        f"add_planned_session: '{replace_ref}' not found on {target_date} {slot}"
+                    )
             if slot in other_activity_slots(day):
                 raise ValueError(f"Slot '{slot}' already occupied by other activity on {target_date}")
+            if replaced_original is not None:
+                day["sessions"].remove(replaced_original)
             meta = _meta_for(session_id)
             location = event.get("location") or ("gym" if "gym" in (meta.get("location") or ()) else "home")
             phase = event.get("phase_id") or (updated.get("profile_snapshot") or {}).get("phase_id", "base")
@@ -1642,6 +1664,25 @@ def apply_events(
                          **({"test": True} if meta.get("test") else {})},
                 "explain": ["key session re-scheduled", f"added_session={session_id}"],
             }
+            if replaced_original is not None:
+                # A315: the snapshot the undo puts back, byte for byte.
+                new_session["replaced_original"] = deepcopy(replaced_original)
+                log_event = {**event, "replaced_session_id": replaced_original.get("session_id"),
+                             "replaced_slot": slot}
+            if event.get("auto"):
+                # A315: applied by the engine after the user's action, not by
+                # a tap — undoable through undo_auto_reschedule.
+                adaptation_id = event.get("adaptation_id")
+                if not adaptation_id:
+                    raise ValueError("add_planned_session: an automatic re-schedule needs 'adaptation_id'")
+                new_session["constraints_applied"] = ["key_reschedule", "auto_reschedule"]
+                new_session["auto_reschedule_id"] = adaptation_id
+                updated["adaptations"].append({
+                    "type": "auto_reschedule", "id": adaptation_id,
+                    "keys": list(event.get("keys") or []),
+                    "date": target_date, "slot": slot, "session_id": session_id,
+                    "replaced_session_id": (replaced_original or {}).get("session_id"),
+                })
             day.setdefault("sessions", []).append(new_session)
             day["sessions"].sort(
                 key=lambda s: (
@@ -1650,6 +1691,42 @@ def apply_events(
                     s.get("session_id", ""),
                 )
             )
+
+        elif event_type == "undo_auto_reschedule":
+            # A315: take back an automatic key re-schedule — only while the
+            # added session is still untouched and not in the past; the session
+            # it replaced comes back byte for byte. The key is then not
+            # re-scheduled automatically again this week (the manual proposal
+            # stays).
+            adaptation_id = event.get("adaptation_id")
+            record = next((a for a in updated.get("adaptations") or []
+                           if isinstance(a, dict) and a.get("type") == "auto_reschedule"
+                           and a.get("id") == adaptation_id), None)
+            if not adaptation_id or record is None:
+                raise ValueError(f"undo_auto_reschedule: unknown adaptation '{adaptation_id}'")
+            if any(isinstance(a, dict) and a.get("type") == "auto_reschedule_declined"
+                   and a.get("adaptation_id") == adaptation_id for a in updated.get("adaptations") or []):
+                raise ValueError(f"undo_auto_reschedule: '{adaptation_id}' was already undone")
+            today_iso = today or datetime.now().strftime("%Y-%m-%d")
+            if str(record.get("date")) < today_iso:
+                raise ValueError("undo_auto_reschedule: the re-scheduled session is in the past")
+            day = _find_day(updated, record["date"])
+            added = next((s for s in day.get("sessions") or []
+                          if s.get("auto_reschedule_id") == adaptation_id), None)
+            if added is None:
+                raise ValueError("undo_auto_reschedule: the re-scheduled session is no longer on the plan")
+            if added.get("status") not in (None, "planned") or added.get("_user_edited"):
+                raise ValueError("undo_auto_reschedule: the re-scheduled session was already used or edited")
+            day["sessions"].remove(added)
+            original = added.get("replaced_original")
+            if original is not None:
+                day["sessions"].append(deepcopy(original))
+                day["sessions"].sort(key=_session_sort_key)
+            _recompute_day_status(day)
+            updated["adaptations"].append({
+                "type": "auto_reschedule_declined", "adaptation_id": adaptation_id,
+                "keys": list(record.get("keys") or []), "week": updated.get("start_date"),
+            })
 
         elif event_type == "add_generated_session":
             # A213: add a session generated inline (body-part picker, etc.).

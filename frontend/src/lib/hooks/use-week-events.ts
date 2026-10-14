@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ApiError, NETWORK_ERROR_STATUS, applyEvents, type EventsResponse } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
 import { siblingsOf, writeWeekCache } from "@/lib/week-cache";
+import { showAutoReschedules } from "@/lib/auto-reschedule";
 import type { WeekPlan } from "@/lib/types";
 
 type WeekCacheEntry = {
@@ -39,7 +40,7 @@ export function useWeekEvents(weekNum: number) {
   const qc = useQueryClient();
 
   return useCallback(
-    (events: Array<Record<string, unknown>>): Promise<EventsResponse> => {
+    function runEvents(events: Array<Record<string, unknown>>): Promise<EventsResponse> {
       const run = chain.then(async () => {
         const cached = qc.getQueryData<WeekCacheEntry>(queryKeys.week(weekNum));
         const weekPlan = cached?.week_plan;
@@ -61,6 +62,9 @@ export function useWeekEvents(weekNum: number) {
         // A245 G-2 (F34): mirrors onto the week(0) ⇄ week(N) alias so /today
         // and /week cannot disagree about the same seven days.
         writeWeekCache(qc, weekNum, result.week_plan, siblingsOf(result));
+        // A315 — a key session these events lost was put back elsewhere: say
+        // so, with an Undo that goes through this same queue.
+        showAutoReschedules(result.auto_reschedules, runEvents);
         return result;
       });
       // La coda non deve morire su un errore del task precedente.

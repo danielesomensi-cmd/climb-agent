@@ -39,6 +39,7 @@ import { useSubscription } from "@/lib/hooks/use-subscription";
 import { useUserState, useWeekPlan, useDailyQuote, useOutdoorDoneDays } from "@/lib/hooks/queries";
 import { useFreeSessionHistory, useFreeSessionsForDates } from "@/lib/hooks/queries/use-free-session";
 import { useWeekEvents } from "@/lib/hooks/use-week-events";
+import { showAutoReschedules } from "@/lib/auto-reschedule";
 import { queueOrWarn } from "@/lib/outbox-feedback";
 import { flush as flushOutbox } from "@/lib/outbox";
 import { queryKeys } from "@/lib/query-keys";
@@ -698,6 +699,9 @@ function TodayContent() {
         whole_day: rdata.whole_day,
       });
       updateWeekCache(result.week_plan, siblingsOf(result));
+      // A315 — the override took a key session away and the engine put it
+      // back elsewhere: toast + Undo (through the serialized events queue).
+      showAutoReschedules(result.auto_reschedules, runWeekEvents);
       // A301: the override replaced its slot and nothing else. Its notes and
       // the alerts that involve it are a heads-up, never an error (an error
       // here used to hide the whole plan behind a red box).

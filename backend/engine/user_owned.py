@@ -72,6 +72,9 @@ def removal_records(plan: Mapping[str, Any]) -> List[dict]:
     consumes its family for the week, a moved one is counted where it landed.
     """
     out: List[dict] = []
+    # A315: an automatic key re-schedule the user undid gave its slot back.
+    undone = {a.get("adaptation_id") for a in (plan or {}).get("adaptations") or []
+              if isinstance(a, Mapping) and a.get("type") == "auto_reschedule_declined"}
     for a in (plan or {}).get("adaptations") or []:
         if not isinstance(a, Mapping):
             continue
@@ -98,6 +101,13 @@ def removal_records(plan: Mapping[str, Any]) -> List[dict]:
             if ev.get("to_date") and ev.get("replaced_session_id"):
                 out.append({"date": str(ev["to_date"]), "ref": ev["replaced_session_id"],
                             "slot": ev.get("to_slot"), "kind": "replaced"})
+        elif et == "add_planned_session":
+            # A315: a key re-schedule that took the slot of an engine session.
+            if ev.get("replaced_session_id") and ev.get("target_date") \
+                    and ev.get("adaptation_id") not in undone:
+                out.append({"date": str(ev["target_date"]), "ref": ev["replaced_session_id"],
+                            "slot": ev.get("replaced_slot") or ev.get("slot"), "kind": "replaced"})
+            continue
         else:
             continue
         if date and (ref or slot):
