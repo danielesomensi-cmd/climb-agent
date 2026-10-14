@@ -50,6 +50,28 @@ describe("key-sessions helpers", () => {
     expect(keyDays(status())).toEqual({ "2026-10-05": "key", "2026-10-09": "lost" });
   });
 
+  // B374 — Monday 12/10/2026: Max pulling skipped, but strength_long on Sunday
+  // still carries it (debt 0). The star moves: no lost marker, no badge.
+  it("does not mark a skipped key as lost when its stimulus is still covered", () => {
+    const covered = status({
+      requirements: [req({ status: "planned", debt: 0,
+        planned: [{ date: "2026-10-11", slot: "evening", session_id: "strength_long" }] })],
+      sessions: [
+        { date: "2026-10-09", slot: "evening", session_id: "strength_long", status: "skipped", role: "skipped",
+          keys: ["finger_max"], supporting: [] },
+        { date: "2026-10-11", slot: "evening", session_id: "strength_long", status: "planned", role: "key",
+          keys: ["finger_max"], supporting: [] },
+      ],
+    });
+    expect(keyDays(covered)).toEqual({ "2026-10-11": "key" });
+    expect(keyRoleFor(covered, "2026-10-09", "evening")).toBeNull();
+    expect(keyRoleFor(covered, "2026-10-11", "evening")?.role).toBe("key");
+  });
+
+  it("keeps the lost marker and the badge role when the stimulus is still owed", () => {
+    expect(keyRoleFor(status(), "2026-10-09", "evening")?.role).toBe("skipped");
+  });
+
   it("describes every resolution in plain words", () => {
     expect(requirementLine(req({ status: "done" }))).toBe("Done");
     expect(requirementLine(req({ status: "planned", planned: [{ date: "2026-10-09", slot: "evening", session_id: "strength_long" }] })))

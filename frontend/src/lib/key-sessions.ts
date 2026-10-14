@@ -24,7 +24,27 @@ export function keyRoleFor(
   slot: string | null | undefined,
 ): KeySessionRole | null {
   if (!status?.sessions) return null;
-  return status.sessions.find((s) => s.date === date && (s.slot ?? null) === (slot ?? null)) ?? null;
+  const role = status.sessions.find((s) => s.date === date && (s.slot ?? null) === (slot ?? null)) ?? null;
+  // B374: a skipped / downgraded key whose stimulus is still covered this week
+  // (re-scheduled, or another key session carries it) is not a loss — no badge.
+  if (role && (role.role === "skipped" || role.role === "downgraded") && !isKeyLost(status, role)) return null;
+  return role;
+}
+
+/**
+ * B374 — a skipped / downgraded key session is "lost" only when one of its
+ * stimuli is still owed this week. When the key was moved (or another session
+ * of the week delivers it) its requirement carries no debt: the star follows
+ * the session to its new day and the old day shows nothing.
+ * A key with no requirement row stays lost (conservative).
+ */
+export function isKeyLost(status: KeyStatus | null | undefined, role: KeySessionRole): boolean {
+  if (role.keys.length === 0) return false;
+  const reqs = status?.requirements ?? [];
+  return role.keys.some((k) => {
+    const r = reqs.find((x) => x.key === k);
+    return !r || (r.debt ?? 0) > 0;
+  });
 }
 
 /** Days of the week with a key session (for the week-grid marker). */
@@ -32,7 +52,7 @@ export function keyDays(status: KeyStatus | null | undefined): Record<string, "k
   const out: Record<string, "key" | "lost"> = {};
   for (const s of status?.sessions ?? []) {
     if (s.role === "key") out[s.date] = out[s.date] === "lost" ? "lost" : "key";
-    if ((s.role === "skipped" || s.role === "downgraded") && s.keys.length > 0) out[s.date] = "lost";
+    if ((s.role === "skipped" || s.role === "downgraded") && isKeyLost(status, s)) out[s.date] = "lost";
   }
   return out;
 }

@@ -1497,8 +1497,9 @@ function KeyRoleBadge({ role }: { role?: KeySessionRole | null }) {
   }
   if (role.role === "skipped") {
     return (
-      <Badge variant="outline" className="text-[11px] border-danger/30 bg-danger/15 text-danger">
-        Skipped key
+      <Badge variant="outline" className="text-[11px] gap-1 border-danger/30 bg-danger/15 text-danger" title="Key stimulus lost this week">
+        <Star className="size-2.5" aria-hidden="true" />
+        Key lost · {role.keys.map(keyLabel).join(" + ")}
       </Badge>
     );
   }
