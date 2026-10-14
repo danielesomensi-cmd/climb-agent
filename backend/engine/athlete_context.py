@@ -111,6 +111,15 @@ TRYHARD_WINDOW_D = 28
 PE_LIMIT_MAX_GAP_D = 12
 #: Coach notes are truncated to this length in the context.
 COACH_NOTES_MAX = 500
+#: A314: look-back of the "exercises done recently" section (72 h before the
+#: target day, the target day included when something is already done on it).
+RECENT_EXERCISES_DAYS = 3
+#: A314: an accessory / core / prehab exercise done within this many days
+#: before the target day is not repeated (copenhagen_plank on 13 and 14/10/2026).
+NO_REPEAT_DAYS = 2
+NO_REPEAT_CATEGORIES = ("strength_accessory", "core", "prehab", "complementary")
+#: A314: categories never flagged as a repetition (generic warm-up / cool-down).
+REPEAT_EXEMPT_CATEGORIES = ("warmup_general", "warmup_specific", "flexibility", "mobility", "relaxation")
 
 #: Where the general improvement plan lives (A293). The CLI extracts the block
 #: between these markers and prints it (ladder levels, pocket notes, ...).
@@ -757,6 +766,78 @@ def _variety(state: Mapping[str, Any], today: date, archived_weeks: ArchivedWeek
     }
 
 
+def recent_exercises(state: Mapping[str, Any], today: DateLike, *, archived_weeks: ArchivedWeeks = None,
+                     catalog: Optional[Mapping[str, Mapping[str, Any]]] = None,
+                     days: int = RECENT_EXERCISES_DAYS) -> Dict[str, Any]:
+    """A314 — the exercises of the DONE sessions from ``today - days`` to
+    ``today`` (inclusive), grouped by exercise, plus the ``no_repeat`` list:
+    accessory / core / prehab exercises done within ``NO_REPEAT_DAYS`` before
+    ``today`` (or on it). Logged entries follow the "was it done" rule
+    (``counted_entries``); a session without a log reads its planned list."""
+    td = _as_date(today)
+    cat = catalog if catalog is not None else load_exercise_catalog()
+    start = td - timedelta(days=days)
+    by_ex: Dict[str, Dict[str, Any]] = {}
+    for d, s, _src in iter_plan_sessions(state, archived_weeks):
+        dd = _as_date(d)
+        if not (start <= dd <= td) or s.get("status") != "done":
+            continue
+        entries, origin = counted_entries(s)
+        for e in entries:
+            ex = str(e.get("exercise_id") or "")
+            if not ex:
+                continue
+            meta = cat.get(ex) or {}
+            row = by_ex.setdefault(ex, {"exercise_id": ex, "category": meta.get("category"),
+                                        "name": meta.get("name"), "done": []})
+            load = e.get("used_external_load_kg")
+            if load is None:
+                load = e.get("load_kg") if origin != "actual" else None
+            row["done"].append({
+                "date": d, "slot": s.get("slot"), "session_id": s.get("session_id"),
+                "completed_sets": e.get("completed_sets") if origin == "actual" else None,
+                "prescribed_sets": e.get("prescribed_sets") if origin == "actual" else e.get("sets"),
+                "feedback_label": e.get("feedback_label"),
+                "load_kg": _num(load),
+                "origin": origin,
+            })
+    rows = []
+    for r in by_ex.values():
+        r["done"].sort(key=lambda x: (x["date"], str(x.get("slot") or "")))
+        r["last_date"] = r["done"][-1]["date"]
+        rows.append(r)
+    rows.sort(key=lambda r: (r["last_date"], r["exercise_id"]), reverse=True)
+    nr_start = (td - timedelta(days=NO_REPEAT_DAYS)).isoformat()
+    no_repeat = [{"exercise_id": r["exercise_id"], "category": r["category"],
+                  "dates": sorted({x["date"] for x in r["done"] if x["date"] >= nr_start})}
+                 for r in rows if r["category"] in NO_REPEAT_CATEGORIES and r["last_date"] >= nr_start]
+    no_repeat.sort(key=lambda r: r["exercise_id"])
+    return {"window_start": start.isoformat(), "window_end": td.isoformat(),
+            "no_repeat_days": NO_REPEAT_DAYS, "exercises": rows, "no_repeat": no_repeat}
+
+
+def repeated_exercises(draft_exercise_ids: Iterable[Any], recent: Mapping[str, Any],
+                       target: DateLike) -> List[Dict[str, Any]]:
+    """A314 — draft exercises already done within ``NO_REPEAT_DAYS`` before
+    ``target`` (or on it). Generic warm-up / cool-down categories are exempt.
+    An alert, never a block."""
+    td = _as_date(target)
+    lo = (td - timedelta(days=NO_REPEAT_DAYS)).isoformat()
+    by_ex = {r["exercise_id"]: r for r in recent.get("exercises") or []}
+    out: List[Dict[str, Any]] = []
+    seen = set()
+    for ex in draft_exercise_ids:
+        ex = str(ex or "")
+        r = by_ex.get(ex)
+        if not ex or ex in seen or r is None or r.get("category") in REPEAT_EXEMPT_CATEGORIES:
+            continue
+        dates = sorted({x["date"] for x in r["done"] if lo <= x["date"] <= td.isoformat()})
+        if dates:
+            seen.add(ex)
+            out.append({"exercise_id": ex, "dates": dates})
+    return out
+
+
 def _working_loads(state: Mapping[str, Any], today: date) -> List[Dict[str, Any]]:
     """Working-load memory of the anchored exercises — informative, never a
     load source (loads come from ``anchors``). Flags: STALE, TEST_COPY."""
@@ -1025,6 +1106,7 @@ def build_athlete_context(
         "key_sessions_next_week": None,
         "upcoming": _upcoming(st, td, arch),
         "recent": _recent(st, td, arch, rows),
+        "recent_exercises": recent_exercises(st, td, archived_weeks=arch, catalog=cat),
         "athlete_notes": _athlete_notes(st, td, arch),
         "guards": _guards(st, td, arch, rows),
         "variety": _variety(st, td, arch, cat),
@@ -1337,6 +1419,26 @@ def render_text(ctx: Mapping[str, Any], *, plan_notes: Optional[str] = None,
     for o in rc.get("outdoor") or []:
         L.append(f"  {o['date']} outdoor {o.get('spot')}: {o['routes']} vie, {o['sent']} chiuse"
                  + (f" — giorno dita HARD ({o.get('hardest_hard_route')} {o.get('hardest_hard_grade')})" if o["hard_day"] else ""))
+
+    rx = ctx.get("recent_exercises") or {}
+    if rx:
+        L.append("")
+        L.append(f"## Esercizi fatti negli ultimi {RECENT_EXERCISES_DAYS} giorni "
+                 f"({rx.get('window_start')} → {rx.get('window_end')})")
+        for r in rx.get("exercises") or []:
+            parts = []
+            for x in r["done"]:
+                sets = (f" {x['completed_sets']}/{x['prescribed_sets']} serie"
+                        if x.get("completed_sets") is not None and x.get("prescribed_sets") is not None else "")
+                load = f" {_fmt_kg(x['load_kg'])} kg" if x.get("load_kg") else ""
+                fb = f" «{x['feedback_label']}»" if x.get("feedback_label") else ""
+                parts.append(f"{x['date']}{sets}{load}{fb}")
+            L.append(f"  {r['exercise_id']} [{r.get('category') or '?'}]: " + "; ".join(parts))
+        if not rx.get("exercises"):
+            L.append("  nessuno")
+        nr = rx.get("no_repeat") or []
+        L.append(f"  Da non ripetere oggi (accessori/core/prehab nelle ultime {rx.get('no_repeat_days')} giornate): "
+                 + (", ".join(f"{r['exercise_id']} ({', '.join(r['dates'])})" for r in nr) if nr else "nessuno"))
 
     notes = ctx.get("athlete_notes") or []
     if notes:

@@ -22,6 +22,7 @@ python scripts/athlete_context.py --date YYYY-MM-DD                        # se 
 - Legge Supabase in sola lettura, a ogni lancio, e stampa l'età dello stato.
 - Se fallisce, **ti fermi** e lo dici: non componi a memoria.
 - Leggi anche `docs/training/athlete_plan.md` (almeno §2-§5). Il blocco «Note atleta» con i livelli delle scale e le tasche lo stampa già lo script.
+- Leggi la sezione **«Esercizi fatti negli ultimi 3 giorni»** (A314): cosa ha fatto davvero (serie fatte/previste, carico, feedback). La riga **«Da non ripetere oggi»** elenca gli accessori/core/prehab delle ultime 48 h: **non rimetterli** nella sessione nuova (mai lo stesso accessorio o core in giorni consecutivi), salvo richiesta esplicita di Daniele. Caso reale: `copenhagen_plank` composto a mano il 13 e il 14/10/2026, il secondo giorno 1 serie su 3. Il `--simulate` stampa `avviso: ripetizione: X fatto il D` per ogni riga della bozza già fatta nelle 48 h: alert, non blocco — se esce, cambia esercizio prima di mostrare la preview.
 - Leggi la sezione **«Note dell'atleta sugli esercizi»** (A303): sono le note che Daniele scrive nel feedback (dolore, attrezzo diverso, orario, sensazioni). Tienine conto nella proposta e dillo se una nota cambia la scelta.
 
 ## 2. Decidi COSA fare, prima del come
@@ -62,7 +63,7 @@ python scripts/athlete_context.py --date YYYY-MM-DD                        # se 
    - Il front lever solo senza tirata massimale nelle 24 h dopo.
    - `dead_bug`, `plank`, `plank_shoulder_tap`, `pallof_press`, `core_hollow_hold` al massimo come attivazione.
    - Budget: `toes_to_bar` **oppure** front lever, più rollout, più eventualmente copenhagen.
-7. **Accessori a rotazione A/B:** guarda «Varietà» e ruota fuori i gruppi «usati troppo».
+7. **Accessori a rotazione A/B:** guarda «Varietà» e ruota fuori i gruppi «usati troppo»; niente accessori/core della riga «Da non ripetere oggi» (§1).
 8. **Struttura:**
    - riscaldamento specifico 10-12', con riscaldamento tasche prima di limit o outdoor (protocollo `pocket_warmup`: `hang_rampup_progressive` → `pocket_rampup_hangboard` bi/tridito destra → `single_finger_pocket_rampup` medio sinistro, piedi appoggiati);
    - 1-2 blocchi principali;

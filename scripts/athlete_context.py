@@ -252,6 +252,17 @@ def simulate(state: Dict[str, Any], draft: Dict[str, Any], target_date: str, slo
     plan = _week_plan_for(state, target)
     result: Dict[str, Any] = {"target_date": target_date, "slot": slot, "ok": False,
                               "downgrades": [], "removed": [], "warnings": []}
+    # A314: an exercise of the draft already done within 48 h of the target
+    # day (alert, not a block).
+    try:
+        recent = ac.recent_exercises(state, target, archived_weeks=archived_weeks)
+        result["repeats"] = ac.repeated_exercises(
+            [e.get("exercise_id") for e in draft.get("exercises") or [] if isinstance(e, dict)], recent, target)
+    except Exception as exc:  # pragma: no cover - the simulation must still print
+        result["repeats"] = []
+        result["warnings"].append(f"controllo ripetizioni non riuscito: {exc}")
+    for r in result["repeats"]:
+        result["warnings"].append(f"ripetizione: {r['exercise_id']} fatto il {', '.join(r['dates'])}")
     if plan is None:
         result["error"] = "settimana non generata: nessun week_plan per quella data"
         return result
