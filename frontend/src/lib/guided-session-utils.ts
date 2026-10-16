@@ -295,6 +295,7 @@ export function buildGuidedStateFromExercises(
         ...limitSuggestedFields(ex),
       },
       cues: (ex.cues as string[] | undefined) ?? undefined,
+      hrTarget: (ex.hr_target as GuidedExercise["hrTarget"]) ?? undefined,  // A316
       videoUrl: (ex.video_url as string | undefined) ?? undefined,
       status: "pending",
       feedbackLabel: null,  // A295: nothing pre-selected

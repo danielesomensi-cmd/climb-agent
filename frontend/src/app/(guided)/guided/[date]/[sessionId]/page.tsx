@@ -18,6 +18,8 @@ import { guidedStorageKey } from "@/lib/guided-session-utils";
 import { unlockAudio, getAudioContext } from "@/lib/audio-unlock";
 import { useSubscription } from "@/lib/hooks/use-subscription";
 import { useWakeLock } from "@/lib/hooks/use-wake-lock";
+import { useUserState } from "@/lib/hooks/use-state";
+import { hrMaxFromState } from "@/lib/hr-zones";
 import type { GuidedSessionState, GuidedExercise, LimitProblem, SessionPain, WeekPlan } from "@/lib/types";
 import { withFeedbackContract, type MeasureValues } from "@/lib/measured-feedback";
 
@@ -97,6 +99,9 @@ export default function GuidedSessionPage() {
   // during a 5-minute boulder rest, which suspends the timer — the condition the
   // set counter used to get wrong.
   useWakeLock(state !== null && !showSummary);
+  // A316: HRmax for the bpm bands — fetched only when a cardio row has one.
+  const { state: userState } = useUserState(!!state?.exercises.some((ex) => ex.hrTarget));
+  const hrMax = hrMaxFromState(userState);
 
   // Ref to always have latest state for the beforeunload handler
   const stateRef = useRef(state);
@@ -631,6 +636,7 @@ export default function GuidedSessionPage() {
                 exercise={currentExercise}
                 isTestSession={state.isTestSession}
                 bodyweightKg={state.bodyweightKg}
+                hrMax={hrMax}
                 onDone={handleDone}
                 onSkip={handleSkip}
                 onSetChange={handleSetChange}

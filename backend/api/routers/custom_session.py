@@ -378,6 +378,12 @@ def enrich_custom_sessions_for_play(sessions: list) -> list:
             # already stored. Sessions saved between B283 and B324 carry cues but
             # no alt_sides, so the skip above left them one-sided forever.
             ex["alt_sides"] = bool((catalog.get(ex.get("exercise_id") or "") or {}).get("alt_sides"))
+            # A316: heart-rate band from the catalog, derived at read like alt_sides.
+            _hr = (catalog.get(ex.get("exercise_id") or "") or {}).get("hr_target")
+            if _hr:
+                ex["hr_target"] = dict(_hr)
+            else:
+                ex.pop("hr_target", None)
             # B370: sessions saved before the rest default existed get it at read.
             _fill_rest_default(ex, catalog)
             # A295: the measure the player may ask for (last-set reps, hang

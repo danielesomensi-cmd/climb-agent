@@ -271,6 +271,10 @@ def _with_custom_anchored_loads(week_plan: dict, state: dict) -> dict:
                     # a null rest — the player showed no rest timer.
                     for ex in session_entry["exercises"]:
                         _fill_rest_default(ex, catalog)
+                        # A316: heart-rate band of the catalog exercise, at read.
+                        _hr = (catalog.get(ex.get("exercise_id") or "") or {}).get("hr_target")
+                        if _hr:
+                            ex["hr_target"] = dict(_hr)
     return out
 
 

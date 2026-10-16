@@ -153,6 +153,28 @@ On library-only exercises (allowed on any exercise, never read by the engine):
 - `sources` — citations (URLs or bibliographic strings).
 - `protocol_refs` — ids of protocols in `bw_ladders.json` → `protocols` that apply to this exercise (set on the four limit exercises → `limit_weak_style`, on `hang_rampup_progressive` → `pocket_warmup`). The resolver does not copy it into a session.
 
+#### Heart-rate target (`hr_target`, A316)
+
+Structured cardio band as a percentage of the athlete's max heart rate. Set on five exercises (`easy_run_zone2`, `treadmill_incline_walk`, `stationary_bike_zone2`, `approach_hike_loaded` → work 60-70; `treadmill_hiit_4x4` → work 90-95, recovery 65-75):
+
+```json
+"hr_target": {"basis": "hr_max", "work_pct": [90, 95], "recovery_pct": [65, 75]}
+```
+
+- `basis` — always `"hr_max"` in v1.
+- `work_pct` — `[low, high]` % of HRmax for the work (or the whole steady effort).
+- `recovery_pct` — optional, `[low, high]` % for the active recovery between intervals.
+
+The resolver copies it as-is onto the resolved instance (only when present; nothing is computed and selection is unaffected). Custom sessions get it from the catalog **at read time** (like `alt_sides`; done/skipped sessions are returned as saved). The bpm are computed only at display (`frontend/src/lib/hr-zones.ts`) and in the coach prompt (`backend/engine/hr_zones.py`): low end rounded up, high end rounded down, so the bpm band never leaves the % band. No age formula anywhere — without a recorded HRmax the band stays a percentage.
+
+#### Heart-rate profile (`body.hr_max_bpm`, `body.hr_rest_bpm`, `body.hr_max_source`, A316)
+
+Optional fields written by Settings → Profile into `assessment.body` and mirrored into top-level `body` (the B270 flow). Readers take `body` first, then `assessment.body`; out-of-range values count as absent.
+
+- `hr_max_bpm` — int, 120-230. The highest heart rate the athlete actually measured.
+- `hr_rest_bpm` — int, 30-110.
+- `hr_max_source` — `"measured"` | `"estimated"`. Settings always writes `"measured"`.
+
 #### Progressions file (`backend/catalog/progressions/v1/bw_ladders.json`, C272)
 
 - `families[]` — 16 bodyweight families: `family`, `axis_default` (`reps` | `seconds`), `stimulus_ref` (`null` or a `stimulus.py` family), `heavy_pull` / `heavy_pull_from_level`, `hanging` / `hanging_from_level`, `skill_family` (60-day history window instead of 120), `lower_back_risk_from_level` (manual only from that level until a lower-back pain zone exists), `floor_level_advanced`, `entry_seed[]` (`{test, min, max?, level, target | target_from_test{divisor|factor}, ramp?, requires_equipment?}`), `gates[]`, `terminal` (`kind`: `tempo` | `load` | `handoff` | `cap`), `variants[]`, `extras[]`, `levels[]` (`level_idx` from 0, `exercise_id`, `axis`, `sets`, `band{lo,hi,step}`, `advance_sessions`, `rest_s`).

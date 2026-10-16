@@ -164,6 +164,11 @@ def _profile_section(state: Dict[str, Any]) -> str:
             f"height {_fmt(body.get('height_cm'))} cm, "
             f"weight {_fmt(body.get('weight_kg'))} kg"
         )
+    # A316: the athlete's heart-rate bands, only when an HRmax is recorded.
+    from backend.engine.hr_zones import coach_line as _hr_coach_line
+    _hr_line = _hr_coach_line(state)
+    if _hr_line:
+        lines.append(_hr_line)
     if profile:
         # A269: say which axes are measured and which are inferred. Without it
         # the model reads five identical-looking numbers and speaks about an
