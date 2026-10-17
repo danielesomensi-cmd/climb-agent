@@ -80,6 +80,10 @@ _SESSION_META: Dict[str, Dict[str, Any]] = {
     "treadmill_zone2_cardio": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("gym",), "required_equipment": ["treadmill"], "max_per_week": 3},
     "upper_push_arms_lunch": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym",), "required_equipment": ["dumbbell", "cable_machine"], "max_per_week": 2},
     "legs_maintenance_lunch": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym",), "required_equipment": ["dumbbell"], "max_per_week": 2},
+    # A318 — fifth lunch family (arms_shoulders, opt-in): shoulders, triceps,
+    # biceps + handstand. Pure registry entry: in no phase pool, so no
+    # generated week changes; same labels as the other strength lunches.
+    "arms_shoulders_handstand_lunch": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym",), "required_equipment": ["dumbbell"], "max_per_week": 2},
     # C276 — the lead try-hard session (falls + 2 routes with a declared rule,
     # routes at or below onsight). In no phase pool yet: A305 decides where it
     # goes, so no generated week changes. Not hard, not finger: it must not

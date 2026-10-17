@@ -1,0 +1,276 @@
+{
+  "id": "arms_shoulders_handstand_lunch",
+  "name": "Arms, Shoulders + Handstand (Lunch)",
+  "version": "1.0",
+  "supplementary": true,
+  "intent": {
+    "primary_goal": "strength_general",
+    "secondary_goals": [
+      "handstand_skill"
+    ],
+    "notes": "Lunch-break session at a weights gym: handstand practice first, then shoulders, triceps and biceps. The handstand goes first on purpose, right after the warm-up: it is a balance skill, it needs fresh shoulders and triceps to keep the elbows locked, and an upside-down fall with pre-fatigued deltoids is the risk this order avoids. Its dose is low-fatigue practice (never to failure), so the lifts after it lose very little. Loaded lifts at RIR 1-2 (one or two clean reps left in the tank); loads come from your working loads and move with your feedback. For a dumbbell exercise the load is per dumbbell (one hand). About 35 min. No finger load, no hanging, no heavy pull. The curl is elbow-flexor work: keep it away from the 24 h before a heavy pulling session. After the overhead press, the isolation exercises appear in the engine's generic order: any order among them works. In a deload week the app already drops one set from every exercise: stop every set at RIR 3."
+  },
+  "compatibility": {
+    "slot": [
+      "lunch_short",
+      "short"
+    ],
+    "sports": [
+      "climbing"
+    ]
+  },
+  "required_equipment": [
+    "dumbbell"
+  ],
+  "time_budget": {
+    "target_duration_min": 35,
+    "hard_cap_min": 45
+  },
+  "tags": {
+    "hard": false,
+    "finger": false
+  },
+  "modules": [
+    {
+      "block_id": "pulse_raise",
+      "required": true,
+      "priority": 110,
+      "module_role": "general_warmup",
+      "notes": "Short pulse raise before going upside down.",
+      "selection": {
+        "primary": {
+          "exercise_id": "general_pulse_raise",
+          "prescription_overrides": {
+            "sets": 1,
+            "work_seconds": 120,
+            "notes": "2 min of light jogging in place or easy cardio, with arm swings."
+          },
+          "filters": {
+            "role": [
+              "warmup"
+            ],
+            "domain": [
+              "aerobic_capacity"
+            ],
+            "intensity_max": "low"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "shoulder_wrist_prep",
+      "required": true,
+      "priority": 105,
+      "module_role": "general_warmup",
+      "notes": "Thoracic and shoulder mobility plus wrist preparation: the wrists carry the whole body in the handstand.",
+      "selection": {
+        "primary": {
+          "exercise_id": "mobility_thoracic_shoulders_flow",
+          "prescription_overrides": {
+            "sets": 1,
+            "work_seconds": 180,
+            "notes": "2 min of thoracic rotations, arm circles and scapular circles, then 1 min of wrist prep on the floor: wrist circles, rock forward and back on flat palms with the fingers pointing forward, then backward. No static stretching."
+          },
+          "filters": {
+            "role": [
+              "warmup"
+            ],
+            "domain": [
+              "mobility"
+            ],
+            "intensity_max": "low"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "handstand_balance",
+      "required": false,
+      "priority": 100,
+      "module_role": "primary",
+      "order": "after_warmup",
+      "notes": "Balance first, while the nervous system is fresh: heel pulls from a chest-to-wall handstand, the bridge to a freestanding handstand.",
+      "selection": {
+        "primary": {
+          "exercise_id": "heel_pulls_chest_to_wall",
+          "prescription_overrides": {
+            "sets": 3,
+            "reps": 3,
+            "rest_between_sets_seconds": 60,
+            "notes": "3 x 3 attempts: walk up chest to the wall, peel one heel off, then the other, and hunt for the balance line for a few seconds. Correct with finger pressure, not with the shoulders. Stop the set when the line gets sloppy: this is practice, not a set to failure."
+          },
+          "filters": {
+            "role": [
+              "accessory"
+            ],
+            "domain": [
+              "handstand_skill"
+            ],
+            "pattern": [
+              "handstand"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "handstand_hold",
+      "required": true,
+      "priority": 98,
+      "module_role": "primary",
+      "order": "after_warmup",
+      "notes": "Chest-to-wall handstand hold: the foundation of every other handstand drill, and the measurable target of this block (a clean 30 s hold also opens the next level of the vertical-push ladder).",
+      "selection": {
+        "primary": {
+          "exercise_id": "wall_handstand_hold",
+          "prescription_overrides": {
+            "sets": 3,
+            "work_seconds": 30,
+            "rest_between_sets_seconds": 60,
+            "notes": "Target: 3 x 30 s clean, belly to the wall, hands 15-20 cm from it. Push the floor away, ribs closed, glutes tight. Come down when the shoulders sink or the back arches, and log the seconds of your weakest hold."
+          },
+          "filters": {
+            "role": [
+              "accessory"
+            ],
+            "domain": [
+              "handstand_skill"
+            ],
+            "pattern": [
+              "handstand"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "shoulder_press",
+      "required": true,
+      "priority": 95,
+      "module_role": "secondary",
+      "order": "after_warmup",
+      "notes": "Vertical press for the shoulders, the heaviest lift of the session, done right after the handstand while you are still fresh. The same movement every time so the load can progress from feedback.",
+      "selection": {
+        "primary": {
+          "exercise_id": "overhead_press",
+          "prescription_overrides": {
+            "sets": 3,
+            "deload_sets": 2,
+            "reps": 8,
+            "rest_between_sets_seconds": 90,
+            "notes": "3 x 8 at RIR 1-2, seated dumbbell press or standing barbell, always the same implement. With dumbbells the load is per dumbbell. 3 s lowering phase, ribs down. If every set felt like RIR 3 or more, log the session as easy and the next load goes up."
+          },
+          "filters": {
+            "role": [
+              "accessory"
+            ],
+            "domain": [
+              "strength_general"
+            ],
+            "pattern": [
+              "push"
+            ],
+            "intensity_max": "medium"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "lateral_delts",
+      "required": false,
+      "priority": 90,
+      "module_role": "secondary",
+      "notes": "Lateral raise for the side of the shoulder, which climbing barely trains.",
+      "selection": {
+        "primary": {
+          "exercise_id": "lateral_raise",
+          "prescription_overrides": {
+            "sets": 3,
+            "deload_sets": 2,
+            "reps": 12,
+            "rest_between_sets_seconds": 45,
+            "notes": "3 x 12 at RIR 1-2, load per dumbbell. Lead with the elbows up to shoulder height, never above, 2-3 s down."
+          },
+          "filters": {
+            "role": [
+              "accessory"
+            ],
+            "domain": [
+              "strength_general"
+            ],
+            "pattern": [
+              "shoulder_isolation"
+            ],
+            "intensity_max": "low"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "triceps",
+      "required": true,
+      "priority": 85,
+      "module_role": "secondary",
+      "notes": "Triceps in the stretched position: an overhead extension with one dumbbell, so the long head works where the cable pushdown of the push lunch does not reach.",
+      "selection": {
+        "primary": {
+          "exercise_id": "overhead_tricep_extension",
+          "prescription_overrides": {
+            "sets": 3,
+            "deload_sets": 2,
+            "reps": 10,
+            "rest_between_sets_seconds": 60,
+            "notes": "3 x 10 at RIR 1-2 with one dumbbell held in both hands: the load is that one dumbbell. Elbows in, ribs down, full stretch behind the head. If every set felt like RIR 3 or more, log it as easy and the load goes up."
+          },
+          "filters": {
+            "role": [
+              "accessory"
+            ],
+            "domain": [
+              "strength_general"
+            ],
+            "pattern": [
+              "push"
+            ],
+            "equipment": [
+              "dumbbell"
+            ],
+            "intensity_max": "low"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "biceps",
+      "required": true,
+      "priority": 80,
+      "module_role": "secondary",
+      "notes": "Elbow flexion with a neutral grip: the hammer curl puts the brachialis and brachioradialis to work, the flexors that hold a lock-off (the push lunch has the supinated curl). Never a weighted pull-up or chin-up.",
+      "selection": {
+        "primary": {
+          "exercise_id": "hammer_curl",
+          "prescription_overrides": {
+            "sets": 3,
+            "deload_sets": 2,
+            "reps": 8,
+            "rest_between_sets_seconds": 75,
+            "notes": "3 x 8 at RIR 1-2, load per dumbbell, thumbs up, elbows pinned, 3 s lowering phase, no swing. If every set felt like RIR 3 or more, log it as easy and the load goes up."
+          },
+          "filters": {
+            "role": [
+              "accessory",
+              "main"
+            ],
+            "domain": [
+              "strength_general"
+            ],
+            "pattern": [
+              "elbow_flexion"
+            ],
+            "intensity_max": "medium"
+          }
+        }
+      }
+    }
+  ]
+}

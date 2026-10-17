@@ -22,6 +22,12 @@ export const ROLE_LABELS: Record<SlotRole, string> = {
   complementary: "Complementary",
 };
 export const MAX_MINUTES_RANGE: [number, number] = [10, 240];
+/** Every family the engine knows (`complementary_v1.FOCUS_FAMILIES`), in display order. */
+export const FOCUS_FAMILIES: FocusFamily[] = ["legs", "hiit", "z2", "upper_push_arms", "arms_shoulders"];
+/**
+ * The rotation of a user who never set one (`complementary_v1.DEFAULT_ROTATION`).
+ * A318: not every family — `arms_shoulders` is opt-in, added from the editor.
+ */
 export const DEFAULT_ROTATION: FocusFamily[] = ["legs", "hiit", "z2", "upper_push_arms"];
 export const MAX_ROTATION_LENGTH = 21;
 
@@ -107,10 +113,15 @@ export function isComplementary(slot: Partial<StructuredSlot> | null | undefined
   return !!slot?.available && slot.preferred_location !== "other_sport" && effectiveRole(slot) === "complementary";
 }
 
-/** The rotation the engine will use for the general phase (absent = all four). */
+/**
+ * The rotation the engine will use for the general phase (absent = the default
+ * four). Unknown families are dropped, as the engine does; every known family
+ * is kept — A318: filtering on the default rotation would silently drop an
+ * opt-in family the user saved.
+ */
 export function effectiveRotation(raw: unknown): FocusFamily[] {
   if (!Array.isArray(raw)) return [...DEFAULT_ROTATION];
-  return raw.filter((f): f is FocusFamily => (DEFAULT_ROTATION as string[]).includes(f as string));
+  return raw.filter((f): f is FocusFamily => (FOCUS_FAMILIES as string[]).includes(f as string));
 }
 
 export function moveItem<T>(list: T[], index: number, delta: -1 | 1): T[] {

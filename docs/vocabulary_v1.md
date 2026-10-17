@@ -950,10 +950,11 @@ Session templates define complete training sessions. Module templates define reu
 
 Verify with: `python _archive/scripts/audit_templates.py`
 
-### 3.0 Canonical session template_ids (40)
+### 3.0 Canonical session template_ids (41)
 
 Sessions live in `backend/catalog/sessions/v1/`. Each produces a full resolved session.
 
+- `arms_shoulders_handstand_lunch` *(strength_general, gym — A318 lunch, family `arms_shoulders`: handstand first (heel pulls + wall hold), overhead press, lateral raise, overhead triceps extension, hammer curl; RIR 1-2, dumbbell loads per dumbbell)*
 - `boulder_circuit_gym` *(volume_climbing, gym)*
 - `complementary_conditioning` *(strength_general, home)*
 - `core_training` *(core, home)*
@@ -1678,7 +1679,7 @@ availability.<weekday>.<slot>  (all optional; absent ⇒ planner byte-identical 
   focus:        FocusFamily — pins the family of a complementary slot
 
 planning_prefs
-  complementary_rotation:           list[FocusFamily]   (default legs, hiit, z2, upper_push_arms)
+  complementary_rotation:           list[FocusFamily]   (default legs, hiit, z2, upper_push_arms — arms_shoulders is opt-in)
   complementary_rotation_by_phase:  { phase_id: list[FocusFamily] }  (replaces the rotation of that phase)
 
 FocusFamily → catalog sessions (first that fits slot equipment, max_minutes, max_per_week)
@@ -1686,6 +1687,7 @@ FocusFamily → catalog sessions (first that fits slot equipment, max_minutes, m
   hiit             treadmill_hiit_4x4
   z2               treadmill_zone2_cardio
   upper_push_arms  upper_push_arms_lunch (carries the biceps curl) | upper_body_weights
+  arms_shoulders   arms_shoulders_handstand_lunch (A318: handstand + shoulders, triceps, hammer curl — carries the biceps rule)
 Phase variant (default): deload → hiit becomes z2.
 ```
 

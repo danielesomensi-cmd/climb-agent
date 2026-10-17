@@ -308,7 +308,8 @@ can carry with the equipment (or the pool's discipline) is left to A294's hint. 
 
 Runs **last**, after the deload transform. A slot with `role: "complementary"` is hidden from every pass above
 (and from the A294 proposals) by `_primary_view`; this pass fills it with one session of a focus family
-(`legs`, `hiit`, `z2`, `upper_push_arms` → C274 catalog sessions), own budget outside target days, pruning,
+(`legs`, `hiit`, `z2`, `upper_push_arms` → C274 catalog sessions; A318 adds the opt-in `arms_shoulders` →
+`arms_shoulders_handstand_lunch`, outside `DEFAULT_ROTATION`), own budget outside target days, pruning,
 hard cap and deload cap. The family ↔ slot pairing is the minimum-penalty permutation over the week's real
 primaries (HIIT not on/before a max day and ≤ 1/week, biceps not ≤ 24 h before a heavy pull, legs not ≤ 48 h
 before a limit/outdoor day or a trip departure; HIIT also not before an outdoor day; HIIT/legs not on pre-trip

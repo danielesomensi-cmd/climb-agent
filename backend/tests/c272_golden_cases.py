@@ -38,6 +38,10 @@ changed) on the 3 home keys; ``strength_long`` / ``technique_focus_gym`` on the
 ``fall_practice`` instance (``[]`` → ``["gym_routes"]``, the catalog moved the
 requirement from ``equipment_required_any``) — same ids, same prescriptions.
 
+A318 added 6 keys, one per profile × date, for the new session
+``arms_shoulders_handstand_lunch``; no existing key changed (checked key by key
+against the fixture of origin/main).
+
 A316 changed 6 keys, all ``treadmill_zone2_cardio`` (3 profiles × 2 dates), digest
 only: ``treadmill_incline_walk`` gains the catalog ``hr_target`` band and its HR
 cue drops the age formula. Same ids, same order, same prescriptions;

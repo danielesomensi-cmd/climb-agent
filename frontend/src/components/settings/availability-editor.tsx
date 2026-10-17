@@ -534,7 +534,9 @@ export function AvailabilityEditor({
                     week, from what your evenings hold — HIIT never on or before a max day
                     (at most one a week, it never counts as a hard day; zone 2 in deload),
                     biceps not in the 24 h before heavy pulling, legs not in the 48 h
-                    before a limit or outdoor day. Cardio runs on the treadmill.
+                    before a limit or outdoor day. Cardio runs on the treadmill. Arms,
+                    shoulders + handstand is not in the default four: add it below if you
+                    want it.
                   </p>
                 </div>
                 {rotation.length === 0 ? (
@@ -595,7 +597,7 @@ export function AvailabilityEditor({
                       className="rounded px-2 py-1 text-[11px] text-muted-foreground underline"
                       onClick={() => editRotation([...DEFAULT_ROTATION])}
                     >
-                      Reset to all four
+                      Reset to the default four
                     </button>
                   )}
                 </div>
