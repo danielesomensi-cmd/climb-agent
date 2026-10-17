@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from backend.engine import storage
 from backend.engine.closed_loop_v1 import STIMULUS_CATEGORIES, _session_categories
@@ -383,43 +383,266 @@ def _build_difficulty(
 
 
 def _is_off_plan_session(session_id: str, session: Optional[Dict[str, Any]] = None) -> bool:
-    """A240: custom / generated (ad-hoc, body-part) sessions stay out of the
-    stimulus balance — same boundary as ``stimulus._is_player_session``."""
+    """Custom / generated (ad-hoc, body-part) sessions — same boundary as
+    ``stimulus._is_player_session``. A240 kept them out of the stimulus
+    balance; since B383 they count, categorised from their content
+    (``_content_categories``) instead of from the catalog."""
     sid = str(session_id or "")
     if sid.startswith(("custom_", "generated_")):
         return True
     return bool(session and (session.get("is_custom") or session.get("build_kind") == "body_parts"))
 
 
+# ---------------------------------------------------------------------------
+# B383 — custom sessions and crag days in the stimulus balance
+# ---------------------------------------------------------------------------
+#
+# Decision (Daniele, 2026-10-17): custom sessions count. Most of his training
+# is custom, so the A240 exclusion made the report say "No Endurance training
+# in 124 days" for an athlete who climbs routes at the crag every weekend.
+# Report-only: the closed-loop writers keep ignoring custom sessions (A240).
+#
+# An off-plan session has no catalog primary_goal, so its categories come from
+# its exercises, with the vocabulary the catalog already uses:
+#   1. the A288 stimulus family (``stimulus.stimulus_of``) when there is one —
+#      finger_max → finger_strength, limit_power → boulder_power +
+#      finger_strength (A291 limit_projecting), power_endurance → endurance,
+#      pulling_max → complementaries (A291 pulling_strength);
+#   2. otherwise the exercise's catalog domains through the same goal → category
+#      table A291 uses for sessions (``_EXERCISE_DOMAIN_CATEGORIES``);
+#   3. warm-up / cooldown entries add nothing; conditioning (treadmill 4x4,
+#      Z2 run/walk, bike) is complementaries, exactly like the catalog sessions
+#      treadmill_hiit_4x4 / treadmill_zone2_cardio (primary_goal conditioning).
+# A session takes its climbing categories when it has any (like a catalog
+# session takes its primary goal, not one category per accessory), otherwise
+# complementaries.
+
+_FAMILY_CATEGORIES: Dict[str, Tuple[str, ...]] = {
+    "finger_max": ("finger_strength",),
+    "limit_power": ("boulder_power", "finger_strength"),
+    "power_endurance": ("endurance",),
+    "pulling_max": ("complementaries",),
+}
+
+_EXERCISE_DOMAIN_CATEGORIES: Dict[str, Tuple[str, ...]] = {
+    "finger_max_strength": ("finger_strength",),
+    "finger_strength_endurance": ("finger_strength",),
+    "finger_aerobic_endurance": ("finger_strength", "endurance"),  # A291 finger_aerobic_base
+    "contact_strength": ("boulder_power", "finger_strength"),      # A291 contact_strength
+    "power": ("boulder_power", "finger_strength"),                 # limit bouldering
+    "power_endurance": ("endurance",),
+    "anaerobic_capacity": ("endurance",),
+    "aerobic_capacity": ("endurance",),
+    "climbing_routes": ("endurance",),                             # A291 route_projecting
+}
+# The generic ``finger_strength`` domain also tags finger warm-ups and prehab
+# curls: it is a finger stimulus only on loaded work.
+_FINGER_DOMAIN_CATEGORIES = frozenset({"main_strength", "test", "test_measurement"})
+_NO_STIMULUS_ROLES = frozenset({"warmup", "activation", "cooldown"})
+_CLIMBING_CATEGORIES = ("finger_strength", "boulder_power", "endurance")
+
+
+def _exercise_catalog() -> Dict[str, Dict[str, Any]]:
+    from backend.engine.adaptive_replan import load_exercises_by_id
+    return load_exercises_by_id()
+
+
+def exercise_stimulus_categories(exercise_id: str) -> Tuple[str, ...]:
+    """B383: stimulus categories of ONE catalog exercise ('' → nothing).
+
+    Empty for warm-up/cooldown entries and unknown ids (never guess)."""
+    from backend.engine.stimulus import stimulus_of
+
+    family = stimulus_of(exercise_id)
+    if family:
+        return _FAMILY_CATEGORIES.get(family, ("complementaries",))
+    meta = _exercise_catalog().get(str(exercise_id or ""))
+    if not meta:
+        return ()
+    category = str(meta.get("category") or "")
+    roles = {str(r) for r in (meta.get("role") or [])}
+    if category.startswith("warmup") or (roles and roles <= _NO_STIMULUS_ROLES):
+        return ()
+    if category == "conditioning":
+        return ("complementaries",)
+    out: set = set()
+    for domain in meta.get("domain") or []:
+        out.update(_EXERCISE_DOMAIN_CATEGORIES.get(str(domain), ()))
+        if domain == "finger_strength" and category in _FINGER_DOMAIN_CATEGORIES:
+            out.add("finger_strength")
+    return tuple(sorted(out)) or ("complementaries",)
+
+
+def _content_categories(exercise_ids: List[str]) -> List[str]:
+    found: set = set()
+    for eid in exercise_ids:
+        found.update(exercise_stimulus_categories(eid))
+    climbing = sorted(found & set(_CLIMBING_CATEGORIES))
+    if climbing:
+        return climbing
+    return ["complementaries"] if found else []
+
+
+def _custom_definitions(state: Optional[Dict[str, Any]]) -> Dict[str, List[str]]:
+    """custom session id (``cs_…``) → its exercise ids, from state.custom_sessions."""
+    out: Dict[str, List[str]] = {}
+    for cs in (state or {}).get("custom_sessions") or []:
+        if isinstance(cs, dict) and cs.get("id"):
+            out[str(cs["id"])] = [
+                str(e.get("exercise_id")) for e in cs.get("exercises") or []
+                if isinstance(e, dict) and e.get("exercise_id")
+            ]
+    return out
+
+
+def _off_plan_categories(
+    session_id: str,
+    session: Optional[Dict[str, Any]],
+    definitions: Dict[str, List[str]],
+) -> List[str]:
+    """B383: categories of a custom / generated session from its content.
+
+    The plan copy wins (what was logged, with the player pre-fill rule of
+    ``stimulus.counted_entries``, else what it carried); without one, the
+    custom definition in ``state.custom_sessions``. No content → [] (the
+    session does not count: never guess from the id or the tags)."""
+    from backend.engine.stimulus import counted_entries
+
+    ids: List[str] = []
+    if session:
+        entries, _origin = counted_entries(session)
+        ids = [str(e.get("exercise_id")) for e in entries if e.get("exercise_id")]
+    if not ids:
+        sid = str(session_id or "")
+        cs_id = str((session or {}).get("custom_session_id") or "") or (
+            sid[len("custom_"):] if sid.startswith("custom_") else ""
+        )
+        ids = definitions.get(cs_id, [])
+    return _content_categories(ids)
+
+
+def _session_stimulus_categories(
+    session_id: str,
+    session: Optional[Dict[str, Any]],
+    definitions: Dict[str, List[str]],
+) -> List[str]:
+    if _is_off_plan_session(session_id, session):
+        return _off_plan_categories(session_id, session, definitions)
+    return _session_categories(session or {"session_id": session_id})
+
+
+# Crag days. A291/A294 vocabulary: a lead day is route climbing (A291
+# route_projecting / aerobic_capacity → endurance), a boulder day is
+# bouldering (boulder_power). An outdoor day is NOT a finger_strength stimulus:
+# A288 (decision 2026-10-04) — "outdoor near RP counts as finger-hard day
+# only", i.e. fatigue for the guards, not a max-finger exposure.
+_OUTDOOR_DISCIPLINE_CATEGORY = {"lead": "endurance", "boulder": "boulder_power"}
+
+
+def _outdoor_day_categories(
+    state: Optional[Dict[str, Any]],
+    outdoor_rows: Optional[List[Dict[str, Any]]],
+    week_plan: Optional[Dict[str, Any]] = None,
+) -> Dict[str, List[str]]:
+    """B383: date → categories of the crag days the athlete actually climbed.
+
+    Sources: the outdoor log (``outdoor_logs`` rows + ``state.outdoor_log``),
+    a route counting only with at least one attempt (or no attempt list at
+    all: a legacy v1 entry); plus the plan days marked
+    ``outdoor_session_status: done`` with no log, by the discipline of their
+    pitch ladder, else the goal's. A planned / skipped crag day never counts."""
+    from backend.engine.stimulus import _outdoor_entries, _route_discipline, iter_plan_days
+
+    out: Dict[str, set] = {}
+    for entry in _outdoor_entries(state or {}, outdoor_rows):
+        d = str(entry.get("date") or "")[:10]
+        disc_entry = str(entry.get("discipline") or "")
+        for route in entry.get("routes") or []:
+            if not isinstance(route, dict):
+                continue
+            attempts = route.get("attempts")
+            if isinstance(attempts, list) and not attempts:
+                continue
+            cat = _OUTDOOR_DISCIPLINE_CATEGORY.get(_route_discipline(route, disc_entry))
+            if cat:
+                out.setdefault(d, set()).add(cat)
+    goal_disc = str(((state or {}).get("goal") or {}).get("discipline") or "")
+    days = list(iter_plan_days(state or {}))
+    if week_plan:  # the report's week may come from the archive, not the hot state
+        days += list(iter_plan_days({"week_plans": {"_report_week": week_plan}}))
+    for d, day, _src in days:
+        if d in out or day.get("outdoor_session_status") != "done":
+            continue
+        disc = str((day.get("outdoor_plan") or {}).get("discipline") or goal_disc)
+        cat = _OUTDOOR_DISCIPLINE_CATEGORY.get(disc)
+        if cat:
+            out.setdefault(d, set()).add(cat)
+    return {d: sorted(c) for d, c in out.items()}
+
+
+def _plan_sessions_by_key(state: Optional[Dict[str, Any]]) -> Dict[Tuple[str, str], Dict[str, Any]]:
+    """(date, session_id) → the hot plan copy of an off-plan session (its
+    logged exercises beat the definition, which may have been edited since)."""
+    from backend.engine.stimulus import iter_plan_sessions
+
+    out: Dict[Tuple[str, str], Dict[str, Any]] = {}
+    for d, session, _src in iter_plan_sessions(state or {}):
+        sid = str(session.get("session_id") or "")
+        if _is_off_plan_session(sid, session):
+            out.setdefault((d, sid), session)
+    return out
+
+
 def _derived_last_done(
     completion_log: List[Dict[str, Any]],
     before: str,
+    *,
+    state: Optional[Dict[str, Any]] = None,
+    outdoor_rows: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, str]:
     """B377: last done date per stimulus category, derived at read time.
 
     Source: ``session_completion_log`` rows with status ``done`` dated strictly
     before ``before`` (YYYY-MM-DD), categorised from the catalog (A291,
-    ``_session_categories``). Custom/generated sessions are excluded (A240),
-    rows without a session_id are ignored. Pure: a double mark_done only adds a
-    duplicate row (same max date), an undo (mark_planned) removes the row and
-    the category falls back to the previous date. The stored
-    ``stimulus_recency`` counters are legacy and no longer read here.
+    ``_session_categories``); rows without a session_id are ignored. Pure: a
+    double mark_done only adds a duplicate row (same max date), an undo
+    (mark_planned) removes the row and the category falls back to the previous
+    date. The stored ``stimulus_recency`` counters are legacy and no longer
+    read here.
+
+    B383: custom / generated rows count, categorised from their content
+    (``_off_plan_categories``, needs ``state``); crag days the athlete climbed
+    count too (``_outdoor_day_categories``).
     """
+    definitions = _custom_definitions(state)
+    plan_copies = _plan_sessions_by_key(state)
     last: Dict[str, str] = {}
+
+    def _bump(cat: str, d: str) -> None:
+        if d > last.get(cat, ""):
+            last[cat] = d
+
     for row in completion_log or []:
         if not isinstance(row, dict) or row.get("status") != "done":
             continue
         d = str(row.get("date") or "")[:10]
         sid = str(row.get("session_id") or "")
-        if not d or d >= before or not sid or _is_off_plan_session(sid):
+        if not d or d >= before or not sid:
             continue
         try:
             datetime.strptime(d, "%Y-%m-%d")
         except ValueError:
             continue
-        for cat in _session_categories({"session_id": sid}):
-            if d > last.get(cat, ""):
-                last[cat] = d
+        if _is_off_plan_session(sid):
+            cats = _off_plan_categories(sid, plan_copies.get((d, sid)), definitions)
+        else:
+            cats = _session_categories({"session_id": sid})
+        for cat in cats:
+            _bump(cat, d)
+    for d, cats in _outdoor_day_categories(state, outdoor_rows).items():
+        if d < before:
+            for cat in cats:
+                _bump(cat, d)
     return last
 
 
@@ -427,6 +650,9 @@ def _build_stimulus_balance(
     week_plan: Optional[Dict[str, Any]],
     completion_log: List[Dict[str, Any]],
     week_start: str,
+    *,
+    state: Optional[Dict[str, Any]] = None,
+    outdoor_rows: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Dict[str, Any]]:
     """Build stimulus balance section: sessions per category this week + days
     since the last one before this week.
@@ -434,8 +660,11 @@ def _build_stimulus_balance(
     B377: ``days_since_last`` is derived from ``session_completion_log`` (see
     ``_derived_last_done``) and measured from ``week_start`` to the last done
     session *before* the week — always >= 1, never the frozen stored counter.
-    ``last_done_date`` (additive) is that date. Custom/generated sessions are
-    excluded from both numbers (A240).
+    ``last_done_date`` (additive) is that date.
+
+    B383: custom / generated sessions count in both numbers, categorised from
+    their content; a crag day the athlete climbed counts once per category
+    (lead → endurance, boulder → boulder_power).
     """
     start = datetime.strptime(week_start, "%Y-%m-%d").date()
     end = start + timedelta(days=6)
@@ -443,6 +672,7 @@ def _build_stimulus_balance(
     until = end.isoformat()
 
     counts: Dict[str, int] = {cat: 0 for cat in STIMULUS_CATEGORIES}
+    definitions = _custom_definitions(state)
 
     if week_plan:
         for week in week_plan.get("weeks") or []:
@@ -453,12 +683,16 @@ def _build_stimulus_balance(
                 for session in day.get("sessions") or []:
                     if session.get("status") != "done":
                         continue
-                    if _is_off_plan_session(session.get("session_id") or "", session):
-                        continue
-                    for cat in _session_categories(session):
+                    sid = str(session.get("session_id") or "")
+                    for cat in _session_stimulus_categories(sid, session, definitions):
                         counts[cat] = counts.get(cat, 0) + 1
 
-    last_done = _derived_last_done(completion_log, since)
+    for d, cats in _outdoor_day_categories(state, outdoor_rows, week_plan).items():
+        if since <= d <= until:
+            for cat in cats:
+                counts[cat] = counts.get(cat, 0) + 1
+
+    last_done = _derived_last_done(completion_log, since, state=state, outdoor_rows=outdoor_rows)
 
     result: Dict[str, Dict[str, Any]] = {}
     for cat in STIMULUS_CATEGORIES:
@@ -1055,8 +1289,10 @@ def generate_weekly_report(
 
     # Load raw data
     indoor = _load_indoor_sessions(user_id, since, until)
-    outdoor_raw = load_outdoor_sessions(user_id, since_date=since)
-    outdoor_filtered = [s for s in outdoor_raw if s.get("date", "") <= until]
+    # B383: the whole outdoor log (the stimulus balance needs the crag days
+    # before the week too); the week's sections still read only the week.
+    outdoor_all = load_outdoor_sessions(user_id)
+    outdoor_filtered = [s for s in outdoor_all if since <= s.get("date", "") <= until]
     completion_log = user_state.get("session_completion_log") or []
     free_sessions = [
         fs for fs in (user_state.get("free_sessions") or [])
@@ -1076,6 +1312,8 @@ def generate_weekly_report(
         week_plan,
         completion_log,
         week_start,
+        state=user_state,
+        outdoor_rows=outdoor_all,
     )
     progression = _build_progression(
         user_state.get("working_loads") or {}, week_start, user_state

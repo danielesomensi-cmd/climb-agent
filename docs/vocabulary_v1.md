@@ -1169,6 +1169,8 @@ Since A291 a session's categories come from the session catalog's `intent.primar
 
 The 2 catalog sessions without a primary_goal are mapped explicitly: `finger_aerobic_base`, `finger_endurance_short` → finger_strength + endurance. The planner tag `finger` always adds finger_strength. Ids the catalog does not know (custom, ad-hoc, outdoor) use the legacy substring rule, where `power` no longer matches `power_endurance` (power_endurance_gym used to count as boulder_power).
 
+**Weekly report only (B383):** the stimulus balance does not use that substring rule for custom / generated sessions: it categorises them from their exercises (`report_engine.exercise_stimulus_categories` — A288 family `finger_max` → finger_strength, `limit_power` → boulder_power + finger_strength, `power_endurance` → endurance, `pulling_max` → complementaries; otherwise the exercise domains through the table above; warm-up/cooldown → nothing; category `conditioning` → complementaries). A session takes its climbing categories when it has any, else complementaries. A crag day the athlete climbed counts once per category: lead → endurance, boulder → boulder_power.
+
 ### 4.5 Retest decisions and retest status (A289)
 
 `retest_policy.retest_decisions(state, week_start, *, today, finger_device, archived_weeks, outdoor_rows)` — the only scheduler of tests of a **covered** axis (`finger` with a hangboard, `pulling`; covered = `official_max(...).tested`, i.e. a test < 90 days). `None` when nothing is covered (planner byte-identical). Output stored, with the placement outcome, in `week_plans[*].profile_snapshot.retest_decisions` `{version, week_start, applied, covered_axes, required_sessions[], skipped[], already_scheduled[]}`.
