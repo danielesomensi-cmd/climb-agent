@@ -20,6 +20,7 @@ import { KeyConflictDialog } from "@/components/training/key-conflict-dialog";
 import { useKeyConflictGate } from "@/lib/hooks/use-key-conflict-gate";
 import { findDay, firstFreeSlot } from "@/lib/day-slots";
 import { invalidateWeekPlans } from "@/lib/invalidation";
+import { formatLoad, type LoadUnit } from "@/lib/load-units";
 import { useQueryClient } from "@tanstack/react-query";
 
 type Step = "equipment" | "parts" | "preview";
@@ -398,7 +399,7 @@ export default function BodyPartPickerPage() {
                       <div className="font-medium text-sm">
                         {ex.exercise_id.replace(/_/g, " ")}
                       </div>
-                      <ExercisePrescription prescription={ex.prescription} suggestedLoad={ex.suggested_external_load_kg} />
+                      <ExercisePrescription prescription={ex.prescription} suggestedLoad={ex.suggested_external_load_kg} loadUnit={ex.load_unit} />
                     </div>
                   ))}
                 </div>
@@ -421,7 +422,7 @@ export default function BodyPartPickerPage() {
                       <div className="font-medium text-sm">
                         {ex.exercise_id.replace(/_/g, " ")}
                       </div>
-                      <ExercisePrescription prescription={ex.prescription} suggestedLoad={ex.suggested_external_load_kg} />
+                      <ExercisePrescription prescription={ex.prescription} suggestedLoad={ex.suggested_external_load_kg} loadUnit={ex.load_unit} />
                     </div>
                   ))}
               </div>
@@ -447,9 +448,11 @@ export default function BodyPartPickerPage() {
 function ExercisePrescription({
   prescription,
   suggestedLoad,
+  loadUnit,
 }: {
   prescription: Record<string, unknown>;
   suggestedLoad?: number;
+  loadUnit?: LoadUnit;
 }) {
   if (!prescription) return null;
   const bits: string[] = [];
@@ -467,7 +470,7 @@ function ExercisePrescription({
     else bits.push(`${sets} sets`);
   }
   if (restSec) bits.push(`rest ${restSec}s`);
-  if (typeof load === "number" && load > 0) bits.push(`+${load}kg`);
+  if (typeof load === "number" && load > 0) bits.push(formatLoad(load, loadUnit, { signed: true }));
 
   if (bits.length === 0) return null;
   return (

@@ -103,7 +103,8 @@
       "phase_affinity": [
         "base",
         "deload"
-      ]
+      ],
+      "load_unit": "implement"
     },
     {
       "id": "band_external_rotation",
@@ -1130,7 +1131,8 @@
         "Torso upright or slight forward lean, core engaged",
         "Full range: back knee approaches but does not touch floor",
         "3-second eccentric lower for maximum tendon adaptation",
-        "Complete all reps on one leg before switching — equal volume both sides"
+        "Complete all reps on one leg before switching — equal volume both sides",
+        "To load: a dumbbell in each hand — the load you log is the weight of one dumbbell"
       ],
       "video_url": "https://www.youtube.com/watch?v=1V4ypd3YBbA",
       "load_model": "external_load",
@@ -1138,7 +1140,8 @@
       "alt_sides": true,
       "phase_affinity": [
         "base"
-      ]
+      ],
+      "load_unit": "per_dumbbell"
     },
     {
       "id": "pistol_squat_progression",
@@ -1244,7 +1247,8 @@
       "load_model": "external_load",
       "phase_affinity": [
         "base"
-      ]
+      ],
+      "load_unit": "total"
     },
     {
       "id": "pullup",
@@ -1745,7 +1749,8 @@
       "fatigue_cost": 5,
       "recency_group": "bench_press",
       "equipment_required": [
-        "weight"
+        "barbell",
+        "bench"
       ],
       "location_allowed": [
         "gym"
@@ -1766,7 +1771,7 @@
         "cns": "medium",
         "skin": "none"
       },
-      "description": "Horizontal barbell pressing (barbell only: the dumbbell version is dumbbell_bench_press, whose load is per hand and must never be logged here). Comprehensive horizontal push pattern targeting pectorals, anterior deltoid, and triceps. Most load-measurable of all pressing movements, making progressive overload easy to track. Useful for climbers needing significant upper-body push antagonist work to address strength imbalances.",
+      "description": "Horizontal barbell pressing on a flat bench (barbell only: the dumbbell version is dumbbell_bench_press, whose load is per dumbbell and must never be logged here). The load is the total on the bar. Comprehensive horizontal push pattern targeting pectorals, anterior deltoid, and triceps. Most load-measurable of all pressing movements, making progressive overload easy to track. Useful for climbers needing significant upper-body push antagonist work to address strength imbalances.",
       "cues": [
         "Feet flat on floor, slight arch in lower back — retract and depress scapulae against bench",
         "Grip width: slightly outside shoulder width — wrists stacked over elbows at bottom",
@@ -1778,7 +1783,8 @@
       "load_model": "external_load",
       "phase_affinity": [
         "base"
-      ]
+      ],
+      "load_unit": "total"
     },
     {
       "id": "overhead_press",
@@ -1818,20 +1824,21 @@
         "cns": "low",
         "skin": "none"
       },
-      "description": "Vertical pressing pattern (barbell or dumbbell). Targets anterior/medial deltoid and triceps. Trains the overhead position climbers need for manteling and high-ball pressing. Addresses the deltoid imbalance common in climbers who over-train vertical pull.",
+      "description": "Vertical pressing pattern with a dumbbell in each hand (standing or seated). The load is per dumbbell — the weight of ONE dumbbell, never the sum. Targets anterior/medial deltoid and triceps. Trains the overhead position climbers need for manteling and high-ball pressing. Addresses the deltoid imbalance common in climbers who over-train vertical pull.",
       "cues": [
-        "Standing: feet shoulder-width, slight core brace — do not hyperextend lower back",
-        "Bar starts at upper chest / collarbone level, elbows slightly in front of bar",
-        "Press directly overhead — bar travels in a slight arc around the face",
-        "Finish with bar over mid-foot and ears visible in front of upper arm",
+        "Standing or seated: feet shoulder-width, slight core brace — do not hyperextend lower back",
+        "Dumbbells start at shoulder height, elbows slightly in front of the body",
+        "Press directly overhead until the arms are straight and the dumbbells almost touch",
+        "Finish with the ears visible in front of the upper arms",
         "Lower with control: 3-second eccentric",
-        "Seated dumbbell variation is shoulder-health-friendly alternative if bar feels uncomfortable"
+        "The load you log is the weight of one dumbbell"
       ],
       "video_url": "https://www.hoopersbeta.com/library/antagonist-training",
       "load_model": "external_load",
       "phase_affinity": [
         "base"
-      ]
+      ],
+      "load_unit": "per_dumbbell"
     },
     {
       "id": "plank",
@@ -3305,7 +3312,7 @@
       "fatigue_cost": 5,
       "recency_group": "horizontal_pull",
       "equipment_required": [
-        "weight"
+        "barbell"
       ],
       "location_allowed": [
         "gym"
@@ -3317,7 +3324,7 @@
         "work_seconds": null,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 90,
-        "notes": "Barbell or dumbbell row. Controlled eccentric."
+        "notes": "Barbell row: the load is the total on the bar. The dumbbell version is dumbbell_row (load per dumbbell). Controlled eccentric."
       },
       "stress_tags": {
         "fingers": "low",
@@ -3325,20 +3332,76 @@
         "cns": "medium",
         "skin": "none"
       },
-      "description": "Bent-over barbell or dumbbell horizontal row. Targets rhomboids, mid-trapezius, rear deltoid, and biceps. Heaviest loadable horizontal pull movement — effective for climbers who need significant upper-back volume to counterbalance anterior shoulder loading. Dumbbell variation is accessible and allows unilateral work.",
+      "description": "Bent-over barbell horizontal row (the dumbbell version is dumbbell_row, whose load is per dumbbell). Targets rhomboids, mid-trapezius, rear deltoid, and biceps. Heaviest loadable horizontal pull movement — effective for climbers who need significant upper-back volume to counterbalance anterior shoulder loading. The load is the total on the bar.",
       "cues": [
         "Hip hinge to ~45°: flat back, core braced, chest up",
         "Pull bar to lower abdomen / upper hip — not chest",
         "Lead with elbows driving back and up — do not shrug",
         "Retract scapulae at the top: feel mid-back squeeze",
         "3-second controlled eccentric lower — no bouncing off legs",
-        "If lower back fatigues before upper back, reduce load or switch to dumbbell single-arm row"
+        "If lower back fatigues before upper back, reduce load or switch to the dumbbell row"
       ],
       "video_url": "https://www.hoopersbeta.com/library/antagonist-training",
       "load_model": "external_load",
       "phase_affinity": [
         "base"
-      ]
+      ],
+      "load_unit": "total"
+    },
+    {
+      "id": "dumbbell_row",
+      "name": "Dumbbell Row",
+      "category": "strength_accessory",
+      "time_min": 12,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general",
+        "strength_pulling"
+      ],
+      "pattern": "pull_horizontal",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "horizontal_pull",
+      "equipment_required": [
+        "dumbbell",
+        "bench"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 6,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90,
+        "notes": "Load per dumbbell. Two dumbbells bent over, or single-arm with a hand on the bench (same dumbbell both sides). Controlled eccentric."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "medium",
+        "skin": "none"
+      },
+      "description": "Bent-over dumbbell horizontal row: a dumbbell in each hand with the torso hinged, or one arm at a time with the free hand and knee on a bench. The load is per dumbbell (the weight of ONE dumbbell), never the sum of the two. Targets rhomboids, mid-trapezius, rear deltoid, and biceps — the accessible, joint-friendly version of the barbell row that also lets each side work on its own.",
+      "cues": [
+        "Hip hinge to ~45° (or one hand and knee on the bench): flat back, core braced, chest up",
+        "Pull the dumbbell to the hip — not to the chest",
+        "Lead with the elbow driving back and up — do not shrug",
+        "Retract the shoulder blade at the top: feel the mid-back squeeze",
+        "3-second controlled eccentric — no swinging",
+        "The load you log is the weight of one dumbbell"
+      ],
+      "video_url": null,
+      "load_model": "external_load",
+      "phase_affinity": [
+        "base"
+      ],
+      "load_unit": "per_dumbbell"
     },
     {
       "id": "typewriter_pullup",
@@ -3501,7 +3564,8 @@
       "phase_affinity": [
         "base",
         "deload"
-      ]
+      ],
+      "load_unit": "total"
     },
     {
       "id": "front_lever_one_leg",
@@ -3827,7 +3891,8 @@
       "phase_affinity": [
         "base",
         "power_endurance"
-      ]
+      ],
+      "load_unit": "total"
     },
     {
       "id": "side_plank",
@@ -3937,7 +4002,8 @@
       "phase_affinity": [
         "base",
         "power_endurance"
-      ]
+      ],
+      "load_unit": "implement"
     },
     {
       "id": "dead_bug",
@@ -4308,7 +4374,8 @@
       "phase_affinity": [
         "base",
         "deload"
-      ]
+      ],
+      "load_unit": "implement"
     },
     {
       "id": "reverse_wrist_curl",
@@ -4361,7 +4428,8 @@
       "phase_affinity": [
         "base",
         "deload"
-      ]
+      ],
+      "load_unit": "implement"
     },
     {
       "id": "forearm_pronation_supination",
@@ -4412,7 +4480,8 @@
       "phase_affinity": [
         "base",
         "deload"
-      ]
+      ],
+      "load_unit": "implement"
     },
     {
       "id": "finger_extensor_training",
@@ -4524,7 +4593,8 @@
       "phase_affinity": [
         "base",
         "deload"
-      ]
+      ],
+      "load_unit": "implement"
     },
     {
       "id": "shoulder_car",
@@ -6128,7 +6198,8 @@
       "phase_affinity": [
         "base",
         "power_endurance"
-      ]
+      ],
+      "load_unit": "implement"
     },
     {
       "id": "farmers_carry",
@@ -6178,14 +6249,16 @@
         "Steps should be controlled — not waddling or leaning to either side",
         "30s carry at chosen weight, rest 60s, repeat 3 times",
         "Load: should feel heavy in grip by 20s. If grip is not the limiter, weight is too light",
-        "Single-arm variation: one side at a time trains anti-lateral-flexion more specifically"
+        "Single-arm variation: one side at a time trains anti-lateral-flexion more specifically",
+        "The load you log is the weight in one hand (one dumbbell or kettlebell)"
       ],
       "video_url": "https://www.youtube.com/watch?v=rt17lmnaLSM",
       "load_model": "external_load",
       "phase_affinity": [
         "base",
         "power_endurance"
-      ]
+      ],
+      "load_unit": "per_dumbbell"
     },
     {
       "id": "bear_crawl",
@@ -7626,7 +7699,8 @@
       "phase_affinity": [
         "base",
         "deload"
-      ]
+      ],
+      "load_unit": "implement"
     },
     {
       "id": "heel_hook_specific_drill",
@@ -8471,7 +8545,8 @@
       "video_url": null,
       "phase_affinity": [
         "base"
-      ]
+      ],
+      "load_unit": "per_dumbbell"
     },
     {
       "id": "bicep_curl",
@@ -8525,7 +8600,8 @@
       "phase_affinity": [
         "base",
         "deload"
-      ]
+      ],
+      "load_unit": "per_dumbbell"
     },
     {
       "id": "lateral_raise",
@@ -8579,7 +8655,8 @@
       "phase_affinity": [
         "base",
         "deload"
-      ]
+      ],
+      "load_unit": "per_dumbbell"
     },
     {
       "id": "test_max_hang_duration_20mm",
@@ -8879,7 +8956,8 @@
       "load_model": "external_load",
       "phase_affinity": [
         "base"
-      ]
+      ],
+      "load_unit": "implement"
     },
     {
       "id": "glute_bridge",
@@ -8928,7 +9006,8 @@
       "phase_affinity": [
         "base",
         "deload"
-      ]
+      ],
+      "load_unit": "implement"
     },
     {
       "id": "finger_extensor_band",
@@ -10046,7 +10125,8 @@
       "phase_affinity": [
         "base",
         "deload"
-      ]
+      ],
+      "load_unit": "implement"
     },
     {
       "id": "step_ups",
@@ -10088,14 +10168,16 @@
         "Step up driving through the heel of the working leg",
         "Do not push off with the trailing leg — all work from the top leg",
         "Control the descent — don't just drop down",
-        "Hold dumbbells for added resistance"
+        "Hold a dumbbell in each hand for added resistance",
+        "The load you log is the weight of one dumbbell"
       ],
       "load_model": "external_load",
       "video_url": null,
       "alt_sides": true,
       "phase_affinity": [
         "base"
-      ]
+      ],
+      "load_unit": "per_dumbbell"
     },
     {
       "id": "hip_flexor_strengthening",
@@ -10926,13 +11008,15 @@
         "Lower with control: 3-second descent, drive back up through the front heel",
         "Keep torso upright — don't lean forward or let the hips shift laterally",
         "Complete all reps on one leg before switching",
-        "To progress: hold dumbbells at sides (5–15 kg) or use a barbell"
+        "To progress: hold dumbbells at sides (5–15 kg) or use a barbell",
+        "The load you log is the weight of one dumbbell"
       ],
       "description": "Unilateral lower-body strength exercise targeting quads, glutes, and balance. The reverse (stepping-back) variant is more knee-friendly than forward lunges and transfers well to climbing footwork and high-step control.",
       "video_url": null,
       "phase_affinity": [
         "base"
-      ]
+      ],
+      "load_unit": "per_dumbbell"
     },
     {
       "id": "overcoming_isometric_pull",
@@ -11467,7 +11551,8 @@
       "load_model": "external_load",
       "phase_affinity": [
         "base"
-      ]
+      ],
+      "load_unit": "per_dumbbell"
     },
     {
       "id": "overhead_tricep_extension",
@@ -11521,7 +11606,8 @@
       "phase_affinity": [
         "base",
         "deload"
-      ]
+      ],
+      "load_unit": "implement"
     },
     {
       "id": "cossack_squat",
@@ -11574,7 +11660,8 @@
       "alt_sides": true,
       "phase_affinity": [
         "base"
-      ]
+      ],
+      "load_unit": "implement"
     },
     {
       "id": "hip_90_90_switch",
@@ -11675,7 +11762,8 @@
       "alt_sides": true,
       "phase_affinity": [
         "base"
-      ]
+      ],
+      "load_unit": "implement"
     },
     {
       "id": "single_leg_rdl",
@@ -11727,7 +11815,8 @@
       "alt_sides": true,
       "phase_affinity": [
         "base"
-      ]
+      ],
+      "load_unit": "implement"
     },
     {
       "id": "bulgarian_split_squat",
@@ -11773,7 +11862,8 @@
         "Lower hips straight down until the rear knee hovers just above the floor",
         "Front knee tracks over the 2nd/3rd toe — do NOT let it collapse inward",
         "Drive through the whole front foot (not just the toes) to stand up",
-        "Complete all reps on one leg before switching"
+        "Complete all reps on one leg before switching",
+        "To load: a dumbbell in each hand — the load you log is the weight of one dumbbell"
       ],
       "video_url": null,
       "load_model": "external_load",
@@ -11781,7 +11871,8 @@
       "alt_sides": true,
       "phase_affinity": [
         "strength_power"
-      ]
+      ],
+      "load_unit": "per_dumbbell"
     },
     {
       "id": "supinated_inverted_row",
@@ -11888,7 +11979,8 @@
       "load_model": "external_load",
       "phase_affinity": [
         "base"
-      ]
+      ],
+      "load_unit": "implement"
     },
     {
       "id": "wide_pinch_extended_wrist_hold",
@@ -11994,7 +12086,8 @@
       "load_model": "external_load",
       "phase_affinity": [
         "strength_power"
-      ]
+      ],
+      "load_unit": "total"
     },
     {
       "id": "weighted_chinup",
@@ -12102,7 +12195,8 @@
       "load_model": "external_load",
       "phase_affinity": [
         "base"
-      ]
+      ],
+      "load_unit": "per_dumbbell"
     },
     {
       "id": "reverse_barbell_curl",
@@ -12154,7 +12248,8 @@
       "load_model": "external_load",
       "phase_affinity": [
         "base"
-      ]
+      ],
+      "load_unit": "total"
     },
     {
       "id": "tech_applied_strength",
@@ -13551,7 +13646,8 @@
       "load_model": "external_load",
       "phase_affinity": [
         "base"
-      ]
+      ],
+      "load_unit": "total"
     },
     {
       "id": "deadlift",
@@ -13602,7 +13698,8 @@
       "load_model": "external_load",
       "phase_affinity": [
         "strength_power"
-      ]
+      ],
+      "load_unit": "total"
     },
     {
       "id": "leg_extension",
@@ -13655,7 +13752,8 @@
       "phase_affinity": [
         "base",
         "deload"
-      ]
+      ],
+      "load_unit": "total"
     },
     {
       "id": "leg_curl",
@@ -13706,7 +13804,8 @@
       "phase_affinity": [
         "base",
         "deload"
-      ]
+      ],
+      "load_unit": "total"
     },
     {
       "id": "standing_calf_raise_loaded",
@@ -13758,7 +13857,8 @@
       "phase_affinity": [
         "base",
         "deload"
-      ]
+      ],
+      "load_unit": "total"
     },
     {
       "id": "skullcrusher",
@@ -13814,7 +13914,8 @@
       "phase_affinity": [
         "base",
         "deload"
-      ]
+      ],
+      "load_unit": "total"
     },
     {
       "id": "triceps_cable_pushdown",
@@ -13868,7 +13969,8 @@
       "phase_affinity": [
         "base",
         "deload"
-      ]
+      ],
+      "load_unit": "total"
     },
     {
       "id": "dumbbell_external_rotation",
@@ -13921,7 +14023,8 @@
       "phase_affinity": [
         "base",
         "deload"
-      ]
+      ],
+      "load_unit": "implement"
     },
     {
       "id": "back_extension",
@@ -13972,7 +14075,8 @@
       "phase_affinity": [
         "base",
         "deload"
-      ]
+      ],
+      "load_unit": "implement"
     },
     {
       "id": "cable_woodchop",
@@ -14026,7 +14130,8 @@
       "phase_affinity": [
         "base",
         "power_endurance"
-      ]
+      ],
+      "load_unit": "total"
     },
     {
       "id": "weighted_hanging_leg_raise",
@@ -14080,7 +14185,8 @@
         "strength_power",
         "power_endurance",
         "performance"
-      ]
+      ],
+      "load_unit": "implement"
     },
     {
       "id": "weighted_plank",
@@ -14132,7 +14238,8 @@
       "phase_affinity": [
         "base",
         "power_endurance"
-      ]
+      ],
+      "load_unit": "implement"
     },
     {
       "id": "bar_dead_hang",
@@ -15056,7 +15163,8 @@
       "load_model": "external_load",
       "sources": [
         "https://gmb.io/l-sit/"
-      ]
+      ],
+      "load_unit": "total"
     },
     {
       "id": "hanging_knee_raise",
@@ -15935,7 +16043,8 @@
         "Lighter weight if the back lifts"
       ],
       "video_url": null,
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "load_unit": "implement"
     },
     {
       "id": "front_lever_advanced_tuck",
@@ -16452,7 +16561,8 @@
       "video_url": null,
       "load_model": "external_load",
       "unilateral": true,
-      "alt_sides": true
+      "alt_sides": true,
+      "load_unit": "implement"
     },
     {
       "id": "side_plank_star",
@@ -16716,7 +16826,8 @@
       ],
       "video_url": null,
       "load_model": "external_load",
-      "alt_sides": true
+      "alt_sides": true,
+      "load_unit": "total"
     },
     {
       "id": "lying_windshield_wiper",
@@ -16926,7 +17037,8 @@
         "Body in one line"
       ],
       "video_url": null,
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "load_unit": "implement"
     },
     {
       "id": "elevated_pike_pushup",
@@ -18234,7 +18346,8 @@
         "https://theclimbingdoctor.com/lower-body-strength-for-high-stepping-and-edging-3/"
       ],
       "progression": "Bodyweight → dumbbell 4-8 kg.",
-      "measure": "Load or reps every 4 weeks."
+      "measure": "Load or reps every 4 weeks.",
+      "load_unit": "implement"
     },
     {
       "id": "technique_benchmark_test",

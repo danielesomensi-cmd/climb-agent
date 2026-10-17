@@ -11,6 +11,7 @@ import { completeFeedback, tapFeedback } from "@/lib/haptics";
 import { displaySetNumber, sideForSet } from "@/lib/alt-sides";
 import { LadderBadge } from "@/components/training/ladder-badge";
 import type { CustomSessionExercise } from "@/lib/types";
+import { formatLoad } from "@/lib/load-units";
 import { PHASE_TEXT } from "./player-phase-colors";
 
 export type ExerciseCategory = "time_based" | "reps_based" | "timed_sets";
@@ -187,7 +188,7 @@ export function CustomExerciseStep({
             Set {displaySet} of {totalSets}
             {currentSide && " per side"}
           </span>
-          {loadKg > 0 && <span> · @ {loadKg} kg</span>}
+          {loadKg > 0 && <span> · @ {formatLoad(loadKg, exercise.load_unit)}</span>}
           {category === "reps_based" && reps > 0 && <span> · {reps} reps</span>}
           {(category === "time_based" || category === "timed_sets") && workSec > 0 && (
             <span> · {workSec}s</span>

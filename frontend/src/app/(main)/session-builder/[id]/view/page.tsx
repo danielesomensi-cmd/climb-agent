@@ -11,14 +11,15 @@ import { ApiError } from "@/lib/api";
 import { useMemo } from "react";
 import { Loader2, Pencil, Play } from "lucide-react";
 import { toISODateLocal } from "@/lib/dates";
+import { formatLoad } from "@/lib/load-units";
 
-function formatPrescription(ex: { sets: number; reps: number | null; work_seconds: number | null; load_kg: number; rest_between_sets_seconds: number | null; alt_sides?: boolean }): string {
+function formatPrescription(ex: { sets: number; reps: number | null; work_seconds: number | null; load_kg: number; rest_between_sets_seconds: number | null; alt_sides?: boolean; load_unit?: string }): string {
   const parts: string[] = [];
   const perSide = ex.alt_sides ? " per side" : "";   // B324
   if (ex.reps != null) parts.push(`${ex.sets}×${ex.reps}${perSide}`);
   else if (ex.work_seconds != null) parts.push(`${ex.sets}×${ex.work_seconds}s${perSide}`);
   else parts.push(`${ex.sets} sets${perSide}`);
-  if (ex.load_kg > 0) parts.push(`${ex.load_kg}kg`);
+  if (ex.load_kg > 0) parts.push(formatLoad(ex.load_kg, ex.load_unit));
   if (ex.rest_between_sets_seconds != null) parts.push(`Rest ${ex.rest_between_sets_seconds}s`);
   return parts.join(" · ");
 }

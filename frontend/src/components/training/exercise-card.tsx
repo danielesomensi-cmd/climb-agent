@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronRight } from "lucide-react";
 import type { ActualExercise } from "@/lib/types";
+import { formatLoad, type LoadUnit } from "@/lib/load-units";
 import { ExerciseDetailSheet } from "@/components/training/exercise-detail-sheet";
 
 // A286 — mappa colori condivisa (era duplicata e divergente in 3 file).
@@ -42,6 +43,8 @@ interface ExerciseCardProps {
     suggested_external_load_kg?: number;
     suggested_total_load_kg?: number;
     load_source?: string;
+    /** B380: what the kg counts (missing = total). */
+    load_unit?: LoadUnit;
     category?: string;
     testField?: string;
   };
@@ -60,8 +63,10 @@ function formatRestMMSS(seconds: number): string {
   return `${mins}:${String(secs).padStart(2, "0")}`;
 }
 
-/** Format load with sign: +26 kg or -5 kg */
-function formatLoad(kg: number): string {
+/** Format load with sign: +26 kg or -5 kg. B380: a per-dumbbell / implement
+ *  load is not "added" to anything — "34 kg per dumbbell", "12 kg". */
+function formatSignedLoad(kg: number, unit?: LoadUnit): string {
+  if (unit === "per_dumbbell" || unit === "implement") return formatLoad(kg, unit);
   return kg >= 0 ? `+${kg} kg` : `${kg} kg`;
 }
 
@@ -87,7 +92,7 @@ export function ExerciseCard({ exercise, feedbackLevel, actual, rawExercise, mod
 
   if (exercise.load_kg != null) {
     mainParts.push(
-      exercise.load_kg > 0 ? `@ ${exercise.load_kg}kg` : "@ bodyweight"
+      exercise.load_kg > 0 ? `@ ${formatLoad(exercise.load_kg, exercise.load_unit)}` : "@ bodyweight"
     );
   }
 
@@ -157,7 +162,7 @@ export function ExerciseCard({ exercise, feedbackLevel, actual, rawExercise, mod
           {/* Suggested load (when no actual data) */}
           {!actual && exercise.suggested_external_load_kg != null && (
             <p className="text-[11px] text-muted-foreground/70 mt-0.5">
-              Load: +{exercise.suggested_external_load_kg} kg
+              Load: {formatLoad(exercise.suggested_external_load_kg, exercise.load_unit, { signed: true })}
               {exercise.suggested_total_load_kg != null && (
                 <span> (total: {exercise.suggested_total_load_kg} kg)</span>
               )}
@@ -171,11 +176,11 @@ export function ExerciseCard({ exercise, feedbackLevel, actual, rawExercise, mod
           {hasLoadDelta && (
             <p className="text-[11px] mt-0.5">
               <span className="text-muted-foreground/70">
-                Prescribed: {formatLoad(prescribedExternal)}
+                Prescribed: {formatSignedLoad(prescribedExternal, exercise.load_unit)}
               </span>
               <span className="text-muted-foreground/50 mx-1">{"\u2192"}</span>
               <span className={loadDeltaColor}>
-                Used: {formatLoad(usedExternal)}
+                Used: {formatSignedLoad(usedExternal, exercise.load_unit)}
               </span>
               {usedTotal != null && (
                 <span className="text-muted-foreground/50 ml-1">
@@ -188,7 +193,7 @@ export function ExerciseCard({ exercise, feedbackLevel, actual, rawExercise, mod
           {/* A139: Used load without prescribed (no delta, just show what was used) */}
           {actual && usedExternal != null && prescribedExternal == null && (
             <p className="text-[11px] text-muted-foreground/70 mt-0.5">
-              Used: {formatLoad(usedExternal)}
+              Used: {formatSignedLoad(usedExternal, exercise.load_unit)}
               {usedTotal != null && <span> ({usedTotal} kg tot)</span>}
             </p>
           )}

@@ -43,7 +43,8 @@ def _state(**overrides) -> dict:
         "bodyweight_kg": 70,
         "equipment": {
             "home": ["pullup_bar", "weight", "hangboard", "rings"],
-            "gyms": [{"gym_id": "g1", "equipment": ["weight", "pullup_bar", "cable_machine", "bench", "hangboard"]}],
+            # B380: barbell_row needs a real barbell (plates alone no longer imply one).
+            "gyms": [{"gym_id": "g1", "equipment": ["weight", "barbell", "pullup_bar", "cable_machine", "bench", "hangboard"]}],
         },
         "macrocycle": {"start_date": "2026-07-06", "phases": [{"phase_id": "strength_power", "duration_weeks": 3}]},
         "recent_sessions": [],

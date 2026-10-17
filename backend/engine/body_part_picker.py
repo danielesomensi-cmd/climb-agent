@@ -21,6 +21,7 @@ from copy import deepcopy
 from datetime import date as _date
 from typing import Any, Dict, List, Optional, Sequence, Set
 
+from backend.engine.load_units import load_unit_of
 from backend.engine.anchored_load import ANCHORED_EXERCISES, CUSTOM_INTENSITY, anchor_summary, anchored_load
 from backend.engine.catalog_roles import is_library_only
 from backend.engine.equipment_utils import KNOWN_EQUIPMENT_KEYS, expand_equipment
@@ -107,7 +108,7 @@ BODY_PART_CATEGORIES: Dict[str, Dict[str, Any]] = {
             "domains": ["strength_pulling", "lock_off_endurance"],
             "patterns": ["pull_vertical", "pull_horizontal"],
             "exclude_patterns": [],
-            "include_ids": ["chinup", "inverted_row", "barbell_row"],
+            "include_ids": ["chinup", "inverted_row", "barbell_row", "dumbbell_row"],
             "exclude_ids": [],
         },
     },
@@ -583,6 +584,7 @@ def apply_resolver_light(
         "category": exercise.get("category"),
         "pattern": exercise.get("pattern"),
         "load_model": exercise.get("load_model"),
+        "load_unit": load_unit_of(exercise),  # B380
         "video_url": exercise.get("video_url") or None,
         "cues": list(exercise.get("cues") or []),
         "prescription": defaults,

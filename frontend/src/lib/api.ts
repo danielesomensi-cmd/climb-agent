@@ -1,3 +1,4 @@
+import type { LoadUnit } from "@/lib/load-units";
 import type { AutoReschedule } from "@/lib/auto-reschedule";
 import type {
   OnboardingData,
@@ -1273,6 +1274,8 @@ export interface BodyPartSession {
     prescription: Record<string, unknown>;
     load_source?: string;
     suggested_external_load_kg?: number;
+    /** B380: what the kg counts (missing = total). */
+    load_unit?: LoadUnit;
   }>;
   estimated_duration_minutes: number;
   estimated_load_score: number;
@@ -1361,6 +1364,8 @@ export interface AdhocSessionExercisePreview {
   rest_between_sets_seconds: number | null;
   rest_between_reps_seconds: number | null;
   load_kg: number;
+  /** B380: what load_kg counts (per dumbbell / implement / total; missing = total). */
+  load_unit?: LoadUnit;
   notes: string;
   /**
    * A296/A299: limit-family rows — the limit target of `resolved_for_date`,

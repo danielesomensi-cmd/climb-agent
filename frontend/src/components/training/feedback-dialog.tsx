@@ -259,7 +259,7 @@ export function FeedbackDialog({
                     htmlFor={`${exercise.exercise_id}-load`}
                     className="text-xs text-muted-foreground"
                   >
-                    Load used
+                    {exercise.loadUnit === "per_dumbbell" ? "Load used per dumbbell" : "Load used"}
                   </Label>
                   <Input
                     id={`${exercise.exercise_id}-load`}

@@ -70,7 +70,7 @@ Compose ONLY from these. Use the display names; the ID is in backticks.
 
 **Push (chest/shoulders/triceps):** `bench_press` (Bench Press), `dumbbell_bench_press` (Dumbbell Bench Press), `dumbbell_fly` (Dumbbell Fly), `overhead_press` (Overhead Press), `lateral_raise` (Lateral Raise), `skullcrusher` (Lying Triceps Extension / Skullcrusher), `triceps_cable_pushdown` (Triceps Cable Pushdown), `overhead_tricep_extension` (Overhead Tricep Extension), `weighted_dip` (Weighted Dip), `ring_pushup` (Ring Push-up).
 
-**Pull (back/biceps):** `pullup` (Pull-up), `chinup` (Chin-up), `weighted_pullup` (Weighted Pull-up), `weighted_chinup` (Weighted Chin-up), `barbell_row` (Barbell Row), `bicep_curl` (Bicep Curl), `hammer_curl` (Hammer Curl), `reverse_barbell_curl` (Reverse Barbell Curl). (Pulls are climbing-specific — keep them light on antagonist days and near finger/pulling sessions.)
+**Pull (back/biceps):** `pullup` (Pull-up), `chinup` (Chin-up), `weighted_pullup` (Weighted Pull-up), `weighted_chinup` (Weighted Chin-up), `barbell_row` (Barbell Row), `dumbbell_row` (Dumbbell Row — load per dumbbell), `bicep_curl` (Bicep Curl), `hammer_curl` (Hammer Curl), `reverse_barbell_curl` (Reverse Barbell Curl). (Pulls are climbing-specific — keep them light on antagonist days and near finger/pulling sessions.)
 
 **Legs:** `back_squat` (Back Squat), `goblet_squat` (Goblet Squat), `split_squat` (Split Squat), `deadlift` (Conventional Deadlift), `romanian_deadlift` (Romanian Deadlift), `leg_extension` (Leg Extension, machine), `leg_curl` (Leg Curl, machine), `nordic_curl` (Nordic Hamstring Curl), `standing_calf_raise_loaded` (Loaded Standing Calf Raise).
 

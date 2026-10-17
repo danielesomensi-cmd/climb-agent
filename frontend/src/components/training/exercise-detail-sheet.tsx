@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Film, Heart } from "lucide-react";
 import { displayPrescribedGrade } from "@/lib/gradeUtils";
 import { anchoredLoadNotes } from "@/lib/anchored-load";
+import { formatLoad, pickLoadUnit, type LoadUnit } from "@/lib/load-units";
 import { useUserState } from "@/lib/hooks/use-state";
 import { hrMaxFromState, hrTargetLines, type HrTarget } from "@/lib/hr-zones";
 
@@ -30,6 +31,12 @@ function formatRest(seconds: number): string {
 /** Format category slug → readable label */
 function formatCategory(cat: string): string {
   return cat.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/** B380: what the kg counts — suggested block first, then the instance. */
+function unitOf(ex: Record<string, unknown>): LoadUnit | undefined {
+  const s = (ex.suggested ?? {}) as Record<string, unknown>;
+  return pickLoadUnit(s.load_unit, ex.load_unit);
 }
 
 /** Build prescription lines from raw exercise data */
@@ -73,7 +80,7 @@ function buildPrescription(ex: Record<string, unknown>): string[] {
 
   // Load
   if (loadKg != null) {
-    lines.push(loadKg > 0 ? `Load: ${loadKg} kg` : "Load: bodyweight");
+    lines.push(loadKg > 0 ? `Load: ${formatLoad(loadKg, unitOf(ex))}` : "Load: bodyweight");
   }
 
   // Intensity
@@ -103,7 +110,7 @@ function buildSuggested(ex: Record<string, unknown>): string[] {
     }
   } else {
     if (s.suggested_external_load_kg != null) {
-      let line = `Suggested: +${s.suggested_external_load_kg} kg`;
+      let line = `Suggested: ${formatLoad(s.suggested_external_load_kg as number, unitOf(ex), { signed: true })}`;
       if (s.suggested_total_load_kg != null) {
         line += ` (total: ${s.suggested_total_load_kg} kg)`;
       }

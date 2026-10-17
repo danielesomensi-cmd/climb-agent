@@ -42,6 +42,19 @@ A318 added 6 keys, one per profile × date, for the new session
 ``arms_shoulders_handstand_lunch``; no existing key changed (checked key by key
 against the fixture of origin/main).
 
+B380 changed 105 resolver keys and the 36 composer-pool digests, each checked
+against a stripped export of origin/main @ a42e6ab under pytest. Selection
+changes (9): ``upper_push_arms_lunch`` × 6 — ``bench_press`` now needs a real
+barbell + bench, the profiles' gym/home have dumbbells only, so the chest-press
+pin falls to P0 (``handstand_pushup_wall`` on 10-07, ``overhead_press`` on
+10-21); ``heavy_conditioning_gym`` 10-07 × 3 — ``barbell_row`` needs a barbell,
+``inverted_row`` instead (no bench → no ``dumbbell_row``). Value changes: curls
+cold-start at 18 kg per dumbbell, ``overhead_press`` at 0.125 × BW (it is a
+dumbbell press now) — 12 more keys. Every other key differs only by the additive
+``suggested.load_unit`` (stripping it gives back the main digest). Pools: lose
+``bench_press`` / ``barbell_row``; at the gym the two freed slots of the
+truncated pool take ``v_up`` / ``wall_handstand_hold``.
+
 A316 changed 6 keys, all ``treadmill_zone2_cardio`` (3 profiles × 2 dates), digest
 only: ``treadmill_incline_walk`` gains the catalog ``hr_target`` band and its HR
 cue drops the age formula. Same ids, same order, same prescriptions;

@@ -18,6 +18,7 @@ from backend.api.deps import (
     save_state,
 )
 from backend.api.models import CustomSessionCreateRequest, CustomSessionUpdateRequest
+from backend.engine.load_units import load_unit_of
 from backend.engine.adhoc_prescription import propose_exercise_prescription
 from backend.engine.progression_v1 import limit_grade_target
 from backend.engine.anchored_load import resolve_custom_exercises
@@ -109,6 +110,8 @@ def _enrich_exercise_display(ex: dict, catalog: dict) -> dict:
     ex["name"] = cat_ex.get("name") or str(ex.get("exercise_id") or "").replace("_", " ").title()
     ex["cues"] = cat_ex.get("cues") or []
     ex["load_model"] = cat_ex.get("load_model") or ""
+    # B380: what the kg counts — "per_dumbbell" / "implement" / "total".
+    ex["load_unit"] = load_unit_of(cat_ex)
     ex["category"] = cat_ex.get("category") or ""
     # B324: laterality. Without it the custom player ran a Copenhagen plank or a
     # Pallof press as if it had one side, and the same gap reached the week plan
@@ -256,6 +259,7 @@ def list_exercises(
             "prescription_defaults": ex.get("prescription_defaults", {}),
             "fatigue_cost": ex.get("fatigue_cost", 0),
             "load_model": ex.get("load_model"),
+            "load_unit": load_unit_of(ex),  # B380
             # B324: laterality, so the builder can label a picked exercise
             # "per side" before the session is ever saved.
             "alt_sides": bool(ex.get("alt_sides")),

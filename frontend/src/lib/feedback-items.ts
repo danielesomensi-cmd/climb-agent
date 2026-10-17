@@ -17,12 +17,15 @@ import type { FeedbackMeasure, GuidedExercise, LimitProblemDraft } from "@/lib/t
 import { asMeasure, measureFields, type MeasureValues } from "@/lib/measured-feedback";
 import { displayPrescribedGrade } from "@/lib/gradeUtils";
 import { limitFeedbackFields } from "@/lib/limit-problems";
+import { pickLoadUnit, type LoadUnit } from "@/lib/load-units";
 
 /** An exercise as the post-session FeedbackDialog needs to know it. */
 export interface FeedbackDialogExercise {
   exercise_id: string;
   name: string;
   loadModel?: string;
+  /** B380: what the kg counts (per dumbbell / implement / total; missing = total). */
+  loadUnit?: LoadUnit;
   unilateral?: boolean;
   suggestedExternalLoadKg?: number;
   suggestedTotalLoadKg?: number;
@@ -113,6 +116,7 @@ export function extractFeedbackExercises(
       exercise_id: exerciseId,
       name: (ex.name as string) ?? exerciseId.replace(/_/g, " "),
       loadModel: ex.load_model as string | undefined,
+      loadUnit: pickLoadUnit(suggested.load_unit, ex.load_unit),
       unilateral: !!(ex.unilateral ?? suggested.right_hand),
       suggestedExternalLoadKg: suggested.suggested_external_load_kg as number | undefined,
       suggestedTotalLoadKg: suggested.suggested_total_load_kg as number | undefined,

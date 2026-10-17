@@ -1050,7 +1050,7 @@ def rewrite_ladder_rows(rows: Any, family: str, to_level_idx: int, on: DateLike)
             r["work_seconds"], r["reps"] = int(band["lo"]), None
         else:
             r["reps"], r["work_seconds"] = int(band["lo"]), None
-        for k in ("name", "cues", "video_url", "notes", "category", "load_model", "alt_sides"):
+        for k in ("name", "cues", "video_url", "notes", "category", "load_model", "load_unit", "alt_sides"):
             r.pop(k, None)
         n += 1
     return n

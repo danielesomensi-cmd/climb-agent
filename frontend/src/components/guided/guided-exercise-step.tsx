@@ -17,6 +17,7 @@ import { OVERHOLD_CAP_S, type MeasureValues } from "@/lib/measured-feedback";
 import { tapFeedback } from "@/lib/haptics";
 import { hrTargetLines } from "@/lib/hr-zones";
 import { displayPrescribedGrade } from "@/lib/gradeUtils";
+import { formatLoad, loadInputLabel } from "@/lib/load-units";
 import { LimitProblemLogger } from "@/components/training/limit-problem-logger";
 import { limitFeedbackFields, limitTargetFor } from "@/lib/limit-problems";
 
@@ -85,7 +86,7 @@ export function formatPrescription(ex: GuidedExercise): string[] {
   }
 
   if (p.loadKg) {
-    lines.push(`Load: ${p.loadKg} kg`);
+    lines.push(`Load: ${formatLoad(p.loadKg, ex.loadUnit)}`);
   }
 
   if (p.tempo) {
@@ -326,8 +327,10 @@ export function GuidedExerciseStep({
       return `L +${left ?? 0} · R +${right ?? 0} kg`;
     }
     if (isUnilateralTestMeasurement) return null;
-    if (exercise.suggested.externalLoadKg != null) return `+${exercise.suggested.externalLoadKg} kg`;
-    if (exercise.prescription.loadKg) return `${exercise.prescription.loadKg} kg`;
+    if (exercise.suggested.externalLoadKg != null) {
+      return formatLoad(exercise.suggested.externalLoadKg, exercise.loadUnit, { signed: true });
+    }
+    if (exercise.prescription.loadKg) return formatLoad(exercise.prescription.loadKg, exercise.loadUnit);
     if (shownGrade) {
       return shownGradeLow && shownGradeLow !== shownGrade
         ? `${displayPrescribedGrade(shownGradeLow, exercise.suggested.gradeScale)} – ${displayPrescribedGrade(shownGrade, exercise.suggested.gradeScale)}`
@@ -339,7 +342,8 @@ export function GuidedExerciseStep({
   const hrLines = hrTargetLines(exercise.hrTarget, hrMax);
   // The "Load: X kg" line is dropped only when the hero already shows that load.
   const heroShowsPrescribedLoad =
-    heroTarget != null && !!exercise.prescription.loadKg && heroTarget === `${exercise.prescription.loadKg} kg`;
+    heroTarget != null && !!exercise.prescription.loadKg &&
+    heroTarget === formatLoad(exercise.prescription.loadKg, exercise.loadUnit);
   const detailLines = prescriptionLines
     .slice(1)
     .filter((line) => !(heroShowsPrescribedLoad && line.startsWith("Load: ")));
@@ -825,7 +829,7 @@ export function GuidedExerciseStep({
                 <div className="text-sm space-y-0.5 w-full">
                   {exercise.suggested.externalLoadKg != null && (
                     <p>
-                      Suggested: <span className="font-semibold">+{exercise.suggested.externalLoadKg} kg</span>
+                      Suggested: <span className="font-semibold">{formatLoad(exercise.suggested.externalLoadKg, exercise.loadUnit, { signed: true })}</span>
                       {exercise.suggested.totalLoadKg != null && (
                         <span className="text-muted-foreground"> (total: {exercise.suggested.totalLoadKg} kg)</span>
                       )}
@@ -1182,7 +1186,9 @@ export function GuidedExerciseStep({
             {hasLoadField && !isPerHandLoad && (
               <div className="space-y-1.5">
                 <Label htmlFor="load-input" className="text-sm text-muted-foreground">
-                  {exercise.allowLoadLogging ? "Weight used (kg) — optional" : "Actual load used (kg)"}
+                  {exercise.allowLoadLogging
+                    ? "Weight used (kg) — optional"
+                    : loadInputLabel(exercise.loadUnit, "Actual load used (kg)")}
                 </Label>
                 <Input
                   id="load-input"

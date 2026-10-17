@@ -68,18 +68,17 @@ class TestLoadTransfer:
     """Cross-exercise load transfer via similarity groups."""
 
     def test_transfer_bench_to_dumbbell(self):
-        """bench_press 40kg → dumbbell_bench_press should be ~34kg (0.85×)."""
+        """B380: bench_press 40 kg total → dumbbell_bench_press 20 kg PER DUMBBELL
+        (÷2 — the old 0.85 factor read the per-hand number as a total)."""
         state = _state_with_entry("bench_press", 40.0)
         result = _transfer_load(state, "dumbbell_bench_press", "2026-03-05")
-        assert result is not None
-        assert result == _round_half_step(40.0 * 0.85)
+        assert result == 20.0
 
     def test_transfer_dumbbell_to_bench(self):
-        """dumbbell_bench_press 34kg → bench_press should be ~40kg (1/0.85×)."""
+        """B380: dumbbell_bench_press 34 kg per dumbbell → bench_press 68 kg total (×2)."""
         state = _state_with_entry("dumbbell_bench_press", 34.0)
         result = _transfer_load(state, "bench_press", "2026-03-05")
-        assert result is not None
-        assert result == _round_half_step(34.0 * (1.0 / 0.85))
+        assert result == 68.0
 
     def test_no_squat_transfer(self):
         """B363: the squat group is gone — goblet/0.80 prescribed a per-leg
@@ -96,7 +95,7 @@ class TestLoadTransfer:
         assert result is None
 
     def test_no_transfer_for_ungrouped(self):
-        """barbell_row has no similarity group → no transfer."""
+        """bench_press is not in barbell_row's group (pull) → no transfer."""
         state = _state_with_entry("bench_press", 40.0)
         result = _transfer_load(state, "barbell_row", "2026-03-05")
         assert result is None
@@ -128,19 +127,20 @@ class TestLoadCoherence:
     """Check for outlier load ratios within similarity groups."""
 
     def test_no_warning_when_coherent(self):
-        """Loads matching expected ratio should produce no warnings."""
+        """Loads matching expected ratio should produce no warnings (B380:
+        40 kg on the bar ≈ two 20 kg dumbbells)."""
         state = _state_with_entries([
             {"id": "bench_press", "load": 40.0},
-            {"id": "dumbbell_bench_press", "load": 34.0},
+            {"id": "dumbbell_bench_press", "load": 20.0},
         ])
         warnings = check_load_coherence(state, "2026-03-05")
         assert len(warnings) == 0
 
     def test_warning_when_outlier(self):
-        """bench_press 60kg but dumbbell_bench_press 15kg → ratio way off."""
+        """bench_press 60kg but dumbbell_bench_press 10kg per dumbbell (20 total) → ratio way off."""
         state = _state_with_entries([
             {"id": "bench_press", "load": 60.0},
-            {"id": "dumbbell_bench_press", "load": 15.0},
+            {"id": "dumbbell_bench_press", "load": 10.0},
         ])
         warnings = check_load_coherence(state, "2026-03-05")
         assert len(warnings) == 1

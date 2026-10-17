@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import type { CustomSessionExercise } from "@/lib/types";
 import { followsTrainingLoad, isAnchoredExercise } from "@/lib/anchored-load";
 import { useBuilderExercises } from "@/lib/hooks/queries";
+import { pickLoadUnit } from "@/lib/load-units";
 import { Info, Minus, Plus, Trash2 } from "lucide-react";
 import { parseStepperInput, stepValue, type StepperBounds } from "./stepper-value";
 
@@ -155,6 +156,8 @@ export function ExerciseParamsEditor({
   // A304: any other weighted row follows the training load unless fixed.
   const follows = followsTrainingLoad(draft, catalogEntry?.load_model);
   const fixed = (anchored || follows) && draft.load_mode === "fixed";
+  // B380: what the kg counts ("per dumbbell" for a pair of dumbbells).
+  const loadUnit = pickLoadUnit(draft.load_unit, catalogEntry?.load_unit);
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
@@ -273,7 +276,7 @@ export function ExerciseParamsEditor({
           )}
 
           <Stepper
-            label="Load"
+            label={loadUnit === "per_dumbbell" ? "Load per dumbbell" : "Load"}
             hint={
               anchored && !fixed
                 ? "used only without a recent test"

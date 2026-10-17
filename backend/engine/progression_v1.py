@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 from backend.engine.assessment_v1 import GRADE_ORDER as _LEAD_GRADE_ORDER
 from backend.engine.assessment_v1 import _FINGER_BENCHMARK
 from backend.engine import limit_log
+from backend.engine import load_units as _load_units
 
 FONT_GRADES: List[str] = [
     "5A", "5A+", "5B", "5B+", "5C", "5C+",
@@ -50,11 +51,22 @@ _WHOLE_GRADE_TO_INDEX = {g: i for i, g in enumerate(WHOLE_FONT_GRADES)}
 EXTERNAL_LOAD_FALLBACK_PCT_BW = {
     "barbell_row": 0.30,
     "bench_press": 0.40,
-    "dumbbell_bench_press": 0.34,
+    # B380: per-dumbbell exercises are expressed per dumbbell — half of the
+    # barbell total of the same movement (it used to be 0.34 as a TOTAL,
+    # read by the athlete as the weight of each dumbbell).
+    "dumbbell_bench_press": 0.17,
+    # B380: curls cold-start per dumbbell, scaled to bodyweight — Daniele asked
+    # 18 kg at his 78 kg (0.23 × 78 = 17.9 → 18.0); a lighter athlete starts lower
+    # instead of inheriting his number.
+    "bicep_curl": 0.23,
+    "hammer_curl": 0.23,
+    "dumbbell_row": 0.15,
     "face_pull": 0.08,
     "farmers_carry": 0.30,
     "goblet_squat": 0.12,
-    "overhead_press": 0.25,
+    # B380: overhead_press is a dumbbell press, load per dumbbell (0.25 was a
+    # barbell total).
+    "overhead_press": 0.125,
     "romanian_deadlift": 0.40,
     "split_squat": 0.15,
     "turkish_getup": 0.15,
@@ -93,16 +105,21 @@ EXTERNAL_LOAD_FALLBACK_FIXED_KG: dict[str, float] = {
 # Each group maps exercise_id → coefficient relative to group anchor (1.0).
 # When exercise A has no working_loads but similar exercise B does,
 # A's load is estimated as B's load × (coeff_A / coeff_B).
+# B380: coefficients compare WHOLE loads (load_units.to_total): a barbell and
+# its dumbbell variant share coefficient 1.0 and the only conversion is the
+# unit — per dumbbell = total ÷ 2, total = per dumbbell × 2 (the old 0.85
+# dumbbell factor read the per-hand number as a total).
 _SIMILARITY_GROUPS: Dict[str, Dict[str, float]] = {
     "push": {
         "bench_press": 1.0,
-        "dumbbell_bench_press": 0.85,
+        "dumbbell_bench_press": 1.0,
     },
     # B363: "squat" group removed — it prescribed a split squat at goblet/0.80
     # (61.5 kg → 77 kg on a per-leg movement). split_squat now cold-starts at
     # EXTERNAL_LOAD_FALLBACK_PCT_BW.
     "pull": {
         "barbell_row": 1.0,
+        "dumbbell_row": 1.0,
         "face_pull": 0.25,
     },
 }
@@ -131,6 +148,7 @@ PULLING_1RM_PCT_DEFAULT = 0.70
 # Scaling factors for external_load pulling exercises relative to max_external_load_kg.
 PULLING_EXTERNAL_SCALING: Dict[str, float] = {
     "barbell_row": 0.60,
+    "dumbbell_row": 0.30,  # B380: per dumbbell = half the barbell total
     "face_pull": 0.15,
 }
 
@@ -774,6 +792,8 @@ def _load_catalog_cache() -> Dict[str, Dict[str, Any]]:
                 # double-progression fatigue weight.
                 "stress_tags": dict(e.get("stress_tags") or {}),
                 "contraindications": list(e.get("contraindications") or []),
+                # B380: what the kg counts (per_dumbbell / implement / total).
+                "load_unit": _load_units.load_unit_of(e),
                 "loading_pin": "loading_pin" in (
                     (e.get("equipment_required") or []) + (e.get("equipment_required_any") or [])
                 ),
@@ -1299,14 +1319,23 @@ def _transfer_load(
     group_name, target_coeff = group_info
     group = _SIMILARITY_GROUPS[group_name]
 
+    target_unit = _exercise_load_unit(exercise_id)
     for donor_id, donor_coeff in group.items():
         if donor_id == exercise_id:
             continue
         entry = _best_entry(user_state, donor_id, {}, date_value, freshness_days)
         if entry and entry.get("next_external_load_kg") is not None:
-            donor_load = float(entry["next_external_load_kg"])
-            return _round_half_step(donor_load * (target_coeff / donor_coeff))
+            # B380: compare whole loads, then express in the target's unit
+            # (bench 70 total → dumbbell bench 35 per dumbbell, and back).
+            donor_total = _load_units.to_total(float(entry["next_external_load_kg"]), _exercise_load_unit(donor_id))
+            target_total = donor_total * (target_coeff / donor_coeff)
+            return _round_half_step(_load_units.from_total(target_total, target_unit))
     return None
+
+
+def _exercise_load_unit(exercise_id: str) -> str:
+    """B380: the catalog ``load_unit`` of an exercise (missing → total)."""
+    return _load_units.normalize_load_unit(_load_catalog_cache().get(exercise_id, {}).get("load_unit"))
 
 
 def check_load_coherence(
@@ -1326,7 +1355,8 @@ def check_load_coherence(
         for ex_id, coeff in members.items():
             entry = _best_entry(user_state, ex_id, {}, date_value, freshness_days)
             if entry and entry.get("next_external_load_kg") is not None:
-                loads[ex_id] = float(entry["next_external_load_kg"])
+                # B380: whole loads (a pair of dumbbells counts twice).
+                loads[ex_id] = _load_units.to_total(float(entry["next_external_load_kg"]), _exercise_load_unit(ex_id))
                 coeffs[ex_id] = coeff
         if len(loads) < 2:
             continue
@@ -1899,6 +1929,11 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                     "suggested_external_load_kg": next_load,
                     "suggested_rep_scheme": f"{sets}x{reps}",
                 })
+                # B380: what the number counts, for the display ("34 kg per
+                # dumbbell"). Omitted for ``total`` — the pre-B380 reading.
+                _unit = _exercise_load_unit(ex_id)
+                if _unit != _load_units.TOTAL:
+                    suggested["load_unit"] = _unit
 
             # Hangboard total_load exercises (repeaters, density hangs, etc.) — data-driven (ARCH-2)
             if load_model == "total_load" and ex_id == "weighted_chinup" and anch is None:

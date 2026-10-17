@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import type { CustomSessionExercise } from "@/lib/types";
 import { isAutoLoadRow } from "@/lib/anchored-load";
 import { ChevronUp, ChevronDown } from "lucide-react";
+import { formatLoad } from "@/lib/load-units";
 
 function formatPrescription(ex: CustomSessionExercise, loadModel?: string): string {
   const parts: string[] = [];
@@ -15,7 +16,7 @@ function formatPrescription(ex: CustomSessionExercise, loadModel?: string): stri
   // B364 / A304: a row in "Auto" gets its kg on the day it is played.
   if (isAutoLoadRow(ex, loadModel)) parts.push("Auto load");
   if (ex.progress_mode === "ladder") parts.push("Follows level");
-  else if (ex.load_kg > 0) parts.push(`${ex.load_kg}kg`);
+  else if (ex.load_kg > 0) parts.push(formatLoad(ex.load_kg, ex.load_unit));
   if (ex.rest_between_sets_seconds != null) parts.push(`Rest ${ex.rest_between_sets_seconds}s`);
   return parts.join(" · ");
 }
