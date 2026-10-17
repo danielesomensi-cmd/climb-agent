@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import functools
+import hashlib
 import json
 import logging
 import os
+from datetime import date
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -113,6 +115,48 @@ def get_quote_for_session(
 
     selected = fresh[0]
 
+    return {
+        "id": selected.get("id"),
+        "text": selected.get("text"),
+        "author": selected.get("author"),
+        "source_type": selected.get("source_type"),
+        "context": context,
+    }
+
+
+def get_quote_of_the_day(
+    context: str,
+    day: date,
+    user_key: str = "",
+) -> Dict[str, Any]:
+    """B384 — the quote of *day* for *user_key*, without reading or writing state.
+
+    Same pool as ``get_quote_for_session`` (context tag → "general" → any),
+    sorted by id; the index walks the pool one step per calendar day from a
+    per-user offset, so a user sees every quote of the pool once before any
+    repeats and two calls on the same day return the same quote. The offset is
+    a sha256 of the user key, never Python's ``hash()`` (salted per process,
+    which would make the quote change on every Railway restart).
+    """
+    pool = _context_pool(context)
+    if not pool:
+        return get_quote_for_session(context)  # empty catalog → same fallback
+    offset = int(hashlib.sha256((user_key or "").encode("utf-8")).hexdigest()[:8], 16)
+    selected = pool[(day.toordinal() + offset) % len(pool)]
+    return _as_payload(selected, context)
+
+
+def _context_pool(context: str) -> List[Dict[str, Any]]:
+    quotes = _load_quotes()
+    pool = [q for q in quotes if context in (q.get("contexts") or [])]
+    if not pool:
+        pool = [q for q in quotes if "general" in (q.get("contexts") or [])]
+    if not pool:
+        pool = list(quotes)
+    return sorted(pool, key=lambda q: q.get("id", ""))
+
+
+def _as_payload(selected: Dict[str, Any], context: str) -> Dict[str, Any]:
     return {
         "id": selected.get("id"),
         "text": selected.get("text"),
