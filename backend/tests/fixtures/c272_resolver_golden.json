@@ -1290,7 +1290,7 @@
    ]
   },
   "intermediate|2026-10-07|arms_shoulders_handstand_lunch": {
-   "digest": "efb82c96c549c79eeea5011af96a9667ec5001dee3e386273d9ad269594f4a2f",
+   "digest": "4fb329b4486bf110640c7f39d07528b5cc89d9f8dded6bb405df56634419dbf6",
    "exercise_ids": [
     "general_pulse_raise",
     "mobility_thoracic_shoulders_flow",
@@ -1498,7 +1498,7 @@
    ]
   },
   "intermediate|2026-10-07|heavy_conditioning_gym": {
-   "digest": "cf879d9a031c0aa98f369ae9c698498052aafd0101fdf97a1a5f8f641e4f5089",
+   "digest": "f2b04258322787524568cbcb27f529b03be0ff18ce8b76d4d52d663b2a867662",
    "exercise_ids": [
     "dynamic_mobility_flow",
     "general_pulse_raise",
@@ -1777,7 +1777,7 @@
    ]
   },
   "intermediate|2026-10-07|upper_push_arms_lunch": {
-   "digest": "d21910d5e70f2418d6a1dde3be3031b20b2b8abc670c987d8f80e676f6c40fdb",
+   "digest": "07233b4ad87d478f8c1a79a221d66c0459803302d84dd1de652c6a6e77f7612c",
    "exercise_ids": [
     "general_pulse_raise",
     "ab_wheel_rollout",
@@ -1794,7 +1794,7 @@
    ]
   },
   "intermediate|2026-10-21|arms_shoulders_handstand_lunch": {
-   "digest": "0ba1e9c45cc771585ffccbbc5d02507543ca668e2f6abe92a3b93cd1a69d2471",
+   "digest": "fe36cd812b38cbb956b1eb26acb8d6845a4b3f2601ebdf720ac519ba3392dfd5",
    "exercise_ids": [
     "general_pulse_raise",
     "mobility_thoracic_shoulders_flow",
@@ -2001,7 +2001,7 @@
    ]
   },
   "intermediate|2026-10-21|heavy_conditioning_gym": {
-   "digest": "a8efaf3dfe959942454a4f0128457f8b38ad4f66595e0d2dbf035a9c3a9ae249",
+   "digest": "5f63a5379abe3f1d20943d18478f5c350b9a244074eec9ee7cc7a37878e19322",
    "exercise_ids": [
     "dynamic_mobility_flow",
     "general_pulse_raise",
@@ -2272,7 +2272,7 @@
    ]
   },
   "intermediate|2026-10-21|upper_push_arms_lunch": {
-   "digest": "8d5198e05101fe4026ca4d3fe1974b9cd8612893ba701ebac0706348f3c6ca82",
+   "digest": "c23f4e242d4029da766582c6243f2085263695f4fa57b8eb849213dcc745e6f0",
    "exercise_ids": [
     "general_pulse_raise",
     "suitcase_carry",
@@ -2289,7 +2289,7 @@
    ]
   },
   "untested|2026-10-07|arms_shoulders_handstand_lunch": {
-   "digest": "efb82c96c549c79eeea5011af96a9667ec5001dee3e386273d9ad269594f4a2f",
+   "digest": "4fb329b4486bf110640c7f39d07528b5cc89d9f8dded6bb405df56634419dbf6",
    "exercise_ids": [
     "general_pulse_raise",
     "mobility_thoracic_shoulders_flow",
@@ -2497,7 +2497,7 @@
    ]
   },
   "untested|2026-10-07|heavy_conditioning_gym": {
-   "digest": "970c24b2e3cc5883119d22a262cf0e62b52f55fd19f987d8a59d67ec55d44c6e",
+   "digest": "521fa476861279d079cd8f86a3f30b6112aae01f782c3b2b21b30883b9842bfb",
    "exercise_ids": [
     "dynamic_mobility_flow",
     "general_pulse_raise",
@@ -2776,7 +2776,7 @@
    ]
   },
   "untested|2026-10-07|upper_push_arms_lunch": {
-   "digest": "dd0c259bbcdfb3fce39b3bb9185a51f8317edeb00f8c0553b1d215cb7c0a263a",
+   "digest": "de8c823bf5b94063a762efedcf9ddd75e1030b682ebc6228b1587e5515232c7f",
    "exercise_ids": [
     "general_pulse_raise",
     "side_plank",
@@ -2793,7 +2793,7 @@
    ]
   },
   "untested|2026-10-21|arms_shoulders_handstand_lunch": {
-   "digest": "0ba1e9c45cc771585ffccbbc5d02507543ca668e2f6abe92a3b93cd1a69d2471",
+   "digest": "fe36cd812b38cbb956b1eb26acb8d6845a4b3f2601ebdf720ac519ba3392dfd5",
    "exercise_ids": [
     "general_pulse_raise",
     "mobility_thoracic_shoulders_flow",
@@ -3000,7 +3000,7 @@
    ]
   },
   "untested|2026-10-21|heavy_conditioning_gym": {
-   "digest": "0a65a06f3b6832aa374c798c601ce0761fa5ebc8b7d40b4751a694b9d58e2b69",
+   "digest": "41ad1c3bf1336c14ad6ab2df19834c59519b4b79b7a9b2a75bcb5839697caeef",
    "exercise_ids": [
     "dynamic_mobility_flow",
     "general_pulse_raise",
@@ -3271,7 +3271,7 @@
    ]
   },
   "untested|2026-10-21|upper_push_arms_lunch": {
-   "digest": "4b37c5950ea9768bc1461829f3bf796a0713560602c29eec5e316f159c5d67d3",
+   "digest": "99e4fb85407e84b107e993767fce4d7701af79fe63cb08296b8eba59ed493cc4",
    "exercise_ids": [
     "general_pulse_raise",
     "plank",

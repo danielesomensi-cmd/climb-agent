@@ -125,9 +125,13 @@ class TestTransfer:
 
 class TestColdStart:
     @pytest.mark.parametrize("ex_id", ["bicep_curl", "hammer_curl"])
-    def test_curls_start_at_18_per_dumbbell(self, ex_id):
-        sug = _suggested(_state(), ex_id)
-        assert sug["suggested_external_load_kg"] == 18.0
+    @pytest.mark.parametrize("bw,expected", [(78.0, 18.0), (55.0, 12.5)])
+    def test_curls_cold_start_per_dumbbell_scaled_to_bodyweight(self, ex_id, bw, expected):
+        # Daniele (78 kg) gets the 18 kg he asked for; a 55 kg athlete is not handed his number.
+        st = _state()
+        st["bodyweight_kg"] = bw
+        sug = _suggested(st, ex_id)
+        assert sug["suggested_external_load_kg"] == expected
         assert sug["load_unit"] == "per_dumbbell"
 
     def test_per_dumbbell_fallback_is_at_most_half_the_barbell_one(self):

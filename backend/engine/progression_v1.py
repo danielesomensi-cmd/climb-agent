@@ -55,6 +55,11 @@ EXTERNAL_LOAD_FALLBACK_PCT_BW = {
     # barbell total of the same movement (it used to be 0.34 as a TOTAL,
     # read by the athlete as the weight of each dumbbell).
     "dumbbell_bench_press": 0.17,
+    # B380: curls cold-start per dumbbell, scaled to bodyweight — Daniele asked
+    # 18 kg at his 78 kg (0.23 × 78 = 17.9 → 18.0); a lighter athlete starts lower
+    # instead of inheriting his number.
+    "bicep_curl": 0.23,
+    "hammer_curl": 0.23,
     "dumbbell_row": 0.15,
     "face_pull": 0.08,
     "farmers_carry": 0.30,
@@ -94,9 +99,6 @@ EXTERNAL_LOAD_FALLBACK_FIXED_KG: dict[str, float] = {
     "dumbbell_fly": 6.0,
     "overhead_tricep_extension": 6.0,
     "weighted_hanging_leg_raise": 2.5,
-    # B380 (Daniele): curls cold-start at 18 kg per dumbbell.
-    "bicep_curl": 18.0,
-    "hammer_curl": 18.0,
 }
 
 # Similarity groups for cross-exercise load transfer (B90).
