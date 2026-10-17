@@ -75,9 +75,31 @@ def removal_records(plan: Mapping[str, Any]) -> List[dict]:
     # A315: an automatic key re-schedule the user undid gave its slot back.
     undone = {a.get("adaptation_id") for a in (plan or {}).get("adaptations") or []
               if isinstance(a, Mapping) and a.get("type") == "auto_reschedule_declined"}
-    for a in (plan or {}).get("adaptations") or []:
+    # B382 (D2): where each day's last add_outdoor sits in the log, so a
+    # remove_outdoor can cancel the removals made to clear the day for it.
+    last_add_outdoor: dict = {}
+    seq: List[int] = []  # log position of each record of ``out``
+    prev_pos = -1
+    for pos, a in enumerate((plan or {}).get("adaptations") or []):
+        seq.extend([prev_pos] * (len(out) - len(seq)))  # records of the previous entry
+        prev_pos = pos
         if not isinstance(a, Mapping):
             continue
+        if a.get("type") == "event" and isinstance(a.get("event"), Mapping):
+            ev = a["event"]
+            if ev.get("event_type") == "add_outdoor" and ev.get("date"):
+                last_add_outdoor[str(ev["date"])[:10]] = pos
+            elif ev.get("event_type") == "remove_outdoor" and ev.get("date"):
+                # B382 (D2): the crag day is given back to the engine — the
+                # sessions removed before the outdoor was added (or, with no
+                # add_outdoor on record, before this event) may come back.
+                d = str(ev["date"])[:10]
+                cut = last_add_outdoor.pop(d, pos)
+                keep = [i for i, r in enumerate(out)
+                        if not (seq[i] < cut and r["date"][:10] == d and r["kind"] == "removed")]
+                out = [out[i] for i in keep]
+                seq = [seq[i] for i in keep]
+                continue
         if a.get("type") == "day_override" and not a.get("outdoor") and a.get("target_date"):
             date = str(a["target_date"])
             if a.get("replaced_session_id") or a.get("replaced_slot"):
@@ -92,7 +114,16 @@ def removal_records(plan: Mapping[str, Any]) -> List[dict]:
         ev = a["event"]
         et = ev.get("event_type")
         if et == "remove_session":
-            date, ref, slot, kind = ev.get("date"), ev.get("session_ref"), ev.get("slot"), "removed"
+            date, ref, kind = ev.get("date"), ev.get("session_ref"), "removed"
+            # B382: the app sends the session id only; apply_events records the
+            # slot the session really sat in (``removed_slot``). The removal of
+            # the user's own session (``removed_owned``) keeps the old reading:
+            # it does not empty the slot for the engine.
+            slot = ev.get("slot") or (None if ev.get("removed_owned") else ev.get("removed_slot"))
+            if date and (ref or slot):
+                out.append({"date": str(date), "ref": ref, "slot": slot, "kind": kind,
+                            "owned": bool(ev.get("removed_owned"))})
+            continue
         elif et == "move_session":
             date = ev.get("from_date")
             ref = ev.get("session_ref") or ev.get("moved_session_id")
@@ -113,6 +144,17 @@ def removal_records(plan: Mapping[str, Any]) -> List[dict]:
         if date and (ref or slot):
             out.append({"date": str(date), "ref": ref, "slot": slot, "kind": kind})
     return out
+
+
+def slot_emptied(records: List[dict]) -> set:
+    """B382: ``(date, slot)`` pairs the user emptied — "I took a session out"
+    means *that slot stays empty*, whatever session id a regeneration would put
+    there. A record with a slot (removal, move source, override, key
+    re-schedule) empties it; the removal of the user's own session
+    (``owned``) does not — it only takes that session away. A legacy record
+    with no slot (app removals before B382) keeps the by-id reading."""
+    return {(str(r["date"])[:10], r["slot"]) for r in records
+            if r.get("slot") and not r.get("owned")}
 
 
 def removed_refs(plan: Mapping[str, Any]) -> List[Tuple[str, Optional[str], Optional[str]]]:

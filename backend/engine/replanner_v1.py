@@ -700,6 +700,7 @@ def _merge_user_content(
             old_by_date[d] = day
 
     removed = _uo.removed_refs(old_plan)
+    emptied = _uo.slot_emptied(_uo.removal_records(old_plan))
     whole_day = set(_uo.whole_day_override_dates(old_plan))
     # B379: a day the user owns wholesale (outdoor declared on the plan, or a
     # whole-day override) is copied exactly as it was — no engine session
@@ -752,6 +753,10 @@ def _merge_user_content(
                     s for s in engine
                     if not any(_uo.ref_matches(s, r, sl) for (r, sl) in day_removed)
                 ]
+            # B382: a slot the user emptied stays empty — no engine session
+            # goes back into it, whatever its id.
+            if emptied:
+                engine = [s for s in engine if (date_key, s.get("slot")) not in emptied]
 
         if old_day is None:
             if len(engine) != len(day.get("sessions") or []):
@@ -1221,7 +1226,13 @@ def apply_events(
                             f"Cannot remove a session with status '{s['status']}'"
                         )
                     break
-            _extract_session(day, session_ref=session_ref, slot=slot)
+            removed_s = _extract_session(day, session_ref=session_ref, slot=slot)
+            # B382: the log names the slot the session really sat in (the app
+            # sends the session id only) and whether it was the user's own, so
+            # a regeneration keeps the slot empty instead of filling it with a
+            # different session id. The event itself is left untouched.
+            log_event = {**event, "removed_slot": removed_s.get("slot"),
+                         "removed_owned": _uo.is_user_owned(removed_s)}
             # If no sessions left, clear day-level status
             if not day.get("sessions"):
                 day.pop("status", None)

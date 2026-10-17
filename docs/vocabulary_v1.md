@@ -1626,6 +1626,11 @@ is_preservable(session)   = status ∈ {done, skipped} | is_user_owned(session)
   A partial override with no `slot` in the request takes the replaced session's slot (`OverrideRequest.slot` is
   now optional; whole-day default stays `evening`).
 - **`move_session` event `replaced_session_id`** (B369 review): the session the move overwrote in the target slot.
+- **`remove_session` event `removed_slot` / `removed_owned`** (B382): the slot the removed session sat in and
+  whether it was the user's own (`is_user_owned`), added by `apply_events` to the logged event (the app sends the
+  id only). `user_owned.slot_emptied` → the `(date, slot)` pairs the user emptied: the planner leaves them empty
+  and the merge drops any engine session there. A `remove_outdoor` cancels that day's removals logged before its
+  `add_outdoor` (D2).
 - **User removals** = `adaptations[]` events `remove_session` (`date`, `session_ref`/`slot`), the source side of
   `move_session` (`from_date`, `session_ref` or `moved_session_id`, `from_slot`) and its `replaced_session_id` at
   `to_date`/`to_slot`, `day_override` `replaced_session_id`/`replaced_slot` and `replaced_slots`, and the whole

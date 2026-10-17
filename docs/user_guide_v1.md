@@ -652,6 +652,10 @@ From the **Today** or **Week** page, tap a session card's menu to add exercises.
 
 On **Week** or **Today**, move a planned session to another day or slot. The slot you leave stays empty — it simply becomes rest; nothing is added in its place. A planned session already in the slot you move to is replaced; a completed or skipped one is not — that move is refused. Nothing else changes: if the move puts two finger-heavy days back to back, or goes over your weekly limit of hard days, the week shows a recovery alert and both sessions stay as they are. Completed or skipped sessions cannot be moved.
 
+### Removing a Session
+
+Removing a planned session from a day leaves **that slot empty**: when the plan is recalculated (a change in Settings, a new week), the app does not put a different session there. The session you removed can still show up on another day of the same week, if the week has room for it. If you later remove an outdoor day you had planned, that day is given back to the plan: the sessions you had cleared to make room for the crag can come back. Removing a session you added yourself (a quick-add, a custom session) just takes it away — the slot goes back to the plan.
+
 ### Removing an Exercise
 
 Expand a planned session card and tap the trash icon (🗑) next to any exercise to remove it. A confirmation dialog will appear. You cannot remove the last exercise — a session must always have at least one. Completed or skipped sessions cannot be modified.
@@ -894,6 +898,10 @@ If you have equipment that's not in the standard list (e.g., a specific training
 ## 14. Outdoor Sessions
 
 Outdoor climbing is tracked separately from indoor training.
+
+### A planned crag day counts
+
+A crag day you put on the plan counts as one of the week's **hard, finger-loading days**: when the week is recalculated, the plan keeps hard and finger sessions away from the day before and the day after, and counts the crag day in your weekly limit of hard days. With a low limit, a test or a hard session may move to another week to make room for the day out. A planned crag day that has passed without being completed does not count — you did not go.
 
 ### Setting Up Spots
 

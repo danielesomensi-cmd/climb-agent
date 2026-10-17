@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import logging
 import math
+from copy import deepcopy
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from functools import lru_cache
@@ -857,6 +858,7 @@ def _key_stimulus_pass(
     today_date: Optional[date],
     hard_day_offsets: List[int],
     finger_day_offsets: List[int],
+    crag_offsets: Sequence[int] = (),
 ) -> List[Dict[str, Any]]:
     """PASS 2.7 (A305) — place the key stimuli the week is missing.
 
@@ -1041,6 +1043,19 @@ def _key_stimulus_pass(
     def _sid_count(sid: str) -> int:
         return sum(1 for o in range(7) for s in on(o) if s.get("session_id") == sid)
 
+    # B382(b): a declared crag day is a hard, finger-loading day for the pass
+    # (caps, gaps) and for the alerts it must not add — guards_v1 reads the
+    # day's outdoor fields, so the view carries them.
+    crag_set = set(crag_offsets)
+    _outdoor_keys = ("outdoor_spot_name", "outdoor_spot_id", "outdoor_discipline",
+                     "outdoor_session_status", "outdoor_plan", "outdoor_load_score")
+    crag_fields: Dict[int, Dict[str, Any]] = {}
+    if same_week and crag_set:
+        _ex_by = {str(d.get("date"))[:10]: d for d in _plan_days_list(existing_week_plan)}
+        for o in sorted(c for c in crag_set if 0 <= c < 7):
+            _dd = _ex_by.get(week_iso[o]) or {}
+            crag_fields[o] = {k: deepcopy(_dd[k]) for k in _outdoor_keys if k in _dd}
+
     def _alerts(view: Optional[List[List[Dict[str, Any]]]] = None) -> List[Dict[str, Any]]:
         if view is None and "alerts" in cache:
             return cache["alerts"]
@@ -1048,7 +1063,8 @@ def _key_stimulus_pass(
             "start_date": start_date,
             "profile_snapshot": {"hard_cap_per_week": effective_hard_cap,
                                  "recovery_multiplier": recovery_mult},
-            "weeks": [{"days": [{"date": week_iso[o], "sessions": on(o, view)} for o in range(7)]}],
+            "weeks": [{"days": [{"date": week_iso[o], "sessions": on(o, view), **crag_fields.get(o, {})}
+                                for o in range(7)]}],
         }
         out = guards_v1.evaluate(plan, prev_days or None, None, None)
         if view is None:
@@ -1056,6 +1072,8 @@ def _key_stimulus_pass(
         return out
 
     def _has(flag: str, o: int) -> bool:
+        if flag in ("hard", "finger") and o in crag_set:
+            return True  # B382(b)
         return any(session_flag(s, flag) for s in on(o))
 
     def _equipment_feasible(cands: List[str]) -> bool:
@@ -1494,6 +1512,26 @@ def generate_phase_week(
     # B95: resolve "today" for skipping past days
     today_date: Optional[date] = _parse_date(today) if today else None
 
+    # B382: the week being regenerated, as the user left it.
+    _same_week = isinstance(existing_week_plan, dict) \
+        and str(existing_week_plan.get("start_date") or "")[:10] == str(start_date)[:10]
+
+    # B382(a): a slot the user emptied (a removal, the source of a move, an
+    # override, a key re-schedule) stays empty — from today on, this week. One
+    # place: every pass below reads ``normalized``, so none puts a session there
+    # (the session may still land on another day: D1, decided 2026-10-17).
+    if _same_week:
+        from backend.engine.user_owned import removal_records, slot_emptied
+        _wk_iso = [(start + timedelta(days=i)).isoformat() for i in range(7)]
+        for _d_iso, _slot in sorted(slot_emptied(removal_records(existing_week_plan))):
+            if _slot not in SLOTS or _d_iso not in _wk_iso:
+                continue
+            if today_date is not None and _parse_date(_d_iso) < today_date:
+                continue
+            _wd = _weekday_key(_parse_date(_d_iso))
+            normalized[_wd] = dict(normalized[_wd])
+            normalized[_wd][_slot] = {**normalized[_wd][_slot], "available": False}
+
     # Build day structures
     day_dates: List[date] = [start + timedelta(days=i) for i in range(7)]
     day_keys: List[str] = [_weekday_key(d) for d in day_dates]
@@ -1617,6 +1655,45 @@ def generate_phase_week(
         has_slot = any(day_avail[slot]["available"] for slot in SLOTS)
         day_has_available_slot.append(has_slot)
 
+    # B382(b): a crag day the user declared on the plan is one of the week's
+    # hard, finger-loading days — the same reading as the alerts (guards_v1
+    # ``_hard_cap`` / ``_finger_gap``, B372). This week: an engine-free day
+    # declared outdoor, done or not past (a past day never completed: the
+    # athlete did not go). The previous week's crag days seed the spacing like
+    # its sessions do (B161, negative offsets).
+    from backend.engine.user_owned import is_declared_outdoor_day as _declared
+    crag_offsets: List[int] = []
+    if _same_week:
+        _old_by = {str(d.get("date"))[:10]: d for d in _plan_days_list(existing_week_plan)}
+        for offset in range(7):
+            _dd = _old_by.get(day_dates[offset].isoformat())
+            if _dd is not None and day_engine_free[offset] and _declared(_dd):
+                crag_offsets.append(offset)
+            elif (_dd is not None and _declared(_dd) and _dd.get("outdoor_session_status") == "done"
+                  and today_date is not None and day_dates[offset] < today_date):
+                crag_offsets.append(offset)
+    for _pd in _plan_days_list(prev_week_plan):
+        try:
+            _po = (_parse_date(str(_pd.get("date"))[:10]) - start).days
+        except (TypeError, ValueError):
+            continue
+        if -7 <= _po < 0 and _declared(_pd) and (
+            _pd.get("outdoor_session_status") == "done"
+            or today_date is None or _parse_date(str(_pd.get("date"))[:10]) >= today_date
+        ):
+            crag_offsets.append(_po)
+    crag_offsets = sorted(set(crag_offsets))
+    crag_in_week = [o for o in crag_offsets if o >= 0]
+    hard_days += len(crag_in_week)
+
+    def _near_crag(offset: int, finger: bool, hard: bool) -> bool:
+        """B382(b): a finger / hard session within its gap of a crag day, on
+        either side (PASS 1 / 1.5 check spacing backwards only)."""
+        return any(
+            (finger and abs(offset - c) <= finger_gap_days) or (hard and abs(offset - c) <= hard_gap_days)
+            for c in crag_offsets
+        )
+
     # Cap available days to target_training_days_per_week
     available_day_count = sum(day_has_available_slot)
     if available_day_count > target_days:
@@ -1734,6 +1811,10 @@ def generate_phase_week(
                 last_finger_offset = finger_day_offsets[-1]
                 if (offset - last_finger_offset) <= finger_gap_days:
                     skip = True
+
+            # B382(b): not next to a declared crag day — TEMPORARY
+            if not skip and _near_crag(offset, meta["finger"], meta["hard"]):
+                skip = True
 
             # No consecutive hard/max-intensity days (extended by D83 recovery multiplier) — TEMPORARY
             if not skip and meta["hard"] and hard_day_offsets:
@@ -1870,6 +1951,8 @@ def generate_phase_week(
                     continue
                 if fb_meta.get("finger") and finger_day_offsets and (offset - finger_day_offsets[-1]) <= finger_gap_days:
                     continue
+                if _near_crag(offset, bool(fb_meta.get("finger")), bool(fb_meta.get("hard"))):
+                    continue
                 result = _find_best_slot(
                     day_avail, fb_meta, locations, prefer_evening=True,
                     home_equipment=home_equipment, gyms=gyms, default_gym_id=default_gym_id,
@@ -1889,6 +1972,18 @@ def generate_phase_week(
                     if fb_meta.get("finger"):
                         finger_day_offsets.append(offset)
                     break
+
+    # B382(b): from here on every pass checks spacing with ``any(abs(...))`` on
+    # these lists, so the crag days join them now (after PASS 1 / 1.5, whose
+    # backwards check reads the last element: a crag Saturday in the list would
+    # block every earlier day).
+    _crag_seeded_finger: List[int] = []  # kept out of the plan's own counters
+    for _c in crag_offsets:
+        if _c not in finger_day_offsets:
+            finger_day_offsets.append(_c)
+            _crag_seeded_finger.append(_c)
+        if _c not in hard_day_offsets:
+            hard_day_offsets.append(_c)
 
     # ── PASS 2: Fill remaining days with complementary sessions ──
     days_with_sessions = sum(1 for ds in day_sessions if ds)
@@ -2421,14 +2516,14 @@ def generate_phase_week(
                 if any(is_finger_hard_session(e) and not (e.get("tags") or {}).get("test")
                        for e in survivors):
                     return False
-                fh = list(_ext_finger)
+                fh = list(_ext_finger) + list(crag_offsets)  # B382(b)
                 for o in range(7):
                     if o != offset and any(is_finger_hard_session(e) for e in day_sessions[o]):
                         fh.append(o)
                 if any(0 < offset - o <= _hang_block_d for o in fh):
                     return False
                 if not victim_finger:
-                    fo_all = list(_prev_finger) + [
+                    fo_all = list(_prev_finger) + list(crag_offsets) + [
                         o for o in range(7) if o != offset
                         and any(_SESSION_META.get(e.get("session_id", ""), {}).get("finger") for e in day_sessions[o])
                     ]
@@ -2459,10 +2554,10 @@ def generate_phase_week(
             hard_now = sum(
                 1 for o in range(7)
                 if o != offset and any((e.get("tags") or {}).get("hard") for e in day_sessions[o])
-            )
+            ) + sum(1 for c in crag_in_week if c != offset)  # B382(b)
             if hard_now >= effective_hard_cap:
                 return False
-            ho_all = list(_prev_hard) + [
+            ho_all = list(_prev_hard) + list(crag_offsets) + [
                 o for o in range(7) if o != offset
                 and any((e.get("tags") or {}).get("hard") for e in day_sessions[o])
             ]
@@ -2577,7 +2672,8 @@ def generate_phase_week(
                     finger_day_offsets.append(offset)
                 if meta.get("hard") and offset not in hard_day_offsets:
                     hard_day_offsets.append(offset)
-            hard_days = sum(1 for o in range(7) if any((e.get("tags") or {}).get("hard") for e in day_sessions[o]))
+            hard_days = sum(1 for o in range(7) if any((e.get("tags") or {}).get("hard") for e in day_sessions[o])) \
+                + len(crag_in_week)  # B382(b): the crag days stay counted
             _rd_placed_offsets.add(offset)
             if any(_SESSION_META[e["session_id"]].get("finger") for e in new_entries):
                 _rd_hang_offsets.append(offset)
@@ -2951,6 +3047,7 @@ def generate_phase_week(
         today_date=today_date,
         hard_day_offsets=hard_day_offsets,
         finger_day_offsets=finger_day_offsets,
+        crag_offsets=crag_offsets,
     )
 
     # ── A281: no-hard sweep (closes B-PRETRIP-PASS1-ONLY) ──
@@ -3008,7 +3105,7 @@ def generate_phase_week(
             day_entry["prev_other_activity_reduce"] = True
         plan_days.append(day_entry)
 
-    finger_days_count = len(finger_day_offsets)
+    finger_days_count = len([o for o in finger_day_offsets if o not in _crag_seeded_finger])
 
     # Compute weekly load summary
     total_load = sum(
