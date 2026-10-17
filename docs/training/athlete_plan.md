@@ -270,7 +270,11 @@ Le **16 scale** stanno in `backend/catalog/progressions/v1/bw_ladders.json` (liv
 - **Outdoor / progetto:** scivolate di piede per giro, scarpetta usata, esito al punto di impegno.
 - Nessuna debt card per un log mancante: solo per una chiave non fatta. I log passati non si toccano.
 
-## 8. Progetto corrente — Cima Nikita (8a, Berdorf)
+## 8. Progetti correnti — Cima Nikita (8a) e Isatis (7c+), Berdorf
+
+Da ottobre 2026 i progetti attivi sono **due** (Daniele, 2026-10-17): **Cima Nikita** (sotto) e **Isatis 7c+**, progetto di rientro. La beta di Isatis e lo storico dei tentativi stanno nel workspace del coach (`~/Projects/climb-coach/progetti/`, locale, fuori da questo repo pubblico). Le regole sotto valgono per entrambi.
+
+### Cima Nikita
 
 È **un** progetto dentro il programma, non il suo asse. **Non si pianifica attorno alle giornate Nikita.** Non ci sono «settimane Nikita», né restrizioni di 72 h prima di Nikita, né un template settimanale dedicato. Le giornate outdoor seguono le regole outdoor generiche: outdoor-hard (tentativo ≥ RP−2 = giorno dita-hard) e condizioni (≥ 24 h dopo la pioggia).
 
