@@ -642,7 +642,15 @@ class TestApi:
         assert r.status_code == 200, r.text
         after = deps.load_state(None)["week_plans"][mon]
         a_days = after["weeks"][0]["days"]
-        assert a_days[:2] == past_before  # past immutable, byte for byte
+        # Past immutable, byte for byte — except the B120/B375 cache of the
+        # resolution, which the read adds once to a played session that had none.
+        def _no_added_resolved(days_):
+            return [
+                {**d, "sessions": [{k: v for k, v in s.items() if k != "resolved"} for s in d["sessions"]]}
+                for d in days_
+            ]
+        assert not any("resolved" in s for d in past_before for s in d["sessions"])
+        assert _no_added_resolved(a_days[:2]) == past_before
         lunches = [s for d in a_days[2:] for s in d["sessions"] if s["slot"] == "lunch"]
         assert lunches and all(s.get("slot_role") == "complementary" for s in lunches)
         assert not any(is_hiit_like(s) for s in lunches)  # Tuesday's HIIT was the week's one
