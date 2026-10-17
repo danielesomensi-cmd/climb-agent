@@ -65,7 +65,7 @@ python scripts/athlete_context.py --date YYYY-MM-DD                        # se 
    - Budget: `toes_to_bar` **oppure** front lever, più rollout, più eventualmente copenhagen.
 7. **Accessori a rotazione A/B:** guarda «Varietà» e ruota fuori i gruppi «usati troppo»; niente accessori/core della riga «Da non ripetere oggi» (§1).
 8. **Struttura:**
-   - riscaldamento specifico 10-12', con riscaldamento tasche prima di limit o outdoor (protocollo `pocket_warmup`: `hang_rampup_progressive` → `pocket_rampup_hangboard` bi/tridito destra → `single_finger_pocket_rampup` medio sinistro, piedi appoggiati);
+   - riscaldamento specifico 10-12', con riscaldamento tasche prima di limit o outdoor (protocollo `pocket_warmup`: `hang_rampup_progressive` → `pocket_rampup_hangboard` bi/tridito destra → `single_finger_pocket_rampup` medio destro, piedi appoggiati);
    - 1-2 blocchi principali;
    - ≤ 2 accessori;
    - 3' di chiusura.

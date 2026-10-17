@@ -81,6 +81,32 @@ _FINGER_LOAD_DOMAINS = frozenset({
 })
 
 
+# B392: catalog roles that only prepare the session. A warm-up the catalog rates
+# at low finger stress does not load the flexors, whatever its pattern says.
+_WARMUP_ROLES = frozenset({"warmup", "activation"})
+_LIGHT_FINGER_STRESS = frozenset({"none", "low"})
+
+
+def _is_light_warmup(entry: Dict[str, Any]) -> bool:
+    """True for a pure warm-up whose catalog finger stress is ``none``/``low``.
+
+    B392. ``warmup_easy_boulders`` carries the ``climbing_limit_boulder``
+    pattern, so every custom that opened with easy boulders came out
+    ``finger: True`` — a technique day then blocked max finger work the next
+    day (seen in prod: the 18/10 custom put «NO dita max» on 19/10). Same
+    exclusion stimulus.py already makes for limit_power. Scoped to warm-ups on
+    purpose: the sub-max hangboard work (``sub_max_capacity_hang`` & co.) is
+    also rated ``low`` but is the session's main finger load and keeps the tag.
+    """
+    roles = entry.get("role") or []
+    if isinstance(roles, str):
+        roles = [roles]
+    if not roles or not set(map(str, roles)) <= _WARMUP_ROLES:
+        return False
+    fingers = (entry.get("stress_tags") or {}).get("fingers")
+    return str(fingers) in _LIGHT_FINGER_STRESS
+
+
 def _rank(intensity: Optional[str]) -> int:
     return _INTENSITY_RANK.get(str(intensity or "low"), 0)
 
@@ -134,8 +160,9 @@ def derive_session_tags(
             continue
         patterns = _patterns_of(entry)
         domains = [str(d) for d in (entry.get("domain") or [])]
-        if any(p in _FINGER_LOAD_PATTERNS for p in patterns) or any(
-            d in _FINGER_LOAD_DOMAINS for d in domains
+        if not _is_light_warmup(entry) and (
+            any(p in _FINGER_LOAD_PATTERNS for p in patterns)
+            or any(d in _FINGER_LOAD_DOMAINS for d in domains)
         ):
             finger = True
         level = str(entry.get("intensity_level") or "low")

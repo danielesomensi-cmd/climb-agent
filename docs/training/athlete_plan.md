@@ -98,11 +98,11 @@ Il test conta come esposizione. Durante il rientro, max hang al massimo 5 serie.
 
 ### Dita a tasca e mono
 
-- Sul **mono** usa il **medio sinistro**. Con la **mano destra** tira molto **bidito e tridito**.
+- Sul **mono** usa il **medio della mano destra** (confermato l'11/10: il «medio sinistro» del 10/10 era un errore di trascrizione). Sempre con la **destra** tira molto **bidito e tridito**.
 - **Riscaldamento specifico** prima di limit e outdoor (in testa alla seduta dita), protocollo `pocket_warmup` di `backend/catalog/progressions/v1/bw_ladders.json`:
   1. `hang_rampup_progressive` (riscaldamento dita generico);
   2. `pocket_rampup_hangboard`: 4 sospensioni da 10 s sulle tasche a **2 e 3 dita della trave**, piedi appoggiati, circa 50% → 60% → 70% → 80% del peso. Per lui: bidito e tridito con la **destra** (dove tira di più), poi la sinistra;
-  3. `single_finger_pocket_rampup`: carico progressivo del **medio sinistro** in una tasca profonda della trave, **piedi sempre a terra o sulla sedia**, sforzo 3 → 4 → 5 → 6 su 10. Mai una sospensione libera su un dito, mai il mono della palestra.
+  3. `single_finger_pocket_rampup`: carico progressivo del **medio destro** in una tasca profonda della trave, **piedi sempre a terra o sulla sedia**, sforzo 3 → 4 → 5 → 6 su 10. Mai una sospensione libera su un dito, mai il mono della palestra.
   Le id del catalogo sono generiche (role `library`, mai scelte dal motore): le specifiche sue (dito, mano) vanno nelle `notes` della riga.
 - **Lavoro su tasca solo submassimale e solo su una tasca di hangboard.** Mai un mono in palestra (il simulatore è un buco a 2 dita).
 - **Sorvegliare puleggia e lombricali** di quelle dita. Un fastidio alla puleggia chiude la giornata. Circa 6 carichi veri del mono per giornata outdoor (ENGINEERING CONSTANT).
@@ -289,7 +289,7 @@ Da ottobre 2026 i progetti attivi sono **due** (Daniele, 2026-10-17): **Cima Nik
 | M4 | piede sinistro basso al centro |
 | M5 | piede destro |
 | M6 | piede sinistro sul nottolino, spinta laterale |
-| M7 | mono (medio sinistro) |
+| M7 | mono (medio destro) |
 | M8 | piede sinistro aperto e basso, in contropressione («tiro e spingo») |
 | M9 | chiusura |
 | M10 | catena |
@@ -319,7 +319,7 @@ Livelli scale (aggiornati 2026-10-04, partenza consigliata — da confermare all
 - CADUTE: da valutare (prima seduta di fall_practice: F1 → F2 se paura ≤3)
 Limitatori: 1) piedi 2) posizione 3) try-hard. Ogni custom non di recupero ha un blocco tecnica o try-hard con UN target misurabile.
 Forza: continua a progredire (carichi SOLO da anchored_load, mai working_loads grezzi, mai il 2RM).
-Tasche: mono = medio SINISTRO; bi/tridito con la DESTRA. Prima di limit/outdoor: pocket_rampup_hangboard (2-3 dita, destra prima) + single_finger_pocket_rampup (medio sinistro, piedi appoggiati); solo submassimale su trave, mai mono in palestra; attenzione a pulegge/lombricali.
+Tasche: mono = medio DESTRO; bi/tridito con la DESTRA. Prima di limit/outdoor: pocket_rampup_hangboard (2-3 dita, destra prima) + single_finger_pocket_rampup (medio destro, piedi appoggiati); solo submassimale su trave, mai mono in palestra; attenzione a pulegge/lombricali.
 Core: livello per famiglia nella sezione «Scale corpo libero» dello script (seed in sola lettura); niente dead_bug/plank/plank_shoulder_tap/pallof come blocco principale; front lever mai nelle 24 h prima di limit/strength_long.
 Progetto corrente: Cima Nikita 8a (Berdorf) — NON si pianifica attorno a Nikita; registro «T1 M7 piede R✓ I2».
 Berdorf: solo ≥24 h dopo la pioggia.

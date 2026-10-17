@@ -527,7 +527,7 @@ class TestDocs:
     def test_plan_has_notes_block(self):
         md = (REPO_ROOT / ac.ATHLETE_PLAN_PATH).read_text(encoding="utf-8")
         notes = ac.extract_plan_notes(md)
-        assert notes and "PIEDI" in notes and "medio SINISTRO" in notes and "Nikita" in notes
+        assert notes and "PIEDI" in notes and "medio DESTRO" in notes and "Nikita" in notes
 
     def test_extract_plan_notes_missing_markers(self):
         assert ac.extract_plan_notes("# nothing") is None
