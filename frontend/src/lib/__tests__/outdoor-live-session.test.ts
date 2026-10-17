@@ -54,6 +54,8 @@ function session(over: Partial<import("@/lib/outdoor-live-session").LiveOutdoorS
     dayType: "project" as const,
     startedAt: "2026-08-20T05:00:00Z",
     routes: [ROUTE("DNA", "7a+")],
+    // B378: required by LiveOutdoorSession; pickRestoredSession ignores it, saveLiveSession overwrites it.
+    updatedAt: 0,
     ...over,
   };
 }
