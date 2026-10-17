@@ -250,17 +250,51 @@ def test_b360_add_outdoor_still_joins_two_real_crags():
 ])
 def test_b360_indoor_override_plan_is_byte_identical(kwargs):
     """I nuovi kwargs non devono cambiare una virgola del percorso indoor."""
+    _assert_indoor_override_byte_identical(kwargs)
+
+
+def _assert_indoor_override_byte_identical(kwargs):
+    # B388: one plan, two deep copies. Two `_make_plan()` calls stamp
+    # `generated_at` (`datetime.now()` at second resolution, planner_v2.py:3029)
+    # twice, and a pair of generations straddling a second compared
+    # `12:41:22` against `12:41:23` although the override changed nothing.
     gyms = [{"gym_id": "cocque", "equipment": ["gym_boulder", "gym_routes", "hangboard"]}]
+    plan = _make_plan()
     base = apply_day_override(
-        _make_plan(), reference_date=REF_DATE, target_date=TARGET_DATE,
+        deepcopy(plan), reference_date=REF_DATE, target_date=TARGET_DATE,
         gyms=gyms, **kwargs,
     )
     with_spot = apply_day_override(
-        _make_plan(), reference_date=REF_DATE, target_date=TARGET_DATE,
+        deepcopy(plan), reference_date=REF_DATE, target_date=TARGET_DATE,
         gyms=gyms, spot_id="spot_abc", spot_name="Grande Grotta", **kwargs,
     )
     assert json.dumps(base, sort_keys=True) == json.dumps(with_spot, sort_keys=True)
     assert "outdoor_spot_name" not in _day(base), "un override indoor non crea campi outdoor"
+
+
+@pytest.mark.parametrize("kwargs", [
+    {"intent": "strength", "location": "gym", "gym_id": "cocque"},
+    {"intent": "rest", "location": "home"},
+    {"intent": "endurance", "location": "gym", "gym_id": "cocque", "session_index": 0},
+])
+def test_b388_indoor_override_comparison_survives_a_second_boundary(kwargs, monkeypatch):
+    """B388: a clock that moves one second per read makes the straddle certain;
+    the comparison must still hold, because the override changes nothing."""
+    import datetime as _dt
+
+    import backend.engine.planner_v2 as pv2
+
+    class _Tick(_dt.datetime):
+        calls = 0
+
+        @classmethod
+        def now(cls, tz=None):
+            cls.calls += 1
+            return _dt.datetime(2026, 10, 17, 12, 41, 0) + _dt.timedelta(seconds=cls.calls)
+
+    monkeypatch.setattr(pv2, "datetime", _Tick)
+    _assert_indoor_override_byte_identical(kwargs)
+    assert _Tick.calls >= 1  # the patched clock was really read
 
 
 # ── 8. L'intent conserva il suo unico ruolo legittimo: la disciplina ────────
