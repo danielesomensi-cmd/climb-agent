@@ -11,6 +11,10 @@
 
 ## Open
 
+**B390 — una rigenerazione a metà settimana ignora le sessioni hard già fatte (da [[B382]], 2026-10-17)** 🟠 P2 — Fase 1 fatta, **STOP** in attesa dell'OK di Daniele (`planner_v2`). `generate_phase_week` parte con `hard_days = 0` e gap vuoti (planner_v2.py:1580-1597): B161 semina solo la settimana prima, B382(b) solo i giorni in falesia; i giorni prima di oggi (B95) non vengono letti. Risultato: cap superato, dita back to back e ripetizioni sui giorni restanti, poi segnalati da `guards_v1` contro le scelte del motore stesso (il pass chiavi A305 e i pranzi A300 vedono invece la settimana intera). Repro sintetico: rigenerazione di giovedì dopo `strength_long` fatto mercoledì → `limit_boulder_gym` giovedì, 4 giorni hard con cap 3. Opzione raccomandata A: seminare cap, gap e anti-ripetizione dalle sessioni `done` dei giorni passati. Analisi e decisioni: `docs/briefs/B390_midweek_past_hard.md`.
+
+**B391 — voci `add_custom_session` nel log `adaptations` senza la sessione nel piano (da [[B382]], 2026-10-17)** ⚪ P3 — Fase 1 fatta, in attesa dell'OK di Daniele. Non è un bug di codice: le custom dei pranzi messe a mano dal 07/09 sono state tolte il 05/10 (passaggio ad A300) con un `PUT /api/state` senza record di rimozione, voluto; le voci di log sono rimaste e il merge B369 le riporta avanti. Nessun lettore le usa (verificato). 24 voci nelle settimane future (19/10 → 23/11). Opzione raccomandata A: pulizia una tantum delle settimane future con dry run e backup, passate intatte, + regola nel runbook del coach. Analisi: `docs/briefs/B391_orphan_custom_add_events.md`.
+
 **B381-FALLBACK — `fallback_exercise_ids` per blocco nel resolver (rinviato da [[B381]], 2026-10-17)** ⚪ P3 — un pin che fallisce per equipaggiamento ricade oggi sulla scelta generica dei filtri. B381 ha risolto il caso concreto (panca) cambiando il pin; un fallback esplicito per blocco serve solo se ricompare un caso simile. Tocca `resolve_session.py` → fase 1 + STOP.
 
 
