@@ -1,6 +1,6 @@
 # B391 — `add_custom_session` entries in the adaptations log with no session in the plan
 
-**Type:** B (data hygiene) · **Status:** Phase 1 (analysis) — **STOP**, waiting for Daniele's OK
+**Type:** B (data hygiene) · **Status:** ✅ Done 2026-10-17 — option A applied in prod (see roadmap)
 **Origin:** out-of-scope finding of [[B382]] (2026-10-17) · **STOP-gated module:** none for the
 recommended option (a prod data clean-up; no engine code)
 
