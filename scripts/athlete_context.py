@@ -477,7 +477,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(json.dumps(payload, ensure_ascii=False, indent=1, default=str))
     else:
         sys.stdout.write(ac.render_text(ctx, plan_notes=plan_notes(),
-                                        source_line=_age_line(data.get("updated_at"))))
+                                        source_line=_age_line(data.get("updated_at")),
+                                        state=state, outdoor_rows=data.get("outdoor_rows")))
         if sim is not None:
             sys.stdout.write("\n" + render_simulation(sim))
     return EXIT_OK

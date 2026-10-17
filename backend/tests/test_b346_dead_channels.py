@@ -93,9 +93,37 @@ def test_unknown_test_id_in_queue_is_ignored():
     assert "test_max_hang_7s" not in _session_ids(plan)
 
 
+def _week_without_timestamp(**kwargs) -> dict:
+    """The generated week minus ``generated_at``, a wall-clock timestamp (B388)."""
+    week = generate_phase_week(**kwargs)
+    week.pop("generated_at", None)
+    return week
+
+
 def test_planner_output_is_deterministic_with_a_queue():
     kwargs = _planner_kwargs(test_queue=_queue())
-    assert generate_phase_week(**kwargs) == generate_phase_week(**kwargs)
+    assert _week_without_timestamp(**kwargs) == _week_without_timestamp(**kwargs)
+
+
+def test_queue_determinism_survives_a_second_boundary(monkeypatch):
+    """B388: ``generated_at`` is ``datetime.now()`` at second resolution
+    (planner_v2.py:3029), so comparing two whole weeks failed whenever the
+    two generations straddled a second (``12:45:26 != 12:45:27``)."""
+    import datetime as _dt
+
+    import backend.engine.planner_v2 as pv2
+
+    class _Tick(_dt.datetime):
+        calls = 0
+
+        @classmethod
+        def now(cls, tz=None):
+            cls.calls += 1
+            return _dt.datetime(2026, 10, 17, 12, 45, 25) + _dt.timedelta(seconds=cls.calls)
+
+    monkeypatch.setattr(pv2, "datetime", _Tick)
+    test_planner_output_is_deterministic_with_a_queue()
+    assert _Tick.calls >= 2  # the patched clock was really read
 
 
 # ─── 1b. queue pruning ───────────────────────────────────────────────────────
