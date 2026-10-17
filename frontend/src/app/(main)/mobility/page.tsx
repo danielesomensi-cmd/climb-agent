@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { TopBar } from "@/components/layout/top-bar";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +17,7 @@ import {
   startFreeSession,
   type MobilityRegion,
 } from "@/lib/api";
+import { invalidateFreeSessionHistory } from "@/lib/invalidation";
 import { MobilitySetup, type MobilityConfig } from "@/components/mobility/MobilitySetup";
 import {
   MobilityFlowTimer,
@@ -26,6 +28,7 @@ type Step = "setup" | "flow" | "summary";
 
 export default function MobilityPage() {
   const router = useRouter();
+  const qc = useQueryClient();
 
   const [step, setStep] = useState<Step>("setup");
   const [regions, setRegions] = useState<MobilityRegion[]>([]);
@@ -92,12 +95,14 @@ export default function MobilityPage() {
           },
         });
         setDurationMinutes(r.duration_minutes);
+        // B386 — /today's badges are derived from ['state'] now: refresh it.
+        invalidateFreeSessionHistory(qc);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to save session");
       }
       setStep("summary");
     },
-    [sessionId]
+    [sessionId, qc]
   );
 
   const handleExitFlow = useCallback(() => {

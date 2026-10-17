@@ -37,12 +37,14 @@ import { ApiError, apiErrorDetail, applyEvents, checkKeyConflicts, postFeedback,
 import { STALE_PLAN_MESSAGE } from "@/lib/plan-revision";
 import { useSubscription } from "@/lib/hooks/use-subscription";
 import { useUserState, useWeekPlan, useDailyQuote, useOutdoorDoneDays } from "@/lib/hooks/queries";
-import { useFreeSessionHistory, useFreeSessionsForDates } from "@/lib/hooks/queries/use-free-session";
+import { useFreeSessionsForDates } from "@/lib/hooks/queries/use-free-session";
 import { useWeekEvents } from "@/lib/hooks/use-week-events";
 import { showAutoReschedules } from "@/lib/auto-reschedule";
 import { queueOrWarn } from "@/lib/outbox-feedback";
 import { flush as flushOutbox } from "@/lib/outbox";
 import { queryKeys } from "@/lib/query-keys";
+import { invalidateFreeSessionHistory } from "@/lib/invalidation";
+import { writeLastDestination } from "@/lib/last-destination";
 import { siblingsOf, writeWeekCache, type WeekSiblings } from "@/lib/week-cache";
 import { alertMessagesFor, describeActionAlerts } from "@/lib/week-alerts";
 import {
@@ -213,6 +215,15 @@ function TodayContent() {
    * flight, errored, or disabled with nothing cached.
    */
   const stateLoadedOk = stateQuery.isSuccess && !stateQuery.isFetching;
+
+  // B386 — the root dispatcher now trusts a remembered "/today" without asking
+  // the server first, so /today is where that memory gets corrected. Only on a
+  // settled answer with Clerk up: an empty state is never persisted (B292), so
+  // "no macrocycle" here is always the server's word, not a stale cache.
+  useEffect(() => {
+    if (!stateLoadedOk || !identityKnown) return;
+    writeLastDestination(hasMacrocycle ? "/today" : "/onboarding/welcome");
+  }, [stateLoadedOk, identityKnown, hasMacrocycle]);
 
   /** Helper: write a fresh week_plan into the React Query cache (instant UI update) */
   const updateWeekCache = useCallback((newWeekPlan: WeekPlan, siblings?: WeekSiblings) => {
@@ -447,13 +458,12 @@ function TodayContent() {
     () => weekPlan?.weeks.flatMap((w) => w.days).map((d) => d.date) ?? [],
     [weekPlan],
   );
-  const freeSessionsQuery = useFreeSessionHistory(targetDate, !!targetDate);
-  const freeSessions = useMemo(
-    () => freeSessionsQuery.data?.sessions ?? [],
-    [freeSessionsQuery.data],
-  );
+  // B386 — both lists are derived from the shared ['state'] query (zero extra
+  // requests); they used to be 7 per-day /history calls on every cold open.
+  const targetDates = useMemo(() => (targetDate ? [targetDate] : []), [targetDate]);
+  const { sessions: freeSessions } = useFreeSessionsForDates(targetDates, authReady);
   const { sessions: weekFreeSessions, isSettled: weekFreeSessionsLoaded } =
-    useFreeSessionsForDates(weekDates, !!weekPlan);
+    useFreeSessionsForDates(weekDates, authReady);
 
   /** Find target day in the weekly plan */
   const dayPlan: DayPlan | undefined = weekPlan?.weeks
@@ -1336,9 +1346,9 @@ function TodayContent() {
             onDeleteFreeSession={async (sessionId: string) => {
               try {
                 await deleteFreeSession(sessionId);
-                // A245 F-5: the list is cache-owned now, so drop the cached
-                // day instead of filtering a local copy that no longer exists.
-                qc.invalidateQueries({ queryKey: queryKeys.freeSessionHistoryAll });
+                // A245 F-5 / B386: cache-owned (derived from ['state']), so
+                // refetch instead of filtering a local copy.
+                invalidateFreeSessionHistory(qc);
               } catch { /* ignore */ }
             }}
           />

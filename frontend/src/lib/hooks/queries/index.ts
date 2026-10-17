@@ -12,7 +12,7 @@ export type { OutdoorDaysSummary } from "./use-outdoor-sessions";
 export {
   useFreeSessionSurfaces,
   useFreeSessionPresets,
-  useFreeSessionHistory,
+  useFreeSessionsForDates,
 } from "./use-free-session";
 export { useCatalogSessions, useCatalogExercises } from "./use-catalog";
 export {
@@ -21,7 +21,6 @@ export {
   useMilestones,
   useMonthlyHeatmap,
   useOnboardingDefaults,
-  useSubscriptionStatus,
   useWeeklyReport,
   useReplannerSuggestions,
 } from "./use-misc";

@@ -41,6 +41,7 @@ import { useWeekEvents } from "@/lib/hooks/use-week-events";
 import { showAutoReschedules } from "@/lib/auto-reschedule";
 import { queueOrWarn } from "@/lib/outbox-feedback";
 import { queryKeys } from "@/lib/query-keys";
+import { invalidateFreeSessionHistory } from "@/lib/invalidation";
 import { siblingsOf, writeWeekCache, type WeekSiblings } from "@/lib/week-cache";
 import { alertMessagesFor, describeActionAlerts } from "@/lib/week-alerts";
 import { buildDialogFeedbackItems, extractFeedbackExercises } from "@/lib/feedback-items";
@@ -80,7 +81,8 @@ export default function WeekPage() {
   const qc = useQueryClient();
   const [weekNum, setWeekNum] = useState(0); // 0 = current week (also the cache key)
   const stateQuery = useUserState(authReady);
-  const weekQuery = useWeekPlan(weekNum, authReady);
+  // B386 — only /week (forward arrow) prefetches the next week, on idle.
+  const weekQuery = useWeekPlan(weekNum, authReady, { prefetchNext: true });
   const weekPlan = weekQuery.data?.week_plan ?? null;
   // B257: a past week with no saved plan fails closed (immutable, never
   // regenerated) — show an explicit message instead of a generic empty state.
@@ -212,7 +214,7 @@ export default function WeekPage() {
     [weekPlan],
   );
   const { sessions: allFreeSessions, isSettled: freeSessionsLoaded } =
-    useFreeSessionsForDates(weekDates, !!weekPlan);
+    useFreeSessionsForDates(weekDates, authReady);
   const freeSessionsByDate = useMemo(() => {
     const map: Record<string, Array<Record<string, unknown>>> = {};
     for (const fs of allFreeSessions as Array<Record<string, unknown>>) {
@@ -1020,9 +1022,9 @@ export default function WeekPage() {
                   onDeleteFreeSession={async (sessionId: string) => {
                     try {
                       await deleteFreeSession(sessionId);
-                      // A245 F-5: cache-owned now — invalidate instead of
-                      // hand-editing a local map that no longer exists.
-                      qc.invalidateQueries({ queryKey: queryKeys.freeSessionHistoryAll });
+                      // A245 F-5 / B386: cache-owned (derived from ['state']) —
+                      // invalidate instead of hand-editing a local map.
+                      invalidateFreeSessionHistory(qc);
                     } catch { /* ignore */ }
                   }}
                 />

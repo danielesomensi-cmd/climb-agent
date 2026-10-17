@@ -4,7 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { getState } from "@/lib/api";
-import { readLastDestination, writeLastDestination } from "@/lib/last-destination";
+import {
+  fastPathDestination,
+  readLastDestination,
+  writeLastDestination,
+} from "@/lib/last-destination";
 
 /**
  * A245 B-3 (F1) — the root used to decide where to go by calling getState()
@@ -32,6 +36,17 @@ export default function Home() {
     // still route straight to /today below (no double hop).
     if (!isSignedIn) {
       router.replace("/onboarding/welcome");
+      return;
+    }
+
+    // B386 — returning users already told us where they live. Going through
+    // getState() first cost a full /api/state round-trip plus a serial hop
+    // before /today could even start its own (identical) state fetch. /today
+    // handles "no macrocycle" itself (onboarding card) and rewrites the
+    // remembered destination, so a stale value corrects itself next open.
+    const fast = fastPathDestination(readLastDestination());
+    if (fast) {
+      router.replace(fast);
       return;
     }
 

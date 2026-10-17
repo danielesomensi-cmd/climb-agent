@@ -7,7 +7,6 @@ import {
   getMilestones,
   getMonthlyHeatmap,
   getOnboardingDefaults,
-  getSubscriptionStatus,
   getWeeklyReport,
   getSuggestedSessions,
 } from "@/lib/api";
@@ -37,16 +36,6 @@ export function useOnboardingDefaults(enabled = true) {
     queryKey: queryKeys.onboardingDefaults,
     queryFn: getOnboardingDefaults,
     staleTime: Infinity, // static
-    enabled,
-  });
-}
-
-export function useSubscriptionStatus(enabled = true) {
-  return useQuery({
-    queryKey: queryKeys.subscriptionStatus,
-    queryFn: getSubscriptionStatus,
-    staleTime: 5 * 60_000,
-    refetchInterval: 5 * 60_000, // matches legacy useSubscription poll
     enabled,
   });
 }

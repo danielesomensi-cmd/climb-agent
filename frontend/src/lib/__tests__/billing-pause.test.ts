@@ -4,7 +4,9 @@
  * B323: the suite default is node; render/hook tests opt in per file.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { createElement, type ReactNode } from "react";
 import { renderHook, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 /**
  * A285 — `enforced` is the field that keeps the paused UI honest.
@@ -34,9 +36,16 @@ vi.mock("@/lib/api", () => ({
 
 let useSubscription: typeof import("@/lib/hooks/use-subscription").useSubscription;
 
+/** B386 — useSubscription is a React Query hook now: one fresh client per test. */
+function wrapper({ children }: { children: ReactNode }) {
+  return createElement(QueryClientProvider, { client: qc }, children);
+}
+let qc: QueryClient;
+
 beforeEach(async () => {
   vi.resetModules();
   getSubscriptionStatus.mockReset();
+  qc = new QueryClient();
   ({ useSubscription } = await import("@/lib/hooks/use-subscription"));
 });
 
@@ -54,7 +63,7 @@ const PAUSED = { ...ENTITLED, enforced: false };
 describe("useSubscription — A285 enforced", () => {
   it("reports enforced=false when the server says billing is paused", async () => {
     getSubscriptionStatus.mockResolvedValue(PAUSED);
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderHook(() => useSubscription(), { wrapper });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.enforced).toBe(false);
@@ -64,7 +73,7 @@ describe("useSubscription — A285 enforced", () => {
 
   it("defaults to enforced when an older backend omits the field", async () => {
     getSubscriptionStatus.mockResolvedValue(ENTITLED);
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderHook(() => useSubscription(), { wrapper });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.enforced).toBe(true);
@@ -72,7 +81,7 @@ describe("useSubscription — A285 enforced", () => {
 
   it("reports enforced=true for a genuine paying subscriber", async () => {
     getSubscriptionStatus.mockResolvedValue({ ...PAUSED, enforced: true });
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderHook(() => useSubscription(), { wrapper });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.enforced).toBe(true);
@@ -80,7 +89,7 @@ describe("useSubscription — A285 enforced", () => {
 
   it("stays enforced while the first answer is still in flight", () => {
     getSubscriptionStatus.mockReturnValue(new Promise(() => {}));
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderHook(() => useSubscription(), { wrapper });
 
     expect(result.current.loading).toBe(true);
     expect(result.current.enforced).toBe(true);
@@ -88,7 +97,7 @@ describe("useSubscription — A285 enforced", () => {
 
   it("stays enforced when the server denies (B202 fail-closed is untouched)", async () => {
     getSubscriptionStatus.mockRejectedValue(new ApiError(402, "nope"));
-    const { result } = renderHook(() => useSubscription());
+    const { result } = renderHook(() => useSubscription(), { wrapper });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.canInteract).toBe(false);

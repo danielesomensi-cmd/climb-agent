@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ApiError, getSubscriptionStatus, type SubscriptionStatus } from "@/lib/api";
+import { queryKeys } from "@/lib/query-keys";
 
 const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -72,71 +74,64 @@ export function shouldDenyOnError(err: unknown, everAnswered: boolean): boolean 
   return !everAnswered;
 }
 
+/**
+ * B386 — how long a subscription answer is reused before asking again.
+ *
+ * /today and the TrialBanner both mount useSubscription on every open; with
+ * the old per-instance useEffect that was 2+ identical requests per page. The
+ * shared React Query cache makes it one, and navigating between pages inside
+ * this window costs nothing.
+ */
+export const SUBSCRIPTION_STALE_MS = 60_000;
+
+/**
+ * B386 — the fail-closed mapping, pure so it can be tested without a client.
+ *
+ * `hasData` plays the role the old `everAnswered` ref had, but cache-wide: a
+ * successful answer from ANY mounted consumer counts. The rule is unchanged —
+ * a 401/402/403 denies even with data in hand; a transport failure keeps the
+ * last known answer; any failure before the first answer denies (B202).
+ */
+export function deriveSubscriptionResult(args: {
+  data: SubscriptionStatus | undefined;
+  error: unknown;
+  isPending: boolean;
+}): UseSubscriptionResult {
+  const { data, error, isPending } = args;
+  if (error && shouldDenyOnError(error, data !== undefined)) return _DENY;
+  if (data !== undefined) return mapResponse(data);
+  if (isPending) return { ..._DENY, loading: true };
+  return _DENY;
+}
+
 export function useSubscription(): UseSubscriptionResult {
-  const [result, setResult] = useState<UseSubscriptionResult>({
-    ..._DENY,
-    loading: true,
+  const query = useQuery({
+    queryKey: queryKeys.subscriptionStatus,
+    queryFn: getSubscriptionStatus,
+    staleTime: SUBSCRIPTION_STALE_MS,
+    // The old hook never retried: a retry delays the fail-closed answer and is
+    // pointless on a 401/402/403.
+    retry: false,
+    // A245 B-5 (F44) — poll every 5 minutes, but never while the browser knows
+    // it is offline (each tick would be a guaranteed failure + a 15s timeout).
+    refetchInterval: () =>
+      typeof navigator !== "undefined" && navigator.onLine === false
+        ? false
+        : REFRESH_INTERVAL_MS,
+    refetchIntervalInBackground: false,
+    // The old hook refetched on every `online` event: catch up on reconnect.
+    refetchOnReconnect: "always",
+    // Not persisted (PERSISTED_QUERY_PREFIXES is state/week only): a cold open
+    // always asks the server before granting anything — B202 is untouched.
   });
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  /**
-   * A245 C-1 (F8) — have we ever had an authoritative answer from the server?
-   *
-   * Until we have, a failure means "unknown" and B202 fail-closed applies.
-   * Once we have, a failure means "the network is down", which is NOT evidence
-   * that the subscription lapsed.
-   */
-  const everAnswered = useRef(false);
-
-  const fetch = useCallback(async () => {
-    try {
-      const data = await getSubscriptionStatus();
-      everAnswered.current = true;
-      setResult(mapResponse(data));
-    } catch (err) {
-      // A245 C-1 (F8) — this used to be an unconditional _DENY, so ANY fetch
-      // error (plain offline included) flipped canInteract to false and /today
-      // bounced the user to /subscribe on mark-done. A paying climber in a gym
-      // with no signal was told to go buy a subscription: the worst possible
-      // message in the worst possible place.
-      //
-      // A 401/402/403 is the server actually answering about entitlement —
-      // still fail-closed. Anything else (network, timeout, 5xx) is transport,
-      // so keep the last known state if we ever had one.
-      if (shouldDenyOnError(err, everAnswered.current)) {
-        setResult(_DENY);
-        return;
-      }
-      setResult((prev) => ({ ...prev, loading: false }));
-    }
-  }, []);
-
-  useEffect(() => {
-    // B355 — caricamento al mount: `fetch()` è async e il setState avviene solo
-    // nella sua continuation (dopo l'await), quindi non c'è nessun render a
-    // cascata sincrono. Leggere lo stato abbonamento in render è impossibile
-    // (è una chiamata di rete) e spostarlo altrove romperebbe il fail-closed
-    // B202, che dipende dall'ordine mount → prima risposta.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetch();
-    // A245 B-5 (F44) — the 5-minute poll used to fire regardless of
-    // connectivity: offline it burned a request (and, since A245 A-3, a 15s
-    // timeout) every 5 minutes, all guaranteed to fail. Skip the tick when the
-    // browser knows there is no connection, and catch up on reconnect.
-    //
-    // Scope note: this only gates WHEN we poll. The fail-closed _DENY on error
-    // (B202) is untouched here — that is F8, Phase C.
-    const tick = () => {
-      if (typeof navigator !== "undefined" && navigator.onLine === false) return;
-      fetch();
-    };
-    timerRef.current = setInterval(tick, REFRESH_INTERVAL_MS);
-    window.addEventListener("online", fetch);
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-      window.removeEventListener("online", fetch);
-    };
-  }, [fetch]);
-
-  return result;
+  return useMemo(
+    () =>
+      deriveSubscriptionResult({
+        data: query.data,
+        error: query.error,
+        isPending: query.isPending,
+      }),
+    [query.data, query.error, query.isPending],
+  );
 }

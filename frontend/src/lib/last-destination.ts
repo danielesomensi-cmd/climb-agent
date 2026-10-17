@@ -38,3 +38,16 @@ export function purgeLastDestination(): void {
     // Nothing to purge.
   }
 }
+
+/**
+ * B386 — the root dispatcher's fast path for a signed-in user.
+ *
+ * Only `/today` is trusted without asking the server: it is the page that
+ * already knows how to tell a user with no plan where to go, so being wrong
+ * costs one onboarding card, not a lost plan. `/onboarding/welcome` (or no
+ * value at all) keeps the getState() check — a user who just finished
+ * onboarding must not be held on the welcome page by a stale value.
+ */
+export function fastPathDestination(remembered: RootDestination | null): RootDestination | null {
+  return remembered === "/today" ? "/today" : null;
+}

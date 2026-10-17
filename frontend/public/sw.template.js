@@ -7,15 +7,32 @@
 // (B196), PWA users were stuck with stale JS bundles after every deploy.
 const CACHE_NAME = "climb-agent-__BUILD_ID__";
 
-// A286 E1 — cache separata per le immagini, derivata da CACHE_NAME (quindi
-// versionata dal commit SHA come tutto il resto: non bumpare a mano).
-// Sta a parte per un solo motivo: qui serve un tetto al numero di voci, e
-// contare le chiavi della cache principale (che contiene anche HTML/JS/CSS)
-// significherebbe sfrattare l'app shell.
-const IMAGE_CACHE_NAME = `${CACHE_NAME}-images`;
+// B386 — two caches that do NOT carry the build id, because what they hold does
+// not change with a deploy.
+//
+// Before B386 every cache was named after the commit SHA and `activate` purged
+// everything else, so a deploy that changed nothing in the app (a docs or
+// counter commit) still made every PWA re-download ~284 KB br of identical
+// `/_next/static/*` chunks and every exercise image it had seen.
+//
+// - STATIC: `/_next/static/*` is content-addressed (the hash is in the file
+//   name), so a cached entry is correct forever. A new build simply asks for new
+//   names; the ones it no longer uses age out through the entry cap.
+// - IMAGES: `/_next/image` and `/icons/*` are NOT hashed (same URL if the file
+//   changes), so an entry is served from cache but re-fetched in the background
+//   once it is older than IMAGE_REVALIDATE_MS.
+//
+// These names are fixed on purpose — they are the only names here that may ever
+// be bumped by hand, and only if the cached FORMAT changes, never per deploy.
+// CACHE_NAME (HTML/RSC shells, unhashed public files) stays per-build.
+const STATIC_CACHE_NAME = "climb-agent-static-v1";
+// Una build ha ~100-150 chunk: il tetto ne tiene 3-4 build, poi sfratto FIFO.
+const STATIC_CACHE_MAX_ENTRIES = 600;
+const IMAGE_CACHE_NAME = "climb-agent-images-v1";
 // ~120 voci = tutte le immagini degli esercizi che un utente incontra in
 // qualche settimana di piano, senza far crescere la cache all'infinito.
 const IMAGE_CACHE_MAX_ENTRIES = 120;
+const IMAGE_REVALIDATE_MS = 7 * 24 * 60 * 60 * 1000;
 
 // A245 B-1 (F1) — the precache used to be just ["/", "/manifest.json"], so a
 // cold start with no network could not reach any real screen.
@@ -73,9 +90,11 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
       // Purge every cache that doesn't match the current build — this handles
-      // both stale climb-agent-* caches and any leftover from previous schemes.
+      // both stale climb-agent-* caches and any leftover from previous schemes
+      // (including the pre-B386 per-build `climb-agent-<sha>-images`). The two
+      // version-agnostic caches survive by name.
       const keys = await caches.keys();
-      const keep = new Set([CACHE_NAME, IMAGE_CACHE_NAME]);
+      const keep = new Set([CACHE_NAME, STATIC_CACHE_NAME, IMAGE_CACHE_NAME]);
       await Promise.all(keys.filter((k) => !keep.has(k)).map((k) => caches.delete(k)));
       // Take control of all open PWA clients without requiring a reload.
       await self.clients.claim();
@@ -131,24 +150,56 @@ function isImageRequest(url) {
   return url.pathname === "/_next/image" || url.pathname.startsWith("/icons/");
 }
 
-/** Cache-first con tetto: la voce più vecchia esce quando si sfora. */
-async function imageCacheFirst(request) {
-  const cache = await caches.open(IMAGE_CACHE_NAME);
-  const cached = await cache.match(request);
-  if (cached) return cached;
+/** FIFO cap: cache.keys() is in insertion order, so the first are the oldest. */
+async function trimCache(cache, maxEntries) {
+  const keys = await cache.keys();
+  const excess = keys.length - maxEntries;
+  if (excess > 0) {
+    await Promise.all(keys.slice(0, excess).map((k) => cache.delete(k)));
+  }
+}
 
+/** True when a cached response is older than `maxAgeMs` (by its Date header). */
+function isOlderThan(response, maxAgeMs) {
+  const date = Date.parse(response.headers.get("date") || "");
+  // No usable Date header: treat as stale so it gets one refresh, not never.
+  return !Number.isFinite(date) || Date.now() - date > maxAgeMs;
+}
+
+async function fetchAndStore(cacheName, request, maxEntries) {
   const response = await fetch(request);
   if (response.ok) {
+    const cache = await caches.open(cacheName);
     await cache.put(request, response.clone());
-    // cache.keys() restituisce le voci in ordine di inserimento: le prime sono
-    // le più vecchie. Sfratto FIFO, non LRU — basta e costa una sola scansione.
-    const keys = await cache.keys();
-    const excess = keys.length - IMAGE_CACHE_MAX_ENTRIES;
-    if (excess > 0) {
-      await Promise.all(keys.slice(0, excess).map((k) => cache.delete(k)));
-    }
+    await trimCache(cache, maxEntries);
   }
   return response;
+}
+
+/**
+ * Cache-first con tetto. B386: the cache survives deploys, and since these
+ * URLs are not content-hashed an entry older than IMAGE_REVALIDATE_MS is
+ * refreshed in the background (the user still gets the cached copy now).
+ */
+async function imageCacheFirst(event, request) {
+  const cache = await caches.open(IMAGE_CACHE_NAME);
+  const cached = await cache.match(request);
+  if (cached) {
+    if (isOlderThan(cached, IMAGE_REVALIDATE_MS)) {
+      event.waitUntil(
+        fetchAndStore(IMAGE_CACHE_NAME, request, IMAGE_CACHE_MAX_ENTRIES).catch(() => {})
+      );
+    }
+    return cached;
+  }
+  return fetchAndStore(IMAGE_CACHE_NAME, request, IMAGE_CACHE_MAX_ENTRIES);
+}
+
+/** B386 — `/_next/static/*`: content-addressed, so cache-first with no expiry. */
+async function hashedStaticCacheFirst(request) {
+  const cached = await caches.match(request, { cacheName: STATIC_CACHE_NAME });
+  if (cached) return cached;
+  return fetchAndStore(STATIC_CACHE_NAME, request, STATIC_CACHE_MAX_ENTRIES);
 }
 
 /**
@@ -190,16 +241,24 @@ self.addEventListener("fetch", (event) => {
   // sotto, e va invece nella cache con il tetto.
   if (isImageRequest(url)) {
     event.respondWith(
-      imageCacheFirst(request).catch(() => caches.match(request).then((c) => c || Response.error()))
+      imageCacheFirst(event, request).catch(() => caches.match(request).then((c) => c || Response.error()))
     );
     return;
   }
 
-  // Cache-first for static assets (JS, CSS, images, fonts)
-  if (
-    url.pathname.match(/\.(js|css|png|jpg|svg|woff2?|ico)$/) ||
-    url.pathname.startsWith("/_next/static/")
-  ) {
+  // B386 — hashed build assets: version-agnostic cache, survives deploys.
+  if (url.pathname.startsWith("/_next/static/")) {
+    event.respondWith(
+      hashedStaticCacheFirst(request).catch(() =>
+        caches.match(request).then((c) => c || Response.error())
+      )
+    );
+    return;
+  }
+
+  // Cache-first for the other (unhashed) static files — per-build cache, since
+  // the same URL can carry new bytes after a deploy.
+  if (url.pathname.match(/\.(js|css|png|jpg|svg|woff2?|ico)$/)) {
     event.respondWith(
       caches.match(request).then(
         (cached) =>

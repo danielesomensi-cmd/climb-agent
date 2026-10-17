@@ -28,8 +28,13 @@ export function invalidateOutdoor(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: queryKeys.weekAll });
 }
 
-/** Free session write: refresh history (badges in today/week). */
+/** Free session write: refresh the badges in today/week.
+ *
+ * B386 — those badges are now derived from `['state']` (free_sessions rides on
+ * the state payload), so state is what has to refetch. The history prefix is
+ * kept for any per-day `/history` reader that may still exist. */
 export function invalidateFreeSessionHistory(qc: QueryClient) {
+  qc.invalidateQueries({ queryKey: queryKeys.state, exact: true });
   qc.invalidateQueries({ queryKey: queryKeys.freeSessionHistoryAll });
 }
 
