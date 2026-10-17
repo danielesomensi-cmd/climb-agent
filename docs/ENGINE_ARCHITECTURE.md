@@ -625,8 +625,13 @@ separate adaptation module.
 > last» per stimulus category is **derived at read time** by
 > `report_engine._derived_last_done` from `session_completion_log` (status
 > `done`, dated before the report week) and the catalog categories
-> (`closed_loop_v1._session_categories`, A291). Custom/generated sessions are
-> excluded (A240). The stored `user_state.stimulus_recency` / `fatigue_proxy`
+> (`closed_loop_v1._session_categories`, A291). **Since B383** custom /
+> generated sessions count, categorised from their exercises
+> (`report_engine.exercise_stimulus_categories`: A288 family first, then the
+> catalog domains through the A291 goal table; warm-ups add nothing,
+> conditioning is complementaries), and a crag day the athlete climbed counts
+> (lead → endurance, boulder → boulder_power, never finger_strength). The
+> closed-loop writers still ignore custom sessions (A240). The stored `user_state.stimulus_recency` / `fatigue_proxy`
 > counters (written by `closed_loop_v1.apply_day_result_to_user_state` on the
 > `/events` mark_done/mark_skipped path only, non-idempotent) are **legacy**:
 > no reader is left. The writers were left untouched on purpose.

@@ -102,7 +102,9 @@ def test_skipped_is_not_done(tmp_log_dir):
     assert sb["finger_strength"]["last_done_date"] == "2026-03-02"
 
 
-def test_custom_and_generated_excluded_a240(tmp_log_dir):
+def test_custom_and_generated_without_content_do_not_count(tmp_log_dir):
+    # B383: customs count by their CONTENT; with no definition in
+    # state.custom_sessions and no plan copy there is nothing to categorise.
     sb = _sb(_state([
         _row("2026-03-14", "custom_cs_abc"),
         _row("2026-03-14", "generated_hiit_2026-03-14_lunch"),
@@ -112,7 +114,8 @@ def test_custom_and_generated_excluded_a240(tmp_log_dir):
         assert sb[cat]["days_since_last"] is None
 
 
-def test_custom_done_this_week_not_counted(tmp_log_dir):
+def test_custom_done_this_week_without_exercises_not_counted(tmp_log_dir):
+    # B383: a custom counts by its exercises, never by its id or its tags.
     plan = {"weeks": [{"days": [{"date": "2026-03-17", "sessions": [
         {"session_id": "custom_cs_abc", "status": "done", "is_custom": True,
          "tags": {"finger": True, "hard": True}},
