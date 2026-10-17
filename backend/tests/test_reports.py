@@ -413,9 +413,10 @@ class TestStimulusBalance:
         assert sb["endurance"]["sessions_this_week"] == 1
 
     def test_days_since_last(self, tmp_log_dir):
-        state = _make_state(stimulus_recency={
-            "finger_strength": {"last_done_date": "2026-03-10", "done_count": 5},
-        })
+        # B377: derived from session_completion_log, not stimulus_recency.
+        state = _make_state(session_completion_log=[
+            {"date": "2026-03-10", "session_id": "strength_long", "status": "done"},
+        ])
         report = generate_weekly_report(state, None, WEEK_START)
         sb = report["stimulus_balance"]
         assert sb["finger_strength"]["days_since_last"] == 6  # Mar 16 - Mar 10
@@ -665,9 +666,10 @@ class TestHighlights:
         assert "progression" in keys
 
     def test_stimulus_gap_warning(self, tmp_log_dir):
-        state = _make_state(stimulus_recency={
-            "finger_strength": {"last_done_date": "2026-03-01", "done_count": 3},
-        })
+        # B377: derived from session_completion_log, not stimulus_recency.
+        state = _make_state(session_completion_log=[
+            {"date": "2026-03-01", "session_id": "strength_long", "status": "done"},
+        ])
         report = generate_weekly_report(state, None, WEEK_START)
         keys = self._get_highlight_keys(report["highlights"])
         assert "stimulus_gap_finger_strength" in keys

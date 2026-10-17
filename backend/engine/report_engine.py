@@ -382,12 +382,61 @@ def _build_difficulty(
 # ---------------------------------------------------------------------------
 
 
+def _is_off_plan_session(session_id: str, session: Optional[Dict[str, Any]] = None) -> bool:
+    """A240: custom / generated (ad-hoc, body-part) sessions stay out of the
+    stimulus balance — same boundary as ``stimulus._is_player_session``."""
+    sid = str(session_id or "")
+    if sid.startswith(("custom_", "generated_")):
+        return True
+    return bool(session and (session.get("is_custom") or session.get("build_kind") == "body_parts"))
+
+
+def _derived_last_done(
+    completion_log: List[Dict[str, Any]],
+    before: str,
+) -> Dict[str, str]:
+    """B377: last done date per stimulus category, derived at read time.
+
+    Source: ``session_completion_log`` rows with status ``done`` dated strictly
+    before ``before`` (YYYY-MM-DD), categorised from the catalog (A291,
+    ``_session_categories``). Custom/generated sessions are excluded (A240),
+    rows without a session_id are ignored. Pure: a double mark_done only adds a
+    duplicate row (same max date), an undo (mark_planned) removes the row and
+    the category falls back to the previous date. The stored
+    ``stimulus_recency`` counters are legacy and no longer read here.
+    """
+    last: Dict[str, str] = {}
+    for row in completion_log or []:
+        if not isinstance(row, dict) or row.get("status") != "done":
+            continue
+        d = str(row.get("date") or "")[:10]
+        sid = str(row.get("session_id") or "")
+        if not d or d >= before or not sid or _is_off_plan_session(sid):
+            continue
+        try:
+            datetime.strptime(d, "%Y-%m-%d")
+        except ValueError:
+            continue
+        for cat in _session_categories({"session_id": sid}):
+            if d > last.get(cat, ""):
+                last[cat] = d
+    return last
+
+
 def _build_stimulus_balance(
     week_plan: Optional[Dict[str, Any]],
-    stimulus_recency: Dict[str, Any],
+    completion_log: List[Dict[str, Any]],
     week_start: str,
 ) -> Dict[str, Dict[str, Any]]:
-    """Build stimulus balance section: sessions per category this week + days since last."""
+    """Build stimulus balance section: sessions per category this week + days
+    since the last one before this week.
+
+    B377: ``days_since_last`` is derived from ``session_completion_log`` (see
+    ``_derived_last_done``) and measured from ``week_start`` to the last done
+    session *before* the week — always >= 1, never the frozen stored counter.
+    ``last_done_date`` (additive) is that date. Custom/generated sessions are
+    excluded from both numbers (A240).
+    """
     start = datetime.strptime(week_start, "%Y-%m-%d").date()
     end = start + timedelta(days=6)
     since = start.isoformat()
@@ -402,25 +451,23 @@ def _build_stimulus_balance(
                 if not (since <= d <= until):
                     continue
                 for session in day.get("sessions") or []:
-                    if session.get("status") == "done":
-                        for cat in _session_categories(session):
-                            counts[cat] = counts.get(cat, 0) + 1
+                    if session.get("status") != "done":
+                        continue
+                    if _is_off_plan_session(session.get("session_id") or "", session):
+                        continue
+                    for cat in _session_categories(session):
+                        counts[cat] = counts.get(cat, 0) + 1
+
+    last_done = _derived_last_done(completion_log, since)
 
     result: Dict[str, Dict[str, Any]] = {}
     for cat in STIMULUS_CATEGORIES:
-        rec = stimulus_recency.get(cat) or {}
-        last_done = rec.get("last_done_date")
-        if last_done:
-            try:
-                last_dt = datetime.strptime(last_done, "%Y-%m-%d").date()
-                days_since = (start - last_dt).days
-            except (ValueError, TypeError):
-                days_since = None
-        else:
-            days_since = None
+        last = last_done.get(cat)
+        days_since = (start - datetime.strptime(last, "%Y-%m-%d").date()).days if last else None
         result[cat] = {
             "sessions_this_week": counts.get(cat, 0),
             "days_since_last": days_since,
+            "last_done_date": last,
         }
 
     return result
@@ -1027,7 +1074,7 @@ def generate_weekly_report(
     )
     stimulus_balance = _build_stimulus_balance(
         week_plan,
-        user_state.get("stimulus_recency") or {},
+        completion_log,
         week_start,
     )
     progression = _build_progression(
