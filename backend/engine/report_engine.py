@@ -161,7 +161,33 @@ def _find_week_plan(
     return cwp  # return whatever we have, even if dates don't match
 
 
-def _build_adherence(week_plan: Optional[Dict[str, Any]], week_start: str) -> Dict[str, Any]:
+def _skipped_session_id(
+    session: Dict[str, Any], date: str, logged: Dict[str, List[str]]
+) -> str:
+    """B389: the id of what was skipped, not of the stub standing in for it.
+
+    ``mark_skipped`` replaces the slot with a ``regeneration_easy`` recovery stub
+    (status ``skipped``) that carries the skipped session in ``skipped_session_id``
+    (A294) / ``skipped_original`` (B367). Reading ``session_id`` reported every
+    skip as "regeneration_easy". A stub from before A294 has neither field: the
+    completion log's skip rows of that day name it (consumed in order).
+    """
+    sid = session.get("skipped_session_id") or (session.get("skipped_original") or {}).get("session_id")
+    if sid:
+        return sid
+    pending = logged.get(date)
+    if pending:
+        return pending.pop(0)
+    if "fill_kind=recovery" in (session.get("explain") or []):
+        return ""  # a stub whose skipped session nobody recorded: unknown, not "regeneration_easy"
+    return session.get("session_id", "")
+
+
+def _build_adherence(
+    week_plan: Optional[Dict[str, Any]],
+    week_start: str,
+    completion_log: Optional[List[Dict[str, Any]]] = None,
+) -> Dict[str, Any]:
     """Build adherence section from week plan session statuses."""
     start = datetime.strptime(week_start, "%Y-%m-%d").date()
     end = start + timedelta(days=6)
@@ -173,6 +199,21 @@ def _build_adherence(week_plan: Optional[Dict[str, Any]], week_start: str) -> Di
     skipped = 0
     added = 0
     skipped_sessions: List[Dict[str, str]] = []
+
+    # B389: skip rows of the week by date, minus the ids a stub already names
+    # (only legacy stubs without skipped_session_id fall back to these).
+    named = {
+        (day.get("date"), s.get("skipped_session_id") or (s.get("skipped_original") or {}).get("session_id"))
+        for week in (week_plan or {}).get("weeks") or []
+        for day in week.get("days") or []
+        for s in day.get("sessions") or []
+        if s.get("status") == "skipped"
+    }
+    logged: Dict[str, List[str]] = {}
+    for row in completion_log or []:
+        d, sid = row.get("date") or "", row.get("session_id") or ""
+        if row.get("status") == "skipped" and sid and since <= d <= until and (d, sid) not in named:
+            logged.setdefault(d, []).append(sid)
 
     if week_plan:
         for week in week_plan.get("weeks") or []:
@@ -189,7 +230,7 @@ def _build_adherence(week_plan: Optional[Dict[str, Any]], week_start: str) -> Di
                         skipped += 1
                         skipped_sessions.append({
                             "date": d,
-                            "session_id": session.get("session_id", ""),
+                            "session_id": _skipped_session_id(session, d, logged),
                         })
                     if session.get("tags", {}).get("added"):
                         added += 1
@@ -1303,7 +1344,7 @@ def generate_weekly_report(
 
     # Build each section
     context = _build_context(user_state, week_start)
-    adherence = _build_adherence(week_plan, week_start)
+    adherence = _build_adherence(week_plan, week_start, completion_log)
     load = _build_load(week_plan, indoor, outdoor_filtered, free_sessions, week_start)
     difficulty = _build_difficulty(
         user_state.get("feedback_log") or [], week_start
