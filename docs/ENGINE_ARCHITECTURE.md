@@ -614,6 +614,16 @@ separate adaptation module.
 > (`adjustments.per_exercise`, `compute_next_multiplier`, `apply_multiplier`)
 > from the same module for the same reason (zero production readers).
 
+> **Stimulus balance in the weekly report (B377, 2026-10-17):** «days since
+> last» per stimulus category is **derived at read time** by
+> `report_engine._derived_last_done` from `session_completion_log` (status
+> `done`, dated before the report week) and the catalog categories
+> (`closed_loop_v1._session_categories`, A291). Custom/generated sessions are
+> excluded (A240). The stored `user_state.stimulus_recency` / `fatigue_proxy`
+> counters (written by `closed_loop_v1.apply_day_result_to_user_state` on the
+> `/events` mark_done/mark_skipped path only, non-idempotent) are **legacy**:
+> no reader is left. The writers were left untouched on purpose.
+
 ### 8.1 Official max vs working load — `anchored_load.py` (B364)
 
 Two numbers, never mixed:
