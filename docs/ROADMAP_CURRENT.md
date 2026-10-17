@@ -11,6 +11,10 @@
 
 ## Open
 
+**B381 — fallback esplicito panca bilanciere → panca manubri nel resolver (da [[B380]], 2026-10-17)** 🟡 P2 — con soli manubri il blocco `chest_press` di `upper_push_arms_lunch` (pin `bench_press`) passa alla scelta generica e prende `handstand_pushup_wall` / `overhead_press` / `dumbbell_fly`, mai `dumbbell_bench_press`. Serve un fallback esplicito sull'esercizio fissato (es. `fallback_exercise_ids`). Tocca `resolve_session.py` → fase 1 + STOP. Collegato: al Work (che ha il bilanciere) il pranzo del venerdì prescrive `bench_press` 70 kg, ma Daniele la panca la fa con i manubri (34 per mano) → decidere se preferire i manubri al Work.
+
+**TEST-FLAKY-2026-10-17 — un test backend fallisce a caso (1 run su 6)** 🟢 P3 — sul merge di B380 un run ha dato `1 failed, 5288 passed`; i 5 run successivi tutti verdi e il test non è stato identificato (output troncato). Al prossimo fallimento lanciare con `-rf` e salvare il nome. Sospetto: un timestamp al secondo (come quello trovato in B376, `resolve_session.now_iso()`).
+
 **B369-P6-residui — dopo [[B371]]: riconciliazione post-rigenerazione e `change_gym` (da [[B369]], 2026-10-05)** 🟡 P3 — [[B371]] ha chiuso il controllo di versione; restano i due punti collegati, entrambi nel motore (`replanner_v1`, Fase 1 + STOP): (1) dopo una rigenerazione le sessioni del motore non vengono riconciliate contro quelle dell'utente conservate — oggi solo segnalazione (`regeneration_guard_warnings`, coerente con A301); (2) `change_gym` non marca la sessione come dell'utente, quindi una rigenerazione successiva riporta la sessione del motore alla palestra di default. Non «banalmente sicuro»: un nuovo marker in `USER_MARKERS` cambia cosa vedono `retest_policy._locked_by_merge`, la rotazione dei complementari (A300) e gli alert di A301. (3) **corsa residua di B371**: il lock per utente vale nel singolo processo uvicorn (Procfile attuale); con più worker/repliche, o con gli scrittori senza lock (rigenerazione in `GET /api/week`, `PUT /api/state`), resta una finestra stretta di lost update — la chiusura vera è un salvataggio condizionato sulla revisione salvata (PATCH/RPC Supabase filtrato).
 
 
