@@ -242,7 +242,8 @@ export interface WeekPlan {
 
 // ── A300 — adaptive structure (slot roles + complementary rotation) ─────────
 export type SlotRole = "primary" | "complementary" | "any";
-export type FocusFamily = "legs" | "hiit" | "z2" | "upper_push_arms";
+/** A318 — `arms_shoulders` (shoulders, triceps, biceps + handstand) is opt-in: in no default rotation. */
+export type FocusFamily = "legs" | "hiit" | "z2" | "upper_push_arms" | "arms_shoulders";
 
 export interface AvailabilitySlot {
   available: boolean;

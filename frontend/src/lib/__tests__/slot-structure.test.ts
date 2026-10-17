@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
+  DEFAULT_ROTATION,
+  FOCUS_FAMILIES,
   effectiveRole,
   effectiveRotation,
   isComplementary,
@@ -95,6 +97,14 @@ describe("rotation", () => {
   it("keeps order and drops unknown families", () => {
     expect(effectiveRotation(["z2", "bogus", "legs"])).toEqual(["z2", "legs"]);
     expect(effectiveRotation([])).toEqual([]);
+  });
+
+  it("A318: keeps the opt-in arms_shoulders family, which is not in the default", () => {
+    expect(DEFAULT_ROTATION).not.toContain("arms_shoulders");
+    expect(FOCUS_FAMILIES).toEqual(["legs", "hiit", "z2", "upper_push_arms", "arms_shoulders"]);
+    expect(effectiveRotation(["arms_shoulders", "legs", "hiit", "upper_push_arms", "z2"])).toEqual([
+      "arms_shoulders", "legs", "hiit", "upper_push_arms", "z2",
+    ]);
   });
 
   it("moveItem swaps within bounds and is a no-op at the edges", () => {

@@ -20,6 +20,8 @@ SUPPLEMENTARY_IDS = {
     "treadmill_zone2_cardio",
     "upper_push_arms_lunch",
     "legs_maintenance_lunch",
+    # A318: the fifth lunch family (arms_shoulders)
+    "arms_shoulders_handstand_lunch",
 }
 
 # B206: location viability now reflects _SESSION_META (single source of truth):
@@ -36,6 +38,7 @@ GYM_SUPPLEMENTARY = {
     "treadmill_zone2_cardio",
     "upper_push_arms_lunch",
     "legs_maintenance_lunch",
+    "arms_shoulders_handstand_lunch",
 }
 
 

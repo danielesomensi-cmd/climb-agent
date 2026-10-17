@@ -290,6 +290,19 @@
   "pool|untested|home|technique": "045b6cd3e7370025cdc859c10aec3e4c97d69ab4eca67c94aa6d83d918239107"
  },
  "resolver": {
+  "advanced|2026-10-07|arms_shoulders_handstand_lunch": {
+   "digest": "e7fe0878b199a7c4b085e33be77bb3b49fd0d06f60e14212d7abfe1cc6f31996",
+   "exercise_ids": [
+    "general_pulse_raise",
+    "mobility_thoracic_shoulders_flow",
+    "heel_pulls_chest_to_wall",
+    "wall_handstand_hold",
+    "overhead_press",
+    "hammer_curl",
+    "lateral_raise",
+    "overhead_tricep_extension"
+   ]
+  },
   "advanced|2026-10-07|boulder_circuit_gym": {
    "digest": "15a3bc6a59d549a6fcd41ba11eb8851558d5e26bcd7ca162768b2af97fdd7a89",
    "exercise_ids": [
@@ -781,6 +794,19 @@
     "cooldown_spinal_twist"
    ]
   },
+  "advanced|2026-10-21|arms_shoulders_handstand_lunch": {
+   "digest": "59c9c0f3209a4e904f9ea527d7012119f6b9781500af85ed9a278c1f4031123e",
+   "exercise_ids": [
+    "general_pulse_raise",
+    "mobility_thoracic_shoulders_flow",
+    "heel_pulls_chest_to_wall",
+    "wall_handstand_hold",
+    "overhead_press",
+    "hammer_curl",
+    "lateral_raise",
+    "overhead_tricep_extension"
+   ]
+  },
   "advanced|2026-10-21|boulder_circuit_gym": {
    "digest": "ba11a4d9767435876582333ef23b88386a5b2534c9a616586c337450b592ab75",
    "exercise_ids": [
@@ -1261,6 +1287,19 @@
    "digest": "93018eb2015dc548a6aac1ad379a026105539ab1684846b17d63a007f60c8525",
    "exercise_ids": [
     "cooldown_shoulder_chest"
+   ]
+  },
+  "intermediate|2026-10-07|arms_shoulders_handstand_lunch": {
+   "digest": "32b68dc6fcadade7faba60bcf9ef125cbd7a6d7f49c23026fb04674ecd8ab739",
+   "exercise_ids": [
+    "general_pulse_raise",
+    "mobility_thoracic_shoulders_flow",
+    "heel_pulls_chest_to_wall",
+    "wall_handstand_hold",
+    "overhead_press",
+    "hammer_curl",
+    "lateral_raise",
+    "overhead_tricep_extension"
    ]
   },
   "intermediate|2026-10-07|boulder_circuit_gym": {
@@ -1754,6 +1793,19 @@
     "cooldown_spinal_twist"
    ]
   },
+  "intermediate|2026-10-21|arms_shoulders_handstand_lunch": {
+   "digest": "cce9ff784c48b252eab723cf58c86999c1e613e77e12c6cc00b5aec6602456a1",
+   "exercise_ids": [
+    "general_pulse_raise",
+    "mobility_thoracic_shoulders_flow",
+    "heel_pulls_chest_to_wall",
+    "wall_handstand_hold",
+    "overhead_press",
+    "hammer_curl",
+    "lateral_raise",
+    "overhead_tricep_extension"
+   ]
+  },
   "intermediate|2026-10-21|boulder_circuit_gym": {
    "digest": "746433de26999f86de3b5c7f939ed75823f050578b8970a8f3af1ba4e8366114",
    "exercise_ids": [
@@ -2234,6 +2286,19 @@
    "digest": "93018eb2015dc548a6aac1ad379a026105539ab1684846b17d63a007f60c8525",
    "exercise_ids": [
     "cooldown_shoulder_chest"
+   ]
+  },
+  "untested|2026-10-07|arms_shoulders_handstand_lunch": {
+   "digest": "32b68dc6fcadade7faba60bcf9ef125cbd7a6d7f49c23026fb04674ecd8ab739",
+   "exercise_ids": [
+    "general_pulse_raise",
+    "mobility_thoracic_shoulders_flow",
+    "heel_pulls_chest_to_wall",
+    "wall_handstand_hold",
+    "overhead_press",
+    "hammer_curl",
+    "lateral_raise",
+    "overhead_tricep_extension"
    ]
   },
   "untested|2026-10-07|boulder_circuit_gym": {
@@ -2725,6 +2790,19 @@
    "digest": "dd41ad6abf93d50bc8904f6b0cd1f232aa06f7d91a777e86a62b83aaa0f2543a",
    "exercise_ids": [
     "cooldown_spinal_twist"
+   ]
+  },
+  "untested|2026-10-21|arms_shoulders_handstand_lunch": {
+   "digest": "cce9ff784c48b252eab723cf58c86999c1e613e77e12c6cc00b5aec6602456a1",
+   "exercise_ids": [
+    "general_pulse_raise",
+    "mobility_thoracic_shoulders_flow",
+    "heel_pulls_chest_to_wall",
+    "wall_handstand_hold",
+    "overhead_press",
+    "hammer_curl",
+    "lateral_raise",
+    "overhead_tricep_extension"
    ]
   },
   "untested|2026-10-21|boulder_circuit_gym": {

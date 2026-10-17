@@ -20,7 +20,7 @@
   {
     "id": "cue_004",
     "text": "Quality over quantity \u2014 stop the set when form breaks down. A sloppy rep teaches bad patterns.",
-    "session_types": ["complementary_conditioning", "core_training", "heavy_conditioning_gym", "pulling_strength_gym", "upper_body_weights", "legs_strength", "lower_body_gym", "upper_push_arms_lunch", "legs_maintenance_lunch"],
+    "session_types": ["complementary_conditioning", "core_training", "heavy_conditioning_gym", "pulling_strength_gym", "upper_body_weights", "legs_strength", "lower_body_gym", "upper_push_arms_lunch", "legs_maintenance_lunch", "arms_shoulders_handstand_lunch"],
     "source": "D78"
   },
   {
@@ -317,7 +317,7 @@
   {
     "id": "cue_056",
     "text": "Drop the weight before you drop form. The strength that transfers to climbing is the strength produced cleanly.",
-    "session_types": ["pulling_strength_gym", "upper_body_weights", "heavy_conditioning_gym", "complementary_conditioning", "upper_push_arms_lunch"]
+    "session_types": ["pulling_strength_gym", "upper_body_weights", "heavy_conditioning_gym", "complementary_conditioning", "upper_push_arms_lunch", "arms_shoulders_handstand_lunch"]
   },
   {
     "id": "cue_057",

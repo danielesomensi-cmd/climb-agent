@@ -11,7 +11,9 @@ the target-days pruning, the hard cap and the deload 5-session cap.
 What goes where
 ---------------
 The athlete names **focus families** (``planning_prefs.complementary_rotation``,
-default all four): ``legs``, ``hiit``, ``z2``, ``upper_push_arms``. Each family
+default the first four): ``legs``, ``hiit``, ``z2``, ``upper_push_arms`` — plus
+``arms_shoulders`` (A318: shoulders, triceps, biceps + handstand), opt-in only:
+it is in no default rotation, a user gets it by naming it. Each family
 maps to catalog sessions (C274), first fitting one wins: equipment of the slot's
 location/gym and the slot's ``max_minutes`` against the catalog
 ``time_budget.hard_cap_min``. A slot may pin its own ``focus``.
@@ -25,8 +27,9 @@ primaries actually placed, by minimum penalty, never by fixed weekday:
 - at most one HIIT per week (``is_hiit_like``: the catalog ``tags.hiit``, the
   ``conditioning_hiit`` exercises, the name regex only for legacy customs). HIIT
   is ``hard: False`` in the catalog: it never consumes the hard-day cap;
-- biceps (``upper_push_arms_lunch`` carries curls) not within the 24 h before a
-  heavy pull (``is_pulling_hard_session``);
+- biceps (``upper_push_arms_lunch`` and ``arms_shoulders_handstand_lunch``
+  carry curls) not within the 24 h before a heavy pull
+  (``is_pulling_hard_session``);
 - legs not within the 48 h before a limit session (``limit_power`` stimulus or a
   max-intensity climbing session on a wall) or an outdoor day;
 - Z2 anywhere;
@@ -65,7 +68,7 @@ from datetime import date
 from itertools import permutations
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
-FOCUS_FAMILIES: Tuple[str, ...] = ("legs", "hiit", "z2", "upper_push_arms")
+FOCUS_FAMILIES: Tuple[str, ...] = ("legs", "hiit", "z2", "upper_push_arms", "arms_shoulders")
 
 #: Catalog sessions of each family, in order of preference (first that fits).
 FAMILY_SESSIONS: Dict[str, Tuple[str, ...]] = {
@@ -73,8 +76,14 @@ FAMILY_SESSIONS: Dict[str, Tuple[str, ...]] = {
     "hiit": ("treadmill_hiit_4x4",),
     "z2": ("treadmill_zone2_cardio",),
     "upper_push_arms": ("upper_push_arms_lunch", "upper_body_weights"),
+    # A318 (Daniele, 2026-10-17): a fifth lunch — shoulders, triceps, biceps +
+    # handstand. One session: no fallback, a gym without dumbbells reports the
+    # slot in ``unmet_secondary`` instead of placing something else.
+    "arms_shoulders": ("arms_shoulders_handstand_lunch",),
 }
 
+#: The rotation of a user who names none. A318: deliberately NOT every family —
+#: ``arms_shoulders`` is opt-in, so every existing plan stays bit-for-bit the same.
 DEFAULT_ROTATION: Tuple[str, ...] = ("legs", "hiit", "z2", "upper_push_arms")
 
 #: Family substitutions per phase, applied to the general rotation and to the
@@ -83,8 +92,9 @@ DEFAULT_PHASE_VARIANTS: Dict[str, Dict[str, str]] = {"deload": {"hiit": "z2"}}
 
 HIIT_MAX_PER_WEEK = 1
 
-#: Sessions carrying elbow-flexor work (the curl block of C274).
-BICEPS_SESSIONS = frozenset({"upper_push_arms_lunch"})
+#: Sessions carrying elbow-flexor work (the curl block of C274; the hammer curl
+#: of A318).
+BICEPS_SESSIONS = frozenset({"upper_push_arms_lunch", "arms_shoulders_handstand_lunch"})
 LEGS_SESSIONS = frozenset(FAMILY_SESSIONS["legs"])
 
 SLOT_HOUR: Dict[str, int] = {"morning": 8, "lunch": 13, "evening": 19}
@@ -114,7 +124,7 @@ def _valid_families(raw: Any) -> Optional[List[str]]:
 
 def resolve_rotation(planning_prefs: Optional[Mapping[str, Any]], phase_id: str) -> List[str]:
     """The rotation of this phase: per-phase override verbatim, else the
-    general rotation (default all four families) with the phase variants."""
+    general rotation (default ``DEFAULT_ROTATION``) with the phase variants."""
     prefs = planning_prefs or {}
     by_phase = prefs.get("complementary_rotation_by_phase")
     if isinstance(by_phase, Mapping):

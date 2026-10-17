@@ -81,6 +81,30 @@ describe("AvailabilityEditor — A300 slot structure", () => {
     expect(onSave.mock.calls[0][1].complementary_rotation).toEqual(["z2", "hiit", "upper_push_arms"]);
   });
 
+  it("A318: the fifth family is offered with its label and can be added to the rotation", () => {
+    const onSave = setup({ tue: { lunch: { available: true, preferred_location: "gym", gym_id: "work", role: "complementary" } } }, prefs);
+    const rot = screen.getByTestId("complementary-rotation");
+    // Not in the default rotation: only the "+" button carries it.
+    expect(within(rot).queryByRole("button", { name: "Remove Arms, shoulders + handstand" })).toBeNull();
+    fireEvent.click(within(rot).getByRole("button", { name: "+ Arms, shoulders + handstand" }));
+    for (let i = 0; i < 4; i++) {
+      fireEvent.click(within(rot).getAllByRole("button", { name: "Move Arms, shoulders + handstand up" })[0]);
+    }
+    save();
+    expect(onSave.mock.calls[0][1].complementary_rotation).toEqual([
+      "arms_shoulders", "legs", "hiit", "z2", "upper_push_arms",
+    ]);
+  });
+
+  it("A318: a saved rotation with the fifth family is shown, not dropped", () => {
+    setup(
+      { tue: { lunch: { available: true, preferred_location: "gym", gym_id: "work", role: "complementary" } } },
+      { ...prefs, complementary_rotation: ["arms_shoulders", "legs", "hiit", "z2", "upper_push_arms"] },
+    );
+    const rot = screen.getByTestId("complementary-rotation");
+    expect(within(rot).getByRole("button", { name: "Remove Arms, shoulders + handstand" })).toBeTruthy();
+  });
+
   it("an invalid max minutes disables the save", () => {
     setup();
     const row = screen.getByTestId("slot-structure-mon-evening");

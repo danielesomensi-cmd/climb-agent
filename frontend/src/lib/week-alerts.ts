@@ -21,6 +21,7 @@ import type {
   UnmetSecondary,
   WeekPlan,
 } from "@/lib/types";
+import { FOCUS_FAMILIES } from "@/lib/slot-structure";
 
 /** One alert line on a session card or in a list. */
 export interface SessionAlert {
@@ -39,9 +40,11 @@ export const FOCUS_LABELS: Record<FocusFamily, string> = {
   hiit: "HIIT (treadmill)",
   z2: "Zone 2 cardio (treadmill)",
   upper_push_arms: "Push + arms (biceps incl.)",
+  arms_shoulders: "Arms, shoulders + handstand",
 };
 
-export const FOCUS_ORDER: FocusFamily[] = ["legs", "hiit", "z2", "upper_push_arms"];
+/** Display order of the family pickers: every family, the opt-in one last. */
+export const FOCUS_ORDER: FocusFamily[] = FOCUS_FAMILIES;
 
 export function focusLabel(focus: string | null | undefined): string {
   if (!focus) return "Complementary";

@@ -216,7 +216,11 @@ class TestResolution:
             for m in json.loads(p.read_text(encoding="utf-8")).get("modules") or []:
                 if m.get("order"):
                     found.append((p.stem, m["block_id"], m["order"]))
-        assert found == [("lead_tryhard_gym", "falls_block", "after_warmup"),
+        # A318: the lunch handstand goes first while fresh, then the heaviest lift.
+        assert found == [("arms_shoulders_handstand_lunch", "handstand_balance", "after_warmup"),
+                         ("arms_shoulders_handstand_lunch", "handstand_hold", "after_warmup"),
+                         ("arms_shoulders_handstand_lunch", "shoulder_press", "after_warmup"),
+                         ("lead_tryhard_gym", "falls_block", "after_warmup"),
                          ("route_projecting_gym", "falls_primer", "after_warmup")]
 
 

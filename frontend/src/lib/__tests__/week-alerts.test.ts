@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
+  FOCUS_LABELS,
+  FOCUS_ORDER,
+  focusLabel,
   alertsForSession,
   alertsOffSessions,
   describeActionAlerts,
@@ -275,5 +278,22 @@ describe("alertMessagesFor", () => {
     const other = gw({ date: "2026-10-07", slot: "evening", message: "other slot", with: [] });
     expect(alertMessagesFor([flagged, named, other], "2026-10-07", "lunch")).toEqual(["flagged", "named"]);
     expect(alertMessagesFor(undefined, "2026-10-07", "lunch")).toEqual([]);
+  });
+});
+
+describe("A318 — the fifth lunch family", () => {
+  it("has a label and is listed last in the pickers", () => {
+    expect(FOCUS_LABELS.arms_shoulders).toBe("Arms, shoulders + handstand");
+    expect(focusLabel("arms_shoulders")).toBe("Arms, shoulders + handstand");
+    expect(FOCUS_ORDER).toEqual(["legs", "hiit", "z2", "upper_push_arms", "arms_shoulders"]);
+  });
+
+  it("names the family in a biceps alert of its session", () => {
+    const a = structureAlert({
+      date: "2026-10-19", slot: "lunch", session_id: null, focus: "arms_shoulders",
+      code: "biceps_before_heavy_pull", with: ["2026-10-19 pulling_strength_gym"],
+    });
+    expect(a.title).toBe("Biceps before heavy pulling");
+    expect(a.message).toContain("Arms, shoulders + handstand");
   });
 });
