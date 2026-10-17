@@ -59,7 +59,7 @@ def _valid_body(**overrides) -> dict:
 
 def _ensure_seed_state_has_macrocycle() -> dict:
     """Some fixtures may not include a macrocycle. Seed one if missing."""
-    state = client.get("/api/state").json()
+    state = client.get("/api/state?full=1").json()
     if state.get("macrocycle"):
         return state
     # Seed via the existing onboarding/generate path — but the fixture already
@@ -67,7 +67,7 @@ def _ensure_seed_state_has_macrocycle() -> dict:
     r = client.post("/api/macrocycle/generate", json={"total_weeks": 12})
     if r.status_code != 200:
         pytest.skip(f"Cannot seed macrocycle: {r.status_code} {r.text}")
-    return client.get("/api/state").json()
+    return client.get("/api/state?full=1").json()
 
 
 # ── T1: happy path ─────────────────────────────────────────────────────────
@@ -95,7 +95,7 @@ class TestT1HappyPath:
         """B-NEWMACRO-STARTDATE-FIX: new_start is next Monday after today,
         independent of the old cycle's end_date."""
         _ensure_seed_state_has_macrocycle()
-        old = client.get("/api/state").json()
+        old = client.get("/api/state?full=1").json()
         old_start = old["macrocycle"]["start_date"]
         today_iso = date.today().isoformat()
         r = client.post("/api/macrocycle/start-new-cycle", json=_valid_body())
@@ -107,7 +107,7 @@ class TestT1HappyPath:
         assert new_start_d.weekday() == 0
         assert new_start != old_start
 
-        live = client.get("/api/state").json()
+        live = client.get("/api/state?full=1").json()
         assert live["macrocycle"]["start_date"] == new_start
 
 
@@ -120,13 +120,13 @@ class TestT2ArchiveIntegrity:
         r = client.post("/api/macrocycle/start-new-cycle", json=_valid_body())
         assert r.status_code == 200
         assert r.json()["archived_count"] == 1
-        state = client.get("/api/state").json()
+        state = client.get("/api/state?full=1").json()
         assert len(state["macrocycle_history"]) == 1
 
     def test_history_entry_shape(self):
         _ensure_seed_state_has_macrocycle()
         client.post("/api/macrocycle/start-new-cycle", json=_valid_body())
-        entry = client.get("/api/state").json()["macrocycle_history"][0]
+        entry = client.get("/api/state?full=1").json()["macrocycle_history"][0]
         assert set(entry.keys()) == {
             "archived_at", "macrocycle", "goal_at_archive",
             "weeks_completed", "total_weeks", "completion_summary",
@@ -196,13 +196,13 @@ class TestT3HistoryImmutability:
                 "2026-03-09": {"hard_day_cap_per_week": 2},
             },
         })
-        before = client.get("/api/state").json()
+        before = client.get("/api/state?full=1").json()
         before_subset = {k: deepcopy(before.get(k)) for k in _PRESERVED_FIELDS}
 
         r = client.post("/api/macrocycle/start-new-cycle", json=_valid_body())
         assert r.status_code == 200
 
-        after = client.get("/api/state").json()
+        after = client.get("/api/state?full=1").json()
         for field in _PRESERVED_FIELDS:
             assert after.get(field) == before_subset[field], (
                 f"Field {field!r} mutated by start-new-cycle:\n"
@@ -212,14 +212,14 @@ class TestT3HistoryImmutability:
     def test_assessment_grades_and_tests_preserved(self):
         """The endpoint recomputes profile but must NOT touch grades/tests/body."""
         _ensure_seed_state_has_macrocycle()
-        before = client.get("/api/state").json()
+        before = client.get("/api/state?full=1").json()
         before_grades = deepcopy(before["assessment"]["grades"])
         before_tests = deepcopy(before["assessment"].get("tests"))
         before_body = deepcopy(before["assessment"].get("body"))
 
         r = client.post("/api/macrocycle/start-new-cycle", json=_valid_body())
         assert r.status_code == 200
-        after = client.get("/api/state").json()
+        after = client.get("/api/state?full=1").json()
         assert after["assessment"]["grades"] == before_grades
         assert after["assessment"].get("tests") == before_tests
         assert after["assessment"].get("body") == before_body
@@ -256,7 +256,7 @@ class TestT5InitialTestsRequestedFlag:
         _ensure_seed_state_has_macrocycle()
         r = client.post("/api/macrocycle/start-new-cycle", json=_valid_body())
         assert r.status_code == 200
-        state = client.get("/api/state").json()
+        state = client.get("/api/state?full=1").json()
         assert state.get("initial_tests_requested") is True, (
             "initial_tests_requested must be True right after the endpoint "
             "(set AFTER generate_macrocycle in the atomic flow)."
@@ -268,7 +268,7 @@ class TestT5InitialTestsRequestedFlag:
         _ensure_seed_state_has_macrocycle()
         client.post("/api/macrocycle/start-new-cycle", json=_valid_body())
         client.get("/api/week/0?force=true")
-        state = client.get("/api/state").json()
+        state = client.get("/api/state?full=1").json()
         assert state.get("initial_tests_requested") is True
 
 
@@ -348,7 +348,7 @@ class TestT7DisciplineSwitch:
         }
         r = client.post("/api/macrocycle/start-new-cycle", json=body)
         assert r.status_code == 200, r.text
-        state = client.get("/api/state").json()
+        state = client.get("/api/state?full=1").json()
         assert state["goal"]["discipline"] == "boulder"
         assert state["goal"]["target_boulder_grade"] == "7B"
         # Lead-equivalent for assessment: 7B → 7c+
@@ -371,7 +371,7 @@ class TestT7DisciplineSwitch:
         body = _valid_body(discipline="lead", target_grade="8a")
         r = client.post("/api/macrocycle/start-new-cycle", json=body)
         assert r.status_code == 200, r.text
-        state = client.get("/api/state").json()
+        state = client.get("/api/state?full=1").json()
         assert state["goal"]["discipline"] == "lead"
         assert state["goal"]["target_grade"] == "8a"
         assert state["goal"].get("target_boulder_grade") is None
@@ -401,7 +401,7 @@ class TestT8DeadlineValidation:
 class TestT9SubscriptionExpired:
     def test_expired_subscription_returns_402_state_unchanged(self):
         _ensure_seed_state_has_macrocycle()
-        before = client.get("/api/state").json()
+        before = client.get("/api/state?full=1").json()
         expired = {
             "status": "past_due", "is_active": False,
             "trial_days_remaining": None, "can_interact": False,
@@ -417,7 +417,7 @@ class TestT9SubscriptionExpired:
             )
         assert r.status_code == 402
         # State unchanged (no macrocycle replacement, no archive).
-        after = client.get("/api/state").json()
+        after = client.get("/api/state?full=1").json()
         assert after.get("macrocycle", {}).get("start_date") == before.get("macrocycle", {}).get("start_date")
         assert len(after.get("macrocycle_history") or []) == len(before.get("macrocycle_history") or [])
 
@@ -428,14 +428,14 @@ class TestT9SubscriptionExpired:
 class TestT10Atomicity:
     def test_generate_failure_leaves_state_unchanged(self):
         _ensure_seed_state_has_macrocycle()
-        before = client.get("/api/state").json()
+        before = client.get("/api/state?full=1").json()
         with patch(
             "backend.api.routers.macrocycle.generate_macrocycle",
             side_effect=RuntimeError("simulated engine failure"),
         ):
             r = client.post("/api/macrocycle/start-new-cycle", json=_valid_body())
         assert r.status_code == 422
-        after = client.get("/api/state").json()
+        after = client.get("/api/state?full=1").json()
         # Critical: no half-archive (history list unchanged), no goal mutation.
         assert (after.get("macrocycle_history") or []) == (before.get("macrocycle_history") or [])
         assert after["goal"] == before["goal"]
@@ -454,7 +454,7 @@ class TestT11ChainedRestarts:
             target_grade="8a+",
         ))
         assert r2.status_code == 200, r2.text
-        state = client.get("/api/state").json()
+        state = client.get("/api/state?full=1").json()
         assert len(state["macrocycle_history"]) == 2
         # Earlier entry is preserved unchanged.
         first = state["macrocycle_history"][0]
@@ -498,7 +498,7 @@ class TestT12WeekCacheInvalidation:
             f"new_start={new_start} <= future_key={future_key}"
         )
 
-        plans = client.get("/api/state").json().get("week_plans", {})
+        plans = client.get("/api/state?full=1").json().get("week_plans", {})
         # Past entry preserved, untouched.
         assert past_key in plans, f"Past entry {past_key} should be kept (< {new_start})"
         assert "_stale" not in plans[past_key]
@@ -517,5 +517,5 @@ class TestT12WeekCacheInvalidation:
         })
         r = client.post("/api/macrocycle/start-new-cycle", json=_valid_body())
         assert r.status_code == 200
-        state = client.get("/api/state").json()
+        state = client.get("/api/state?full=1").json()
         assert state["current_week_plan"].get("_stale") is True

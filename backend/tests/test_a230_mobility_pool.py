@@ -510,7 +510,7 @@ class TestImmutability:
         return done_session
 
     def _get_done_session(self):
-        state = client.get("/api/state").json()
+        state = client.get("/api/state?full=1").json()
         for week in state["current_week_plan"]["weeks"]:
             for day in week["days"]:
                 if day["date"] == "2026-07-06":

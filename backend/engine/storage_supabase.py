@@ -17,6 +17,7 @@ from typing import Any, Callable, Dict, List, Optional, TypeVar
 import httpx
 from supabase import ClientOptions, create_client
 
+from backend.engine import state_codec  # B387
 from backend.engine.storage_memo import memo_read, memo_write  # B376
 
 logger = logging.getLogger(__name__)
@@ -167,16 +168,17 @@ def read_state(user_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
         what="read_state",
     )
     if r.data:
-        return r.data[0]["state"]
+        return state_codec.unpack(r.data[0]["state"])
     return None
 
 
 @memo_write
 def write_state(state: Dict[str, Any], user_id: Optional[str] = None) -> None:
-    """Upsert user state into Supabase."""
+    """Upsert user state into Supabase. B387: stored through the codec."""
     uid = _require_user_id(user_id)
+    stored = state_codec.pack(state)
     _retry(
-        lambda: _sb().table("users").upsert({"user_id": uid, "state": state}).execute(),
+        lambda: _sb().table("users").upsert({"user_id": uid, "state": stored}).execute(),
         what="write_state",
     )
 

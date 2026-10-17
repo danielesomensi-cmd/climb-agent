@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from uuid import uuid4
 
+from backend.engine import state_codec  # B387
 from backend.engine.storage_memo import memo_read, memo_write  # B376
 
 
@@ -72,16 +73,16 @@ def read_state(user_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
     if not path.exists():
         return None
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        return state_codec.unpack(json.loads(path.read_text(encoding="utf-8")))
     except (json.JSONDecodeError, OSError):
         return None
 
 
 @memo_write
 def write_state(state: Dict[str, Any], user_id: Optional[str] = None) -> None:
-    """Write user_state.json to disk (atomic)."""
+    """Write user_state.json to disk (atomic). B387: stored through the codec."""
     path = _user_state_path(user_id)
-    _atomic_write_text(path, json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True) + "\n")
+    _atomic_write_text(path, json.dumps(state_codec.pack(state), ensure_ascii=False, indent=2, sort_keys=True) + "\n")
 
 
 def user_state_mtime(user_id: str) -> Optional[float]:

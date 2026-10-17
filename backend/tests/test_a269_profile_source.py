@@ -391,7 +391,7 @@ def test_onboarding_complete_persists_provenance():
     client = TestClient(app)
     assert client.post("/api/onboarding/complete", json=_onboarding_payload()).status_code == 200
 
-    assessment = client.get("/api/state").json()["assessment"]
+    assessment = client.get("/api/state?full=1").json()["assessment"]
     assert assessment["profile_scoring_version"] == PROFILE_SCORING_VERSION
     source = assessment["profile_source"]
     # The one test entered is a max hang, so exactly one axis is measured.
@@ -408,10 +408,10 @@ def test_assessment_compute_persists_provenance():
     client = TestClient(app)
     assert client.post("/api/onboarding/complete", json=_onboarding_payload()).status_code == 200
 
-    before = client.get("/api/state").json()["assessment"]["profile"]
+    before = client.get("/api/state?full=1").json()["assessment"]["profile"]
     assert client.post("/api/assessment/compute", json={}).status_code == 200
 
-    assessment = client.get("/api/state").json()["assessment"]
+    assessment = client.get("/api/state?full=1").json()["assessment"]
     assert assessment["profile"] == before, "recompute must not move a score"
     assert assessment["profile_source"]["finger_strength"] == SOURCE_MEASURED
     assert assessment["profile_scoring_version"] == PROFILE_SCORING_VERSION

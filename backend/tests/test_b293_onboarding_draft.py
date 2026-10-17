@@ -95,7 +95,7 @@ def test_successful_complete_wipes_draft():
     assert r.status_code == 200
 
     assert client.get("/api/onboarding/draft").json()["draft"] is None
-    state = client.get("/api/state").json()
+    state = client.get("/api/state?full=1").json()
     assert "onboarding_draft" not in state
 
 
@@ -139,7 +139,7 @@ def test_complete_rejects_out_of_bounds_profile(field, value):
     assert r.status_code == 422
     assert field in r.json()["detail"]
     # Nothing must have been persisted for this user.
-    assert client.get("/api/state").json().get("macrocycle") is None
+    assert client.get("/api/state?full=1").json().get("macrocycle") is None
 
 
 def test_complete_rejects_empty_name():

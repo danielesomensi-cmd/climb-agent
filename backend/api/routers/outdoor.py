@@ -165,13 +165,18 @@ def _sync_plan_after_outdoor_log(
         "allow_ripple": not is_past,
     })
 
+    from backend.api.routers.custom_session import enrich_custom_sessions_for_play  # B387, lazy like replanner.py
+
     updated = apply_events(
         plan,
         events,
         availability=state.get("availability"),
         planning_prefs=state.get("planning_prefs"),
         gyms=(state.get("equipment") or {}).get("gyms"),
-        custom_sessions=state.get("custom_sessions") or [],
+        # B387: stored customs are lean (no catalog display fields) — hand the
+        # replanner the same enriched copies the /events router does, so a slot
+        # a custom lands in from here carries name / cues / video like any other.
+        custom_sessions=enrich_custom_sessions_for_play(list(state.get("custom_sessions") or [])),
         # B367 inputs; A301: accepted, they no longer change the plan.
         prev_days=_prev_week_days(state, plan.get("start_date")),
         today=_event_floor(date),

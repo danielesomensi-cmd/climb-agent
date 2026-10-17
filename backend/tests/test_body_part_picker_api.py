@@ -213,7 +213,7 @@ class TestStart:
             "seed": 1,
         })
         # Re-read state and confirm session persisted
-        state = client.get("/api/state").json()
+        state = client.get("/api/state?full=1").json()
         plan = state["current_week_plan"]
         wed = plan["weeks"][0]["days"][2]
         assert any(s.get("build_kind") == "body_parts" for s in wed["sessions"])

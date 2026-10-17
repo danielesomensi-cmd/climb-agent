@@ -78,8 +78,8 @@ class TestUserIsolation:
         uid_b = _uid()
 
         # Both start with empty template
-        r_a = client.get("/api/state", headers=_headers(uid_a))
-        r_b = client.get("/api/state", headers=_headers(uid_b))
+        r_a = client.get("/api/state?full=1", headers=_headers(uid_a))
+        r_b = client.get("/api/state?full=1", headers=_headers(uid_b))
         assert r_a.status_code == 200
         assert r_b.status_code == 200
 
@@ -92,8 +92,8 @@ class TestUserIsolation:
         uid_b = _uid()
 
         # Initialize both
-        client.get("/api/state", headers=_headers(uid_a))
-        client.get("/api/state", headers=_headers(uid_b))
+        client.get("/api/state?full=1", headers=_headers(uid_a))
+        client.get("/api/state?full=1", headers=_headers(uid_b))
 
         # Modify A
         client.put(
@@ -103,11 +103,11 @@ class TestUserIsolation:
         )
 
         # B should still have empty user
-        r_b = client.get("/api/state", headers=_headers(uid_b))
+        r_b = client.get("/api/state?full=1", headers=_headers(uid_b))
         assert r_b.json().get("user", {}).get("name", "") != "Alice"
 
         # A should have the change
-        r_a = client.get("/api/state", headers=_headers(uid_a))
+        r_a = client.get("/api/state?full=1", headers=_headers(uid_a))
         assert r_a.json()["user"]["name"] == "Alice"
 
 
@@ -116,7 +116,7 @@ class TestNewUserAutoCreation:
 
     def test_new_user_gets_template(self):
         uid = _uid()
-        r = client.get("/api/state", headers=_headers(uid))
+        r = client.get("/api/state?full=1", headers=_headers(uid))
         assert r.status_code == 200
         state = r.json()
         assert state.get("schema_version") == EMPTY_TEMPLATE["schema_version"]
@@ -127,7 +127,7 @@ class TestNewUserAutoCreation:
         path = _users_dir() / uid / "user_state.json"
         assert not path.exists()
 
-        client.get("/api/state", headers=_headers(uid))
+        client.get("/api/state?full=1", headers=_headers(uid))
         assert path.exists()
 
         data = json.loads(path.read_text())
@@ -138,16 +138,16 @@ class TestInvalidUUID:
     """Invalid UUID in X-User-ID header returns 400."""
 
     def test_random_string_rejected(self):
-        r = client.get("/api/state", headers={"X-User-ID": "not-a-uuid"})
+        r = client.get("/api/state?full=1", headers={"X-User-ID": "not-a-uuid"})
         assert r.status_code == 400
         assert "Invalid X-User-ID" in r.json()["detail"]
 
     def test_empty_string_rejected(self):
-        r = client.get("/api/state", headers={"X-User-ID": ""})
+        r = client.get("/api/state?full=1", headers={"X-User-ID": ""})
         assert r.status_code == 400
 
     def test_partial_uuid_rejected(self):
-        r = client.get("/api/state", headers={"X-User-ID": "12345678-1234"})
+        r = client.get("/api/state?full=1", headers={"X-User-ID": "12345678-1234"})
         assert r.status_code == 400
 
 
@@ -155,12 +155,12 @@ class TestLegacyFallback:
     """Missing X-User-ID falls back to legacy state path (for tests)."""
 
     def test_no_header_returns_200(self):
-        r = client.get("/api/state")
+        r = client.get("/api/state?full=1")
         assert r.status_code == 200
 
     def test_no_header_uses_legacy_path(self):
         """Without header, state operations use the legacy single-file path."""
-        r = client.get("/api/state")
+        r = client.get("/api/state?full=1")
         assert r.status_code == 200
         # Should work without creating any user directory
         # (uses backend/data/user_state.json)

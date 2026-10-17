@@ -402,6 +402,45 @@ def enrich_custom_sessions_for_play(sessions: list) -> list:
     return out
 
 
+#: B387: the catalog display data `_enrich_exercise_display` attaches. None of
+#: it is user input (CustomSessionExerciseEntry has no such field) and the read
+#: path re-derives it, so storing it only duplicated the catalog — 62 % of
+#: Daniele's custom_sessions bytes — and froze cues that the catalog later fixed.
+STORED_DISPLAY_KEYS = ("name", "cues", "video_url", "category", "load_model", "load_unit", "alt_sides")
+
+
+def _play_exercise(ex: dict) -> dict:
+    """One exercise exactly as GET detail / the replanner hand it to the player."""
+    return enrich_custom_sessions_for_play([{"exercises": [ex]}])[0]["exercises"][0]
+
+
+def storage_form(ex: dict, catalog: Optional[dict] = None) -> dict:
+    """B387: the stored shape of a custom exercise — the display fields dropped,
+    and ``notes`` too when it is just the catalog default the enrichment fills.
+
+    Lossless by construction: the lean entry is kept only when it plays exactly
+    like the original through the real read path (:func:`_play_exercise`).
+    Otherwise — a cue the catalog changed since the save, a pre-B283 entry with
+    a partial set of fields — the entry is returned unchanged, so what the
+    athlete sees never moves."""
+    catalog = catalog if catalog is not None else _load_exercises_catalog()
+    lean = {k: v for k, v in ex.items() if k not in STORED_DISPLAY_KEYS}
+    cat_ex = catalog.get(ex.get("exercise_id") or "") or {}
+    default_notes = (cat_ex.get("prescription_defaults") or {}).get("notes")
+    if default_notes and lean.get("notes") == default_notes:
+        lean.pop("notes")
+    if lean == ex:
+        return dict(ex)
+    return lean if _play_exercise(lean) == _play_exercise(dict(ex)) else dict(ex)
+
+
+def stored_session(session: dict, catalog: Optional[dict] = None) -> dict:
+    """B387: a custom session with every exercise in :func:`storage_form`."""
+    out = dict(session)
+    out["exercises"] = [storage_form(dict(ex), catalog) for ex in session.get("exercises") or []]
+    return out
+
+
 @router.get("/{session_id}", dependencies=[Depends(require_active_subscription)])
 def get_session(
     session_id: str,
@@ -464,7 +503,8 @@ def create_session(req: CustomSessionCreateRequest, user_id: Optional[str] = Dep
         created_at=now,
     )
 
-    sessions.append(session)
+    # B387: stored lean, returned enriched (the response shape is unchanged).
+    sessions.append(stored_session(session, catalog))
     state["custom_sessions"] = sessions
     save_state(state, user_id)
 
@@ -491,7 +531,7 @@ def update_session(session_id: str, req: CustomSessionUpdateRequest, user_id: Op
                 catalog=catalog,
                 created_at=s.get("created_at", ""),
             )
-            sessions[i] = updated
+            sessions[i] = stored_session(updated, catalog)  # B387
             state["custom_sessions"] = sessions
             save_state(state, user_id)
             return updated

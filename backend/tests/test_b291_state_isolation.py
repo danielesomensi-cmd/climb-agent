@@ -81,7 +81,7 @@ class TestAnonymousWritesStayOutOfTheRepo:
         """Guard against the test passing because nothing was written at all."""
         with TestClient(app) as client:
             client.put("/api/state", json={"goal": {"target_grade": "9a"}})
-            got = client.get("/api/state")
+            got = client.get("/api/state?full=1")
 
         if got.status_code == 200:
             assert got.json().get("goal", {}).get("target_grade") == "9a"

@@ -707,7 +707,7 @@ def test_custom_session_api_resolves_anchored_loads_at_read():
 
         assert client.get(f"/api/custom-session/{sid}?date=09-10-2026").status_code == 422
         # read-only: nothing persisted
-        stored = client.get("/api/state").json()["custom_sessions"][0]["exercises"][0]
+        stored = client.get("/api/state?full=1").json()["custom_sessions"][0]["exercises"][0]
         assert stored["load_kg"] == 28.0 and "stored_load_kg" not in stored
     finally:
         client.delete("/api/state")

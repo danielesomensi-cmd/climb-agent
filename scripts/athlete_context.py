@@ -51,6 +51,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from backend.engine import athlete_context as ac  # noqa: E402
+from backend.engine import state_codec  # noqa: E402
 
 #: Daniele's internal user id (memory reference_prod_user_debug).
 DEFAULT_USER_ID = "7ea9f0ee-e629-4ce9-8f4f-f8e6e3dc771e"
@@ -456,7 +457,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     except Exception as exc:
         print(f"Lettura fallita: {exc}", file=sys.stderr)
         return EXIT_ERROR
-    state = data.get("state")
+    # B387: the blob may store current_week_plan as a pointer (state_codec).
+    state = state_codec.unpack(data.get("state"))
     if not state:
         print(f"Nessuno stato per l'utente {args.user_id}", file=sys.stderr)
         return EXIT_NO_STATE

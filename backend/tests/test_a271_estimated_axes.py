@@ -247,7 +247,7 @@ def test_put_state_stamps_the_sidecar_at_write_time():
         json={"assessment": {"tests": {"max_hang_20mm_7s_total_kg": 118}}},
     )
     assert r.status_code == 200, r.text
-    source = client.get("/api/state").json()["assessment"]["tests_source"]
+    source = client.get("/api/state?full=1").json()["assessment"]["tests_source"]
     assert source["max_hang_20mm_7s_total_kg"] == "measured"
 
 
@@ -259,7 +259,7 @@ def test_put_state_ignores_unknown_test_keys():
     client = TestClient(app)
     client.delete("/api/state")
     client.put("/api/state", json={"assessment": {"tests": {"not_a_test": 1}}})
-    source = (client.get("/api/state").json()["assessment"] or {}).get("tests_source") or {}
+    source = (client.get("/api/state?full=1").json()["assessment"] or {}).get("tests_source") or {}
     assert "not_a_test" not in source
     assert set(source) <= set(_TEST_KEYS)
 

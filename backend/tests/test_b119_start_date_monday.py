@@ -122,7 +122,7 @@ class TestStatePutAutoCorrect(unittest.TestCase):
         seed_mc = generate_macrocycle(
             seed_goal, seed_profile, {"trips": []}, "2026-02-23", 12,
         )
-        original_state = client.get("/api/state").json()
+        original_state = client.get("/api/state?full=1").json()
         client.put("/api/state", json={"macrocycle": seed_mc})
 
         try:
@@ -147,7 +147,7 @@ class TestMacrocycleEndpointMonday(unittest.TestCase):
         client = TestClient(app)
         # Seed goal + assessment.profile so the macrocycle endpoint has inputs
         # regardless of test ordering.
-        original_state = client.get("/api/state").json()
+        original_state = client.get("/api/state?full=1").json()
         # B347: every date here is derived from today.
         #
         # This test used to hardcode `start_date: "2026-03-05"` and inherit the

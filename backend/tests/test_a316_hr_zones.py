@@ -156,11 +156,11 @@ def test_settings_save_path_keeps_hr_fields(tmp_path, monkeypatch):
 
     hr = {"hr_max_bpm": 190, "hr_rest_bpm": 52, "hr_max_source": "measured"}
     assert client.put("/api/state", json={"assessment": {"body": hr}, "body": hr}).status_code == 200
-    st = client.get("/api/state").json()
+    st = client.get("/api/state?full=1").json()
     assert {k: st["body"][k] for k in hr} == hr
     assert {k: st["assessment"]["body"][k] for k in hr} == hr
     res = client.post("/api/assessment/compute", json={"assessment": st["assessment"], "goal": st.get("goal") or {}})
     assert res.status_code == 200
-    after = client.get("/api/state").json()
+    after = client.get("/api/state?full=1").json()
     assert hr_zones.hr_max(after) == 190 and hr_zones.hr_rest(after) == 52
     assert "4x4 intervals 171-180" in hr_zones.coach_line(after)

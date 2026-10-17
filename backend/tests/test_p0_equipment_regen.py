@@ -51,7 +51,7 @@ def _setup_macrocycle(start_date: str) -> dict:
 
 def _seed_completion_log(entries: list[dict]):
     """Inject session_completion_log entries into state."""
-    r = client.get("/api/state")
+    r = client.get("/api/state?full=1")
     state = r.json()
     state["session_completion_log"] = entries
     client.put("/api/state", json={"session_completion_log": entries})
@@ -130,7 +130,7 @@ class TestEquipmentRegenPreservesWeek:
         _seed_completion_log(log_entries)
 
         # Verify log is seeded
-        state_before = client.get("/api/state").json()
+        state_before = client.get("/api/state?full=1").json()
         assert len(state_before["session_completion_log"]) == 4
 
         # Incremental regen (equipment-change flow)
@@ -140,7 +140,7 @@ class TestEquipmentRegenPreservesWeek:
         assert r.status_code == 200
 
         # Completion log must be intact
-        state_after = client.get("/api/state").json()
+        state_after = client.get("/api/state?full=1").json()
         assert len(state_after["session_completion_log"]) == 4
         assert state_after["session_completion_log"] == log_entries
 

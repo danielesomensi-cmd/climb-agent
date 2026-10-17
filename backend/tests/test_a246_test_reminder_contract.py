@@ -99,7 +99,7 @@ class TestResponseEndpoint:
     """Each option must move the engine, not just return 200."""
 
     def _state(self, client):
-        return client.get("/api/state", headers=_headers()).json()
+        return client.get("/api/state?full=1", headers=_headers()).json()
 
     def test_confirm_requests_tests_and_clears_deferrals(self, client):
         # Pre-load deferrals so we can see them cleared.

@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 
 from backend.api import deps
 from backend.api.main import app
+from backend.engine import state_codec  # B387
 
 client = TestClient(app)
 
@@ -50,7 +51,7 @@ class TestHealth:
 
 class TestState:
     def test_get_state(self):
-        r = client.get("/api/state")
+        r = client.get("/api/state?full=1")
         assert r.status_code == 200
         data = r.json()
         assert "schema_version" in data
@@ -73,7 +74,7 @@ class TestState:
 
     def test_get_after_delete_returns_empty(self):
         client.delete("/api/state")
-        r = client.get("/api/state")
+        r = client.get("/api/state?full=1")
         assert r.status_code == 200
         assert r.json()["user"] == {}
 
@@ -107,14 +108,14 @@ class TestState:
 
         # Patch availability with a real change (B369: an identical PUT is not
         # a change and flags nothing).
-        mon_evening = ((client.get("/api/state").json().get("availability") or {})
+        mon_evening = ((client.get("/api/state?full=1").json().get("availability") or {})
                        .get("mon") or {}).get("evening") or {}
         client.put("/api/state", json={
             "availability": {"mon": {"evening": {
                 "available": not mon_evening.get("available", False), "preferred_location": "gym"}}},
         })
 
-        state = client.get("/api/state").json()
+        state = client.get("/api/state?full=1").json()
         plans = state.get("week_plans", {})
         # B369: nothing is deleted any more — current and future weeks are
         # flagged stale and regenerated through the preserving merge on read.
@@ -128,9 +129,9 @@ class TestState:
         future_key = "2099-01-04"
         client.put("/api/state", json={"week_plans": {
             future_key: {"start_date": future_key, "weeks": [{"days": []}]}}})
-        same = client.get("/api/state").json().get("availability") or {}
+        same = client.get("/api/state?full=1").json().get("availability") or {}
         client.put("/api/state", json={"availability": same})
-        plans = client.get("/api/state").json().get("week_plans", {})
+        plans = client.get("/api/state?full=1").json().get("week_plans", {})
         assert "_stale" not in plans[future_key]
 
     def test_put_planning_prefs_change_flags_weeks_stale(self):
@@ -139,10 +140,10 @@ class TestState:
         future_key = "2099-01-04"
         client.put("/api/state", json={"week_plans": {
             future_key: {"start_date": future_key, "weeks": [{"days": []}]}}})
-        prefs = client.get("/api/state").json().get("planning_prefs") or {}
+        prefs = client.get("/api/state?full=1").json().get("planning_prefs") or {}
         cap = int(prefs.get("hard_day_cap_per_week") or 3)
         client.put("/api/state", json={"planning_prefs": {"hard_day_cap_per_week": cap + 1}})
-        plans = client.get("/api/state").json().get("week_plans", {})
+        plans = client.get("/api/state?full=1").json().get("week_plans", {})
         assert plans[future_key].get("_stale") is True
 
     def test_put_without_availability_keeps_week_cache(self):
@@ -154,7 +155,7 @@ class TestState:
         # Patch something else (not availability)
         client.put("/api/state", json={"user": {"preferred_name": "NoInvalidate"}})
 
-        state = client.get("/api/state").json()
+        state = client.get("/api/state?full=1").json()
         plans = state.get("week_plans", {})
         assert future_key in plans, "Week cache should not be touched without availability change"
 
@@ -168,7 +169,7 @@ class TestState:
         })
         client.put("/api/state", json={"goal": {"discipline": "boulder"}})
 
-        goal = client.get("/api/state").json()["goal"]
+        goal = client.get("/api/state?full=1").json()["goal"]
         assert goal["discipline"] == "boulder"
         assert goal["target_grade"] == "7C", \
             f"Lead 8a should remap to boulder 7C, got {goal['target_grade']!r}"
@@ -189,7 +190,7 @@ class TestState:
         })
         client.put("/api/state", json={"goal": {"discipline": "lead"}})
 
-        goal = client.get("/api/state").json()["goal"]
+        goal = client.get("/api/state?full=1").json()["goal"]
         assert goal["discipline"] == "lead"
         assert goal["target_grade"] == "7c+", \
             f"Boulder 7B should remap to lead 7c+, got {goal['target_grade']!r}"
@@ -827,7 +828,7 @@ class TestReplanner:
         assert r.status_code == 200
 
         # Verify the persisted state has current_week_plan
-        state = json.loads(deps.STATE_PATH.read_text())
+        state = state_codec.unpack(json.loads(deps.STATE_PATH.read_text()))  # B387: stored through the codec
         assert state.get("current_week_plan") is not None
         cached_day = next(
             d for d in state["current_week_plan"]["weeks"][0]["days"]
@@ -853,7 +854,7 @@ class TestReplanner:
         assert r.status_code == 200
 
         # Verify the persisted state has current_week_plan with the override
-        state = json.loads(deps.STATE_PATH.read_text())
+        state = state_codec.unpack(json.loads(deps.STATE_PATH.read_text()))  # B387: stored through the codec
         assert state.get("current_week_plan") is not None
         assert state["current_week_plan"].get("weeks") is not None
 
@@ -1643,7 +1644,7 @@ class TestCurrentLevelSync:
         client.put("/api/state", json={"assessment": {"grades": {
             "lead_max_rp": "7c", "lead_max_os": "7a+",
         }}})
-        before = client.get("/api/state").json().get("performance")
+        before = client.get("/api/state?full=1").json().get("performance")
         r = client.put("/api/state", json={"user": {"preferred_name": "NoTouch"}})
         assert r.status_code == 200
         assert r.json().get("performance") == before

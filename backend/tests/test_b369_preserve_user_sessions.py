@@ -449,7 +449,7 @@ def _path_force():
 
 
 def _path_availability():
-    av = client.get("/api/state").json().get("availability") or {}
+    av = client.get("/api/state?full=1").json().get("availability") or {}
     mon = (av.get("mon") or {}).get("morning") or {}
     r = client.put("/api/state", json={"availability": {"mon": {"morning": {
         "available": not mon.get("available", False), "preferred_location": "home"}}}})
@@ -458,7 +458,7 @@ def _path_availability():
 
 
 def _path_planning_prefs():
-    prefs = client.get("/api/state").json().get("planning_prefs") or {}
+    prefs = client.get("/api/state?full=1").json().get("planning_prefs") or {}
     cap = int(prefs.get("hard_day_cap_per_week") or 3)
     assert client.put("/api/state", json={"planning_prefs": {"hard_day_cap_per_week": max(1, cap - 1)}}).status_code == 200
     _regen_both()

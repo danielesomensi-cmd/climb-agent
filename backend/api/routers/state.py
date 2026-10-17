@@ -33,10 +33,28 @@ def _deep_merge(base: Dict[str, Any], patch: Dict[str, Any]) -> Dict[str, Any]:
     return base
 
 
+#: B387: keys the app never reads from /api/state — the plans and the custom
+#: sessions have their own endpoints (/api/week, /api/custom-session). They were
+#: ~85 % of the response (580 of 678 KB on Daniele's state), sent on each of the
+#: app's getState() calls. Writable keys stay writable through PUT.
+_LEAN_OMIT = ("week_plans", "current_week_plan", "custom_sessions")
+
+
+def _lean(state: Dict[str, Any]) -> Dict[str, Any]:
+    """The state without the heavy keys, plus ``_omitted`` naming what was left
+    out — so a script that reads a list here, edits it and PUTs it back sees the
+    key is missing instead of believing it is empty."""
+    out = {k: v for k, v in state.items() if k not in _LEAN_OMIT}
+    out["_omitted"] = [k for k in _LEAN_OMIT if k in state]
+    return out
+
+
 @router.get("")
-def get_state(user_id: Optional[str] = Depends(get_user_id)):
-    """Return the full user_state.json."""
-    return load_state(user_id)
+def get_state(full: bool = False, user_id: Optional[str] = Depends(get_user_id)):
+    """Return the user state. B387: lean by default (no week plans, no custom
+    sessions — see ``_LEAN_OMIT``); ``?full=1`` returns every key."""
+    state = load_state(user_id)
+    return state if full else _lean(state)
 
 
 # B165d: Keys the frontend/engine are allowed to set via PUT /api/state
@@ -176,7 +194,7 @@ def put_state(request: Request, patch: Dict[str, Any], user_id: Optional[str] = 
     if any(k in patch and state.get(k) != _structure_before[k] for k in _STRUCTURE_KEYS):
         invalidate_week_cache(state)
     save_state(state, user_id)
-    return state
+    return _lean(state)  # B387: same lean view as GET
 
 
 @router.get("/status")

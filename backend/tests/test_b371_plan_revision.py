@@ -282,7 +282,7 @@ def test_invalidation_and_regeneration_move_the_revision():
     wn, plan = _next_week()
     base = plan["plan_revision"]
     # Changing the planning prefs flags the week stale — a write.
-    prefs = client.get("/api/state").json().get("planning_prefs") or {}
+    prefs = client.get("/api/state?full=1").json().get("planning_prefs") or {}
     cap = int(prefs.get("hard_day_cap_per_week", 3))
     assert client.put("/api/state", json={"planning_prefs": {"hard_day_cap_per_week": max(1, cap - 1)}}).status_code == 200
     flagged = revision_of(_stored(_monday(1)))

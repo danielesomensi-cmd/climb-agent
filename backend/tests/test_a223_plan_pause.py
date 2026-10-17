@@ -445,7 +445,7 @@ class TestMutationGating:
         _seed(_mc(_weeks_ago_monday(3)))
         self._pause()
         # GET state + week are reads → must still work.
-        assert client.get("/api/state").status_code == 200
+        assert client.get("/api/state?full=1").status_code == 200
         assert client.get("/api/week/0").status_code in (200, 422)  # 422 only if no plan
 
 

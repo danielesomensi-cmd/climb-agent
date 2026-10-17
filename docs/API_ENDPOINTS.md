@@ -9,7 +9,7 @@
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/health` | Health check |
-| GET | `/api/state` | Get full user state |
+| GET | `/api/state` | User state. **B387**: lean by default — no `week_plans`, `current_week_plan`, `custom_sessions` (they have their own endpoints); `_omitted` lists what was left out, `?full=1` returns every key. The PUT response is the same lean view |
 | PUT | `/api/state` | Deep-merge patch into state |
 | GET | `/api/state/status` | Dirty-state check (is_macrocycle_stale) |
 | DELETE | `/api/state` | Reset state to empty |

@@ -675,7 +675,7 @@ def _fetch_user_state_from_api(user_id: str) -> Optional[dict]:
     try:
         result = subprocess.run(
             ["curl", "-s", "-f", "--max-time", "15",
-             f"{PROD_API_URL}/api/state",
+             f"{PROD_API_URL}/api/state?full=1",  # B387: GET is lean by default
              "-H", f"X-User-ID: {user_id}"],
             capture_output=True, text=True, timeout=20,
         )

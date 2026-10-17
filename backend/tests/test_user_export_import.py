@@ -53,7 +53,7 @@ class TestExport:
 
     def test_export_matches_state(self):
         """Exported data matches what GET /api/state returns."""
-        state_r = client.get("/api/state")
+        state_r = client.get("/api/state?full=1")
         export_r = client.get("/api/user/export")
         assert state_r.json() == export_r.json()
 
@@ -68,7 +68,7 @@ class TestImport:
         assert r.json()["status"] == "imported"
 
         # Verify the state was overwritten
-        check = client.get("/api/state")
+        check = client.get("/api/state?full=1")
         assert check.json()["user"]["name"] == "Imported User"
 
     def test_import_missing_schema_version(self):
