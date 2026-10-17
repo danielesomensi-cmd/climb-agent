@@ -533,7 +533,7 @@ def place_complementary(
         _pick_location,
     )
     from backend.engine.stimulus import is_hiit_like
-    from backend.engine.user_owned import is_preservable, removal_records, whole_day_override_dates
+    from backend.engine.user_owned import engine_free_dates, is_preservable, removal_records
 
     days: List[Dict[str, Any]] = week_plan["weeks"][0]["days"]
     ws = str(week_plan["start_date"])
@@ -560,7 +560,9 @@ def place_complementary(
                 if day.get("date"):
                     old_days[str(day["date"])] = day
         removals = removal_records(existing_week_plan)
-        whole_day = set(whole_day_override_dates(existing_week_plan))
+        # B379: every day the user owns wholesale — a whole-day override or an
+        # outdoor day declared on the plan (no engine lunch on a crag day).
+        whole_day = set(engine_free_dates(existing_week_plan))
     today_iso = today.isoformat() if today is not None else None
 
     def _frozen(d_iso: str) -> bool:

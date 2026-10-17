@@ -956,9 +956,11 @@ def _key_stimulus_pass(
     blocked: Dict[int, set] = {}
     if same_week:
         from backend.engine.replanner_v1 import _merge_user_content
-        from backend.engine.user_owned import ref_matches, removal_records, whole_day_override_dates
+        from backend.engine.user_owned import engine_free_dates, ref_matches, removal_records
 
-        for d_iso in whole_day_override_dates(existing_week_plan):
+        # B379: every day the user owns wholesale (outdoor declared, whole-day
+        # override) — the merge copies it back as it was.
+        for d_iso in engine_free_dates(existing_week_plan):
             if str(d_iso)[:10] in week_iso:
                 blocked.setdefault(week_iso.index(str(d_iso)[:10]), set()).update(SLOTS)
         for r in removal_records(existing_week_plan):
@@ -1393,7 +1395,12 @@ def generate_phase_week(
             happened, the user's own sessions and removals on the other days
             are respected (a complementary slot the user filled or emptied is
             never refilled) and count toward the rotation and the HIIT cap.
-            Ignored when no slot is complementary.
+            Ignored when no slot is complementary. B379: also read by the
+            availability loop — a day of this same week from today on that
+            the user owns wholesale (``user_owned.engine_free_dates``: an
+            outdoor day declared on the plan, a whole-day override) gets no
+            engine session, exactly like an outdoor-only availability day
+            (but without the ``outdoor_slot`` marker: it is not availability).
         trip_start_dates: A300 — trip departures from this Monday to the
             Tuesday after (``complementary_v1.trip_start_dates``): outdoor
             events for the legs / HIIT rules, also across the week boundary.
@@ -1566,9 +1573,28 @@ def generate_phase_week(
     # A282: days the athlete CAN train on but that target_days pruning dropped.
     day_pruned_but_available: List[bool] = [False] * 7
     day_has_available_slot: List[bool] = []
+    # B379: days of this same week the user owns wholesale (a crag day declared
+    # on the plan, a whole-day override). The B369 merge copies them back as
+    # they were, so the planner treats them as outdoor-only days: no session,
+    # no test, no lunch, and the spacing/caps of the other days are computed
+    # without them. Not written as `outdoor_slot` (that marker is availability).
+    day_engine_free: List[bool] = [False] * 7
+    if isinstance(existing_week_plan, dict) \
+            and str(existing_week_plan.get("start_date") or "")[:10] == str(start_date)[:10]:
+        from backend.engine.user_owned import engine_free_dates
+        _ef = set(engine_free_dates(existing_week_plan))
+        for offset in range(7):
+            if day_dates[offset].isoformat() in _ef and (
+                today_date is None or day_dates[offset] >= today_date
+            ):
+                day_engine_free[offset] = True
     for offset in range(7):
         # B95: skip past days — no sessions assigned to days before today
         if today_date is not None and day_dates[offset] < today_date:
+            day_has_available_slot.append(False)
+            continue
+        if day_engine_free[offset]:
+            day_is_outdoor[offset] = True
             day_has_available_slot.append(False)
             continue
         day_avail = normalized[day_keys[offset]]
@@ -2839,6 +2865,8 @@ def generate_phase_week(
                         continue
                     if day_sessions[offset]:
                         continue  # pass 2 targets empty days only
+                    if today_date is not None and day_dates[offset] < today_date:
+                        continue  # B379: a past day is lived — the merge would drop it
                     if test_meta["finger"] and _rd_blocks_finger_test(offset):
                         continue  # A289 review: 72 h before a policy hang test
                     if day_is_outdoor[offset]:
@@ -2962,7 +2990,7 @@ def generate_phase_week(
             "weekday": day_keys[offset],
             "sessions": day_sessions[offset],
         }
-        if day_is_outdoor[offset]:
+        if day_is_outdoor[offset] and not day_engine_free[offset]:
             day_entry["outdoor_slot"] = True
         if day_dates[offset] in pretrip_set:
             day_entry["pretrip_deload"] = True

@@ -148,6 +148,44 @@ def whole_day_override_dates(plan: Mapping[str, Any]) -> List[str]:
     return out
 
 
+def is_declared_outdoor_day(day: Mapping[str, Any]) -> bool:
+    """B372: an outdoor day the USER put on the plan — a spot, a pitch ladder,
+    or an outdoor block planned / done. The planner's bare ``outdoor_slot`` is
+    availability, not a declaration: nothing ever marks it done, nothing clears
+    it when the slot is used for the gym, so it never counts as a crag day on
+    its own. B379: moved here from ``stimulus`` (which delegates) so the merge,
+    the planner, the complementary pass and the retest policy share it."""
+    if not isinstance(day, Mapping):
+        return False
+    return bool(
+        day.get("outdoor_spot_name") or day.get("outdoor_spot_id") or day.get("outdoor_plan")
+        or day.get("outdoor_session_status") in ("planned", "done")
+    )
+
+
+def engine_free_dates(plan: Mapping[str, Any]) -> List[str]:
+    """B379: dates of *plan* the engine must not put a session on when the
+    week is regenerated — the user owns the whole day.
+
+    ``whole_day_override_dates`` (an outdoor / legacy whole-day override) plus
+    every day the user declared outdoor on the plan
+    (:func:`is_declared_outdoor_day`: a spot, a pitch ladder, an outdoor block
+    planned or done). Before B379 an outdoor day put on the plan through
+    ``add_outdoor`` / ``set_outdoor_plan`` left no ``day_override`` record, so a
+    regeneration filled it with engine sessions (a repeater test on a crag
+    day). Sorted, without duplicates; the caller applies its own "from today
+    on" rule.
+    """
+    out = {str(d)[:10] for d in whole_day_override_dates(plan)}
+    for wk in (plan or {}).get("weeks") or []:
+        if not isinstance(wk, Mapping):
+            continue
+        for day in wk.get("days") or []:
+            if isinstance(day, Mapping) and day.get("date") and is_declared_outdoor_day(day):
+                out.add(str(day["date"])[:10])
+    return sorted(out)
+
+
 def carry_user_markers(old: Mapping[str, Any], new_constraints: List[str]) -> List[str]:
     """B369 review: the ``constraints_applied`` of a session a guard rewrites in
     place — *new_constraints* plus the ownership markers of the old one, so a

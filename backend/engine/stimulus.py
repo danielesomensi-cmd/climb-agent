@@ -982,17 +982,12 @@ def is_outdoor_day(day: Mapping[str, Any]) -> bool:
 
 
 def is_declared_outdoor_day(day: Mapping[str, Any]) -> bool:
-    """B372: an outdoor day the USER put on the plan — a spot, a pitch ladder,
-    or an outdoor block planned / done. The planner's bare ``outdoor_slot`` is
-    availability, not a declaration: nothing ever marks it done, nothing clears
-    it when the slot is used for the gym, so it never counts as a crag day for
-    the fatigue alerts on its own (only its route log / load can)."""
-    if not isinstance(day, Mapping):
-        return False
-    return bool(
-        day.get("outdoor_spot_name") or day.get("outdoor_spot_id") or day.get("outdoor_plan")
-        or day.get("outdoor_session_status") in ("planned", "done")
-    )
+    """B372: an outdoor day the USER put on the plan (spot, pitch ladder, an
+    outdoor block planned / done) — never the planner's bare ``outdoor_slot``.
+    B379: the predicate lives in ``user_owned`` (shared with the merge, the
+    planner, the complementary pass and the retest policy); this delegates."""
+    from backend.engine.user_owned import is_declared_outdoor_day as _declared
+    return _declared(day)
 
 
 def _outdoor_logged_loads(
