@@ -59,7 +59,7 @@ ACTIVATION_ONLY = {"plank", "dead_bug", "plank_shoulder_tap", "pallof_press", "k
 LOADED_PINS = {
     "legs_maintenance_lunch": [("squat_main", "goblet_squat", 4, 6, 120),
                                ("hinge", "romanian_deadlift", 3, 6, 120)],
-    "upper_push_arms_lunch": [("chest_press", "bench_press", 4, 6, 120),
+    "upper_push_arms_lunch": [("chest_press", "dumbbell_bench_press", 4, 6, 120),
                               ("biceps", "bicep_curl", 3, 8, 75)],
 }
 
@@ -294,7 +294,7 @@ class TestTestedAthlete:
         r = _resolve("upper_push_arms_lunch", _untested_state(EQUIPMENT_SETS["c274_work"], "2026-10-16"), "base")
         push = _by_block(r)["push_bodyweight"]
         assert catalog[push["exercise_id"]]["pattern"] == "push"
-        assert push["exercise_id"] not in {"bench_press", "dip", "weighted_dip"}
+        assert push["exercise_id"] not in {"bench_press", "dumbbell_bench_press", "dip", "weighted_dip"}
 
     @pytest.mark.parametrize("sid", STRENGTH_LUNCH)
     def test_deterministic(self, sid):

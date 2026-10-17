@@ -60,6 +60,12 @@ only: ``treadmill_incline_walk`` gains the catalog ``hr_target`` band and its HR
 cue drops the age formula. Same ids, same order, same prescriptions;
 ``other_engines`` unchanged. Checked by diffing ``compute()`` run under pytest on
 origin/main @ 401bf63 against the A316 tree.
+
+B381 changed 6 keys, all ``upper_push_arms_lunch`` (3 profiles x 2 dates): the
+chest-press pin is ``dumbbell_bench_press`` now, so the dumbbell-only profiles
+get it instead of the P0 fallback (``handstand_pushup_wall`` / ``overhead_press``).
+Every other key and ``other_engines`` unchanged (isolated ``compute()`` under
+pytest, origin/main vs the B381 tree).
 """
 
 from __future__ import annotations

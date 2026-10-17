@@ -59,10 +59,10 @@
       "required": true,
       "priority": 100,
       "module_role": "primary",
-      "notes": "Horizontal press for the chest: bench press with free weights, the same movement every time so the load can progress from feedback. Without weights it falls back to another push movement.",
+      "notes": "Horizontal press for the chest: dumbbell bench press, the same movement every time so the load can progress from feedback (load is per dumbbell). Without dumbbells it falls back to another push movement.",
       "selection": {
         "primary": {
-          "exercise_id": "bench_press",
+          "exercise_id": "dumbbell_bench_press",
           "prescription_overrides": {
             "sets": 4,
             "deload_sets": 3,

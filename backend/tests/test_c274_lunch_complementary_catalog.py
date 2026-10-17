@@ -51,8 +51,11 @@ EXPECTED = {
     # C275: the strength lunches got a rotating core block; this gym has no
     # rings, so the optional ring push-up block falls back to a dumbbell fly
     # (the block's equipment filter is a preference, not a gate).
-    "upper_push_arms_lunch": ["general_pulse_raise", "side_plank", "bench_press", "bicep_curl", "dumbbell_fly",
-                              "triceps_cable_pushdown"],
+    # B381: the chest-press pin is dumbbell_bench_press (Daniele benches with
+    # dumbbells even where a barbell exists); the generic sort puts it after
+    # bicep_curl (tie broken by exercise_id).
+    "upper_push_arms_lunch": ["general_pulse_raise", "side_plank", "bicep_curl", "dumbbell_bench_press",
+                              "dumbbell_fly", "triceps_cable_pushdown"],
     # NOTE: this order is the engine's generic phase sort
     # (exercise_ordering.sort_exercises_by_phase: strength_general ties broken
     # by exercise_id), not a design choice. The session notes say so; breaking

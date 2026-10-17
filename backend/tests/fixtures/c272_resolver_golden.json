@@ -778,15 +778,15 @@
    ]
   },
   "advanced|2026-10-07|upper_push_arms_lunch": {
-   "digest": "d21910d5e70f2418d6a1dde3be3031b20b2b8abc670c987d8f80e676f6c40fdb",
    "exercise_ids": [
     "general_pulse_raise",
     "ab_wheel_rollout",
     "bicep_curl",
+    "dumbbell_bench_press",
     "dumbbell_fly",
-    "handstand_pushup_wall",
     "incline_pushup"
-   ]
+   ],
+   "digest": "81eb30222f9cbbb9bf3569f8f32d9c3fae7e8db97975926013298762be5fd44b"
   },
   "advanced|2026-10-07|yoga_recovery": {
    "digest": "dd41ad6abf93d50bc8904f6b0cd1f232aa06f7d91a777e86a62b83aaa0f2543a",
@@ -1273,15 +1273,15 @@
    ]
   },
   "advanced|2026-10-21|upper_push_arms_lunch": {
-   "digest": "70e5e02a26c3fefca488eea27f89397e379d79ba3a77da3f0ddd87c607a96b5c",
    "exercise_ids": [
     "general_pulse_raise",
     "suitcase_carry",
     "bicep_curl",
+    "dumbbell_bench_press",
     "handstand_pushup_wall",
-    "incline_pushup",
-    "overhead_press"
-   ]
+    "incline_pushup"
+   ],
+   "digest": "8a5a595ca7f8e810f0a8651ee8141f36f87ea1e856729d2259318fb0b98e0608"
   },
   "advanced|2026-10-21|yoga_recovery": {
    "digest": "93018eb2015dc548a6aac1ad379a026105539ab1684846b17d63a007f60c8525",
@@ -1777,15 +1777,15 @@
    ]
   },
   "intermediate|2026-10-07|upper_push_arms_lunch": {
-   "digest": "07233b4ad87d478f8c1a79a221d66c0459803302d84dd1de652c6a6e77f7612c",
    "exercise_ids": [
     "general_pulse_raise",
     "ab_wheel_rollout",
     "bicep_curl",
+    "dumbbell_bench_press",
     "dumbbell_fly",
-    "handstand_pushup_wall",
     "incline_pushup"
-   ]
+   ],
+   "digest": "aa86ac706846aefdf48521424eb3cbd3b7a17f23f9664b59649079b330f17aca"
   },
   "intermediate|2026-10-07|yoga_recovery": {
    "digest": "dd41ad6abf93d50bc8904f6b0cd1f232aa06f7d91a777e86a62b83aaa0f2543a",
@@ -2272,15 +2272,15 @@
    ]
   },
   "intermediate|2026-10-21|upper_push_arms_lunch": {
-   "digest": "c23f4e242d4029da766582c6243f2085263695f4fa57b8eb849213dcc745e6f0",
    "exercise_ids": [
     "general_pulse_raise",
     "suitcase_carry",
     "bicep_curl",
+    "dumbbell_bench_press",
     "handstand_pushup_wall",
-    "incline_pushup",
-    "overhead_press"
-   ]
+    "incline_pushup"
+   ],
+   "digest": "1040133a7126d10e6be9125d4ca4e9294cf996999aa784976173d0412e08add1"
   },
   "intermediate|2026-10-21|yoga_recovery": {
    "digest": "93018eb2015dc548a6aac1ad379a026105539ab1684846b17d63a007f60c8525",
@@ -2776,15 +2776,15 @@
    ]
   },
   "untested|2026-10-07|upper_push_arms_lunch": {
-   "digest": "de8c823bf5b94063a762efedcf9ddd75e1030b682ebc6228b1587e5515232c7f",
    "exercise_ids": [
     "general_pulse_raise",
     "side_plank",
     "bicep_curl",
+    "dumbbell_bench_press",
     "dumbbell_fly",
-    "handstand_pushup_wall",
     "incline_pushup"
-   ]
+   ],
+   "digest": "926e23e66fe78c0387ecf31f49a869b09ca1cc951198a7ccf6c97f8ff1c9fc6b"
   },
   "untested|2026-10-07|yoga_recovery": {
    "digest": "dd41ad6abf93d50bc8904f6b0cd1f232aa06f7d91a777e86a62b83aaa0f2543a",
@@ -3271,15 +3271,15 @@
    ]
   },
   "untested|2026-10-21|upper_push_arms_lunch": {
-   "digest": "99e4fb85407e84b107e993767fce4d7701af79fe63cb08296b8eba59ed493cc4",
    "exercise_ids": [
     "general_pulse_raise",
     "plank",
     "bicep_curl",
+    "dumbbell_bench_press",
     "handstand_pushup_wall",
-    "incline_pushup",
-    "overhead_press"
-   ]
+    "incline_pushup"
+   ],
+   "digest": "1cb0dda6304f8eecd8a6b01819d9e5cd2e8e55dfd941b164bf4d6e32eb4616b5"
   },
   "untested|2026-10-21|yoga_recovery": {
    "digest": "93018eb2015dc548a6aac1ad379a026105539ab1684846b17d63a007f60c8525",
