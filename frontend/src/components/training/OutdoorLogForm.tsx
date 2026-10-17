@@ -15,6 +15,7 @@ import { useSubmitLock } from "@/lib/hooks/use-submit-lock";
 import { enqueue } from "@/lib/outbox";
 import { deriveTryTimings, routeHasTimestamps } from "@/lib/try-timings";
 import { TryBreakdown } from "@/components/outdoor/try-breakdown";
+import { attemptLabel } from "@/lib/outdoor-result";
 
 const FRENCH_SPORT_GRADES = [
   "4a","4b","4c","5a","5a+","5b","5b+","5c","5c+",
@@ -117,6 +118,9 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
       if (!anySent) {
         delete (updated[rIdx] as unknown as Record<string, unknown>).style;
       }
+    } else if (attempt.result === "topped_out") {
+      // B393: a top with rests is never promoted to a send by a tap.
+      updated[rIdx].attempts[aIdx] = { ...attempt, result: "fell" };
     } else {
       updated[rIdx].attempts[aIdx] = { ...attempt, result: "sent" };
     }
@@ -357,11 +361,13 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
                       className={`min-h-[44px] px-3 text-sm font-medium ${
                         a.result === "sent"
                           ? "bg-green-600 text-white"
-                          : "bg-red-600 text-white"
+                          : a.result === "topped_out"
+                            ? "bg-amber-600 text-white"
+                            : "bg-red-600 text-white"
                       }`}
                       title="Tap to switch Sent ⇄ Fell"
                     >
-                      {a.result === "sent" ? "Sent" : "Fell"}
+                      {attemptLabel(a.result)}
                     </button>
                     <button
                       onClick={() => removeAttempt(rIdx, aIdx)}

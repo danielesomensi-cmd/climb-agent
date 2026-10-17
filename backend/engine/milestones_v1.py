@@ -169,7 +169,9 @@ def _grade_rank(grade: str, discipline: str) -> Optional[int]:
 
 
 def _route_sent(route: Dict[str, Any]) -> bool:
-    return any(a.get("result") in ("sent", "topped_out") for a in route.get("attempts") or [])
+    # B393: `topped_out` is a top with rests (hangdog / top-rope), not a send —
+    # same reading as athlete_context and grade_evidence.
+    return any(a.get("result") == "sent" for a in route.get("attempts") or [])
 
 
 def _scan_outdoor(user_id: Optional[str]) -> Dict[str, Any]:

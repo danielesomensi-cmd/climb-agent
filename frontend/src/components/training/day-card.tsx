@@ -31,6 +31,7 @@ import { keyRoleFor } from "@/lib/key-sessions";
 import { alertsForSession } from "@/lib/week-alerts";
 import { normalizeOtherActivities, hasOtherActivity } from "@/lib/other-activity";
 import { formatDateShort } from "@/lib/format";
+import { attemptBgClass, attemptLabel } from "@/lib/outdoor-result";
 
 interface Gym {
   gym_id?: string;
@@ -649,14 +650,13 @@ export function DayCard({
                           <span className="truncate flex-1 text-muted-foreground">{route.name}</span>
                           <div className="flex flex-wrap items-center gap-1 justify-end">
                             {route.attempts.map((a, ai) => {
-                              const isSend = a.result === "sent" || a.result === "topped_out";
                               return (
                                 <span
                                   key={ai}
-                                  title={isSend ? "Sent" : "Fell"}
+                                  title={attemptLabel(a.result)}
                                   className={cn(
                                     "inline-block size-2 rounded-full",
-                                    isSend ? "bg-success" : "bg-danger"
+                                    attemptBgClass(a.result)
                                   )}
                                 />
                               );

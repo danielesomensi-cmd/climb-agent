@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import type { OutdoorRoute } from "@/lib/types";
 import { deriveTryTimings, lastTryMs, routeHasTimestamps } from "@/lib/try-timings";
 import { TryBreakdown } from "./try-breakdown";
+import { attemptBgClass, attemptLabel, isSendResult } from "@/lib/outdoor-result";
 
 /**
  * A226 / A227 — log routes LIVE during an active outdoor session.
@@ -337,7 +338,7 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
       {routes.length > 0 && (
         <ul className="space-y-1.5">
           {routes.map((r, i) => ({ r, i })).reverse().map(({ r, i }) => {
-            const sent = r.attempts.some((a) => a.result === "sent" || a.result === "topped_out");
+            const sent = r.attempts.some((a) => isSendResult(a.result));
             const firstTrySend = sent && r.attempts.length === 1;
             // A241 — timestamped routes: ticking "since last try" + expandable
             // per-try breakdown. Legacy routes (no logged_at): old totals.
@@ -363,11 +364,11 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
                     {r.attempts.map((a, ai) => (
                       <span key={ai}
                         title={[
-                          a.result,
+                          attemptLabel(a.result),
                           typeof a.climb_seconds === "number" ? `climb ${fmt(a.climb_seconds)}` : null,
                           typeof a.rest_seconds === "number" ? `rest ${fmt(a.rest_seconds)}` : null,
                         ].filter(Boolean).join(" · ")}
-                        className={`inline-block size-2 rounded-full ${a.result === "sent" || a.result === "topped_out" ? "bg-success" : "bg-danger"}`} />
+                        className={`inline-block size-2 rounded-full ${attemptBgClass(a.result)}`} />
                     ))}
                   </span>
                   <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground">

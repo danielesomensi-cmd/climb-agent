@@ -18,6 +18,7 @@ import { displayBoulderGrade, hardestGrade, gradeRank, type BoulderGradeSystem }
 import OutdoorLogForm from "@/components/training/OutdoorLogForm";
 import { deriveTryTimings, routeHasTimestamps } from "@/lib/try-timings";
 import { TryBreakdown } from "@/components/outdoor/try-breakdown";
+import { isSendResult } from "@/lib/outdoor-result";
 
 // ---------------------------------------------------------------------------
 // Route aggregation (A180)
@@ -43,10 +44,6 @@ const STYLE_LABEL: Record<string, string> = {
   repeat: "repeat",
   project: "projecting",
 };
-
-function isSendResult(result: string): boolean {
-  return result === "sent" || result === "topped_out";
-}
 
 /**
  * B181/A227 — effective style of a single route WITHIN one session.

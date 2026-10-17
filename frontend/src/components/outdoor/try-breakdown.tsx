@@ -1,5 +1,6 @@
 import type { OutdoorAttempt } from "@/lib/types";
 import type { TryTiming } from "@/lib/try-timings";
+import { attemptGlyph, attemptLabel, attemptTextClass } from "@/lib/outdoor-result";
 
 /**
  * A241 — read-only per-try rest/climb rows for one route:
@@ -22,12 +23,11 @@ export function TryBreakdown({ attempts, timings }: { attempts: OutdoorAttempt[]
   return (
     <ul className="space-y-0.5 font-mono text-[11px] text-muted-foreground">
       {attempts.map((a, i) => {
-        const sent = a.result === "sent" || a.result === "topped_out";
         const t = timings[i];
         return (
           <li key={i} className="flex items-center gap-1.5">
-            <span className={sent ? "text-success" : "text-danger"} aria-hidden="true">
-              {sent ? "✓" : "✗"}
+            <span className={attemptTextClass(a.result)} title={attemptLabel(a.result)} aria-hidden="true">
+              {attemptGlyph(a.result)}
             </span>
             <span className="text-foreground/80">try {i + 1}</span>
             <span aria-hidden="true">·</span>
