@@ -215,7 +215,28 @@ def test_multiplier_of_one_is_not_stamped():
 def test_planner_stays_deterministic_under_a_taper():
     kwargs = _kwargs(pretrip_dates=["2026-10-17", "2026-10-18"],
                      taper_volume={d: TAPER_WEEK2_VOLUME for d in ALL_WEEK})
-    assert generate_phase_week(**kwargs) == generate_phase_week(**kwargs)
+    assert _week_without_timestamp(**kwargs) == _week_without_timestamp(**kwargs)
+
+
+def test_taper_determinism_survives_a_second_boundary(monkeypatch):
+    """B388: same straddle as the no-pretrip test above — ``generated_at``
+    (planner_v2.py:3029, second resolution) differed between the two
+    generations whenever the run crossed a second boundary."""
+    import datetime as _dt
+
+    import backend.engine.planner_v2 as pv2
+
+    class _Tick(_dt.datetime):
+        calls = 0
+
+        @classmethod
+        def now(cls, tz=None):
+            cls.calls += 1
+            return _dt.datetime(2026, 10, 17, 12, 20, 0) + _dt.timedelta(seconds=cls.calls)
+
+    monkeypatch.setattr(pv2, "datetime", _Tick)
+    test_planner_stays_deterministic_under_a_taper()
+    assert _Tick.calls >= 2  # the patched clock was really read
 
 
 # ─── _apply_taper_volume ─────────────────────────────────────────────────────
