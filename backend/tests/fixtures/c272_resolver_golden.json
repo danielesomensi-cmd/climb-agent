@@ -743,7 +743,7 @@
    ]
   },
   "advanced|2026-10-07|treadmill_zone2_cardio": {
-   "digest": "1bb67824e0130667c82acdecb06e461eda4f5b42368b07aef4b0460997b0a37d",
+   "digest": "c33b31fab66eca698027d12e56210cacbf67a7398f5ad9820a697189b1f0a70e",
    "exercise_ids": [
     "treadmill_incline_walk",
     "hip_opener_flow"
@@ -1225,7 +1225,7 @@
    ]
   },
   "advanced|2026-10-21|treadmill_zone2_cardio": {
-   "digest": "2f92c8a0a57136530933448eb884c54c4b1ffd4e0bbfdb3d950a2784f82bcaac",
+   "digest": "c767208e8bef2372bbe7bf9435bd5969e9932716340844fa82924897da6a4f14",
    "exercise_ids": [
     "treadmill_incline_walk",
     "hip_opener_flow"
@@ -1716,7 +1716,7 @@
    ]
   },
   "intermediate|2026-10-07|treadmill_zone2_cardio": {
-   "digest": "1bb67824e0130667c82acdecb06e461eda4f5b42368b07aef4b0460997b0a37d",
+   "digest": "c33b31fab66eca698027d12e56210cacbf67a7398f5ad9820a697189b1f0a70e",
    "exercise_ids": [
     "treadmill_incline_walk",
     "hip_opener_flow"
@@ -2198,7 +2198,7 @@
    ]
   },
   "intermediate|2026-10-21|treadmill_zone2_cardio": {
-   "digest": "2f92c8a0a57136530933448eb884c54c4b1ffd4e0bbfdb3d950a2784f82bcaac",
+   "digest": "c767208e8bef2372bbe7bf9435bd5969e9932716340844fa82924897da6a4f14",
    "exercise_ids": [
     "treadmill_incline_walk",
     "hip_opener_flow"
@@ -2689,7 +2689,7 @@
    ]
   },
   "untested|2026-10-07|treadmill_zone2_cardio": {
-   "digest": "1bb67824e0130667c82acdecb06e461eda4f5b42368b07aef4b0460997b0a37d",
+   "digest": "c33b31fab66eca698027d12e56210cacbf67a7398f5ad9820a697189b1f0a70e",
    "exercise_ids": [
     "treadmill_incline_walk",
     "hip_opener_flow"
@@ -3171,7 +3171,7 @@
    ]
   },
   "untested|2026-10-21|treadmill_zone2_cardio": {
-   "digest": "2f92c8a0a57136530933448eb884c54c4b1ffd4e0bbfdb3d950a2784f82bcaac",
+   "digest": "c767208e8bef2372bbe7bf9435bd5969e9932716340844fa82924897da6a4f14",
    "exercise_ids": [
     "treadmill_incline_walk",
     "hip_opener_flow"

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle, Check, ChevronDown, SkipForward, Lightbulb, Film, Info, Timer, Play, Square, MessageSquare } from "lucide-react";
+import { AlertTriangle, Check, ChevronDown, Heart, SkipForward, Lightbulb, Film, Info, Timer, Play, Square, MessageSquare } from "lucide-react";
 import type { GuidedExercise, HangMargin, LimitProblem, LimitProblemDraft } from "@/lib/types";
 import { ExerciseTimer } from "@/components/guided/exercise-timer";
 import { FeedbackPills } from "@/components/guided/feedback-pills";
@@ -15,6 +15,7 @@ import { MeasureInput } from "@/components/training/measured-feedback-inputs";
 import { LadderBadge } from "@/components/training/ladder-badge";
 import { OVERHOLD_CAP_S, type MeasureValues } from "@/lib/measured-feedback";
 import { tapFeedback } from "@/lib/haptics";
+import { hrTargetLines } from "@/lib/hr-zones";
 import { displayPrescribedGrade } from "@/lib/gradeUtils";
 import { LimitProblemLogger } from "@/components/training/limit-problem-logger";
 import { limitFeedbackFields, limitTargetFor } from "@/lib/limit-problems";
@@ -23,6 +24,8 @@ interface GuidedExerciseStepProps {
   exercise: GuidedExercise;
   isTestSession?: boolean;
   bodyweightKg?: number;
+  /** A316: athlete HRmax (bpm) — cardio rows show their band in bpm; null = in %. */
+  hrMax?: number | null;
   /** A295: `feedbackLabel` null = not rated; `measures` the optional last-set reps / hang margin / timed hold. A296: `problems` the limit problem log. */
   onDone: (feedbackLabel: string | null, usedLoad?: number, usedGrade?: string, usedTotalLoad?: number, testMeasurement?: number, perHand?: { right?: number; left?: number; right_reps?: number; left_reps?: number }, measures?: MeasureValues, problems?: LimitProblem[], surface?: string) => void;
   onSkip: () => void;
@@ -96,6 +99,7 @@ export function GuidedExerciseStep({
   exercise,
   isTestSession,
   bodyweightKg,
+  hrMax = null,
   onDone,
   onSkip,
   onSetChange,
@@ -332,6 +336,7 @@ export function GuidedExerciseStep({
     return null;
   })();
   const heroLine = prescriptionLines[0] ?? null;
+  const hrLines = hrTargetLines(exercise.hrTarget, hrMax);
   // The "Load: X kg" line is dropped only when the hero already shows that load.
   const heroShowsPrescribedLoad =
     heroTarget != null && !!exercise.prescription.loadKg && heroTarget === `${exercise.prescription.loadKg} kg`;
@@ -570,6 +575,17 @@ export function GuidedExerciseStep({
               <p className="text-sm text-muted-foreground">{detailLines.join(" · ")}</p>
             )}
           </div>
+        )}
+
+        {/* A316: heart-rate band of cardio rows, in bpm when HRmax is set */}
+        {hrLines.length > 0 && (
+          <div className="flex items-center gap-2 text-sm font-medium tabular-nums" data-testid="hr-target">
+            <Heart className="size-4 shrink-0 text-destructive" aria-hidden />
+            <span>{hrLines.join(" · ")}</span>
+          </div>
+        )}
+        {hrLines.length > 0 && hrMax == null && (
+          <p className="text-xs text-muted-foreground">Set your max heart rate in Settings to see these in bpm.</p>
         )}
 
         {/* Exercise timer — shown for timed exercises AND multi-set rep-based exercises */}

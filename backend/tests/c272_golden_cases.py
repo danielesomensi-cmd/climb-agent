@@ -37,6 +37,12 @@ changed) on the 3 home keys; ``strength_long`` / ``technique_focus_gym`` on the
 3 gym keys change only in the ``equipment_required`` field of their
 ``fall_practice`` instance (``[]`` → ``["gym_routes"]``, the catalog moved the
 requirement from ``equipment_required_any``) — same ids, same prescriptions.
+
+A316 changed 6 keys, all ``treadmill_zone2_cardio`` (3 profiles × 2 dates), digest
+only: ``treadmill_incline_walk`` gains the catalog ``hr_target`` band and its HR
+cue drops the age formula. Same ids, same order, same prescriptions;
+``other_engines`` unchanged. Checked by diffing ``compute()`` run under pytest on
+origin/main @ 401bf63 against the A316 tree.
 """
 
 from __future__ import annotations

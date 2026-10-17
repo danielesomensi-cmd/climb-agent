@@ -1403,6 +1403,10 @@ def _resolve_inline_block(
                 "block_id": block_id,
             },
         }
+        # A316: heart-rate band (% of HRmax) — passed through as data, the bpm
+        # are computed at display time from body.hr_max_bpm.
+        if selected_ex.get("hr_target"):
+            inst["hr_target"] = dict(selected_ex["hr_target"])
         # C276: a catalog block may ask to sit right after the warm-up
         # (`"order": "after_warmup"` — the falls of route_projecting_gym /
         # lead_tryhard_gym). Carried on the instance only when declared, so no
@@ -2078,6 +2082,8 @@ def resolve_session(
                         "block_id": block_id
                     }
                 }
+                if selected_ex.get("hr_target"):  # A316, see above
+                    inst["hr_target"] = dict(selected_ex["hr_target"])
                 if ex_attrs.get("intensity_pct") is not None:
                     sug = suggest_max_hang_load(user_state, merged, exercise_attrs=ex_attrs)
                     if sug:

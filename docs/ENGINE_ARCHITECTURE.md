@@ -1030,6 +1030,12 @@ user_state["week_plans"]["2026-03-24"] = {
 }
 ```
 
+Cardio instances whose catalog exercise has an `hr_target` (A316) carry it
+unchanged — `{"basis": "hr_max", "work_pct": [90, 95], "recovery_pct": [65, 75]}`.
+The resolver only copies it; bpm are computed at display time from
+`body.hr_max_bpm` (see `vocabulary_v1.md` §2.1). Instances without a band keep
+their shape.
+
 > The `adjustments.per_exercise` multiplier structure (A245 E-4) and the
 > `cooldowns.per_cluster` structure (B299) that used to be documented here were
 > both removed — neither was ever written in production. Reactive adaptation is

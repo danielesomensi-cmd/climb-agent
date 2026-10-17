@@ -14422,7 +14422,7 @@
       "description": "Steady-state Zone 2 aerobic work on an inclined treadmill. The most climber-friendly cardio option: walking uphill delivers the same aerobic stimulus as running with a fraction of the joint impact and almost no calf soreness, so it does not compete with the next climbing session. It also rehearses the exact demand of a long crag approach. Aerobic base supports recovery between redpoint attempts and across consecutive days on a climbing trip — it does not build finger strength, and it is not meant to.",
       "cues": [
         "Incline 10-12%, speed 5-5.5 km/h. Walking, not running — impact is the thing being avoided",
-        "Target 60-70% of max heart rate. Estimate max as 208 - (0.7 x age), or use a measured value",
+        "Target 60-70% of max heart rate. Use a measured max heart rate (Settings, profile): the age formula can be off by 10 bpm or more",
         "Note: the default Zone 2 on most sport watches sits below the physiological aerobic threshold — aim for the top of that band, not the middle",
         "Talk test: you must be able to say a full sentence without breaking the breath",
         "Do not hold the handrails — it offloads the legs and voids the incline",
@@ -14433,7 +14433,14 @@
       "phase_affinity": [
         "base",
         "deload"
-      ]
+      ],
+      "hr_target": {
+        "basis": "hr_max",
+        "work_pct": [
+          60,
+          70
+        ]
+      }
     },
     {
       "id": "treadmill_hiit_4x4",
@@ -14464,7 +14471,7 @@
         "work_seconds": 240,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 180,
-        "notes": "4 x 4 min at 85-95% of max heart rate, 3 min easy walk between intervals. Incline 4-8%: running uphill reaches the target heart rate at a lower speed and with less impact. Finish with 2-3 min of easy walking."
+        "notes": "4 x 4 min at 90-95% of max heart rate, reached by the second minute; 3 min easy jog at about 70% between intervals (Helgerud 2007). Incline 4-8%: running uphill reaches the target heart rate at a lower speed and with less impact. Finish with 2-3 min of easy walking."
       },
       "stress_tags": {
         "fingers": "none",
@@ -14474,9 +14481,9 @@
       },
       "description": "The classic 4x4 interval protocol (Helgerud 2007) run on an inclined treadmill: four 4-minute bouts close to maximal aerobic power, separated by 3 minutes of active recovery. It is the most time-efficient way to raise VO2max, which supports recovery between redpoint attempts and long days at the crag. Zero finger and elbow load, but it is a genuinely hard systemic session: one per week is enough, never on the day of or the day before a maximal climbing session.",
       "cues": [
-        "Intervals at 85-95% of max heart rate: hard but sustainable for the full 4 minutes, not a sprint",
+        "Intervals at 90-95% of max heart rate: hard but sustainable for the full 4 minutes, not a sprint",
         "Set the incline at 4-8% and choose the speed that holds the target heart rate, not the other way round",
-        "Recovery is an easy walk, not a stop: keep moving for the full 3 minutes",
+        "Recovery is an easy jog at about 70% of max heart rate, not a walk or a stop: keep running for the full 3 minutes",
         "Do not hold the handrails - it offloads the legs and voids the incline",
         "If the last interval cannot be held at the target, the first ones were too fast"
       ],
@@ -14487,7 +14494,18 @@
       ],
       "sources": [
         "https://pubmed.ncbi.nlm.nih.gov/17414804/"
-      ]
+      ],
+      "hr_target": {
+        "basis": "hr_max",
+        "work_pct": [
+          90,
+          95
+        ],
+        "recovery_pct": [
+          65,
+          75
+        ]
+      }
     },
     {
       "id": "stationary_bike_zone2",
@@ -14538,7 +14556,14 @@
       "phase_affinity": [
         "base",
         "deload"
-      ]
+      ],
+      "hr_target": {
+        "basis": "hr_max",
+        "work_pct": [
+          60,
+          70
+        ]
+      }
     },
     {
       "id": "easy_run_zone2",
@@ -14587,7 +14612,14 @@
       "phase_affinity": [
         "base",
         "deload"
-      ]
+      ],
+      "hr_target": {
+        "basis": "hr_max",
+        "work_pct": [
+          60,
+          70
+        ]
+      }
     },
     {
       "id": "approach_hike_loaded",
@@ -14637,7 +14669,14 @@
       "phase_affinity": [
         "base",
         "deload"
-      ]
+      ],
+      "hr_target": {
+        "basis": "hr_max",
+        "work_pct": [
+          60,
+          70
+        ]
+      }
     },
     {
       "id": "tuck_l_sit",

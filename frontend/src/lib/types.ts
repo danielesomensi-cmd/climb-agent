@@ -1,3 +1,4 @@
+import type { HrTarget } from "@/lib/hr-zones";
 // -----------------------------------------------------------------------
 // API response types
 // -----------------------------------------------------------------------
@@ -1031,6 +1032,8 @@ export interface GuidedExercise {
 
   videoUrl?: string;
   cues?: string[];
+  /** A316: heart-rate band of a cardio row (% of HRmax, from the catalog). */
+  hrTarget?: HrTarget;
 
   // Limitation system (B38)
   limitationWarning?: "monitor" | "active" | "severe";

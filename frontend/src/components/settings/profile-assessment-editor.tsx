@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { HR_MAX_MAX, HR_MAX_MIN, HR_REST_MAX, HR_REST_MIN } from "@/lib/hr-zones";
 import {
   Select,
   SelectContent,
@@ -66,6 +67,9 @@ export function ProfileAssessmentEditor({
   // Body
   const [weightKg, setWeightKg] = useState<string>("");
   const [heightCm, setHeightCm] = useState<string>("");
+  // A316: heart rate (bpm) — drives the bpm bands of cardio exercises
+  const [hrMax, setHrMax] = useState<string>("");
+  const [hrRest, setHrRest] = useState<string>("");
 
   // Grades
   const [leadMaxRp, setLeadMaxRp] = useState<string>("");
@@ -93,6 +97,8 @@ export function ProfileAssessmentEditor({
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setWeightKg(body.weight_kg != null ? String(body.weight_kg) : "");
       setHeightCm(body.height_cm != null ? String(body.height_cm) : "");
+      setHrMax(body.hr_max_bpm != null ? String(body.hr_max_bpm) : "");
+      setHrRest(body.hr_rest_bpm != null ? String(body.hr_rest_bpm) : "");
       setLeadMaxRp(grades.lead_max_rp ?? "");
       setLeadMaxOs(grades.lead_max_os ?? "");
       setBoulderMaxRp(grades.boulder_max_rp ?? "");
@@ -117,15 +123,29 @@ export function ProfileAssessmentEditor({
       return "Il grado RP deve essere ≥ del grado OS (boulder)";
     return null;
   })();
-  const isValid = leadMaxRp !== "" && leadMaxOs !== "" && !rpOsError;
+  const hrError = (() => {
+    const max = hrMax === "" ? null : Number(hrMax);
+    const rest = hrRest === "" ? null : Number(hrRest);
+    if (max != null && (!Number.isFinite(max) || max < HR_MAX_MIN || max > HR_MAX_MAX))
+      return `Max heart rate must be between ${HR_MAX_MIN} and ${HR_MAX_MAX} bpm`;
+    if (rest != null && (!Number.isFinite(rest) || rest < HR_REST_MIN || rest > HR_REST_MAX))
+      return `Resting heart rate must be between ${HR_REST_MIN} and ${HR_REST_MAX} bpm`;
+    return null;
+  })();
+  const isValid = leadMaxRp !== "" && leadMaxOs !== "" && !rpOsError && !hrError;
 
   function buildPatch(): Record<string, unknown> {
     const patch: Record<string, unknown> = {};
 
     // Body
-    const bodyPatch: Record<string, number> = {};
+    const bodyPatch: Record<string, number | string> = {};
     if (weightKg !== "") bodyPatch.weight_kg = parseFloat(weightKg);
     if (heightCm !== "") bodyPatch.height_cm = parseFloat(heightCm);
+    if (hrMax !== "") {
+      bodyPatch.hr_max_bpm = Math.round(Number(hrMax));
+      bodyPatch.hr_max_source = "measured";
+    }
+    if (hrRest !== "") bodyPatch.hr_rest_bpm = Math.round(Number(hrRest));
     if (Object.keys(bodyPatch).length > 0) patch.body = bodyPatch;
 
     // Grades
@@ -208,7 +228,40 @@ export function ProfileAssessmentEditor({
                       onChange={(e) => setHeightCm(e.target.value)}
                     />
                   </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="pa-hrmax">Max heart rate (bpm)</Label>
+                    <Input
+                      id="pa-hrmax"
+                      type="number"
+                      inputMode="numeric"
+                      step="1"
+                      min={HR_MAX_MIN}
+                      max={HR_MAX_MAX}
+                      placeholder="e.g. 190"
+                      value={hrMax}
+                      onChange={(e) => setHrMax(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="pa-hrrest">Resting heart rate (bpm)</Label>
+                    <Input
+                      id="pa-hrrest"
+                      type="number"
+                      inputMode="numeric"
+                      step="1"
+                      min={HR_REST_MIN}
+                      max={HR_REST_MAX}
+                      placeholder="e.g. 55"
+                      value={hrRest}
+                      onChange={(e) => setHrRest(e.target.value)}
+                    />
+                  </div>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Use the highest heart rate you have actually measured (watch or chest strap), not an
+                  age formula. Cardio exercises then show their target in bpm.
+                </p>
+                {hrError && <p className="text-xs text-destructive">{hrError}</p>}
               </div>
 
               {/* Grades */}

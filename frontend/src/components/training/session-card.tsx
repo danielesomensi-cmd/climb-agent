@@ -167,6 +167,7 @@ function buildGuidedExercise(inst: Record<string, unknown>): GuidedExercise {
     },
     videoUrl: (inst.video_url as string | undefined) ?? undefined,
     cues: (inst.cues as string[] | undefined) ?? undefined,
+    hrTarget: (inst.hr_target as GuidedExercise["hrTarget"]) ?? undefined,  // A316
     status: "pending",
     feedbackLabel: null,  // A295: nothing pre-selected
     testField: (inst.attributes as Record<string, unknown> | undefined)?.test_field as string | undefined,

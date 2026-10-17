@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { TopBar } from "@/components/layout/top-bar";
 import { useUserState } from "@/lib/hooks/use-state";
+import { hrMaxFromState } from "@/lib/hr-zones";
 import { useWeekPlan } from "@/lib/hooks/queries/use-week-plan";
 import { computeAssessment, generateMacrocycle, deleteState, putState, getWeek, getOutdoorSpots, addOutdoorSpot, deleteOutdoorSpot, exportUserState, importUserState, createBillingPortal } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
@@ -476,6 +477,13 @@ export default function SettingsPage() {
                   value={(() => {
                     const h = assessment?.body?.height_cm ?? body?.height_cm ?? user.height_cm;
                     return h != null ? `${h} cm` : "—";
+                  })()}
+                />
+                <InfoRow
+                  label="Max heart rate"
+                  value={(() => {
+                    const hm = hrMaxFromState(state);
+                    return hm != null ? `${hm} bpm` : "—";
                   })()}
                 />
                 <InfoRow
