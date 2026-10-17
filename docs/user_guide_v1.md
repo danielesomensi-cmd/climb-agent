@@ -612,6 +612,8 @@ You can regenerate your plan from **Settings**:
 
 If keeping your sessions puts two finger days back to back or goes over your hard-day cap, the rebuilt week records an alert about it — it does not change your sessions or the app's own ones for you.
 
+**A week rebuilt mid-week counts what you already did.** The hard and finger sessions you marked done earlier in the week (today included) count toward your weekly limit of hard days and the recovery gaps, and a session you already did is not planned again that week. A past session you never marked done does not count.
+
 Changing your availability or planning preferences now updates the weeks already planned (current and future), not only the weeks you have not opened yet. If a week cannot be rebuilt for a technical reason, you keep seeing your current plan unchanged and the app tries again the next time you open it.
 
 ---

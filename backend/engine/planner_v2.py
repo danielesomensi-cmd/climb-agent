@@ -1686,6 +1686,40 @@ def generate_phase_week(
     crag_in_week = [o for o in crag_offsets if o >= 0]
     hard_days += len(crag_in_week)
 
+    # B390: the days of this week already lived. A mid-week regeneration used
+    # to start the counters empty, so the remaining days could break the hard
+    # cap, the 48 h gaps and anti-repetition against sessions done on Monday–
+    # Wednesday (the merge then put those days back, and guards_v1 flagged the
+    # engine's own placements). Only sessions marked done count (decided
+    # 2026-10-17: a past session never marked did not happen as far as the
+    # plan knows), only sessions of the plan (free sessions / crag logs off the
+    # plan: no), days before today plus today's done sessions. Crag days are
+    # B382(b)'s. Same flag reading as guards_v1 (``session_flag``: own tags,
+    # else ``_SESSION_META``). Ascending offsets, after B161's negatives: PASS
+    # 1's backwards gap check reads the last element.
+    _past_hard_offsets: List[int] = []
+    if _same_week and today_date is not None:
+        from backend.engine.stimulus import session_flag as _flag
+        _lived_by = {str(d.get("date"))[:10]: d for d in _plan_days_list(existing_week_plan)}
+        for offset in range(7):
+            if day_dates[offset] > today_date or offset in crag_in_week:
+                continue
+            _ld = _lived_by.get(day_dates[offset].isoformat())
+            done = [s for s in (_ld or {}).get("sessions") or []
+                    if isinstance(s, dict) and s.get("status") == "done"]
+            if not done:
+                continue
+            if any(_flag(s, "hard") for s in done):
+                hard_days += 1
+                hard_day_offsets.append(offset)
+                _past_hard_offsets.append(offset)
+            if any(_flag(s, "finger") for s in done):
+                finger_day_offsets.append(offset)
+            for s in done:
+                _sid = str(s.get("session_id") or "")
+                if _sid:
+                    session_count[_sid] = session_count.get(_sid, 0) + 1
+
     def _near_crag(offset: int, finger: bool, hard: bool) -> bool:
         """B382(b): a finger / hard session within its gap of a crag day, on
         either side (PASS 1 / 1.5 check spacing backwards only)."""
@@ -2672,8 +2706,9 @@ def generate_phase_week(
                     finger_day_offsets.append(offset)
                 if meta.get("hard") and offset not in hard_day_offsets:
                     hard_day_offsets.append(offset)
-            hard_days = sum(1 for o in range(7) if any((e.get("tags") or {}).get("hard") for e in day_sessions[o])) \
-                + len(crag_in_week)  # B382(b): the crag days stay counted
+            hard_days = sum(1 for o in range(7) if o not in _past_hard_offsets
+                            and any((e.get("tags") or {}).get("hard") for e in day_sessions[o])) \
+                + len(crag_in_week) + len(_past_hard_offsets)  # B382(b) crag days, B390 lived days stay counted
             _rd_placed_offsets.add(offset)
             if any(_SESSION_META[e["session_id"]].get("finger") for e in new_entries):
                 _rd_hang_offsets.append(offset)
@@ -3113,9 +3148,9 @@ def generate_phase_week(
         for day_list in day_sessions for s in day_list
     )
     hard_days_count = sum(
-        1 for day_list in day_sessions
-        if any(s.get("tags", {}).get("hard") for s in day_list)
-    )
+        1 for o, day_list in enumerate(day_sessions)
+        if o not in _past_hard_offsets and any(s.get("tags", {}).get("hard") for s in day_list)
+    ) + len(_past_hard_offsets)  # B390: the hard days already lived this week
     recovery_days_count = sum(
         1 for day_list in day_sessions
         if not day_list or all(s.get("intensity") == "low" for s in day_list)

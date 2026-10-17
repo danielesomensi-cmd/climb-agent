@@ -1,6 +1,6 @@
 # B390 — a mid-week regeneration ignores the hard sessions already done this week
 
-**Type:** B (bugfix) · **Status:** Phase 1 (analysis) — **STOP**, waiting for Daniele's OK
+**Type:** B (bugfix) · **Status:** ✅ Done (2026-10-17) — Daniele: option A, done-only, plan sessions only
 **Origin:** out-of-scope finding of [[B382]] (2026-10-17) · **STOP-gated module:** `planner_v2.py` (yes)
 
 ## Symptom
