@@ -224,7 +224,7 @@ user_state.assessment + user_state.goal
 | GET | `/api/reports/weekly` | Weekly training report |
 | GET | `/api/reports/monthly` | Monthly training report |
 | GET | `/api/reports/heatmap` | Monthly rest-positive heatmap cells (`?month=YYYY-MM`) |
-| GET | `/api/quotes/daily` | Daily motivational quote |
+| GET | `/api/quotes/daily` | Daily motivational quote. **B384**: pure function of (user, day, context) — optional client-local `?date=`; writes `quote_history` at most once per new quote, under the user write lock (no more full-state save on every GET) |
 | GET | `/api/tips/daily` | Daily feature-discovery tip (deterministic per user, `?date=` client-local) |
 | POST | `/api/tips/{tip_id}/dismiss` | Dismiss today's tip (per-day, idempotent) |
 | GET | `/api/milestones` | Milestone catalog + per-user unlock status (lazy eval) |
