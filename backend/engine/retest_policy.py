@@ -802,8 +802,11 @@ def _locked_by_merge(state: Mapping[str, Any], ws: date, today: Optional[date]) 
     the same predicate the merge uses. B369 review: the merge also drops the
     engine sessions the user took out — every slot of a date replaced wholesale
     (``whole_day_override_dates``) and the slots of the recorded removals
-    (``removed_refs``) — so a test placed there would vanish just the same."""
-    from backend.engine.user_owned import is_preservable, removed_refs, whole_day_override_dates
+    (``removed_refs``) — so a test placed there would vanish just the same.
+    B379: the dates replaced wholesale are ``engine_free_dates`` — the
+    whole-day overrides plus every outdoor day declared on the plan (the merge
+    copies those back as they were: a test is never placed on a crag day)."""
+    from backend.engine.user_owned import engine_free_dates, is_preservable, removed_refs
 
     slots: List[Dict[str, Any]] = []
     dates: List[str] = []
@@ -814,7 +817,7 @@ def _locked_by_merge(state: Mapping[str, Any], ws: date, today: Optional[date]) 
         d = _parse_date(d_iso)
         return d is not None and (today is None or d >= today)
 
-    for d_iso in whole_day_override_dates(plan or {}):
+    for d_iso in engine_free_dates(plan or {}):
         if _future(d_iso[:10]) and d_iso[:10] not in dates:
             dates.append(d_iso[:10])
     for d_iso, ref, slot in removed_refs(plan or {}):
@@ -836,7 +839,8 @@ def _locked_by_merge(state: Mapping[str, Any], ws: date, today: Optional[date]) 
             any(x.get("status") == "done" for x in sessions)
             or day.get("outdoor_session_status") == "done"
         ):
-            dates.append(d_iso)
+            if d_iso not in dates:
+                dates.append(d_iso)
             continue
         for x in sessions:
             if is_preservable(x) and x.get("slot"):

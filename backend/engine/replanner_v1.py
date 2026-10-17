@@ -672,6 +672,10 @@ def _merge_user_content(
       days are immutable);
     - the *preserve_before* day itself with a done session or a done outdoor
       day → copied wholesale;
+    - B379: a day the user owns wholesale (``user_owned.engine_free_dates``:
+      an outdoor day declared on the plan — spot, pitch ladder, outdoor block
+      planned/done — or a whole-day override) → copied wholesale too, so a
+      planned crag day never receives an engine session;
     - every other day → the generated day, plus every preservable session of
       the old day (done/skipped/user-owned) byte-identical in its slot. An
       engine session the user removed (or moved away), and every engine
@@ -697,6 +701,10 @@ def _merge_user_content(
 
     removed = _uo.removed_refs(old_plan)
     whole_day = set(_uo.whole_day_override_dates(old_plan))
+    # B379: a day the user owns wholesale (outdoor declared on the plan, or a
+    # whole-day override) is copied exactly as it was — no engine session
+    # lands on a planned crag day.
+    engine_free = set(_uo.engine_free_dates(old_plan))
 
     new_days = (result.get("weeks") or [{}])[0].get("days", [])
     copied: set = set()  # indices copied wholesale: byte-identical, no recompute
@@ -725,6 +733,13 @@ def _merge_user_content(
                 new_days[i] = deepcopy(old_day)
                 copied.add(i)
                 continue
+
+        # B379: from preserve_before on, a day the user owns wholesale keeps
+        # the old day exactly (its sessions, its outdoor block, its status).
+        if old_day is not None and date_key in engine_free:
+            new_days[i] = deepcopy(old_day)
+            copied.add(i)
+            continue
 
         # Engine sessions of the generated day the user took out.
         engine = list(day.get("sessions") or [])
