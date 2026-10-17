@@ -82,7 +82,7 @@ def _label_width_px(route: dict) -> float:
     """Stima larghezza (px) delle due righe di etichetta di una via, per
     dimensionare la colonna — senza questo, un nome lungo ("A Route With a
     View") si sovrapponeva alla via accanto: nessun errore, solo un render
-    illeggibile (vedi lezione A278 in docs/lessons.md)."""
+    illeggibile (vedi lezione A278 in docs/lessons/2026-08.md)."""
     name = str(route.get("name", "?"))
     grade = str(route.get("grade", "?"))
     length = route.get("length_m")

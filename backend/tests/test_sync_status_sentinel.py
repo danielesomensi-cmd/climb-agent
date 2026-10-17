@@ -1,7 +1,7 @@
 """Sentinel tests for scripts/sync_status.py regex patterns.
 
 If these tests fail, sync_status.py has stopped matching the documented
-sentence structure of CLAUDE.md / PROJECT_BRIEF.md / README.md /
+sentence structure of CLAUDE.md / docs/API_ENDPOINTS.md / docs/FRONTEND.md / PROJECT_BRIEF.md / README.md /
 vocabulary_v1.md. See B-SYNC-FIX.
 
 Snapshots live in backend/tests/fixtures/sync_snapshots/. Update them ONLY
@@ -55,6 +55,18 @@ def claude_snapshot() -> str:
 
 
 @pytest.fixture(scope="module")
+def api_snapshot() -> str:
+    # D285: the endpoint header + table live in docs/API_ENDPOINTS.md
+    return (FIXTURE_DIR / "API_ENDPOINTS.md.snapshot").read_text()
+
+
+@pytest.fixture(scope="module")
+def frontend_snapshot() -> str:
+    # D285: the "Pages (N)" header lives in docs/FRONTEND.md
+    return (FIXTURE_DIR / "FRONTEND.md.snapshot").read_text()
+
+
+@pytest.fixture(scope="module")
 def brief_snapshot() -> str:
     return (FIXTURE_DIR / "PROJECT_BRIEF.md.snapshot").read_text()
 
@@ -69,9 +81,9 @@ def vocab_snapshot() -> str:
     return (FIXTURE_DIR / "vocabulary_v1.md.snapshot").read_text()
 
 
-def test_endpoint_header_regex_matches_claude(claude_snapshot):
-    assert re.search(ENDPOINT_HEADER_REGEX, claude_snapshot), (
-        "ENDPOINT_HEADER_REGEX no longer matches CLAUDE.md. If the endpoint "
+def test_endpoint_header_regex_matches_api_doc(api_snapshot):
+    assert re.search(ENDPOINT_HEADER_REGEX, api_snapshot), (
+        "ENDPOINT_HEADER_REGEX no longer matches docs/API_ENDPOINTS.md. If the endpoint "
         "header sentence was restructured, update both the regex in "
         "sync_status.py and the fixture. See B-SYNC-FIX."
     )
@@ -83,25 +95,30 @@ def test_router_header_regex_matches_claude(claude_snapshot):
     )
 
 
-def test_pages_header_regex_matches_claude(claude_snapshot):
-    assert re.search(PAGES_HEADER_REGEX, claude_snapshot), (
-        "PAGES_HEADER_REGEX no longer matches CLAUDE.md. See B-SYNC-FIX."
+def test_pages_header_regex_matches_frontend_doc(frontend_snapshot):
+    assert re.search(PAGES_HEADER_REGEX, frontend_snapshot), (
+        "PAGES_HEADER_REGEX no longer matches docs/FRONTEND.md. See B-SYNC-FIX."
     )
 
 
-def test_endpoint_total_parse_regex_matches_claude(claude_snapshot):
-    assert re.search(ENDPOINT_TOTAL_PARSE_REGEX, claude_snapshot), (
-        "ENDPOINT_TOTAL_PARSE_REGEX no longer matches CLAUDE.md. "
+def test_endpoint_total_parse_regex_matches_api_doc(api_snapshot):
+    assert re.search(ENDPOINT_TOTAL_PARSE_REGEX, api_snapshot), (
+        "ENDPOINT_TOTAL_PARSE_REGEX no longer matches docs/API_ENDPOINTS.md. "
         "See B-SYNC-FIX."
     )
 
 
-def test_endpoint_table_rows_present_in_claude(claude_snapshot):
-    rows = re.findall(ENDPOINT_TABLE_ROW_REGEX, claude_snapshot, re.MULTILINE)
+def test_endpoint_table_rows_present_in_api_doc(api_snapshot):
+    rows = re.findall(ENDPOINT_TABLE_ROW_REGEX, api_snapshot, re.MULTILINE)
     assert len(rows) > 0, (
-        "ENDPOINT_TABLE_ROW_REGEX found zero rows in CLAUDE.md. "
+        "ENDPOINT_TABLE_ROW_REGEX found zero rows in docs/API_ENDPOINTS.md. "
         "See B-SYNC-FIX."
     )
+
+
+def test_claude_no_longer_carries_endpoint_header(claude_snapshot):
+    """D285: a second endpoint header in CLAUDE.md would drift unsynced."""
+    assert not re.search(ENDPOINT_TOTAL_PARSE_REGEX, claude_snapshot)
 
 
 def test_status_table_markers_present_brief(brief_snapshot):

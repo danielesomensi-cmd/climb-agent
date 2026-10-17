@@ -7,11 +7,14 @@ Usage:
 Reads counts from the codebase and updates:
   - PROJECT_BRIEF.md  (status table between markers)
   - README.md         (status table between markers)
-  - CLAUDE.md         (endpoint total + router count + page count, inline)
+  - CLAUDE.md         (router count, inline)
+  - docs/API_ENDPOINTS.md (endpoint total header; table row count validated)
+  - docs/FRONTEND.md  (page count, inline)
+  (D285 moved the endpoint table and the frontend section out of CLAUDE.md.)
 
 Also runs validation checks and prints warnings for issues that cannot be
 auto-fixed (e.g., missing template IDs in vocabulary, vocab→disk orphans,
-CLAUDE.md endpoint header drift vs code).
+API_ENDPOINTS.md endpoint header drift vs code).
 
 No external dependencies — stdlib only (+ pytest subprocess).
 
@@ -23,7 +26,7 @@ of the brief that introduces the change.
 - Tech-stack tables (PROJECT_BRIEF.md tech stack section, ~lines 71-78)
 - Pricing rows (ROADMAP_CURRENT.md Priority 4 / Future)
 - GTM Sprint status callouts (ROADMAP_CURRENT.md Priority 1.75, ~lines 85-89)
-- The CLAUDE.md endpoint TABLE rows (only the inline header gets auto-updated;
+- The endpoint TABLE rows in docs/API_ENDPOINTS.md (only the header gets auto-updated;
   the table rows must be edited manually when adding/removing endpoints)
 - Any free-prose status assertion ("LIVE since YYYY-MM-DD", "TEST MODE",
   "temporarily disabled", etc.) anywhere in the doc tree
@@ -45,6 +48,8 @@ REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 BRIEF_PATH = os.path.join(REPO_ROOT, "PROJECT_BRIEF.md")
 README_PATH = os.path.join(REPO_ROOT, "README.md")
 CLAUDE_PATH = os.path.join(REPO_ROOT, "CLAUDE.md")
+API_ENDPOINTS_PATH = os.path.join(REPO_ROOT, "docs", "API_ENDPOINTS.md")
+FRONTEND_PATH = os.path.join(REPO_ROOT, "docs", "FRONTEND.md")
 VOCAB_PATH = os.path.join(REPO_ROOT, "docs", "vocabulary_v1.md")
 
 START_MARKER = "<!-- STATUS_TABLE_START -->"
@@ -227,47 +232,43 @@ def update_marker_file(path: str, counts: list[tuple[str, int]], label: str) -> 
     return True
 
 
-def update_claude(endpoints: int, routers: int, pages: int) -> bool:
-    """Update inline counts in CLAUDE.md (endpoints, routers, pages)."""
-    if not os.path.exists(CLAUDE_PATH):
+def _sub_file(path: str, label: str, subs: list) -> bool:
+    """Apply (regex, replacement) pairs to one doc; print what happened."""
+    if not os.path.exists(path):
+        print(f"  {label}: (missing)")
         return False
-
-    with open(CLAUDE_PATH) as f:
+    with open(path) as f:
         content = f.read()
-
     original = content
-
-    # Endpoint header: "N endpoints total (M router + 2 app-level: health check + stripe webhook)"
-    content = re.sub(
-        ENDPOINT_HEADER_REGEX,
-        f"{endpoints} endpoints total "
-        f"({endpoints - 2} router + 2 app-level: health check + stripe webhook)",
-        content,
-    )
-
-    # Router count in repo structure: "# FastAPI REST API (N routers)"
-    content = re.sub(
-        ROUTER_HEADER_REGEX,
-        f"# FastAPI REST API ({routers} routers)",
-        content,
-    )
-
-    # Page count: "**Pages (N):**"
-    content = re.sub(
-        PAGES_HEADER_REGEX,
-        f"**Pages ({pages}):**",
-        content,
-    )
-
+    for pattern, repl in subs:
+        content = re.sub(pattern, repl, content)
     if content == original:
-        print("  CLAUDE.md: (no changes)")
+        print(f"  {label}: (no changes)")
         return True
-
-    with open(CLAUDE_PATH, "w") as f:
+    with open(path, "w") as f:
         f.write(content)
-
-    print("  CLAUDE.md: updated endpoint/router/page counts")
+    print(f"  {label}: updated counts")
     return True
+
+
+def update_claude(endpoints: int, routers: int, pages: int) -> bool:
+    """Update inline counts: routers in CLAUDE.md, endpoints in
+    docs/API_ENDPOINTS.md, pages in docs/FRONTEND.md (layout since D285)."""
+    ok = _sub_file(CLAUDE_PATH, "CLAUDE.md", [
+        # Router count in repo structure: "# FastAPI REST API (N routers)"
+        (ROUTER_HEADER_REGEX, f"# FastAPI REST API ({routers} routers)"),
+    ])
+    ok &= _sub_file(API_ENDPOINTS_PATH, "docs/API_ENDPOINTS.md", [
+        # "N endpoints total (M router + 2 app-level: health check + stripe webhook)"
+        (ENDPOINT_HEADER_REGEX,
+         f"{endpoints} endpoints total "
+         f"({endpoints - 2} router + 2 app-level: health check + stripe webhook)"),
+    ])
+    ok &= _sub_file(FRONTEND_PATH, "docs/FRONTEND.md", [
+        # "**Pages (N):**"
+        (PAGES_HEADER_REGEX, f"**Pages ({pages}):**"),
+    ])
+    return ok
 
 
 # ── Vocab parsing ───────────────────────────────────────────────────
@@ -312,23 +313,23 @@ def parse_endpoint_header_total(claude_content: str) -> "int | None":
 
 
 def diagnostic_pre_update(real_count: int) -> None:
-    """Pre-sync diagnostic: log drift between code and CLAUDE.md header.
+    """Pre-sync diagnostic: log drift between code and the API_ENDPOINTS.md header.
 
     Not a warning — drift here is normal when sync is about to fix it.
     """
-    if not os.path.exists(CLAUDE_PATH):
+    if not os.path.exists(API_ENDPOINTS_PATH):
         return
-    with open(CLAUDE_PATH) as f:
+    with open(API_ENDPOINTS_PATH) as f:
         pre = f.read()
     pre_header = parse_endpoint_header_total(pre)
     if pre_header is None:
         print(
-            "  ℹ️  CLAUDE.md: cannot parse 'N endpoints total' header "
+            "  ℹ️  API_ENDPOINTS.md: cannot parse 'N endpoints total' header "
             "(regex broken? See ENDPOINT_TOTAL_PARSE_REGEX)."
         )
     elif pre_header != real_count:
         print(
-            f"  ℹ️  CLAUDE.md endpoint drift detected: "
+            f"  ℹ️  API_ENDPOINTS.md endpoint drift detected: "
             f"header={pre_header}, code={real_count} (will sync)"
         )
 
@@ -339,19 +340,19 @@ def guardrail_post_update(real_count: int, warnings: list[str]) -> None:
     A POST-SYNC DRIFT means the auto-update did not apply — typically because
     a regex in update_claude() does not match the live doc text (RC-1 class).
     """
-    if not os.path.exists(CLAUDE_PATH):
+    if not os.path.exists(API_ENDPOINTS_PATH):
         return
-    with open(CLAUDE_PATH) as f:
+    with open(API_ENDPOINTS_PATH) as f:
         post = f.read()
     post_header = parse_endpoint_header_total(post)
     if post_header is None:
         warnings.append(
-            "CLAUDE.md: cannot parse endpoint header line. update_claude() "
+            "API_ENDPOINTS.md: cannot parse endpoint header line. update_claude() "
             "regex may not match current text. See ENDPOINT_HEADER_REGEX."
         )
     elif post_header != real_count:
         warnings.append(
-            f"POST-SYNC DRIFT: CLAUDE.md endpoint header is {post_header} "
+            f"POST-SYNC DRIFT: API_ENDPOINTS.md endpoint header is {post_header} "
             f"but code has {real_count} endpoints. update_claude() did not "
             f"apply the fix — likely a broken regex. "
             f"See ENDPOINT_HEADER_REGEX in scripts/sync_status.py."
@@ -410,9 +411,9 @@ def validate(endpoints: int) -> list[str]:
                     f"list but no file at backend/catalog/sessions/v1/{sid}.json"
                 )
 
-    # Check CLAUDE.md endpoint table row count matches declared total
-    if os.path.exists(CLAUDE_PATH):
-        with open(CLAUDE_PATH) as f:
+    # Check docs/API_ENDPOINTS.md endpoint table row count matches declared total
+    if os.path.exists(API_ENDPOINTS_PATH):
+        with open(API_ENDPOINTS_PATH) as f:
             claude = f.read()
         table_rows = len(re.findall(
             ENDPOINT_TABLE_ROW_REGEX, claude, re.MULTILINE
@@ -420,7 +421,7 @@ def validate(endpoints: int) -> list[str]:
         declared = re.search(ENDPOINT_TOTAL_PARSE_REGEX, claude)
         if declared and table_rows != int(declared.group(1)):
             warnings.append(
-                f"CLAUDE.md: endpoint table has {table_rows} rows "
+                f"API_ENDPOINTS.md: endpoint table has {table_rows} rows "
                 f"but header declares {declared.group(1)}"
             )
 

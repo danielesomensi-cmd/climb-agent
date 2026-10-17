@@ -6,15 +6,12 @@ You are a senior software engineer building climb-agent — a climbing training 
 
 Author: Daniele **Somensi** (with an S, not Z).
 
-**Project posture (decided 2026-08-13, on the D274 audit):** climb-agent is a **personal tool** that happens to be
-publicly available. Active marketing is **paused** — the audit measured 11 real external users, 1
-of whom ever completed a session, and a lifetime net revenue of **−€0.47**. Nothing about the
-engineering bar changes: the app is live at climbagent.app, Stripe is LIVE, the subscription guard
-is fail-closed, and real people (including Daniele) train on it — so production defects are still
-production defects. What changes is **what work is worth doing**: build for the athlete using it,
-not for a funnel. Do not propose growth, acquisition or conversion work unless Daniele asks, and
-do not treat "more users" as an implicit goal of a brief. The decision reopens on one signal — a
-non-author user completing 3 sessions in 14 days (`GTM-07`).
+**Project posture (2026-08-13, D274 audit):** a **personal tool** that happens to be public. Marketing is **paused**
+(11 real external users, 1 ever completed a session, lifetime net revenue **−€0.47**). The engineering bar does not
+change — climbagent.app is live, Stripe is LIVE, the subscription guard is fail-closed, real people (Daniele included)
+train on it, so production defects are production defects. What changes is **what work is worth doing**: build for the
+athlete, not a funnel. No growth/acquisition/conversion work unless Daniele asks; "more users" is never an implicit goal.
+Reopens on one signal: a non-author user completing 3 sessions in 14 days (`GTM-07`).
 
 ## What climb-agent is
 
@@ -167,265 +164,39 @@ user_state.assessment + user_state.goal
 
 ## API endpoints
 
-98 endpoints total (96 router + 2 app-level: health check + stripe webhook). B320 retired `/api/user/recovery-code` and `/api/user/recover`.
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/health` | Health check |
-| GET | `/api/state` | Get full user state |
-| PUT | `/api/state` | Deep-merge patch into state |
-| GET | `/api/state/status` | Dirty-state check (is_macrocycle_stale) |
-| DELETE | `/api/state` | Reset state to empty |
-| GET | `/api/catalog/exercises` | List all exercises |
-| GET | `/api/catalog/sessions` | List all session metadata |
-| GET | `/api/onboarding/defaults` | Option lists for onboarding form |
-| POST | `/api/onboarding/complete` | Atomic: save state + assessment + macrocycle (B293: profile bounds → 422). A250: auto-starts the 15-day LOCAL trial (subscriptions row `trialing`, no Stripe objects; lazy expiry in guard; checkout/portal convert it carrying remaining days) |
-| POST | `/api/onboarding/start-week` | Shift macrocycle start_date back N weeks |
-| GET | `/api/onboarding/draft` | Server-side wizard draft for the user, or null (B293) |
-| PUT | `/api/onboarding/draft` | Save wizard draft (replace wholesale; wiped on complete; ignored if macrocycle exists) |
-| POST | `/api/assessment/compute` | Recompute 5-axis profile |
-| GET | `/api/assessment/grade-evidence` | A292 (R6b), read-only: does the outdoor log support a harder lead onsight than the declared one? Evidence = lead route, first appearance in the log, one `sent` attempt, style absent/onsight/flash; proposal = highest grade with ≥2 such routes on 2 days or 2 crags, only upward, never above the RP, never a declined grade. Trip-only evidence is flagged (`all_in_trip`), not blocked |
-| POST | `/api/assessment/confirm-grade` | A292: confirm (`onsight`/`flash`/`worked` per route) or dismiss the proposal. Confirm writes `grades.lead_max_os` + `grades_source` and rebuilds `current_level`; dismiss writes `grade_evidence_dismissed`; worked routes leave the evidence for good. 422 on unknown route / insufficient evidence / not above current / above RP. Never rewrites the outdoor log |
-| POST | `/api/public/assessment` | **Unauthenticated** (A262). 5-axis profile from six answers — acquisition surface for `/assessment`. Stateless: no `get_user_id`, no state read/write, nothing persisted. Rate-limited 20/min (per-IP, no user to key on). Rejects what it cannot score honestly: unknown grade → 422 (never a silent `grade_index` 0), onsight above redpoint → 422, missing grades → 422 instead of the engine's `7a`/`7c+` defaults. Boulder input in Font, mapped through `BOULDER_TO_LEAD` so it is scored against the same benchmarks as lead. **A263**: accetta anche `bodyweight_kg` + `max_hang_added_kg` / `weighted_pullup_added_kg` (peso **aggiunto**, negativo se assistito; il totale lo calcola il router). Numeri senza peso corporeo → 422, perché il fallback a 70 kg del motore riscalerebbe in silenzio il dato dell'utente. Risponde `measured_axes[]` (assi retti da un numero reale) e `estimated` = lista vuota. |
-| POST | `/api/macrocycle/generate` | Generate new macrocycle |
-| POST | `/api/macrocycle/start-new-cycle` | Start fresh macrocycle (atomic: archive → goal review → generate → flag tests). Subscription-gated. |
-| POST | `/api/plan/pause` | Pause active plan (A223 — records pause start; idempotent) |
-| POST | `/api/plan/resume` | Resume paused plan (A223 — shift future weeks by whole-week offset, extend end_date; idempotent) |
-| GET | `/api/week/{week_num}` | Generate week plan (auto-resolves sessions). **A294**: `key_status` sibling of `week_plan` (key sessions of the phase, debt, validated re-schedule proposal, conflicts — derived at read, never persisted); optional client-local `?today=` |
-| POST | `/api/week/test-reminder-response` | Handle periodic test reminder |
-| POST | `/api/session/resolve` | Resolve a single session to exercises |
-| POST | `/api/session/add-exercise` | Add exercise to resolved session |
-| POST | `/api/session/remove-exercise` | Remove exercise from resolved session |
-| POST | `/api/session/surface-override` | B313: adapt a rope session to the boulder wall for the day (`surface: "boulder"`), or revert (`surface: null`). Writes the adapted session onto the slot (`surface_override` + `_user_edited`) so card, guided player and feedback read one source. Server picks the mechanism: catalog `boulder_fallback` swap, else same session re-resolved without `gym_routes` — the rope is stripped from the equipment in **both** cases. 422 if the location has no boulder wall or the primary block does not survive. |
-| POST | `/api/replanner/override` | Apply day override (intent-based, equipment-aware). **A315**: an override that takes a key session away re-schedules it automatically → `auto_reschedules[]` (undo via `/events` `undo_auto_reschedule`) |
-| POST | `/api/replanner/events` | Apply events (done/skipped) to week plan. **A294**: `prev_days` seeded (Sunday→Monday finger gap), returns `adjustments` (always empty since A301) + `key_status` + `guard_warnings` siblings (A301: alerts only, nothing rewritten); `dry_run: true` applies on a copy and returns `{week_plan, adjustments, key_status, key_conflicts}` with zero writes (`custom_session_payload` checks a custom that does not exist yet); new event `add_planned_session` (catalog session, no ripple — the key-session re-schedule); optional client-local `today`. **A315**: a write that makes a key requirement owe more applies its validated proposal automatically (free slot first, else in place of a non-key engine session) and returns `auto_reschedules[]` (`would_auto_reschedule[]` on a dry run); new event `undo_auto_reschedule {adaptation_id}` puts back what was replaced; `KEY_AUTO_RESCHEDULE=0` turns it off |
-| GET | `/api/replanner/suggest-sessions` | Suggest sessions for quick-add |
-| POST | `/api/replanner/quick-add` | Add extra session to a day. **A301**: applied exactly as picked — nothing is downshifted or rippled, `force` is a compatibility no-op, `adjustments[]` is always empty; returns `guard_warnings` (sibling, never persisted) + `warnings` (alert messages involving the added session) |
-| POST | `/api/feedback` | Submit session feedback |
-| GET | `/api/outdoor/spots` | List outdoor spots |
-| POST | `/api/outdoor/spots` | Add outdoor spot |
-| DELETE | `/api/outdoor/spots/{spot_id}` | Remove outdoor spot |
-| POST | `/api/outdoor/log` | Log outdoor session |
-| GET | `/api/outdoor/log/{date}` | Get outdoor session by date |
-| PUT | `/api/outdoor/log` | Update outdoor session |
-| DELETE | `/api/outdoor/log/{date}` | Delete outdoor session by date |
-| GET | `/api/outdoor/sessions` | List outdoor sessions |
-| GET | `/api/outdoor/stats` | Outdoor statistics |
-| GET | `/api/outdoor/strategy` | Resolve deterministic strategy + nutrition for an outdoor day (layered patches) |
-| GET | `/api/outdoor/pitch-ladder` | A265: deterministic pitch ladder for an outdoor day — absolute grade, attempts and rest per pitch, derived from the athlete's own onsight/redpoint (`performance.current_level.sport`, goal `current_grade` as fallback). Lead-only in v1, matching the strategy catalog. 422 rather than a guess when no usable grade exists. `/api/outdoor/strategy` now carries the same ladder under `pitch_ladder`. Persisted onto the day via the `set_outdoor_plan` replanner event (`day.outdoor_plan`, preserved in `_DAY_LEVEL_FIELDS`) and hand-editable from the day card. |
-| POST | `/api/outdoor/session/start` | Start an active outdoor session (server-side timer) |
-| POST | `/api/outdoor/session/{session_id}/finish` | Finish active outdoor session → immutable outdoor.v2 log |
-| GET | `/api/outdoor/session/active` | Restore in-progress active outdoor session (with live routes) |
-| POST | `/api/outdoor/session/{session_id}/log-climb` | Append a climb to the active session (live logging) |
-| DELETE | `/api/outdoor/session/{session_id}/climb/{climb_index}` | Remove a climb from the active session |
-| PUT | `/api/outdoor/session/{session_id}/routes` | Replace the active session's full routes list (live sync) |
-| DELETE | `/api/outdoor/session/{session_id}` | Discard an active outdoor session without logging |
-| POST | `/api/outdoor/convert-slot` | Convert outdoor slot to gym/home |
-| GET | `/api/reports/weekly` | Weekly training report |
-| GET | `/api/reports/monthly` | Monthly training report |
-| GET | `/api/reports/heatmap` | Monthly rest-positive heatmap cells (`?month=YYYY-MM`) |
-| GET | `/api/quotes/daily` | Daily motivational quote. **B384**: pure function of (user, day, context) — optional client-local `?date=`; writes `quote_history` at most once per new quote, under the user write lock (no more full-state save on every GET) |
-| GET | `/api/tips/daily` | Daily feature-discovery tip (deterministic per user, `?date=` client-local) |
-| POST | `/api/tips/{tip_id}/dismiss` | Dismiss today's tip (per-day, idempotent) |
-| GET | `/api/milestones` | Milestone catalog + per-user unlock status (lazy eval) |
-| POST | `/api/milestones/{milestone_id}/seen` | Mark an unlocked milestone celebration as seen |
-| GET | `/api/user/export` | Download user_state as JSON backup |
-| POST | `/api/user/import` | Import user_state (validates, overwrites) |
-| GET | `/api/weekly-override/{week_start}` | Get weekly availability override |
-| PUT | `/api/weekly-override/{week_start}` | Save weekly availability override |
-| DELETE | `/api/weekly-override/{week_start}` | Delete weekly availability override |
-| GET | `/api/free-session/surfaces` | Available surfaces + user gyms |
-| GET | `/api/free-session/presets` | Presets for surface (personalized grades, phase tips) |
-| POST | `/api/free-session/start` | Start a free climbing session |
-| POST | `/api/free-session/{session_id}/log-climb` | Log a climb to active session |
-| POST | `/api/free-session/{session_id}/finish` | Finish session (summary + load) |
-| GET | `/api/free-session/history` | Free sessions for a date |
-| DELETE | `/api/free-session/{session_id}/climb/{climb_index}` | Delete a climb from active session |
-| DELETE | `/api/free-session/{session_id}` | Delete a free session |
-| GET | `/api/custom-session/list` | List user's custom sessions (summary) |
-| GET | `/api/custom-session/exercises` | Exercise catalog for builder picker (search/filter) |
-| GET | `/api/custom-session/blocks` | Resolved warmup/cooldown blocks |
-| GET | `/api/custom-session/{session_id}` | Get full custom session detail |
-| POST | `/api/custom-session` | Create custom session |
-| PUT | `/api/custom-session/{session_id}` | Update custom session |
-| DELETE | `/api/custom-session/{session_id}` | Delete custom session |
-| GET | `/api/body-part-picker/options` | Available body parts + equipment options for picker UI |
-| POST | `/api/body-part-picker/preview` | Generate body-part session preview (no persistence) |
-| POST | `/api/body-part-picker/start` | Generate body-part session + insert into week plan |
-| GET | `/api/body-part-picker/estimate` | Lightweight duration estimate for live counter |
-| GET | `/api/mobility/pool` | Mobility/stretching pool by body region (GATE-2 soft warnings) |
-| GET | `/api/mobility/generate` | Deterministic guided stretch flow (regions + minutes + pace + rest) |
-| GET | `/api/bw-progression` | A298: every bodyweight-ladder family with the athlete's level, dose of the day (`?date=`), pending promotion and last outcome; technique ladders (feet / falls). Subscription-gated |
-| PUT | `/api/bw-progression/{family}` | A298: manual level change from Settings (source `user_edit`). More than one level above the current needs `confirm: true` (409 otherwise); lower-back levels are allowed only here (R12) |
-| POST | `/api/bw-progression/{family}/promotion` | A298: the custom-session promotion tap — `accept` moves the level up and rewrites that family's `ladder` rows in the custom and its not-yet-played slots from `date` on; decline clears the proposal. Past / done / skipped sessions never touched |
-| POST | `/api/coach/chat` | LLM Coach chat turn (subscription-gated, 30 msg/day, suggest-only; optional `lat`/`lon` → passed to the on-demand `get_weather` tool, A244). Weather is native tool use, not a pre-fetch: the model calls `get_weather(location, days_ahead≤5)` only when a turn needs conditions (language-agnostic trigger); non-weather turns pay nothing but the cached tool definition. Executor wraps `cached_conditions()`/`geocode_place()`; loop capped at 2 tool calls/message. |
-| POST | `/api/coach/adhoc-session` | Compose an ad-hoc session PREVIEW from a chat turn (A243). LLM extracts a structured intent via forced tool — including `exclude`, the user's refusals (A259: 'niente trazioni' → `pullups`, which spares lock-offs). **A259**: the session is then composed by the LLM *selecting from an engine-built pool* (`coach/session_composer.py`) and validated line by line; `adhoc_builder` is the fallback on kill switch / tiny pool / provider error / failed validation. Loads always come from `working_loads`, never from the model. The payload carries `composed_by` + `dropped` for audit. No persistence/plan mutation — client persists + inserts on the "Add to today & run" CTA. `{adhoc:false}` → fall back to `/chat`. Counts toward the 30/day limit only on adhoc:true. **A297**: with `COACH_ATHLETE_CONTEXT` on, both composers read the athlete context of `target_date` — the recovery guards of that day take finger-hard / front-lever lines (and weighted pulls ≥ 85 % 1RM) out, listed in `dropped`; the payload adds `athlete_guards` + `athlete_context_version`. |
-| GET | `/api/coach/history` | Coach chat history (paginated, `limit` + `before` cursor) |
-| GET | `/api/coach/suggestions` | Context-aware suggested questions (deterministic, no LLM, not rate-limited) |
-| GET | `/api/admin/users` | List all users (protected, X-Admin-Key) |
-| DELETE | `/api/admin/users/{uuid}` | Delete a user (protected, X-Admin-Key) |
-| GET | `/api/subscription/status` | Current subscription status + trial days remaining. A285 adds `enforced` (additive): `false` only while `SUBSCRIPTION_ENFORCED=0`, which is how the UI tells "active because they pay" from "active because billing is paused" — the other fields are identical in both cases |
-| POST | `/api/subscription/checkout` | Create Stripe Checkout Session → returns hosted URL |
-| POST | `/api/subscription/portal` | Create Stripe Customer Portal session (manage/cancel). A250: for a local trial (no Stripe customer) returns a card-collecting Checkout session instead |
-| POST | `/api/stripe/webhook` | Stripe webhook receiver (signature-verified) |
-| GET | `/api/weather` | Live conditions (lat/lon) or forecast-by-date; returns metrics + composite friction_score/band (prime/good/ok/poor), per-metric qualifiers, headline, best_window (A238). **A275** adds, additively: `hourly[]` (every 3h step of the day — same metrics and same friction verdict as the summary, bucketed in **crag-local** time, elapsed steps dropped on the "now" call), `sunrise`/`sunset`/`sun_date` (local `HH:MM`; OWM publishes today's sun times only, so `sun_date` names the day they belong to), `wind_dir` (16-point compass beside the existing degrees) and `timezone_offset_s`. Costs no extra upstream call — it rides the forecast fetch A238 already makes for `best_window`. The day summary still comes from the midday step and still reads UTC (`B-FORECAST-MIDDAY-STEP`); `hourly[]` is what you read when you need the truth about a given hour. `fetch_outdoor_conditions` now goes through `cached_conditions`, so it shares the 15-min cache and serves the last good reading when the provider dies with a warm cache (cold cache → `None` → catalog base, unchanged) |
+Full table (method, path, behaviour, A/B notes) in **`docs/API_ENDPOINTS.md`** — read it before touching a router.
+When you add or remove an endpoint, edit that table by hand in the same brief: `sync_status.py` updates only the
+header count there and warns when the row count disagrees.
 
 ## Frontend
 
 Next.js 16 App Router (Turbopack) + Tailwind CSS + shadcn/ui. Mobile-first dark-mode PWA.
-
-**Pages (46):** 19 under `(main)` + 2 under `(guided)` (guided session, session-builder play) + 16 under `/onboarding` (index + 15 route dirs) + 2 auth (sign-in, sign-up) + 1 root dispatcher + `/assessment` + `/demo` + `/legal` + `/offline` + 2 dev-only (`/dev/tokens`, `/dev/today-states`). Recount verified against `find frontend/src/app -name page.tsx` (D277, 2026-08-17). **The onboarding sub-count was wrong from D269 until D277** and the breakdown summed to 45 against a headline of 46: B320 deleted `/onboarding/recover` and decremented the sub-count on top of a figure that was already one short, so the total was right for the wrong reason. Check the sum, not just the headline. (The pre-D269 breakdown summed to 36 and omitted the session-builder, body-part-picker, `/demo`, `/offline` and the dev pages.)
-
-**Entry-point routing (B300, `src/app/page.tsx`)** — the root `/` is a smart dispatcher, not a page:
-- **Signed-out** (cold ad/flyer visitor) → `/onboarding/welcome` (public marketing landing: hero + value props + "Start assessment" CTA + a visible "Sign in" link). Before B300 it sent them to the bare `/sign-in` login wall — a bad ad landing.
-- **Signed-in with a macrocycle** → `/today`.
-- **Signed-in, no macrocycle** → `/onboarding/welcome` (→ wizard).
-- **Offline** → last known destination from localStorage (A245), never a forced re-onboard.
-
-`/onboarding/welcome` is the **public entry page**: it renders `WelcomeContent` when unauthenticated (no auth wall) and redirects authenticated users onward. It's the recommended landing for cold acquisition traffic with context — see `docs/attribution_utm_convention.md` (cold zero-context traffic still prefers `/demo`).
-
-**Where the auth wall sits (A256)** — the whole 12-step wizard is public (`PUBLIC_ROUTES` derives them from `ONBOARDING_STEPS`, so a new step is public by default), plus `/onboarding/recover`. The account is requested **only at the submit CTA on `/onboarding/review`**, once the user can see their own summary. The tapped CTA travels back as `?complete=generate|test` in the Clerk `redirect_url`, and `/review` auto-submits on return. `/onboarding/start-week` and `/onboarding/install` stay gated — they run after a plan exists.
-
-Answers typed before signing up live in `localStorage` under `climb_onboarding_draft_anon` and are **adopted** by `loadDraft()` at sign-in. That key must be cleared on submit alongside the user-scoped one, or the next anonymous visitor on a shared device inherits it (regression guard: `onboarding-draft-scope.test.ts`).
-
-- `/today` — Today's sessions, mark done/skipped, post-session feedback
-- `/week` — 7-day grid, day detail cards, replan dialog, multi-week navigation
-- `/plan` — Assessment radar chart + macrocycle timeline + phase details
-- `/session/[id]` — Resolved exercises with prescription details, load score
-- `/reports/weekly` — Adherence, load, difficulty distribution, progression table
-- `/outdoor` — Outdoor history, stats, per-spot breakdown, grade histogram
-- `/whats-next` — Votable roadmap + feedback form
-- `/settings` — Profile, goals, equipment, spots, regenerate assessment/macrocycle
-- `/guided/[date]/[sessionId]` — Step-by-step guided session with timer
-- `/free-session` — Log free climbing sessions (lead/boulder/outdoor)
-- `/mobility` — Stretching & Mobility guided flow (multi-region setup → auto-advancing timer, Core Circuit UX)
-- `/tabata` — Standalone interval timer (documented in `docs/user_guide_v1.md` §16)
-- `/coach` — LLM Coach chat (plan-aware, KB-grounded, suggest-only; 30 msg/day; weather-aware via on-demand `get_weather` tool with GPS + spot geocoding, personal notes, suggested chips)
-- `/assessment` — **Public** 5-axis assessment (A262/A263). No account, nothing stored: six questions → radar + weakest axis. Scale selezionabile (French/YDS, Font/V-scale — conversione client-side prima dell'invio, l'engine riceve sempre la sua convenzione); blocco opzionale max hang + weighted pull-up che rende misurati gli assi dita/tirata. **A268**: chi compila quei numeri vede anche il toggle `[ Goal | Elite ]` di A267 (solo render, niente di persistito); chi li salta vede la pagina identica a prima. The acquisition landing meant to be posted publicly; the CTA seeds the answers into the wizard's anonymous draft (`seedDraftFromAssessment`) so nothing is retyped.
-- `/guide` — User guide
-- `/subscribe` — Subscription plans and checkout
-- `/session-builder`, `/session-builder/[id]`, `/session-builder/[id]/view`, `/session-builder/[id]/play` — Custom session builder: list, edit, read-only view, guided playback (`/api/custom-session/*`)
-- `/body-part-picker` — Body-part session generator (preview → insert into the week plan)
-- `/demo` — Zero-context acquisition landing (no Clerk needed by the page itself — see `A-CLERK-PROVIDER-SCOPE`)
-- `/offline` — Service-worker offline fallback
-- `/dev/tokens`, `/dev/today-states` — Dev-only harnesses (design tokens, `/today` state matrix)
-- `/onboarding/*` — 15 route dirs (12 wizard steps + `welcome` + `install` + `start-week`; corrected in D277). **The wizard proper is 12 steps** (`ONBOARDING_STEPS`: profile, experience, discipline, grades, goals, weaknesses, tests, limitations, locations, availability, trips, review). Outside that list: `welcome` (the public landing) plus `install` and `start-week`, which run *after* a plan exists and stay gated. (B320 removed `recover`: recovery-by-code was a pre-Clerk relic — recovery is signing in with the original email.)
+Pages, entry-point routing (B300), where the onboarding auth wall sits (A256) and the anonymous-draft rule:
+**`docs/FRONTEND.md`**. Its «Pages (N)» count is kept by `sync_status.py`.
 
 ## Deployment
 
-- **Frontend**: Next.js PWA on Vercel — **https://climbagent.app** (canonical, A248)
-  - `www.climbagent.app` and the legacy `https://climb-agent.vercel.app` 308-redirect to the apex (configured in Vercel; DNS on Namecheap: A `@`/`www` → 76.76.21.21)
-  - Auto-deploys on push to main. Root directory: `frontend/`
-  - Env: `NEXT_PUBLIC_API_URL=https://web-production-fb1e9.up.railway.app`
+Services, URLs, env var table (Railway), Stripe, Clerk (incl. testing as a user in prod), user lookup, read-only
+Stripe queries, persistence: **`docs/DEPLOYMENT.md`**. Deploy = `git push` to main → Vercel (frontend) and Railway
+(backend) update in 2-3 min.
 
-- **Backend**: FastAPI/uvicorn on Railway — https://web-production-fb1e9.up.railway.app
-  - Auto-deploys on push to main. Config: `Procfile` + `requirements.txt` in root
-  - Railway uses port 8080 internally (`$PORT=8080`). Do not change the port in Procfile.
-
-- **Deploy**: `git push` to main → both services update within 2-3 minutes.
-
-- **Deploy workflow rules (B196):**
-  - **Backend-only briefs** (no `frontend/` files touched): push directly to main is OK.
-  - **Briefs that touch `frontend/`**: MUST be developed on a branch named `brief/B<n>-<slug>` and tested on the Vercel preview URL before merging to main. Daniele must explicitly approve the preview before merge. Never push frontend changes directly to main without preview verification — PWA users on iPhone are trapped on the previous SW until the new build is verified.
-  - The Service Worker (`frontend/public/sw.template.js`) generates `public/sw.js` per-build via `frontend/scripts/build-sw.js` (prebuild hook), injecting `VERCEL_GIT_COMMIT_SHA` into `CACHE_NAME`. Do NOT commit `public/sw.js` (gitignored). Do NOT bump CACHE_NAME manually.
-
-- **Stripe**: sk_live keys configured in Railway + Vercel. **LIVE** since 2026-04-16. Pricing: USD $9.99/month Standard (15-day free trial) + USD $4.99/month Founding Climber (locked forever, first 20 users — two separate Stripe Price objects, not coupon). Customer Portal configured. B202 fail-closed guard active — unless A285's `SUBSCRIPTION_ENFORCED=0` is set on Railway, which pauses billing without touching Stripe, the guard code, or a single subscription row (check the live variable before assuming which mode production is in). Webhook handles (B226 hardened): checkout.session.completed, customer.subscription.updated, customer.subscription.deleted, customer.deleted, invoice.payment_succeeded, invoice.payment_failed. Handler exceptions return 500 → Stripe retries with backoff. In-memory LRU dedup of event.id (1024 entries) short-circuits duplicate deliveries.
-
-- **Auth**: Clerk (Next.js native). **Production instance since A249 (2026-07-21)** — Frontend API `https://clerk.climbagent.app`, accounts portal `https://accounts.climbagent.app`, 5 CNAME records on Namecheap. The dev instance (`funky-monarch-83`) survives for local dev + Vercel previews (pk_test/sk_test keys scoped to Preview/Development on Vercel). Backend resolves `clerk_id` → internal `user_id` (UUID) via `CLERK_JWKS_URL`. Supabase `users` table with `clerk_id` column (remapped to prod ids by `scripts/migrate_clerk_prod.py`, backup in `scripts/clerk_migration_backup.json`). In-memory LRU cache for `clerk_id → user_id` mapping. Without Clerk header → fallback to legacy UUID system (local dev only).
-  - **Testing as a user in prod**: Clerk BAPI `POST /v1/sessions` is dev-only. On prod: `POST /v1/sign_in_tokens` (BAPI) → `POST https://clerk.climbagent.app/v1/client/sign_ins?_is_native=true` with `strategy=ticket` (FAPI) → session JWT in `client.sessions[0].last_active_token.jwt`.
-
-- **Environment variables (Railway)**:
-  | Variable | Description |
-  |----------|-------------|
-  | DATA_DIR | Persistent volume path (`/data/climb-agent`) |
-  | ADMIN_SECRET | Key for admin endpoints (never commit) |
-  | STORAGE_BACKEND | `supabase` (production) or `file` (pytest/dev) |
-  | SUPABASE_URL | Supabase project URL |
-  | SUPABASE_SERVICE_KEY | Supabase service role key (never commit) |
-  | CLERK_SECRET_KEY | Clerk backend secret (never commit). NOTE: the backend code does NOT read it — auth uses only CLERK_JWKS_URL. Kept on Railway for completeness. |
-  | CLERK_JWKS_URL | Clerk JWKS endpoint for JWT verification — the ONLY Clerk var the backend reads. Prod (A249): `https://clerk.climbagent.app/.well-known/jwks.json` |
-  | STRIPE_SECRET_KEY | Stripe secret key — `sk_live_*` in prod (never commit) |
-  | STRIPE_WEBHOOK_SECRET | Stripe webhook signing secret — `whsec_*` (never commit) |
-  | STRIPE_PRICE_ID_STANDARD | Stripe Price ID for standard plan ($9.99/mo) |
-  | STRIPE_PRICE_ID_FOUNDER | Stripe Price ID for Founding Climber plan ($4.99/mo) |
-  | STRIPE_PORTAL_ENABLED | `true` to enable Customer Portal (default: true) |
-  | FRONTEND_BASE_URL | Base URL for Stripe redirect (default: `https://climbagent.app`, A248) |
-  | BYPASS_USER_IDS | Comma-separated user UUIDs that bypass subscription checks (founder, beta testers). Managed via Railway dashboard — no code change needed to add/remove. Read at import-time: changing it requires a service restart (Railway redeploy or manual restart). |
-  | TELEGRAM_BOT_TOKEN | Bot token (@BotFather) for founder alerts. Unset → `notify()` is a silent no-op (A222). |
-  | TELEGRAM_CHAT_ID | Destination chat id for founder alerts (new onboarding / trial started). Unset → no-op. |
-  | OPENWEATHER_API_KEY | OpenWeatherMap free-tier key for `/api/weather` (A224) + coach `get_weather` tool & spot geocoding (A-COACH-V1b, on-demand since A244). Unset → endpoint returns 503, `/today` card hides, coach `get_weather` tool returns "unavailable" (model says so, never invents). Commercial use requires visible OpenWeather attribution. |
-  | ANTHROPIC_API_KEY | Anthropic API key for the LLM Coach (A-COACH-V1a). Unset → `/api/coach/chat` fails LOUD with 500 `coach_not_configured` (never silent, never commit). |
-  | COACH_MODEL | Coach model id (default `claude-sonnet-5` dal 2026-07-28, B306). Swap here for provider/model changes — no code change needed. |
-  | COACH_MAX_TOKENS | Cap on the coach reply length (default `2048`). **Documented in D277**, and it is the knob the open `COACH-TRUNCATION-RESIDUAL` finding is about: `llm_client.py` logs "raise COACH_MAX_TOKENS or tighten L1" when a reply is cut, so the remedy existed while the variable did not appear anywhere in the docs. |
-  | RATE_LIMIT_ENABLED | `0` turns off *all* API rate limiting. Default is **on** (any value other than `0`), so it fails safe — but it is a security switch and must stay unset in production. Documented in D277. |
-  | TRACE_RESOLVE | `true` enables the verbose resolver trace (B126) for debugging `resolve_session` on Railway. Default `false`. Documented in D277. |
-  | WEEKPLAN_ARCHIVE_LAZY | `true` makes the A221 week-plan archiving lazy instead of eager. Default `false`. Documented in D277. |
-  | COACH_LLM_COMPOSER | `0` disables the A259 LLM composer — every ad-hoc session then goes through the deterministic `adhoc_builder`. Unset/any other value = enabled. |
-  | COACH_ATHLETE_CONTEXT | A297 — the engine's athlete context in the coach prompts (maxima, anchored loads, pain/fatigue, key sessions, recovery guards, retest, limit log) and the composer's guards/ranking. Default **on**; only the literal `0` turns it off, read at call time (a Railway change needs no deploy). Off = coach chat, composer and builder exactly as before A297. Single integration point: `backend/coach/athlete_block.py`. |
-  | KEY_AUTO_RESCHEDULE | A315 — automatic re-schedule of a key session lost by a user's write (`/events`, `/override`). Default **on**; only the literal `0` turns it off, read at call time (a Railway change needs no deploy). Off = the A294 proposals wait for a tap, as before. |
-  | STORAGE_REQUEST_MEMO | B376 — memo per richiesta delle letture di storage (archivio settimane, outdoor log): ogni lettura una volta sola per richiesta HTTP, svuotato da ogni scrittura. Default **on**; solo il literal `0` lo spegne, letto a ogni chiamata (nessun deploy per cambiarlo). Off = una lettura Supabase per chiamata, come prima. |
-| ALLOW_LEGACY_HEADER | **Dev only.** `1` re-enables the `X-User-ID` auth fallback and anonymous (`user_id=None`) requests. MUST stay unset in production: with Clerk configured or `STORAGE_BACKEND=supabase`, B285 rejects both with 401 (the header was a full IDOR). |
-  | SUBSCRIPTION_ENFORCED | A285 **billing pause**. `0` makes `check_subscription` return ALLOW_ALL for everyone before any DB read — the app is free, no row is touched, Stripe stays LIVE and checkout/portal/webhooks keep working. Default **on**: like `RATE_LIMIT_ENABLED`, only the literal `0` disables, so unset/empty/`false` leave the paywall standing. Read at import time → a change needs a restart (setting it on Railway redeploys anyway). While off, `start_trial_if_new` writes nothing (a trial granted during the pause would expire unused and burn the user's one lifetime trial, A232) and `/api/subscription/status` reports `enforced: false` so the UI can say "Free" instead of claiming a subscription that does not exist. |
-
-### Clerk user lookup
-
-To retrieve user info (name, email) from Clerk:
-
-```bash
-# Read key from local .env
-export CLERK_SECRET_KEY=$(grep CLERK_SECRET_KEY .env | cut -d= -f2)
-
-# List all users
-curl -s -H "Authorization: Bearer $CLERK_SECRET_KEY" \
-  https://api.clerk.com/v1/users | python3 -c "
-import json, sys
-for u in json.load(sys.stdin):
-    name = f\"{u.get('first_name','') or ''} {u.get('last_name','') or ''}\".strip() or '—'
-    email = u['email_addresses'][0]['email_address'] if u['email_addresses'] else '—'
-    print(f\"{u['id'][:12]}  {name:20s}  {email}\")
-"
-
-# Get a single user by Clerk ID
-curl -s -H "Authorization: Bearer $CLERK_SECRET_KEY" \
-  https://api.clerk.com/v1/users/{clerk_user_id}
-```
-
-Key location: `.env` in repo root (gitignored, never commit). Since A249 `CLERK_SECRET_KEY` in `.env` is the **production** instance (`sk_live_*`, i.e. the real users); the old dev instance is under `CLERK_DEV_SECRET_KEY`.
-
-### Stripe read-only queries (debug/audit)
-
-`STRIPE_SECRET_KEY` (`sk_live_*`) is in `.env` at repo root (gitignored, never commit). Use it for read-only Stripe investigations (subscriptions, invoices, charges, webhook event delivery) without needing Railway CLI auth:
-
-```bash
-source .venv/bin/activate
-export STRIPE_SECRET_KEY=$(grep '^STRIPE_SECRET_KEY=' .env | cut -d= -f2-)
-python - <<'PY'
-import os, stripe
-stripe.api_key = os.environ["STRIPE_SECRET_KEY"]
-# e.g. stripe.Subscription.list(customer="cus_...", status="all")
-# e.g. stripe.Event.list(limit=30)  → check pending_webhooks (>0 = delivery not confirmed)
-PY
-```
-
-Note: StripeObject in stripe-python 15.x does not expose `.get()` as a method — use `obj["key"]` (wrapped in try/except) or `obj.to_dict_recursive()`.
-
-- **Persistence**: Supabase Postgres with JSONB (`STORAGE_BACKEND=supabase` in production). `user_state` stored as JSONB column. Railway persistent volume (`/data/climb-agent`) as fallback for `STORAGE_BACKEND=file` (pytest, local dev). `/health` exposes `ephemeral_warning`. RLS enabled on all 6 tables (2026-04-03). No policies — anon key blocked, service role key bypasses RLS.
+**Never (inline on purpose):**
+- Never commit secrets (`ADMIN_SECRET`, `SUPABASE_SERVICE_KEY`, `CLERK_SECRET_KEY`, `STRIPE_*`, `ANTHROPIC_API_KEY`, bot tokens). They live in Railway/Vercel and the gitignored `.env`; never print them.
+- Never push `frontend/` changes to main without a verified Vercel preview and Daniele's OK (see *Branch workflow*).
+- Never commit `frontend/public/sw.js` (generated per build) and never bump `CACHE_NAME` by hand.
+- Never change the port in `Procfile` (Railway uses `$PORT=8080`).
+- `RATE_LIMIT_ENABLED`, `ALLOW_LEGACY_HEADER` must stay unset in production. `SUBSCRIPTION_ENFORCED=0` pauses billing: check the live variable before assuming which mode prod is in.
+- Stripe is **LIVE** (`sk_live_*`) and `.env`'s `CLERK_SECRET_KEY` is the **production** Clerk instance: read-only use only unless a brief says otherwise.
+- Production state writes: dry run (or full before/after diff) first; past sessions are immutable.
 
 ## Documentation architecture
 
-- `PROJECT_BRIEF.md` — Project status + auto-updated counters (run `python scripts/sync_status.py`)
-- `docs/ROADMAP_CURRENT.md` — All open items, priorities, future phases
-- `docs/ROADMAP_v2.md` — Archived history (frozen, do not update)
-- `docs/vocabulary_v1.md` — Domain glossary (update when adding enums/types)
-- `docs/DESIGN_GOAL_MACROCICLO_v1.1.md` — Design doc (update when methodology changes)
-- `docs/literature_review_climbing_training.md` — Training science reference
-- `docs/docs_literature_hangboard.md` — Hangboard science reference
-- `docs/beta_feedback.md` — Beta tester feedback log
-- `docs/audit_workflow.md` — Repeatable literature audit process (snapshot extraction → knowledge base audit → implementation brief)
-- `docs/ENGINE_ARCHITECTURE.md` — Engine internals reference (how modules work, data flow, key data structures)
-- `docs/user_guide_v1.md` — User-facing guide (update after A/B briefs that change UX)
-- `docs/attribution_utm_convention.md` — UTM convention per channel (flyer QR, Reddit, email) + how first-touch attribution flows into `user_state.attribution` (A233)
-- All audit deliverables live in `docs/audit/<brief-id>_<topic>.md` (singular `audit/`, never `docs/audits/`). Obsolete/closed audits move to `_archive/docs/audit/`.
+Full map of the docs: **`docs/README.md`**. The ones you touch most:
+- `PROJECT_BRIEF.md` — status + auto-updated counters (`python scripts/sync_status.py`)
+- `docs/ROADMAP_CURRENT.md` — all open items; `docs/ROADMAP_v2.md` is frozen history (do not update)
+- `docs/ENGINE_ARCHITECTURE.md` — engine internals; `docs/vocabulary_v1.md` — glossary (update when adding enums/types)
+- `docs/user_guide_v1.md` — user guide (update after A/B briefs that change UX)
+- Audit deliverables: `docs/audit/<brief-id>_<topic>.md` (singular `audit/`); closed audits → `_archive/docs/audit/`.
 
 ## Docs maintenance
 
@@ -434,7 +205,7 @@ Note: StripeObject in stripe-python 15.x does not expose `.get()` as a method �
 - After `trim_roadmap.py`: the script now verifies every removed ID lands in `ROADMAP_v2.md` and prints a WARNING if not. If you see the warning, investigate before continuing — do not force-push over it.
 - **Sync/counter commits must NOT carry brief IDs in the subject line.** Avoid patterns like `sync: update test count [B178]` or `C170: sync counters` — they pollute the git-log ↔ roadmap reconciliation used by `scripts/next_brief.py`. Put the reference in the commit body or omit it.
 - Standing rule: `python scripts/sync_status.py` at end of every brief (already enforced)
-- The auto-sync script does NOT touch tech-stack tables, pricing rows, status callouts, or the CLAUDE.md endpoint table rows. See the docstring of `scripts/sync_status.py` for the full list of auto-sync limits.
+- The auto-sync script does NOT touch tech-stack tables, pricing rows, status callouts, or the endpoint table rows in `docs/API_ENDPOINTS.md`. See the docstring of `scripts/sync_status.py` for the full list of auto-sync limits.
 
 ## Workflow rules
 
@@ -448,60 +219,37 @@ Note: StripeObject in stripe-python 15.x does not expose `.get()` as a method �
 - **Audit finding alignment rule:** Individual audit findings listed in the roadmap ARE roadmap items. When a remediation brief closes findings, each closed finding MUST be removed from the P1/P2 list (not just the brief row marked ✅). The P1 list must always reflect ground truth — if `/brief` reads it, it must be accurate. Leaving closed findings in the P1 list causes phantom bug reports and wasted re-investigation.
 - Pre-push hook runs `sync_status.py` automatically. If counters are stale, the push is blocked — commit the sync changes first.
 - Repo hygiene check: every ~2 weeks or ~10 briefs (whichever first), run `python scripts/repo_hygiene.py`. Archive completed brief docs, delete temp files, verify core docs are current. Last full audit: D237 (2026-05-11).
-- Brief types: A = new feature, B = bugfix, C = catalog/content, D = audit/documentation (read-only). Each type (A/B/C/D) has its **own independent counter**; `next_brief.py` returns `max+1` **per type**. The same number can legitimately appear under different types (e.g. B161 and D161 coexist) — that is expected, not a collision. Never reuse a number **within the same type**. **Before assigning a new brief number, ALWAYS run `python scripts/next_brief.py` — it scans both ROADMAP_CURRENT.md and `git log --all` (commit messages can reference briefs never added to the roadmap, causing silent collisions). Do NOT guess the next number from the roadmap alone.**
+- Brief types: A = feature, B = bugfix, C = catalog/content, D = audit/docs. Each type has its **own counter** (B161 and D161 can coexist; never reuse a number within a type). **Always get the number from `python scripts/next_brief.py`** — it scans the roadmap and `git log --all`; never guess from the roadmap alone.
 - Push at end of session: `git add -A && git commit -m 'description' && git push`
 
 ## Session isolation (parallel Claude sessions)
 
-More than one Claude session can be open on this repo at the same time. They share **one** working tree, **one** index and **one** HEAD — so without isolation they corrupt each other's work.
+More than one Claude session can be open on this repo: they share **one** working tree, index and HEAD.
+Incident history behind these rules: `docs/SESSION_ISOLATION.md`.
 
-**Preflight — run before creating a branch or touching a file, every brief, no exceptions:**
-
-```bash
-git status --short          # must be empty
-git branch --show-current   # must be main
-```
-
-"I'm on main with a clean tree" is an **assumption until these two commands prove it**. This has already gone wrong twice (2026-07-19 D252/B279, 2026-07-20 B288/A245-D): the second time, `git checkout -b` ran while the tree sat on another session's dirty branch, so the new branch was born on top of foreign work and that session's `git add -A` packaged two files of the other brief into a commit with the wrong message, on the wrong branch.
-
-**Any brief that will produce a commit → work in a dedicated worktree. Always, not only when the preflight fails.**
-
-The rule used to be conditional ("worktree *if* the tree is dirty"). That is not enough, and it failed a third time on 2026-07-29 (B308 vs B309): **the preflight is a point-in-time check**. Both sessions found a clean tree on `main`, both stayed in the shared tree, and forty minutes later one of them ran `git checkout -b` — moving HEAD for the other, whose commit then landed on the wrong branch. Nothing in a conditional rule protects you *during* the work.
-
-A `pre-commit` hook now enforces it: committing on a non-`main` branch **in the primary worktree** is blocked (override with `ALLOW_PRIMARY_BRANCH_COMMIT=1` when you really mean it).
-
-```bash
-python scripts/start_brief.py <BRIEF-ID> <slug>      # preflight + worktree + branch from origin/main
-```
-
-Or by hand: `git worktree add ../climb-agent-<brief> -b brief/<ID>-<slug> origin/main`
-
-Rules that hold in any shared tree:
-
-- **Never `git add -A` when the tree was not clean at brief start.** Stage explicit paths. `git add -A` is only safe when every dirty file is provably yours.
-- **Never `git checkout` / `git switch` in a shared tree**: it moves HEAD for the other session too.
-- A worktree needs a real `npm ci` in `frontend/` — symlinking `node_modules` fails the build (`Symlink node_modules is invalid, it points out of the filesystem root`).
-- `backend/data/user_state.json` is a tracked fixture that the pytest suite rewrites: check it did not sneak into the commit.
-- Cleanup after merge: `git worktree remove ../climb-agent-<brief>` then delete the branch.
-
-**Untangling (only with the other session stopped):** back up both sessions' uncommitted files to disk **before** any git command → `git branch salvage/<sha> <sha>` on the mixed commit → `git cherry-pick -n` + surgical removal of the other brief's files → `git commit -C <sha>` to preserve message and author → verify file-by-file against the backups before deleting anything.
+- **Preflight every brief:** `git status --short` (must be empty) and `git branch --show-current` (must be `main`). It is a point-in-time check, not protection.
+- **Any brief that will produce a commit → dedicated worktree, always:** `python scripts/start_brief.py <BRIEF-ID> <slug>` (or `git worktree add ../climb-agent-<brief> -b brief/<ID>-<slug> origin/main`). The `pre-commit` hook blocks commits on a non-`main` branch in the primary worktree (override `ALLOW_PRIMARY_BRANCH_COMMIT=1` only when you mean it).
+- **Never `git add -A` when the tree was not clean at brief start** — stage explicit paths.
+- **Never `git checkout` / `git switch` in a shared tree** — it moves HEAD for the other session.
+- A worktree needs a real `npm ci` in `frontend/` (symlinked `node_modules` fails the build).
+- `backend/data/user_state.json` is a tracked fixture the suite rewrites: keep it out of commits.
+- Cleanup after merge: `git worktree remove ../climb-agent-<brief>`, then delete the branch.
+- Untangling mixed commits (other session stopped): procedure in `docs/SESSION_ISOLATION.md`.
 
 ## Branch workflow
 
-Regola obbligatoria per evitare di intrappolare gli utenti PWA su una build rotta:
+Obbligatorio, per non intrappolare gli utenti PWA su una build rotta:
 
-- **Backend-only briefs** (nessun file `frontend/` toccato): commit + push diretto a `main`. Railway redeploya in 1-2 min.
-- **Briefs che toccano `frontend/`** (anche un solo file): MUST sviluppare su un branch `brief/B<n>-<slug>`, far buildare la preview Vercel, **testare la preview URL** (sia desktop sia PWA installata su iPhone se rilevante), e ottenere OK esplicito di Daniele PRIMA del merge in `main`.
-  - Mai pushare frontend changes direttamente a `main` senza preview verification — gli utenti PWA su iPhone restano bloccati sul vecchio Service Worker finché la nuova build non è validata.
-  - Il CORS regex per i preview URL Vercel (`https://climb-agent(-[a-z0-9-]+)?\.vercel\.app`) è già live in produzione (B196-CORS), quindi le preview branch chiamano il backend prod senza configurazione extra.
-  - Il Service Worker (`frontend/public/sw.template.js`) viene rigenerato per build via `frontend/scripts/build-sw.js`, che inietta `VERCEL_GIT_COMMIT_SHA` in `CACHE_NAME`. Non committare `public/sw.js` (gitignored), non bumpare `CACHE_NAME` a mano.
-- **Brief misti** (backend + frontend): tratta come frontend → branch + preview obbligatori.
+- **Backend-only** (nessun file `frontend/`): commit + push diretto a `main`. Railway redeploya in 1-2 min.
+- **Tocca `frontend/`** (anche un file solo) o **misto**: branch `brief/B<n>-<slug>`, preview Vercel buildata e **testata** (desktop e, se rilevante, PWA su iPhone), **OK esplicito di Daniele PRIMA del merge**. Senza preview gli utenti iPhone restano sul vecchio Service Worker.
+- Le preview chiamano il backend prod senza configurazione: il CORS regex `https://climb-agent(-[a-z0-9-]+)?\.vercel\.app` è live (B196-CORS).
+- Service Worker: `frontend/public/sw.template.js` → `public/sw.js` per build (`frontend/scripts/build-sw.js` inietta `VERCEL_GIT_COMMIT_SHA` in `CACHE_NAME`). Non committare `sw.js`, non bumpare `CACHE_NAME` a mano.
 
 ## Lessons learned
 
 After completing a task, if you encountered unexpected behavior, made a mistake
 that required correction, or discovered a non-obvious pattern, check
-`docs/lessons.md` for existing lessons first, then append any NEW lessons with
+`docs/lessons.md` (recent) and `docs/lessons/` (monthly archive) for existing lessons first, then append any NEW lessons to `docs/lessons.md` with
 format:
 - **[YYYY-MM-DD] [BRIEF-ID or context]**: One-line lesson.
 
