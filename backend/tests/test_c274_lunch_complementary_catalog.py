@@ -291,6 +291,22 @@ def _week_kwargs(phase_id: str, gym_equipment: list) -> dict:
     )
 
 
+def _week_without_timestamp(phase_id: str, gym_equipment: list) -> dict:
+    """The generated week minus ``generated_at``, a wall-clock timestamp (B388)."""
+    w = generate_phase_week(**_week_kwargs(phase_id, gym_equipment))
+    w.pop("generated_at", None)
+    return w
+
+
+def _assert_treadmill_changes_no_week(phase: str) -> None:
+    climbing = ["gym_boulder", "gym_routes", "hangboard", "dumbbell", "weight", "pullup_bar", "cable_machine"]
+    without = _week_without_timestamp(phase, climbing)
+    with_tm = _week_without_timestamp(phase, climbing + ["treadmill"])
+    assert json.dumps(without, sort_keys=True, default=str) == json.dumps(with_tm, sort_keys=True, default=str)
+    planned = {s["session_id"] for d in with_tm["weeks"][0]["days"] for s in d["sessions"]}
+    assert not planned & set(LUNCH)
+
+
 class TestOptIn:
     @pytest.mark.parametrize("discipline", ("lead", "boulder", "all_round"))
     def test_lunch_sessions_are_in_no_phase_pool(self, discipline):
@@ -299,12 +315,30 @@ class TestOptIn:
 
     @pytest.mark.parametrize("phase", PHASES)
     def test_declaring_a_treadmill_changes_no_generated_week(self, phase):
-        climbing = ["gym_boulder", "gym_routes", "hangboard", "dumbbell", "weight", "pullup_bar", "cable_machine"]
-        without = generate_phase_week(**_week_kwargs(phase, climbing))
-        with_tm = generate_phase_week(**_week_kwargs(phase, climbing + ["treadmill"]))
-        assert json.dumps(without, sort_keys=True, default=str) == json.dumps(with_tm, sort_keys=True, default=str)
-        planned = {s["session_id"] for d in with_tm["weeks"][0]["days"] for s in d["sessions"]}
-        assert not planned & set(LUNCH)
+        _assert_treadmill_changes_no_week(phase)
+
+    @pytest.mark.parametrize("phase", PHASES)
+    def test_treadmill_comparison_survives_a_second_boundary(self, phase, monkeypatch):
+        """B388: the two weeks are generated one after the other and
+        ``generated_at`` is ``datetime.now()`` at second resolution
+        (planner_v2.py:3029). About 0.2 % of real runs straddled a second and
+        compared ``13:38:49`` against ``13:38:50``. A clock that moves one
+        second per call makes that straddle certain."""
+        import datetime as _dt
+
+        import backend.engine.planner_v2 as pv2
+
+        class _Tick(_dt.datetime):
+            calls = 0
+
+            @classmethod
+            def now(cls, tz=None):
+                cls.calls += 1
+                return _dt.datetime(2026, 10, 17, 13, 38, 0) + _dt.timedelta(seconds=cls.calls)
+
+        monkeypatch.setattr(pv2, "datetime", _Tick)
+        _assert_treadmill_changes_no_week(phase)
+        assert _Tick.calls >= 2  # the patched clock was really read
 
     @pytest.mark.parametrize("sid", LUNCH)
     def test_quick_add_at_lunch_touches_only_its_slot(self, sid):
