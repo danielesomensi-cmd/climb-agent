@@ -278,8 +278,32 @@ def _with_custom_anchored_loads(week_plan: dict, state: dict) -> dict:
     return out
 
 
+def _played_without_resolved(week_plan: dict) -> list:
+    """B375: positions ``(week_idx, day_idx, session_idx, session_id)`` of the
+    done/skipped sessions that carry no ``resolved`` yet.
+
+    Must be taken BEFORE :func:`_auto_resolve`: on a cache hit ``week_plan`` is
+    the very object stored in ``state['week_plans']``, so once the resolver has
+    filled it there is nothing left to compare against.
+    """
+    out: list = []
+    for wb_idx, week_block in enumerate(week_plan.get("weeks") or []):
+        for d_idx, day_entry in enumerate(week_block.get("days") or []):
+            for s_idx, session_entry in enumerate(day_entry.get("sessions") or []):
+                if (
+                    session_entry.get("status") in ("done", "skipped")
+                    and not session_entry.get("resolved")
+                ):
+                    out.append((wb_idx, d_idx, s_idx, session_entry.get("session_id")))
+    return out
+
+
 def _cache_completed_resolved(
-    week_plan: dict, state: dict, week_start_key: str, is_current_week: bool
+    week_plan: dict,
+    state: dict,
+    week_start_key: str,
+    is_current_week: bool,
+    targets: Optional[list] = None,
 ) -> bool:
     """B120: persist resolved data for done/skipped sessions into the cached plan.
 
@@ -287,37 +311,81 @@ def _cache_completed_resolved(
     cache roundtrips — protecting them from re-resolution with changed state
     (e.g. after a finger_training_device switch).
 
+    B375: *targets* (from :func:`_played_without_resolved`) restricts the copy
+    to the sessions that lacked ``resolved`` before this read. ``state`` must
+    not share its cached plan with ``week_plan`` — the caller passes a freshly
+    loaded state, otherwise the "cached lacks resolved" test is always false
+    (the pre-B375 bug: nothing was ever persisted). A target is copied only if
+    the stored session is still the same one (same session_id) and still
+    done/skipped; only ``resolved`` is written, nothing else of the session.
+
     Returns True if state was modified (caller should save).
     """
     cached = (state.get("week_plans") or {}).get(week_start_key)
     if not cached:
         return False
+    if targets is None:
+        targets = [
+            (wb, d, s, sess.get("session_id"))
+            for wb, block in enumerate(week_plan.get("weeks") or [])
+            for d, day in enumerate(block.get("days") or [])
+            for s, sess in enumerate(day.get("sessions") or [])
+            if sess.get("status") in ("done", "skipped")
+        ]
 
     dirty = False
-    cached_weeks = cached.get("weeks") or []
-    for wb_idx, week_block in enumerate(week_plan.get("weeks", [])):
-        if wb_idx >= len(cached_weeks):
-            break
-        cached_days = cached_weeks[wb_idx].get("days") or []
-        for d_idx, day_entry in enumerate(week_block.get("days", [])):
-            if d_idx >= len(cached_days):
-                break
-            cached_sessions = cached_days[d_idx].get("sessions") or []
-            for s_idx, session_entry in enumerate(day_entry.get("sessions", [])):
-                if s_idx >= len(cached_sessions):
-                    break
-                if (
-                    session_entry.get("status") in ("done", "skipped")
-                    and session_entry.get("resolved")
-                    and not cached_sessions[s_idx].get("resolved")
-                ):
-                    cached_sessions[s_idx]["resolved"] = session_entry["resolved"]
-                    dirty = True
+    for wb_idx, d_idx, s_idx, session_id in targets:
+        try:
+            src = week_plan["weeks"][wb_idx]["days"][d_idx]["sessions"][s_idx]
+            dst = cached["weeks"][wb_idx]["days"][d_idx]["sessions"][s_idx]
+        except (KeyError, IndexError, TypeError):
+            continue
+        if (
+            src.get("session_id") != session_id
+            or dst.get("session_id") != session_id
+            or dst.get("status") not in ("done", "skipped")
+            or not src.get("resolved")
+            or dst.get("resolved")
+        ):
+            continue
+        dst["resolved"] = deepcopy(src["resolved"])
+        dirty = True
 
     if dirty and is_current_week:
         state["current_week_plan"] = cached
 
     return dirty
+
+
+def _persist_played_resolved(
+    week_plan: dict,
+    targets: list,
+    week_start_key: str,
+    is_current_week: bool,
+    user_id: Optional[str],
+) -> None:
+    """B375: write the ``resolved`` of the played sessions that had none.
+
+    Reloads the state under the user's write lock and patches only those
+    sessions, so a write that landed while this GET was resolving (feedback,
+    done/skip, replan) is never overwritten by the state this GET loaded —
+    and the planned sessions' read-time resolution is never persisted. A
+    failure is logged: the plan is served either way and the next read retries.
+    """
+    from backend.api.plan_revision import user_write_lock
+
+    try:
+        with user_write_lock(user_id):
+            fresh = load_state(user_id)
+            if _cache_completed_resolved(
+                week_plan, fresh, week_start_key, is_current_week, targets=targets
+            ):
+                save_state(fresh, user_id)
+    except Exception:
+        logger.warning(
+            "B375: caching resolved of played sessions failed for week %s",
+            week_start_key, exc_info=True,
+        )
 
 
 def _attach_feedback(week_plan: dict, feedback_log: list) -> None:
@@ -840,17 +908,24 @@ def get_week(
                 state["current_week_plan"] = week_plan
             save_state(state, user_id)
 
+    # B375: the played sessions without a stored resolution, taken BEFORE
+    # _auto_resolve fills them (on a cache hit week_plan IS the stored plan).
+    # A221: a week served from the cold store is never written back into hot.
+    _to_cache = (
+        _played_without_resolved(week_plan)
+        if not served_from_archive and not regeneration_failed
+        else []
+    )
+
     # Auto-resolve each session so the frontend gets exercises inline
     _auto_resolve(week_plan, state, user_id, phase=ctx["phase_id"])
 
     # B120: persist resolved data for completed sessions so they survive cache
     # roundtrips and are never re-resolved with changed state (device switch).
-    # A221: a week served from the cold store must never be written back into
-    # hot state — it is already fully resolved and immutable.
-    if not served_from_archive and not regeneration_failed and _cache_completed_resolved(
-        week_plan, state, week_start_key, is_current_week
-    ):
-        save_state(state, user_id)
+    if _to_cache:
+        _persist_played_resolved(
+            week_plan, _to_cache, week_start_key, is_current_week, user_id
+        )
 
     # Attach feedback summaries from feedback_log (B32)
     _attach_feedback(week_plan, state.get("feedback_log", []))
