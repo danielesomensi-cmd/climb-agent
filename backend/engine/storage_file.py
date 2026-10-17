@@ -16,6 +16,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from uuid import uuid4
 
+from backend.engine.storage_memo import memo_read, memo_write  # B376
+
 
 # ---------------------------------------------------------------------------
 # Path resolution
@@ -75,6 +77,7 @@ def read_state(user_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
         return None
 
 
+@memo_write
 def write_state(state: Dict[str, Any], user_id: Optional[str] = None) -> None:
     """Write user_state.json to disk (atomic)."""
     path = _user_state_path(user_id)
@@ -104,6 +107,7 @@ def _week_archive_dir(user_id: Optional[str]) -> Path:
     return DATA_DIR / "week_archive"
 
 
+@memo_write
 def archive_week(user_id: Optional[str], week_start: str, plan: Dict[str, Any]) -> None:
     """Write a single week plan into the cold store (atomic, write-once-style).
 
@@ -114,6 +118,7 @@ def archive_week(user_id: Optional[str], week_start: str, plan: Dict[str, Any]) 
     _atomic_write_text(path, json.dumps(plan, ensure_ascii=False, indent=2, sort_keys=True) + "\n")
 
 
+@memo_read
 def read_archived_week(user_id: Optional[str], week_start: str) -> Optional[Dict[str, Any]]:
     """Read a single archived week plan, or None if absent/corrupt."""
     path = _week_archive_dir(user_id) / f"{week_start}.json"
@@ -125,6 +130,7 @@ def read_archived_week(user_id: Optional[str], week_start: str) -> Optional[Dict
         return None
 
 
+@memo_read
 def list_archived_keys(user_id: Optional[str]) -> List[str]:
     """Return sorted list of archived week_start keys for a user."""
     d = _week_archive_dir(user_id)
@@ -133,6 +139,7 @@ def list_archived_keys(user_id: Optional[str]) -> List[str]:
     return sorted(p.stem for p in d.glob("*.json"))
 
 
+@memo_read
 def read_archived_weeks_in_range(
     user_id: Optional[str], start: str, end: str
 ) -> Dict[str, Dict[str, Any]]:
@@ -146,6 +153,7 @@ def read_archived_weeks_in_range(
     return out
 
 
+@memo_write
 def delete_archived_week(user_id: Optional[str], week_start: str) -> bool:
     """Delete a single archived week. Returns True if a file was removed."""
     path = _week_archive_dir(user_id) / f"{week_start}.json"
@@ -156,6 +164,7 @@ def delete_archived_week(user_id: Optional[str], week_start: str) -> bool:
         return False
 
 
+@memo_write
 def delete_all_archived(user_id: Optional[str]) -> int:
     """Delete the entire cold store for a user. Returns count removed."""
     d = _week_archive_dir(user_id)
@@ -264,6 +273,7 @@ def _outdoor_log_path_for_date(user_id: Optional[str], date_str: str) -> str:
     return os.path.join(_log_dir(user_id), f"outdoor_sessions_{year}.jsonl")
 
 
+@memo_write
 def append_outdoor_log_line(user_id: Optional[str], entry: Dict[str, Any]) -> str:
     """Append a single outdoor session entry to the yearly JSONL log.
 
@@ -278,6 +288,7 @@ def append_outdoor_log_line(user_id: Optional[str], entry: Dict[str, Any]) -> st
     return log_path
 
 
+@memo_read
 def read_outdoor_logs(
     user_id: Optional[str],
     since_date: Optional[str] = None,
@@ -354,6 +365,7 @@ def outdoor_log_date_exists(user_id: Optional[str], date: str) -> bool:
     return False
 
 
+@memo_write
 def remove_outdoor_log_by_date(user_id: Optional[str], date: str) -> int:
     """Remove all outdoor entries for a given date.  Returns count removed."""
     log_path = _outdoor_log_path_for_date(user_id, date)
@@ -385,6 +397,7 @@ def remove_outdoor_log_by_date(user_id: Optional[str], date: str) -> int:
     return removed
 
 
+@memo_write
 def delete_all_outdoor_logs(user_id: Optional[str]) -> int:
     """Delete all outdoor JSONL files for a user.  Returns count removed."""
     log_dir = _log_dir(user_id)
@@ -510,6 +523,7 @@ def list_user_ids() -> List[str]:
     return ids
 
 
+@memo_write
 def delete_user_data(user_id: str) -> None:
     """Remove the entire user directory (state + logs + everything)."""
     user_dir = USERS_DIR / user_id

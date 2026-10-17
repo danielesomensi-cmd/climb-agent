@@ -126,6 +126,14 @@ app.add_middleware(
 # exist, so there is nothing to double-compress or break.
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
+# B376: one request-scoped memo for storage reads (archive weeks, outdoor logs)
+# — the same read made by several consumers of one request is one round-trip.
+# Pure ASGI, opened/closed per HTTP request; writes invalidate it. Kill switch:
+# STORAGE_REQUEST_MEMO=0.
+from backend.engine.storage_memo import StorageMemoMiddleware  # noqa: E402
+
+app.add_middleware(StorageMemoMiddleware)
+
 
 @app.exception_handler(StalePlanError)
 async def stale_plan_handler(request: Request, exc: StalePlanError):

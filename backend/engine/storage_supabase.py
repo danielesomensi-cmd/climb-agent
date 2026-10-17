@@ -17,6 +17,8 @@ from typing import Any, Callable, Dict, List, Optional, TypeVar
 import httpx
 from supabase import ClientOptions, create_client
 
+from backend.engine.storage_memo import memo_read, memo_write  # B376
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -169,6 +171,7 @@ def read_state(user_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
     return None
 
 
+@memo_write
 def write_state(state: Dict[str, Any], user_id: Optional[str] = None) -> None:
     """Upsert user state into Supabase."""
     uid = _require_user_id(user_id)
@@ -196,6 +199,7 @@ def user_state_mtime(user_id: str) -> Optional[float]:
 # only (never loaded by read_state). One row per archived week.
 # ---------------------------------------------------------------------------
 
+@memo_write
 def archive_week(user_id: Optional[str], week_start: str, plan: Dict[str, Any]) -> None:
     """Upsert a single week plan into the cold store, with read-after-write verify.
 
@@ -236,6 +240,7 @@ def archive_week(user_id: Optional[str], week_start: str, plan: Dict[str, Any]) 
         )
 
 
+@memo_read
 def read_archived_week(user_id: Optional[str], week_start: str) -> Optional[Dict[str, Any]]:
     """Read a single archived week plan, or None if absent."""
     uid = _effective_uid(user_id)
@@ -256,6 +261,7 @@ def read_archived_week(user_id: Optional[str], week_start: str) -> Optional[Dict
     return None
 
 
+@memo_read
 def list_archived_keys(user_id: Optional[str]) -> List[str]:
     """Return sorted list of archived week_start keys for a user."""
     uid = _effective_uid(user_id)
@@ -270,6 +276,7 @@ def list_archived_keys(user_id: Optional[str]) -> List[str]:
     return [row["week_start"] for row in r.data]
 
 
+@memo_read
 def read_archived_weeks_in_range(
     user_id: Optional[str], start: str, end: str
 ) -> Dict[str, Dict[str, Any]]:
@@ -287,6 +294,7 @@ def read_archived_weeks_in_range(
     return {row["week_start"]: row["plan"] for row in r.data}
 
 
+@memo_write
 def delete_archived_week(user_id: Optional[str], week_start: str) -> bool:
     """Delete a single archived week. Returns True if a row was removed."""
     uid = _require_user_id(user_id)
@@ -301,6 +309,7 @@ def delete_archived_week(user_id: Optional[str], week_start: str) -> bool:
     return len(r.data) > 0
 
 
+@memo_write
 def delete_all_archived(user_id: Optional[str]) -> int:
     """Delete the entire cold store for a user. Returns count removed."""
     uid = _require_user_id(user_id)
@@ -365,6 +374,7 @@ def count_session_log_lines(user_id: Optional[str]) -> int:
 # Outdoor logs
 # ---------------------------------------------------------------------------
 
+@memo_write
 def append_outdoor_log_line(user_id: Optional[str], entry: Dict[str, Any]) -> str:
     """Insert an outdoor session. Returns a synthetic path for compat.
 
@@ -416,6 +426,7 @@ def append_outdoor_log_line(user_id: Optional[str], entry: Dict[str, Any]) -> st
     return f"supabase://outdoor_logs/{uid}/{session_date}"
 
 
+@memo_read
 def read_outdoor_logs(
     user_id: Optional[str],
     since_date: Optional[str] = None,
@@ -463,6 +474,7 @@ def outdoor_log_date_exists(user_id: Optional[str], date: str) -> bool:
     return len(r.data) > 0
 
 
+@memo_write
 def remove_outdoor_log_by_date(user_id: Optional[str], date: str) -> int:
     """Delete outdoor entries for a given date. Returns count removed."""
     uid = _require_user_id(user_id)
@@ -477,6 +489,7 @@ def remove_outdoor_log_by_date(user_id: Optional[str], date: str) -> int:
     return len(r.data)
 
 
+@memo_write
 def delete_all_outdoor_logs(user_id: Optional[str]) -> int:
     """Delete all outdoor logs for a user. Returns count removed."""
     uid = _require_user_id(user_id)
@@ -571,6 +584,7 @@ def list_user_ids() -> List[str]:
     return [row["user_id"] for row in r.data if row["user_id"] != "__legacy__"]
 
 
+@memo_write
 def delete_user_data(user_id: str) -> None:
     """Remove all data for a user across all tables."""
     uid = _require_user_id(user_id)
