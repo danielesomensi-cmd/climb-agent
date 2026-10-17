@@ -92,10 +92,22 @@ def _seed(*, mc_start_offset: int = -3, week_plans: dict[str, dict],
 
 # week_num mapping with mc_start = 3 weeks ago, phase0 long enough:
 #   week 1 → -3 (past), week 2 → -2 (past), week 3 → -1 / N-1 (past), week 4 → 0 (current)
+#
+# B388: the keys are computed at test time, never at import. They used to be
+# module constants (`CURRENT_KEY = _monday(0)`), frozen when pytest imported the
+# file, while the app reads date.today() per request: a suite that crossed local
+# Sunday->Monday midnight between collection and these tests compared last
+# week's Monday against the app's new current week (6 failures).
 PAST_NUM = 1            # 3 weeks ago
-PAST_KEY = _monday(-3)
 CURRENT_NUM = 4         # this week
-CURRENT_KEY = _monday(0)
+
+
+def _past_key() -> str:
+    return _monday(-3)
+
+
+def _current_key() -> str:
+    return _monday(0)
 
 
 # ── helper / canonical check ────────────────────────────────────────────────
@@ -113,7 +125,7 @@ class TestIsPastWeek:
 class TestPastWeekFailClosed:
     def test_cache_miss_returns_fail_closed_signal(self):
         """Past week absent from cache → explicit empty signal, status 200."""
-        _seed(week_plans={CURRENT_KEY: _make_week_plan(CURRENT_KEY)})  # PAST_KEY absent
+        _seed(week_plans={_current_key(): _make_week_plan(_current_key())})  # _past_key() absent
         r = client.get(f"/api/week/{PAST_NUM}")
         assert r.status_code == 200, r.text
         body = r.json()
@@ -122,18 +134,18 @@ class TestPastWeekFailClosed:
 
     def test_cache_miss_does_not_regenerate_or_write(self):
         """The fail-closed path must not call the planner nor persist anything."""
-        _seed(week_plans={CURRENT_KEY: _make_week_plan(CURRENT_KEY)})
+        _seed(week_plans={_current_key(): _make_week_plan(_current_key())})
         client.get(f"/api/week/{PAST_NUM}")
         state = deps.load_state(None)
         # No fabricated past week written to the cache.
-        assert PAST_KEY not in state.get("week_plans", {}), \
+        assert _past_key() not in state.get("week_plans", {}), \
             "guard must not persist a regenerated past week"
 
     def test_cached_past_week_with_completed_session_served_unchanged(self):
         """A past week that exists (done session + feedback) is returned intact."""
-        past = _make_week_plan(PAST_KEY, status="done")
+        past = _make_week_plan(_past_key(), status="done")
         past["weeks"][0]["days"][0]["sessions"][0]["feedback_summary"] = "hard"
-        _seed(week_plans={PAST_KEY: past, CURRENT_KEY: _make_week_plan(CURRENT_KEY)})
+        _seed(week_plans={_past_key(): past, _current_key(): _make_week_plan(_current_key())})
         r = client.get(f"/api/week/{PAST_NUM}")
         assert r.status_code == 200, r.text
         sess = r.json()["week_plan"]["weeks"][0]["days"][0]["sessions"][0]
@@ -143,24 +155,24 @@ class TestPastWeekFailClosed:
             == "pullup_weighted"
         # The stored completed session is untouched.
         state = deps.load_state(None)
-        stored = state["week_plans"][PAST_KEY]["weeks"][0]["days"][0]["sessions"][0]
+        stored = state["week_plans"][_past_key()]["weeks"][0]["days"][0]["sessions"][0]
         assert stored["status"] == "done"
 
     def test_force_does_not_regenerate_past_week(self):
         """force=true must be ignored for past weeks: cached served, never regen."""
-        past = _make_week_plan(PAST_KEY, status="done")
-        _seed(week_plans={PAST_KEY: past, CURRENT_KEY: _make_week_plan(CURRENT_KEY)})
+        past = _make_week_plan(_past_key(), status="done")
+        _seed(week_plans={_past_key(): past, _current_key(): _make_week_plan(_current_key())})
         r = client.get(f"/api/week/{PAST_NUM}?force=true")
         assert r.status_code == 200, r.text
         assert r.json()["week_plan"]["weeks"][0]["days"][0]["sessions"][0]["status"] == "done"
 
     def test_force_cache_miss_past_week_fails_closed(self):
         """force=true + absent past week → still fail closed, no regen."""
-        _seed(week_plans={CURRENT_KEY: _make_week_plan(CURRENT_KEY)})
+        _seed(week_plans={_current_key(): _make_week_plan(_current_key())})
         r = client.get(f"/api/week/{PAST_NUM}?force=true")
         assert r.status_code == 200, r.text
         assert r.json()["week_plan"] is None
-        assert PAST_KEY not in deps.load_state(None).get("week_plans", {})
+        assert _past_key() not in deps.load_state(None).get("week_plans", {})
 
 
 # ── regression: current / future generation unchanged ───────────────────────
@@ -173,9 +185,9 @@ class TestCurrentFutureUnaffected:
         assert r.status_code == 200, r.text
         wp = r.json()["week_plan"]
         assert wp is not None
-        assert wp["start_date"] == CURRENT_KEY
+        assert wp["start_date"] == _current_key()
         # It was persisted.
-        assert CURRENT_KEY in deps.load_state(None)["week_plans"]
+        assert _current_key() in deps.load_state(None)["week_plans"]
 
     def test_future_week_generates_on_cache_miss(self):
         """Future week absent → generated normally."""
@@ -187,13 +199,13 @@ class TestCurrentFutureUnaffected:
     def test_current_week_force_regen_preserves_completed(self):
         """Guard must not block the current week: force-regen still preserves
         completed sessions via regenerate_preserving_completed."""
-        cur = _make_week_plan(CURRENT_KEY, status="done")
-        _seed(week_plans={CURRENT_KEY: cur})
+        cur = _make_week_plan(_current_key(), status="done")
+        _seed(week_plans={_current_key(): cur})
         r = client.get("/api/week/0?force=true")
         assert r.status_code == 200, r.text
         # The done session anchored on Monday must survive the regen.
         days = r.json()["week_plan"]["weeks"][0]["days"]
-        mon = next(d for d in days if d["date"] == CURRENT_KEY)
+        mon = next(d for d in days if d["date"] == _current_key())
         done = [s for s in mon["sessions"] if s.get("status") == "done"]
         assert done, "current-week force-regen must preserve completed sessions"
 
@@ -212,14 +224,14 @@ class TestPrevWeekMergeStillWorks:
         phases[0]["duration_weeks"] = max(phases[0].get("duration_weeks", 1), 6)
         state["week_plans"] = {}
         # Stash a prior current-week plan with a done session anchored on Monday.
-        state["_prev_week_plan"] = _make_week_plan(CURRENT_KEY, status="done")
+        state["_prev_week_plan"] = _make_week_plan(_current_key(), status="done")
         state["current_week_plan"] = None
         deps.save_state(state, None)
 
         r = client.get("/api/week/0?force=true")
         assert r.status_code == 200, r.text
         days = r.json()["week_plan"]["weeks"][0]["days"]
-        mon = next(d for d in days if d["date"] == CURRENT_KEY)
+        mon = next(d for d in days if d["date"] == _current_key())
         assert any(s.get("status") == "done" for s in mon["sessions"]), \
             "completed session from _prev_week_plan must be merged into current week"
 
@@ -228,12 +240,12 @@ class TestPrevWeekMergeStillWorks:
 
 class TestReplannerRejectsPastWeek:
     def test_override_on_past_week_rejected(self):
-        _seed(week_plans={PAST_KEY: _make_week_plan(PAST_KEY, status="done"),
-                          CURRENT_KEY: _make_week_plan(CURRENT_KEY)})
+        _seed(week_plans={_past_key(): _make_week_plan(_past_key(), status="done"),
+                          _current_key(): _make_week_plan(_current_key())})
         r = client.post("/api/replanner/override", json={
-            "intent": "rest", "location": "home", "reference_date": PAST_KEY,
-            "week_plan": _make_week_plan(PAST_KEY, status="done"),
-            "target_date": PAST_KEY,
+            "intent": "rest", "location": "home", "reference_date": _past_key(),
+            "week_plan": _make_week_plan(_past_key(), status="done"),
+            "target_date": _past_key(),
         })
         assert r.status_code == 422, r.text
         assert "past" in r.json()["detail"].lower()
@@ -241,11 +253,32 @@ class TestReplannerRejectsPastWeek:
     def test_override_on_current_week_not_rejected_by_guard(self):
         """The past-week guard must not block the current week. (May still fail
         downstream for other reasons, but never with the past-week 422.)"""
-        _seed(week_plans={CURRENT_KEY: _make_week_plan(CURRENT_KEY)})
+        _seed(week_plans={_current_key(): _make_week_plan(_current_key())})
         r = client.post("/api/replanner/override", json={
-            "intent": "rest", "location": "home", "reference_date": CURRENT_KEY,
-            "week_plan": _make_week_plan(CURRENT_KEY),
-            "target_date": CURRENT_KEY,
+            "intent": "rest", "location": "home", "reference_date": _current_key(),
+            "week_plan": _make_week_plan(_current_key()),
+            "target_date": _current_key(),
         })
         assert not (r.status_code == 422 and "past" in r.json().get("detail", "").lower()), \
             "current week must not be rejected by the past-week guard"
+
+
+# ── B388: the week keys follow the clock, not the import ────────────────────
+
+class TestKeysFollowTheClock:
+    def test_current_week_key_tracks_a_week_rollover_after_import(self, monkeypatch):
+        """Simulate the suite crossing Sunday->Monday after this module was
+        imported: the wall clock jumps 7 days. The test's own week key must move
+        with the app's notion of the current week (B388 — it used to be frozen
+        at import and returned last week's Monday)."""
+        import time as _time
+        imported_key = _current_key()
+        real_time = _time.time
+        monkeypatch.setattr(_time, "time", lambda: real_time() + 7 * 86400)
+        assert _current_key() != imported_key
+        assert _current_key() == deps.this_monday()
+
+        _seed(week_plans={})
+        r = client.get("/api/week/0")
+        assert r.status_code == 200, r.text
+        assert r.json()["week_plan"]["start_date"] == _current_key()

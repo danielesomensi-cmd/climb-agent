@@ -156,8 +156,38 @@ def test_days_outside_the_window_keep_their_hard_sessions():
     assert hard, "the week lost every hard session — the sweep is over-reaching"
 
 
+def _week_without_timestamp(**kwargs) -> dict:
+    """The generated week minus ``generated_at``, a wall-clock timestamp (B388)."""
+    week = generate_phase_week(**kwargs)
+    week.pop("generated_at", None)
+    return week
+
+
 def test_no_pretrip_dates_changes_nothing():
-    assert generate_phase_week(**_kwargs()) == generate_phase_week(**_kwargs(pretrip_dates=None))
+    assert _week_without_timestamp(**_kwargs()) == _week_without_timestamp(**_kwargs(pretrip_dates=None))
+
+
+def test_no_pretrip_comparison_survives_a_second_boundary(monkeypatch):
+    """B388: the two weeks are generated one after the other and
+    ``generated_at`` is ``datetime.now()`` at second resolution
+    (planner_v2.py:3029), so a run straddling a second compared
+    ``12:20:00`` against ``12:20:01``. A clock that moves one second per
+    call makes that straddle certain."""
+    import datetime as _dt
+
+    import backend.engine.planner_v2 as pv2
+
+    class _Tick(_dt.datetime):
+        calls = 0
+
+        @classmethod
+        def now(cls, tz=None):
+            cls.calls += 1
+            return _dt.datetime(2026, 10, 17, 12, 20, 0) + _dt.timedelta(seconds=cls.calls)
+
+    monkeypatch.setattr(pv2, "datetime", _Tick)
+    test_no_pretrip_dates_changes_nothing()
+    assert _Tick.calls >= 2  # the patched clock was really read
 
 
 # ─── planner: the volume multiplier travels on the day ───────────────────────
@@ -185,7 +215,28 @@ def test_multiplier_of_one_is_not_stamped():
 def test_planner_stays_deterministic_under_a_taper():
     kwargs = _kwargs(pretrip_dates=["2026-10-17", "2026-10-18"],
                      taper_volume={d: TAPER_WEEK2_VOLUME for d in ALL_WEEK})
-    assert generate_phase_week(**kwargs) == generate_phase_week(**kwargs)
+    assert _week_without_timestamp(**kwargs) == _week_without_timestamp(**kwargs)
+
+
+def test_taper_determinism_survives_a_second_boundary(monkeypatch):
+    """B388: same straddle as the no-pretrip test above — ``generated_at``
+    (planner_v2.py:3029, second resolution) differed between the two
+    generations whenever the run crossed a second boundary."""
+    import datetime as _dt
+
+    import backend.engine.planner_v2 as pv2
+
+    class _Tick(_dt.datetime):
+        calls = 0
+
+        @classmethod
+        def now(cls, tz=None):
+            cls.calls += 1
+            return _dt.datetime(2026, 10, 17, 12, 20, 0) + _dt.timedelta(seconds=cls.calls)
+
+    monkeypatch.setattr(pv2, "datetime", _Tick)
+    test_planner_stays_deterministic_under_a_taper()
+    assert _Tick.calls >= 2  # the patched clock was really read
 
 
 # ─── _apply_taper_volume ─────────────────────────────────────────────────────

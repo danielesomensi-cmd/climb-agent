@@ -195,9 +195,37 @@ def test_unmet_entry_carries_the_weight_that_justified_the_floor():
 
 # ─── invariants that must survive ────────────────────────────────────────────
 
+def _week_without_timestamp(**kwargs) -> dict:
+    """The generated week minus ``generated_at``, a wall-clock timestamp (B388)."""
+    week = generate_phase_week(**kwargs)
+    week.pop("generated_at", None)
+    return week
+
+
 def test_planner_stays_deterministic():
     kwargs = _kwargs()
-    assert generate_phase_week(**kwargs) == generate_phase_week(**kwargs)
+    assert _week_without_timestamp(**kwargs) == _week_without_timestamp(**kwargs)
+
+
+def test_determinism_survives_a_second_boundary(monkeypatch):
+    """B388: ``generated_at`` is ``datetime.now()`` at second resolution
+    (planner_v2.py:3029), so comparing two whole weeks failed whenever the
+    two generations straddled a second (``12:20:17 != 12:20:18``)."""
+    import datetime as _dt
+
+    import backend.engine.planner_v2 as pv2
+
+    class _Tick(_dt.datetime):
+        calls = 0
+
+        @classmethod
+        def now(cls, tz=None):
+            cls.calls += 1
+            return _dt.datetime(2026, 10, 17, 12, 20, 16) + _dt.timedelta(seconds=cls.calls)
+
+    monkeypatch.setattr(pv2, "datetime", _Tick)
+    test_planner_stays_deterministic()
+    assert _Tick.calls >= 2  # the patched clock was really read
 
 
 def test_b308_pulling_guarantee_still_holds():

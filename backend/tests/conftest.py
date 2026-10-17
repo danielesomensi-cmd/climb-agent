@@ -79,3 +79,65 @@ def isolate_storage_write_dirs(tmp_path, monkeypatch):
     # keep the two aligned so a test patching one does not see the other stale.
     monkeypatch.setattr(deps, "STATE_PATH", tmp_state, raising=False)
     yield
+
+
+# ---------------------------------------------------------------------------
+# B388 — no test may straddle a midnight.
+#
+# There is no injectable clock in the backend: ~60 modules read
+# ``date.today()`` / ``datetime.now()`` directly, per call. Many tests read
+# "today" in a fixture (e.g. the current Monday, to seed a week plan) and then
+# hit an endpoint that reads it again — and the two reads only agree while the
+# wall clock stays on the same day. Run the suite across Sunday->Monday local
+# midnight and a test whose fixture ran at 23:59:59.5 sees the server answer at
+# 00:00:00 for the *next* week: ``assert '2026-10-12' == '2026-10-19'``, 422 on
+# a "past" week, guard checks on the wrong day (55 tests reproduced it). The
+# product is right — a request after midnight does belong to the new week; the
+# tests are wrong to assume the day cannot change under them.
+#
+# Freezing the clock for the whole suite would mean patching ``datetime`` in
+# every module (no freezegun in the venv, and ``date.today`` cannot be
+# monkeypatched on the C type). Instead: a test never STARTS within
+# ``_MIDNIGHT_GUARD_S`` seconds of a local or UTC midnight — it waits the
+# boundary out first. No test in the suite runs anywhere near that long, so no
+# test can see two dates; the cost is at most one short wait per run that
+# happens to cross midnight. Day boundaries are guarded, not only Mondays,
+# because day-based logic (trial days, "past session", per-day guards) has the
+# same shape; UTC too, because the coach daily limit counts UTC days.
+# ---------------------------------------------------------------------------
+_MIDNIGHT_GUARD_S = 10.0
+
+
+def _seconds_until_next_midnight(now_ts: float) -> float:
+    """Seconds from ``now_ts`` to the nearest upcoming local or UTC midnight."""
+    from datetime import datetime, time, timedelta, timezone
+
+    local = datetime.fromtimestamp(now_ts)
+    next_local = datetime.combine(local.date() + timedelta(days=1), time())
+    utc = datetime.fromtimestamp(now_ts, timezone.utc)
+    next_utc = datetime.combine(utc.date() + timedelta(days=1), time(), timezone.utc)
+    return min(next_local.timestamp(), next_utc.timestamp()) - now_ts
+
+
+def _midnight_wait_s(now_ts: float, guard_s: float = _MIDNIGHT_GUARD_S) -> float:
+    """How long a test starting at ``now_ts`` must wait so it cannot straddle a
+    midnight: 0 when the next midnight is more than ``guard_s`` away, else the
+    time to just past it."""
+    left = _seconds_until_next_midnight(now_ts)
+    return left + 0.05 if left <= guard_s else 0.0
+
+
+def _wait_out_midnight(now, sleep) -> float:
+    """Sleep past an imminent midnight; returns the seconds waited."""
+    wait = _midnight_wait_s(now())
+    if wait > 0:
+        sleep(wait)
+    return wait
+
+
+@pytest.fixture(autouse=True)
+def _no_test_straddles_midnight():
+    import time
+
+    _wait_out_midnight(time.time, time.sleep)
+    yield
