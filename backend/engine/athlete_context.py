@@ -24,7 +24,10 @@ Contract:
   ``retest_policy.retest_status``. When a contract does not exist yet the
   section says so and is labelled ``source: "fallback"``.
 - ``render_text(ctx)`` renders it in Italian for the CLI (Claude Code reads the
-  output). ``render_coach_block`` / ``render_composer_block`` (A297, R7b) render
+  output). B385: with ``state=`` / ``outdoor_rows=`` (the CLI passes what it
+  read) it adds render-only views — custom sessions by name, planned crag days
+  with their pitch ladder, the limit log, a try-hard count derived from the
+  attempt results — computed at render time, never in ``build_athlete_context``. ``render_coach_block`` / ``render_composer_block`` (A297, R7b) render
   it in English for the in-app coach chat and ad-hoc composer — the single
   prompt integration point, wired by ``backend.coach.athlete_block`` behind
   ``COACH_ATHLETE_CONTEXT``. ``composer_guard_view`` / ``drop_heavy_pulls``
@@ -82,7 +85,7 @@ from backend.engine.stimulus import (
 DateLike = Union[date, str]
 ArchivedWeeks = Optional[Union[Mapping[str, Any], Sequence[Mapping[str, Any]]]]
 
-VERSION = "b372.1"
+VERSION = "b385.1"
 
 # ---------------------------------------------------------------------------
 # Constants. Shared with the engine, never copied: the command and the docs
@@ -395,7 +398,7 @@ def _session_view(d: str, s: Mapping[str, Any]) -> Dict[str, Any]:
 def _upcoming(state: Mapping[str, Any], today: date, archived_weeks: ArchivedWeeks) -> List[Dict[str, Any]]:
     days = _plan_days(state, archived_weeks)
     out: List[Dict[str, Any]] = []
-    for k in range(UPCOMING_DAYS + 1):
+    for k in range(UPCOMING_DAYS):  # B385: 14 days = today .. today+13 (was 15)
         d = (today + timedelta(days=k)).isoformat()
         for s in days.get(d, []):
             out.append(_session_view(d, s))
@@ -1316,9 +1319,178 @@ def _render_technique_library(L: List[str], lib: Mapping[str, Any]) -> None:
     L.append("  Il livello corrente di PIEDI / POSIZIONI / CADUTE sta nelle «Note atleta» qui sotto.")
 
 
+# ---------------------------------------------------------------------------
+# B385 — render-side views for the CLI (never called by build_athlete_context,
+# which runs on every coach turn in prod: these read the state the CLI already
+# holds, only when the text is rendered)
+# ---------------------------------------------------------------------------
+
+_CUSTOM_ID_RE = re.compile(r"\bcustom_(cs_[0-9A-Za-z]+)\b")
+
+_PITCH_ROLE_IT = {"warmup": "riscaldamento", "build": "avvicinamento", "main": "main",
+                  "cooldown": "defaticamento", "project": "progetto"}
+
+_RESULT_TOKEN = {"sent": "SEND", "fell": "FALL", "topped_out": "TOPPED_OUT"}
+
+
+def _custom_names(ctx: Mapping[str, Any], state: Optional[Mapping[str, Any]]) -> Dict[str, str]:
+    """``custom_cs_…`` session id → the name the athlete gave it: the plan copy
+    (ctx upcoming / recent), else ``state.custom_sessions``."""
+    names: Dict[str, str] = {}
+    for cs in (state or {}).get("custom_sessions") or []:
+        if isinstance(cs, Mapping) and cs.get("id") and cs.get("name"):
+            names[f"custom_{cs['id']}"] = str(cs["name"])
+    rc = ctx.get("recent") or {}
+    for s in list(ctx.get("upcoming") or []) + list(rc.get("sessions") or []):
+        sid = str(s.get("session_id") or "")
+        if sid.startswith("custom_") and s.get("name"):
+            names.setdefault(sid, str(s["name"]))
+    return names
+
+
+def _session_label(s: Mapping[str, Any], names: Mapping[str, str]) -> str:
+    """A session for the reader: a custom by its name, never its opaque id."""
+    sid = str(s.get("session_id") or "")
+    if sid.startswith("custom_"):
+        name = s.get("name") or names.get(sid)
+        return f"custom «{name}»" if name else f"custom senza nome ({sid[len('custom_'):]})"
+    return f"{sid} {('«' + str(s['name']) + '»') if s.get('name') else ''}".rstrip()
+
+
+def _replace_custom_ids(text: str, names: Mapping[str, str]) -> str:
+    def _sub(m: "re.Match[str]") -> str:
+        name = names.get(m.group(0))
+        return f"«{name}»" if name else f"custom senza nome ({m.group(1)})"
+    return _CUSTOM_ID_RE.sub(_sub, text)
+
+
+def planned_outdoor_days(state: Optional[Mapping[str, Any]], today: DateLike,
+                         days: int = UPCOMING_DAYS) -> List[Dict[str, Any]]:
+    """Outdoor days on the plan in ``today .. today+days-1``: spot, discipline,
+    day type and the pitch ladder as written (grade, role, attempts). Route
+    names are never invented: only what the day carries."""
+    if not state:
+        return []
+    from backend.engine.stimulus import is_outdoor_day, iter_plan_days
+
+    td = _as_date(today)
+    lo, hi = td.isoformat(), (td + timedelta(days=days - 1)).isoformat()
+    out: Dict[str, Dict[str, Any]] = {}
+    for d, day, _src in iter_plan_days(state):
+        if not (lo <= d <= hi) or d in out or not is_outdoor_day(day):
+            continue
+        plan = day.get("outdoor_plan") if isinstance(day.get("outdoor_plan"), Mapping) else {}
+        if not (plan or day.get("outdoor_spot_name") or day.get("outdoor_spot_id")
+                or day.get("outdoor_session_status")):
+            continue  # a bare planner outdoor_slot is availability, not a crag day
+        pitches = sorted((p for p in plan.get("pitches") or [] if isinstance(p, Mapping)),
+                         key=lambda p: (p.get("index") is None, p.get("index") or 0))
+        out[d] = {
+            "date": d,
+            "spot": day.get("outdoor_spot_name") or day.get("outdoor_spot_id"),
+            "discipline": plan.get("discipline") or day.get("outdoor_discipline"),
+            "day_type": plan.get("day_type"),
+            "status": day.get("outdoor_session_status") or "planned",
+            "pitches": [{"grade": p.get("grade"), "role": p.get("role"),
+                         "attempts": p.get("attempts")} for p in pitches],
+        }
+    return [out[d] for d in sorted(out)]
+
+
+def _outdoor_line(o: Mapping[str, Any]) -> str:
+    bits = [str(o.get("discipline") or "disciplina ?")]
+    if o.get("day_type"):
+        bits.append(f"giornata {o['day_type']}")
+    head = f"  {o['date']} outdoor   {o.get('spot') or 'falesia ?'} ({', '.join(bits)}) [{o['status']}]"
+    if not o.get("pitches"):
+        return head + " nessun piano dei tiri"
+    tiri = []
+    for p in o["pitches"]:
+        role = _PITCH_ROLE_IT.get(str(p.get("role") or ""), p.get("role") or "?")
+        att = p.get("attempts")
+        tiri.append(f"{p.get('grade') or '?'} {role}" + (f" ×{att}" if isinstance(att, int) and att > 1 else ""))
+    return head + " tiri: " + ", ".join(tiri)
+
+
+def tryhard_from_results(state: Optional[Mapping[str, Any]], today: DateLike,
+                         outdoor_rows: Optional[Sequence[Mapping[str, Any]]]) -> Optional[Dict[str, Any]]:
+    """Try-hard outcomes DERIVED from the outdoor attempt results (``sent`` /
+    ``fell`` / ``topped_out``) over the ``TRYHARD_WINDOW_D`` window, on the
+    routes at or above the OUTDOOR-HARD threshold (redpoint − 2, A288). Not the
+    agreed note format: a ``topped_out`` is a top with rests, it does not say
+    whether the rest was a TAKE or a LET_GO. ``None`` without state or without
+    a usable redpoint (never guess the threshold)."""
+    if not state:
+        return None
+    from backend.engine.stimulus import _route_discipline, hard_climb_threshold, is_hard_climb
+
+    td = _as_date(today)
+    since = (td - timedelta(days=TRYHARD_WINDOW_D)).isoformat()
+    thresholds = {disc: hard_climb_threshold(state, disc) for disc in ("lead", "boulder")}
+    if not any(thresholds.values()):
+        return None
+    counts = {"SEND": 0, "FALL": 0, "TOPPED_OUT": 0}
+    routes: List[str] = []
+    for e in _outdoor_entries(state, outdoor_rows):
+        d = str(e["date"])[:10]
+        if not (since <= d <= td.isoformat()):
+            continue
+        for r in e.get("routes") or []:
+            if not isinstance(r, Mapping):
+                continue
+            disc = _route_discipline(r, str(e.get("discipline") or ""))
+            if not is_hard_climb(state, disc, r.get("grade")):
+                continue
+            n = 0
+            for a in r.get("attempts") or []:
+                tok = _RESULT_TOKEN.get(str((a or {}).get("result") or "")) if isinstance(a, Mapping) else None
+                if tok:
+                    counts[tok] += 1
+                    n += 1
+            if n:
+                routes.append(f"{d[5:]} {r.get('name') or '?'} {r.get('grade')} ×{n}")
+    non_send = counts["FALL"] + counts["TOPPED_OUT"]
+    return {
+        "window_start": since,
+        "thresholds": {k: v for k, v in thresholds.items() if v},
+        "counts": counts,
+        "attempts": sum(counts.values()),
+        "fall_pct_of_non_send": round(100.0 * counts["FALL"] / non_send, 1) if non_send else None,
+        "routes": routes,
+    }
+
+
+def _render_limit_log(L: List[str], entries: Sequence[Mapping[str, Any]]) -> None:
+    L.append("")
+    L.append(f"## Limit log (ultime {LIMIT_LOG_RECENT} sessioni al limite, A296)")
+    if not entries:
+        L.append("  nessuna sessione al limite registrata")
+        return
+    for e in entries:
+        res = (f"{e.get('problems')} problemi, {e.get('sent')} chiusi"
+               + (f" (meglio {e['best_sent']})" if e.get("best_sent") else "")
+               if e.get("problems") else "nessun problema registrato")
+        step = ""
+        if e.get("step") is not None or e.get("step_reason"):
+            step = f"; passo {e.get('step')} ({e.get('step_reason') or '—'})"
+        L.append(f"  {e.get('date')} {e.get('source') or '?'} {e.get('surface') or '?'} "
+                 f"{e.get('exercise_id') or '?'}: obiettivo {e.get('target_grade') or '—'} → {res}{step}; "
+                 f"prossimo obiettivo {e.get('next_target_grade') or '—'}"
+                 + ("" if e.get("qualifies") in (None, True) else " — non qualifica")
+                 + (f" ⚠ {e['warning']}" if e.get("warning") else ""))
+
+
 def render_text(ctx: Mapping[str, Any], *, plan_notes: Optional[str] = None,
-                source_line: Optional[str] = None) -> str:
-    """Italian rendering for Claude Code."""
+                source_line: Optional[str] = None,
+                state: Optional[Mapping[str, Any]] = None,
+                outdoor_rows: Optional[Sequence[Mapping[str, Any]]] = None) -> str:
+    """Italian rendering for Claude Code.
+
+    B385: ``state`` / ``outdoor_rows`` (optional, the CLI passes what it read)
+    feed render-only views — custom session names, the planned outdoor days of
+    the next 14 days, the try-hard count derived from the attempt results.
+    Without them the text is what the ctx alone can say."""
+    names = _custom_names(ctx, state)
     L: List[str] = []
     L.append(f"=== Contesto atleta — {ctx.get('as_of')} (versione {ctx.get('version')}) ===")
     if source_line:
@@ -1402,19 +1574,26 @@ def render_text(ctx: Mapping[str, Any], *, plan_notes: Optional[str] = None,
 
     L.append("")
     L.append(f"## Prossimi {UPCOMING_DAYS} giorni")
-    for s in ctx.get("upcoming") or []:
+    rows: List[Tuple[str, int, str]] = []
+    for i, s in enumerate(ctx.get("upcoming") or []):
         flags = [f for f, on in (("hard", s["hard"]), ("dita", s["finger"]), ("tirata", s["pulling"]),
                                  ("dita-hard", s["finger_hard"]), ("test", s["is_test"]),
-                                 ("custom", s["is_custom"]), ("HIIT?", s["hiit"])) if on]
-        L.append(f"  {s['date']} {s.get('slot') or '-':8} {s.get('session_id')} "
-                 f"{('«' + s['name'] + '»') if s.get('name') else ''} [{s['status']}] "
-                 f"{'/'.join(flags) or 'leggera'} {('stimoli: ' + ','.join(s['stimuli'])) if s['stimuli'] else ''}".rstrip())
+                                 ("HIIT?", s["hiit"])) if on]
+        rows.append((s["date"], i, f"  {s['date']} {s.get('slot') or '-':8} {_session_label(s, names)} "
+                     f"[{s['status']}] "
+                     f"{'/'.join(flags) or 'leggera'} {('stimoli: ' + ','.join(s['stimuli'])) if s['stimuli'] else ''}".rstrip()))
+    for o in planned_outdoor_days(state, ctx.get("as_of") or date.today()) if state else []:
+        rows.append((o["date"], -1, _outdoor_line(o)))
+    for _d, _i, line in sorted(rows):
+        L.append(line)
+    if not rows:
+        L.append("  niente in piano")
 
     L.append("")
     rc = ctx.get("recent") or {}
     L.append("## Ultimi 7 giorni (outdoor: 14)")
     for s in rc.get("sessions") or []:
-        L.append(f"  {s['date']} {s.get('slot') or '-':8} {s.get('session_id')} [{s['status']}] "
+        L.append(f"  {s['date']} {s.get('slot') or '-':8} {_session_label(s, names)} [{s['status']}] "
                  f"{('stimoli: ' + ','.join(s['stimuli'])) if s['stimuli'] else ''}".rstrip())
     for o in rc.get("outdoor") or []:
         L.append(f"  {o['date']} outdoor {o.get('spot')}: {o['routes']} vie, {o['sent']} chiuse"
@@ -1474,6 +1653,19 @@ def render_text(ctx: Mapping[str, Any], *, plan_notes: Optional[str] = None,
                  f"FALL sul totale dei non-send: {th.get('fall_pct_of_non_send')}%")
     else:
         L.append("  nessun tentativo loggato nel formato (non è una sessione chiave mancante)")
+    derived = tryhard_from_results(state, ctx.get("as_of") or date.today(), outdoor_rows) if state else None
+    if derived and derived["attempts"]:
+        c = derived["counts"]
+        soglie = ", ".join(f"{k} ≥ {v}" for k, v in derived["thresholds"].items())
+        L.append(f"  Derivato dagli esiti (non nel formato), vie ≥ RP−2 ({soglie}): SEND {c['SEND']} · "
+                 f"FALL {c['FALL']} · TOPPED_OUT {c['TOPPED_OUT']} → FALL sui non-send: "
+                 f"{derived['fall_pct_of_non_send']}% — {'; '.join(derived['routes'])}")
+        L.append("    (TOPPED_OUT = in catena con riposi: l'esito non dice se fu TAKE o LET_GO; "
+                 "il conteggio formale resta quello sopra)")
+    elif derived is not None:
+        L.append("  Derivato dagli esiti (non nel formato): nessun tentativo su vie ≥ RP−2 nella finestra")
+
+    _render_limit_log(L, ctx.get("limit_log") or [])
 
     _render_bw_ladders(L, ctx.get("bw_ladders") or {})
     _render_technique_library(L, ctx.get("technique_library") or {})
@@ -1500,7 +1692,7 @@ def render_text(ctx: Mapping[str, Any], *, plan_notes: Optional[str] = None,
         L.append("  nessuno")
     for w in warns:
         L.append(f"  [{w['code']}] {w['message']}")
-    return "\n".join(L) + "\n"
+    return _replace_custom_ids("\n".join(L) + "\n", names)
 
 
 # ---------------------------------------------------------------------------
