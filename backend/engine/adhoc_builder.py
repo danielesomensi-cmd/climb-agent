@@ -464,14 +464,28 @@ def match_gym(user_state: Dict[str, Any], gym_name: Optional[str]) -> Optional[D
     return None
 
 
-def _current_phase(user_state: Dict[str, Any]) -> Optional[str]:
+def _current_phase(user_state: Dict[str, Any], today: Optional[str] = None) -> Optional[str]:
+    """Phase of the macrocycle on ``today`` (the session day), or None.
+
+    B388: the phase used to be read on the wall clock (``date.today()``) even
+    when the caller passed the session day, so a session composed for a day in
+    another phase — and the C272 golden, pinned on 2026-10-07 — got the phase
+    of the day the code ran. ``today`` None (or unparsable) keeps the wall
+    clock, which is the pre-B388 behaviour of every caller without a day.
+    """
     from backend.api.deps import current_phase_and_week
 
     mc = user_state.get("macrocycle") or {}
     phases = mc.get("phases") or []
     if not phases:
         return None
-    pi, _ = current_phase_and_week(mc)
+    day = None
+    if today:
+        try:
+            day = _date.fromisoformat(str(today)[:10])
+        except ValueError:
+            day = None
+    pi, _ = current_phase_and_week(mc, day)
     if 0 <= pi < len(phases):
         return phases[pi].get("phase_id") or phases[pi].get("id")
     return None
@@ -595,7 +609,7 @@ def compose_adhoc_session(
         equipment = resolve_equipment_mode("gym", user_state, gym_id=gym.get("gym_id"))
     else:
         equipment = resolve_equipment_mode(equipment_set, user_state)
-    phase = _current_phase(user_state)
+    phase = _current_phase(user_state, today)
     guard_view: Optional[Dict[str, Any]] = None
     # A297 review: finger-hard / campus picks are capped per session for a
     # tested athlete (None = no cap: flag off or untested, pre-A297 path).

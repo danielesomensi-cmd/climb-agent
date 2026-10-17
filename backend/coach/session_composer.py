@@ -530,7 +530,7 @@ def compose(
 
     minutes = _clamp(intent.get("minutes"), MIN_MINUTES, MAX_MINUTES) or 45
     energy = intent.get("energy") if intent.get("energy") in ADHOC_ENERGY else "medium"
-    phase = _current_phase(user_state)
+    phase = _current_phase(user_state, today)
     guard_view: Optional[Dict[str, Any]] = None
     if athlete_ctx:
         from backend.engine.athlete_context import composer_guard_view
