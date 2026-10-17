@@ -371,6 +371,20 @@ Two things worth knowing:
   set raises it, "Hard" lowers it). "OK" — or no rating at all — keeps it exactly
   where you put it.
 
+**Dumbbells: the weight of ONE dumbbell.** When an exercise uses a dumbbell in each
+hand (dumbbell bench press, dumbbell row, overhead press, curls, lateral raises,
+farmer's carry, loaded lunges and split squats) the app shows the load as
+**"34 kg per dumbbell"** and the field is labelled **"Load per dumbbell (kg)"**: log
+what one dumbbell weighs, never the sum of the two. Exercises that hold a single
+dumbbell or kettlebell (goblet squat, overhead triceps extension, wrist work) show
+that implement's weight; barbell, cable and machine exercises show the whole load,
+as before. When you have a barbell number but have never logged the dumbbell
+version of the same lift (or the other way round) the app converts it for you:
+bench press 70 kg on the bar → dumbbell bench press 35 kg per dumbbell, and back.
+The barbell bench press and the barbell row are only planned where you have a real
+barbell (and, for the bench, a bench): with dumbbells only the app picks another
+exercise for that slot (the dumbbell row needs a bench too).
+
 ### Max hangs and weighted pull-ups: your max vs your training load
 
 For **max hangs (5" and 7") and weighted pull-ups / chin-ups** the app keeps two

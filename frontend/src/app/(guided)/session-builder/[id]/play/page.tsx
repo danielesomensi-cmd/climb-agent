@@ -23,6 +23,7 @@ import { MeasureInput, PainPicker } from "@/components/training/measured-feedbac
 import { LadderBadge } from "@/components/training/ladder-badge";
 import { LimitProblemLogger } from "@/components/training/limit-problem-logger";
 import { limitFeedbackFields, limitTargetFor } from "@/lib/limit-problems";
+import { formatLoad } from "@/lib/load-units";
 
 type Stage = "idle" | "exercise_active" | "resting" | "completed";
 
@@ -159,7 +160,7 @@ function exercisePrescriptionSummary(ex: CustomSessionExercise): string {
   if (ex.reps != null && ex.reps > 0) parts.push(`${sets}\u00d7${ex.reps}${perSide}`);
   else if (ex.work_seconds != null && ex.work_seconds > 0) parts.push(`${sets}\u00d7${ex.work_seconds}s${perSide}`);
   else parts.push(`${sets} sets${perSide}`);
-  if (ex.load_kg > 0) parts.push(`${ex.load_kg}kg`);
+  if (ex.load_kg > 0) parts.push(formatLoad(ex.load_kg, ex.load_unit));
   if (ex.rest_between_sets_seconds != null && ex.rest_between_sets_seconds > 0) {
     parts.push(`rest ${ex.rest_between_sets_seconds}s`);
   }

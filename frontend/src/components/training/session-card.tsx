@@ -50,6 +50,7 @@ import { focusLabel, type SessionAlert } from "@/lib/week-alerts";
 import { expandEquipment, isExerciseCompatible } from "@/lib/equipment-filter";
 import { walkResolvedBlocks } from "@/lib/session-blocks";
 import { formatSessionName } from "@/lib/format";
+import { formatLoad, loadInputLabel, pickLoadUnit } from "@/lib/load-units";
 import { DailyCueLine } from "@/components/training/daily-cue-banner";
 
 interface Gym {
@@ -125,6 +126,7 @@ function buildGuidedExercise(inst: Record<string, unknown>): GuidedExercise {
     category: (inst.category as string) ?? "",
     blockUid: (inst.block_uid as string) ?? "",
     loadModel: (inst.load_model as string) ?? "",
+    loadUnit: pickLoadUnit(suggested.load_unit, inst.load_unit),
     unilateral: !!(inst.unilateral ?? rightHand),
     altSides: !!(inst.alt_sides),
     allowLoadLogging: !!(inst.attributes as Record<string, unknown> | undefined)?.allow_load_logging,
@@ -606,7 +608,7 @@ function AddExerciseDialog({
                   </div>
                 )}
                 <div>
-                  <Label className="text-xs">Additional weight (kg)</Label>
+                  <Label className="text-xs">{loadInputLabel(selected.load_unit, "Additional weight (kg)")}</Label>
                   <Input
                     type="number"
                     inputMode="decimal"
@@ -615,7 +617,13 @@ function AddExerciseDialog({
                     value={loadKg ?? 0}
                     onChange={(e) => setLoadKg(e.target.value ? Number(e.target.value) : 0)}
                   />
-                  <p className="text-[10px] text-muted-foreground mt-1">Added to bodyweight. Enter 0 for BW only.</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    {selected.load_unit === "per_dumbbell"
+                      ? "The weight of one dumbbell — not the sum of the two."
+                      : selected.load_unit === "implement"
+                        ? "The weight of the dumbbell or kettlebell."
+                        : "Added to bodyweight. Enter 0 for BW only."}
+                  </p>
                 </div>
               </div>
             )}
@@ -1143,7 +1151,7 @@ export function SessionCard({
                     if (ex.reps != null) prescription.push(`${ex.sets}\u00d7${ex.reps}`);
                     else if (ex.work_seconds != null) prescription.push(`${ex.sets}\u00d7${ex.work_seconds}s`);
                     else prescription.push(`${ex.sets} sets`);
-                    if (ex.load_kg > 0) prescription.push(`${ex.load_kg}kg`);
+                    if (ex.load_kg > 0) prescription.push(formatLoad(ex.load_kg, ex.load_unit));
                     if (ex.rest_between_sets_seconds != null) prescription.push(`rest ${ex.rest_between_sets_seconds}s`);
                     return (
                       <div key={`${ex.exercise_id}-${i}`} className="rounded-md border px-3 py-2 text-sm">
@@ -1245,6 +1253,7 @@ export function SessionCard({
                       suggested_external_load_kg: suggested.suggested_external_load_kg as number | undefined,
                       suggested_total_load_kg: suggested.suggested_total_load_kg as number | undefined,
                       load_source: suggested.load_source as string | undefined,
+                      load_unit: pickLoadUnit(suggested.load_unit, ex.load_unit),
                       category: (ex.category as string) ?? undefined,
                       testField: (ex.attributes as Record<string, unknown> | undefined)?.test_field as string | undefined,
                     }}

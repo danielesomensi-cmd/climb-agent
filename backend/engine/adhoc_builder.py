@@ -23,6 +23,7 @@ from __future__ import annotations
 from datetime import date as _date
 from typing import Any, Dict, List, Optional, Sequence
 
+from backend.engine.load_units import load_unit_of
 from backend.engine.anchored_load import HANG_SECONDS, REENTRY_MAX_HANG_SETS
 from backend.engine.adhoc_prescription import (
     anchor_adhoc_load,
@@ -418,6 +419,8 @@ def _to_custom_exercise(
         # _build_session re-derives this from the catalog on persist; emitting it
         # here keeps the pre-persist preview self-consistent too.)
         "load_model": ex.get("load_model"),
+        # B380: what the kg counts (per dumbbell / implement / total).
+        "load_unit": load_unit_of(ex),
         # B324: laterality, so the preview card and the runner alternate sides on
         # Copenhagen plank / Pallof press. Like `name`, this is dropped by
         # CustomSessionExerciseEntry on persist and re-derived from the catalog by

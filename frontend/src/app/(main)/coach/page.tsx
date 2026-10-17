@@ -55,6 +55,7 @@ import {
 import { useUserState } from "@/lib/hooks/queries/use-user-state";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
+import { formatLoad } from "@/lib/load-units";
 
 const PAGE_SIZE = 50;
 
@@ -76,7 +77,7 @@ function exerciseLine(ex: AdhocSessionPreview["exercises"][number]): string {
   if (ex.reps != null && ex.reps > 0) parts.push(`${sets}×${ex.reps}`);
   else if (ex.work_seconds != null && ex.work_seconds > 0) parts.push(`${sets}×${ex.work_seconds}s`);
   else parts.push(`${sets} sets`);
-  if (ex.load_kg > 0) parts.push(`${ex.load_kg} kg`);
+  if (ex.load_kg > 0) parts.push(formatLoad(ex.load_kg, ex.load_unit));
   return parts.join(" · ");
 }
 

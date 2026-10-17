@@ -63,6 +63,13 @@ counts of the ``pe_routes`` block from ``after_equipment_pref`` on (14 → 15:
 fall_practice now counts among the exercises that need the preferred rope
 routes) — exercise_ids, prescriptions, loads and texts identical.
 
+B380 added ``dumbbell_row`` and the ``load_unit`` catalog field (barbell
+bench / row now need a real barbell). All 22 digests were regenerated after
+diffing the raw resolver output under pytest against origin/main @ a8f96c0
+with ``p0_trace`` / ``filter_trace`` and the additive ``suggested.load_unit``
+stripped: zero differences — the candidate counts and ``load_unit`` moved,
+selections, prescriptions and loads did not.
+
 Pure data + one function, importable by the generator without pytest.
 """
 

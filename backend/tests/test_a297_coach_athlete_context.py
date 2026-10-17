@@ -309,7 +309,9 @@ class TestComposer:
 
     def _filler(self, state, catalog, n=4):
         pool = session_composer.build_pool(self.INTENT, state, catalog)
-        return [e["id"] for e in pool if e["id"].startswith(("bicep", "pushup", "bench", "barbell"))][:n]
+        # B380: bench_press / barbell_row need a barbell — at home (dumbbells
+        # only) their dumbbell variants fill the same role.
+        return [e["id"] for e in pool if e["id"].startswith(("bicep", "pushup", "bench", "barbell", "dumbbell"))][:n]
 
     def test_flag_off_prompt_is_pre_a297(self, catalog):
         st = _st()

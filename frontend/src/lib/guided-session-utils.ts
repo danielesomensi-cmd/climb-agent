@@ -2,6 +2,7 @@ import type { GuidedExercise, GuidedSessionState } from "@/lib/types";
 import { anchoredLoadNotes } from "@/lib/anchored-load";
 import { asMeasure } from "@/lib/measured-feedback";
 import { asLadder } from "@/lib/bw-ladder";
+import { pickLoadUnit } from "@/lib/load-units";
 
 /** A298: "custom_cs_ab12" → "cs_ab12" (the promotion tap rewrites that session). */
 function customSessionIdOf(sessionId: string): string | undefined {
@@ -258,6 +259,7 @@ export function buildGuidedStateFromExercises(
       category: (ex.category as string) ?? "",
       blockUid: (ex.body_part as string) ?? (ex.module_role as string) ?? "",
       loadModel: (ex.load_model as string) ?? "",
+      loadUnit: pickLoadUnit(ex.load_unit),
       // B351: the server stamps alt_sides from the catalog on every custom
       // instance (B324); dropping it here ran Pallof/Copenhagen on one side only.
       altSides: ex.alt_sides === true,

@@ -33,6 +33,7 @@ import os
 from typing import Any, Dict, List, Optional, Tuple
 
 from backend.coach import llm_client
+from backend.engine.load_units import load_unit_of
 from backend.engine.adhoc_builder import (
     ADHOC_ENERGY,
     ADHOC_EQUIPMENT_SETS,
@@ -451,6 +452,7 @@ def _decorate_engine_fields(
         ex = catalog_by_id.get(entry["exercise_id"]) or {}
         entry["name"] = ex.get("name") or entry["exercise_id"].replace("_", " ").title()
         entry["load_model"] = ex.get("load_model")
+        entry["load_unit"] = load_unit_of(ex)  # B380
         # B324: laterality comes from the catalog, never from the model — same
         # rule as the load. Without it a composed Copenhagen plank ran one-sided.
         entry["alt_sides"] = bool(ex.get("alt_sides"))

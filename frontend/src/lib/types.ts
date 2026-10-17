@@ -1,4 +1,5 @@
 import type { HrTarget } from "@/lib/hr-zones";
+import type { LoadUnit } from "@/lib/load-units";
 // -----------------------------------------------------------------------
 // API response types
 // -----------------------------------------------------------------------
@@ -333,6 +334,8 @@ export interface Exercise {
   equipment_required: string[];
   equipment_required_any?: string[];
   prescription_defaults: Record<string, unknown>;
+  /** B380: what the kg counts ("per_dumbbell" | "implement" | "total"; missing = total). */
+  load_unit?: LoadUnit;
 }
 
 export interface SessionMeta {
@@ -972,6 +975,8 @@ export interface GuidedExercise {
   category: string;
   blockUid: string;
   loadModel: string;
+  /** B380: what the kg counts — "per_dumbbell" (one of a pair), "implement", "total" (missing = total). */
+  loadUnit?: LoadUnit;
   unilateral?: boolean;    // true for loading-pin LP exercises (per-hand load tracking)
   altSides?: boolean;      // true for timer side-alternation exercises (RIGHT/LEFT badge)
   allowLoadLogging?: boolean;  // A228: opt a bodyweight/band exercise into the optional "weight used" field (record-only, e.g. Pallof Press)
@@ -1158,6 +1163,8 @@ export interface CustomSessionExercise {
   load_kg: number;
   notes: string;
   cues?: string[];
+  /** B380: catalog unit of load_kg ("per_dumbbell" | "implement" | "total"), stamped at read. */
+  load_unit?: LoadUnit;
   alt_sides?: boolean;   // B324: run once per side (RIGHT/LEFT badge, doubled sets)
   // B364: anchored exercises (weighted pull-up / chin-up, max hangs).
   // "anchored" (default when missing) = the engine computes the load on the
@@ -1230,6 +1237,8 @@ export interface BuilderExercise {
   };
   fatigue_cost: number;
   load_model: string;
+  /** B380: what the kg counts (missing = total). */
+  load_unit?: LoadUnit;
   alt_sides?: boolean;   // B324: run once per side
   // A242: deterministic starting proposal + last-logged memory (custom-only).
   proposal?: ExerciseProposal;

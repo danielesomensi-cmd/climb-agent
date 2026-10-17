@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useBuilderExercises } from "@/lib/hooks/queries";
 import type { BuilderExercise, CustomSessionExercise } from "@/lib/types";
 import { Check, History, Plus, Search, X } from "lucide-react";
+import { formatLoad } from "@/lib/load-units";
 
 const DOMAIN_CHIPS: { label: string; domains: string[] }[] = [
   { label: "All", domains: [] },
@@ -70,7 +71,7 @@ function lastTimeLabel(ex: BuilderExercise): string | null {
   const ago = formatAgo(last.date);
   const head =
     last.load_kg != null && last.load_kg > 0
-      ? `${last.load_kg} kg`
+      ? formatLoad(last.load_kg, ex.load_unit)
       : last.feedback_label
         ? last.feedback_label.replace(/_/g, " ")
         : "logged";

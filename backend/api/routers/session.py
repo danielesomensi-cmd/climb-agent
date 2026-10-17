@@ -17,6 +17,7 @@ from backend.api.models import (
     SessionResolveRequest,
     SurfaceOverrideRequest,
 )
+from backend.engine.load_units import load_unit_of
 from backend.engine.load_score import fatigue_map_by_id, load_score_from_ids
 from backend.engine.resolve_session import resolve_session
 
@@ -155,6 +156,7 @@ def add_exercise(req: AddExerciseRequest, user_id: Optional[str] = Depends(get_u
         "attributes": exercise.get("attributes") or {},
         "equipment_required": list(exercise.get("equipment_required") or []),
         "load_model": exercise.get("load_model"),
+        "load_unit": load_unit_of(exercise),  # B380: kg per dumbbell / implement / total
         "unilateral": bool(exercise.get("unilateral")),
         "alt_sides": bool(exercise.get("alt_sides")),
     }

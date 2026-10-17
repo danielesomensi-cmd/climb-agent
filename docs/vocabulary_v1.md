@@ -447,6 +447,17 @@ Allowed values:
 - `bodyweight_only` *(no external loading; e.g., hollow hold, dead bug)*
 - `null` *(load model not applicable or not yet assigned)*
 
+#### `load_unit` (B380)
+
+What the kg of an `external_load` exercise counts. Catalog field, render + barbell↔dumbbell transfer only (progression is percentage-based and never reads it). Constants in `backend/engine/load_units.py`.
+
+- `per_dumbbell` *(a pair of dumbbells, the number is ONE dumbbell; e.g., dumbbell bench press, dumbbell row, overhead press, bicep / hammer curl, lateral raise, farmer's carry)* — shown as "34 kg per dumbbell", input "Load per dumbbell (kg)"
+- `implement` *(one dumbbell / kettlebell / plate, the number is that implement; e.g., goblet squat, overhead triceps extension, wrist curls, Turkish get-up)*
+- `total` *(barbell, cable, machine — the whole load; e.g., bench press, barbell row, Romanian deadlift)*
+- missing → `total` (the pre-B380 reading)
+
+Barbell ↔ dumbbell pairs (`BARBELL_DUMBBELL_PAIRS`: `bench_press` ↔ `dumbbell_bench_press`, `barbell_row` ↔ `dumbbell_row`) convert with per dumbbell = total ÷ 2 and total = per dumbbell × 2, rounded to 0.5 kg. The engine writes `suggested.load_unit` only when it is not `total`; custom / ad-hoc / body-part / user-added rows carry `load_unit` from the catalog.
+
 ---
 
 ### 2.10.1 Grade prescription fields (`prescription_defaults` extensions)
@@ -728,6 +739,7 @@ Fields:
 Affects:
 - `weighted_pullup` (total_load): phase × intensity → % of 1RM
 - `barbell_row` (external_load): `max_external_load_kg × 0.60`
+- `dumbbell_row` (external_load, per dumbbell — B380): `max_external_load_kg × 0.30`
 - `face_pull` (external_load): `max_external_load_kg × 0.15`
 
 #### Suggestion fields per load_model
