@@ -7,9 +7,11 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { Badge } from "@/components/ui/badge";
-import { Film } from "lucide-react";
+import { Film, Heart } from "lucide-react";
 import { displayPrescribedGrade } from "@/lib/gradeUtils";
 import { anchoredLoadNotes } from "@/lib/anchored-load";
+import { useUserState } from "@/lib/hooks/use-state";
+import { hrMaxFromState, hrTargetLines, type HrTarget } from "@/lib/hr-zones";
 
 interface ExerciseDetailSheetProps {
   open: boolean;
@@ -166,7 +168,13 @@ const LIMITATION_STYLES: Record<string, { bg: string; text: string; label: strin
 };
 
 export function ExerciseDetailSheet({ open, onOpenChange, exercise }: ExerciseDetailSheetProps) {
+  // A316: heart-rate band of cardio rows — state fetched only when the sheet
+  // is open on an exercise that has one (shared ['state'] cache otherwise).
+  const hrTarget = (exercise?.hr_target ?? null) as HrTarget | null;
+  const { state: userState } = useUserState(open && !!hrTarget);
   if (!exercise) return null;
+  const hrMax = hrMaxFromState(userState);
+  const hrLines = hrTargetLines(hrTarget, hrMax);
 
   const name = (exercise.name as string) ?? (exercise.exercise_id as string ?? "").replace(/_/g, " ");
   const category = exercise.category as string | undefined;
@@ -217,6 +225,20 @@ export function ExerciseDetailSheet({ open, onOpenChange, exercise }: ExerciseDe
                   {line}
                 </p>
               ))}
+            </div>
+          )}
+
+          {/* A316: heart rate, in bpm when HRmax is set */}
+          {hrLines.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Heart rate</p>
+              <div className="flex items-center gap-2 text-sm font-medium tabular-nums" data-testid="hr-target">
+                <Heart className="size-4 shrink-0 text-destructive" aria-hidden />
+                <span>{hrLines.join(" · ")}</span>
+              </div>
+              {hrMax == null && (
+                <p className="text-xs text-muted-foreground">Set your max heart rate in Settings to see these in bpm.</p>
+              )}
             </div>
           )}
 
