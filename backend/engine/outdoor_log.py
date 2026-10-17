@@ -97,8 +97,96 @@ def _volume_factor(num_attempts: int) -> float:
     return min(3.0, 1.0 + math.log(num_attempts, 3))
 
 
+# ---------------------------------------------------------------------------
+# B394 — load relative to the athlete's max (only for logs from 2026-10-17)
+# ---------------------------------------------------------------------------
+#
+# The B327 formula below scored Daniele's 7c+ project days at ~22 and never
+# reached the replanner's OUTDOOR_RIPPLE_THRESHOLD (65) in 58 logged days
+# (max 33): a limit day at the crag never protected the day after. Three causes:
+# the absolute grade weight, the `project` 0.7 / `fell` 0.8 discounts on the
+# hardest burns, and the MEAN over all attempts (warm-ups dilute it).
+#
+# v2 (Daniele, 2026-10-17): grade weight relative to the athlete's lead max
+# redpoint, intensity = mean of the two hardest attempts, no discount for
+# `project` or falls. Applied ONLY to logs stamped with ``load_ref_grade`` —
+# stamped at write time from OUTDOOR_LOAD_V2_FROM on. Older logs keep B327 for
+# good (Daniele: «non ricalcolare il passato»), and a stamped log keeps the max
+# it was logged against, so a later grade bump never rewrites past days.
+OUTDOOR_LOAD_V2_FROM = "2026-10-17"
+_V2_ANCHOR = 40.0          # attempt score at the athlete's max (before style)
+_V2_DECAY = 0.12           # per grade step below the max
+_V2_FLOOR = 0.15           # lowest relative weight (easy warm-up terrain)
+_V2_CEIL = 1.1             # above the max
+_V2_UNKNOWN_REL = 0.3      # ungraded pitch ("?") in a stamped log
+_V2_TOP_K = 2              # intensity = mean of the K hardest attempts
+_V2_STYLE_MODIFIER: Dict[str, float] = {
+    "onsight": 1.2,
+    "flash": 1.1,
+    "redpoint": 1.0,
+    "project": 1.0,
+    "repeat": 0.5,
+}
+
+
+def outdoor_load_ref_grade(state: Optional[Dict[str, Any]]) -> Optional[str]:
+    """The athlete's lead max redpoint on the outdoor ladder, or None."""
+    grades = ((state or {}).get("assessment") or {}).get("grades") or {}
+    g = str(grades.get("lead_max_rp") or "").strip().lower()
+    return g if g in _OUTDOOR_WEIGHT_ANCHOR else None
+
+
+def stamp_load_ref_grade(
+    entry: Dict[str, Any],
+    state: Optional[Dict[str, Any]],
+    previous: Optional[Dict[str, Any]] = None,
+) -> None:
+    """Set ``entry["load_ref_grade"]`` in place when the v2 load applies (B394).
+
+    An edit keeps the reference the log was first stamped with. Otherwise only a
+    log dated on/after OUTDOOR_LOAD_V2_FROM, not a pure boulder day (the ladder
+    is the lead one), with a known lead max, is stamped.
+    """
+    prev_ref = (previous or {}).get("load_ref_grade")
+    if prev_ref:
+        entry["load_ref_grade"] = prev_ref
+        return
+    if str(entry.get("date") or "") < OUTDOOR_LOAD_V2_FROM:
+        return
+    if entry.get("discipline") == "boulder":
+        return
+    ref = outdoor_load_ref_grade(state)
+    if ref:
+        entry["load_ref_grade"] = ref
+
+
+def _compute_outdoor_load_v2(entry: Dict[str, Any], ref: str) -> int:
+    ref_idx = _OUTDOOR_WEIGHT_ANCHOR.index(ref)
+    scores: List[float] = []
+    for route in entry.get("routes") or []:
+        grade = str(route.get("grade") or "").strip().lower()
+        if grade in _OUTDOOR_WEIGHT_ANCHOR:
+            steps = ref_idx - _OUTDOOR_WEIGHT_ANCHOR.index(grade)
+            rel = max(_V2_FLOOR, min(_V2_CEIL, 1.0 - _V2_DECAY * steps))
+        else:
+            rel = _V2_UNKNOWN_REL
+        style = route.get("style")
+        modifier = _V2_STYLE_MODIFIER.get(style, 1.0) if style else 1.0
+        # Every attempt counts the same whatever its result: a fall at the
+        # crux of the project is the hardest burn of the day.
+        for _ in route.get("attempts") or [{}]:
+            scores.append(_V2_ANCHOR * rel * modifier)
+    if not scores:
+        return 0
+    top = sorted(scores, reverse=True)[:_V2_TOP_K]
+    return round(min(_LOAD_CAP, sum(top) / len(top) * _volume_factor(len(scores))))
+
+
 def compute_outdoor_load_score(entry: Dict[str, Any]) -> int:
     """Compute a deterministic load score for an outdoor session.
+
+    B394: a log carrying ``load_ref_grade`` uses the v2 formula (see
+    ``OUTDOOR_LOAD_V2_FROM``); every other log uses B327, described here.
 
     B327 formula: ``avg_intensity × volume_factor``, where both terms are
     computed over **attempts**, not routes:
@@ -117,6 +205,10 @@ def compute_outdoor_load_score(entry: Dict[str, Any]) -> int:
     lower bound of unknown tightness. Volume is already carried by the attempt
     count; duration added nothing but noise pointing the wrong way.
     """
+    ref = str(entry.get("load_ref_grade") or "").strip().lower()
+    if ref in _OUTDOOR_WEIGHT_ANCHOR:
+        return _compute_outdoor_load_v2(entry, ref)
+
     attempt_scores: List[float] = []
     for route in entry.get("routes") or []:
         grade = route.get("grade", "")

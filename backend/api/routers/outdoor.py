@@ -24,6 +24,7 @@ from backend.engine.outdoor_log import (
     CURRENT_LOG_VERSION,
     append_outdoor_session,
     compute_outdoor_load_score,
+    stamp_load_ref_grade,
     compute_outdoor_stats,
     derive_outdoor_duration,
     load_outdoor_sessions,
@@ -274,6 +275,7 @@ def post_outdoor_log(req: OutdoorSessionLog, user_id: Optional[str] = Depends(ge
     """Validate and append an outdoor session to the log."""
     entry = req.model_dump(exclude_none=True)
     entry["log_version"] = CURRENT_LOG_VERSION
+    stamp_load_ref_grade(entry, load_state(user_id))  # B394
 
     try:
         log_path = append_outdoor_session(entry, user_id)
@@ -336,6 +338,14 @@ def put_outdoor_log(req: OutdoorSessionLog, user_id: Optional[str] = Depends(get
     """Update an existing outdoor session (replace entry for the same date)."""
     entry = req.model_dump(exclude_none=True)
     entry["log_version"] = CURRENT_LOG_VERSION
+    # B394: an edit keeps the load reference the log was first stamped with —
+    # the request model does not carry it, so read it off the stored entry.
+    previous = next(
+        (s for s in reversed(load_outdoor_sessions(user_id, since_date=req.date))
+         if s.get("date") == req.date),
+        None,
+    )
+    stamp_load_ref_grade(entry, load_state(user_id), previous)
 
     try:
         update_outdoor_session(user_id, req.date, entry)
@@ -677,6 +687,7 @@ def finish_outdoor_session(
     entry = req.model_dump(exclude_none=True)
     entry["log_version"] = CURRENT_LOG_VERSION
     entry["date"] = session["date"]
+    stamp_load_ref_grade(entry, state)  # B394
     entry["duration_minutes"] = dur["minutes"]
     # Carry the day_type chosen at start unless the finish body overrides it.
     if not entry.get("day_type") and session.get("day_type"):

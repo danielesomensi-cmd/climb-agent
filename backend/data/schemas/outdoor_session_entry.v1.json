@@ -80,6 +80,10 @@
     "overall_feeling": {
       "type": "string",
       "enum": ["very_easy", "easy", "ok", "hard", "very_hard"]
+    },
+    "load_ref_grade": {
+      "type": "string",
+      "description": "B394: athlete's lead max redpoint when the log was written (logs from 2026-10-17). Selects the relative load formula; absent on older logs."
     }
   },
   "additionalProperties": false
