@@ -1,14 +1,29 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerClose,
-  DrawerTitle,
-} from "@/components/ui/drawer";
+import { useEffect, useState } from "react";
+import type { MoreNavItem } from "./more-drawer";
+
+// B398 (O10): the drawer (and vaul with it) is not part of the first load of
+// /plan, /coach, /outdoor and /settings any more. Closed it renders nothing,
+// so it needs no loading fallback.
+const MoreDrawer = dynamic(() => import("./more-drawer").then((m) => m.MoreDrawer), { ssr: false });
+
+/** Run `fn` once the main thread is idle (fallback: a short timeout). */
+function onIdle(fn: () => void): () => void {
+  const w = window as Window & {
+    requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+    cancelIdleCallback?: (id: number) => void;
+  };
+  if (typeof w.requestIdleCallback === "function") {
+    const id = w.requestIdleCallback(fn, { timeout: 3000 });
+    return () => w.cancelIdleCallback?.(id);
+  }
+  const id = window.setTimeout(fn, 1000);
+  return () => window.clearTimeout(id);
+}
 
 const tabs = [
   {
@@ -39,7 +54,7 @@ const tabs = [
   },
 ];
 
-const moreItems = [
+const moreItems: MoreNavItem[] = [
   {
     href: "/coach",
     label: "Coach",
@@ -86,6 +101,10 @@ function isMoreActive(pathname: string) {
 export function BottomNav() {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
+  // B398 (O10): mount the drawer (closed) once the page is idle, so the first
+  // tap on More opens it as fast as before; a tap before that mounts it open.
+  const [drawerMounted, setDrawerMounted] = useState(false);
+  useEffect(() => onIdle(() => setDrawerMounted(true)), []);
   const moreActive = isMoreActive(pathname);
 
   return (
@@ -141,7 +160,10 @@ export function BottomNav() {
 
           {/* More button */}
           <button
-            onClick={() => setMoreOpen(true)}
+            onClick={() => {
+              setDrawerMounted(true);
+              setMoreOpen(true);
+            }}
             aria-label="More"
             aria-expanded={moreOpen}
             className={`flex min-h-[44px] min-w-[44px] flex-col items-center gap-1 px-3 py-2 text-xs transition-colors ${
@@ -166,50 +188,10 @@ export function BottomNav() {
         </div>
       </nav>
 
-      {/* More drawer */}
-      <Drawer open={moreOpen} onOpenChange={setMoreOpen}>
-        {/* A310 — senza un titolo il dialog era senza nome per VoiceOver (e
-            Radix lo segnala in console); nessuna descrizione da collegare. */}
-        <DrawerContent aria-describedby={undefined}>
-          <DrawerTitle className="sr-only">More</DrawerTitle>
-          {/* A286 — l'ultima riga di icone finiva sotto l'home indicator su
-              iPhone: pb-6 fisso non tiene conto della safe area. */}
-          <div className="p-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-            <div className="grid grid-cols-3 gap-3">
-              {moreItems.map((item) => {
-                const active = pathname.startsWith(item.href);
-                return (
-                  <DrawerClose key={item.href} asChild>
-                    <Link
-                      href={item.href}
-                      className={`flex min-h-[72px] flex-col items-center justify-center gap-2 rounded-xl p-3 transition-colors ${
-                        active
-                          ? "bg-primary/10 text-primary"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                      }`}
-                    >
-                      <svg
-                        className="h-6 w-6"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={active ? 2.5 : 1.5}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d={item.icon}
-                        />
-                      </svg>
-                      <span className="text-xs font-medium">{item.label}</span>
-                    </Link>
-                  </DrawerClose>
-                );
-              })}
-            </div>
-          </div>
-        </DrawerContent>
-      </Drawer>
+      {/* More drawer — B398 (O10): a lazy chunk, mounted on idle or on the first tap. */}
+      {drawerMounted && (
+        <MoreDrawer open={moreOpen} onOpenChange={setMoreOpen} pathname={pathname} items={moreItems} />
+      )}
     </>
   );
 }

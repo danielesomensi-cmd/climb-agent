@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
@@ -8,27 +9,22 @@ import { TopBar } from "@/components/layout/top-bar";
 import { useUserState } from "@/lib/hooks/use-state";
 import { hrMaxFromState } from "@/lib/hr-zones";
 import { useWeekPlan } from "@/lib/hooks/queries/use-week-plan";
-import { computeAssessment, generateMacrocycle, deleteState, putState, getWeek, getOutdoorSpots, addOutdoorSpot, deleteOutdoorSpot, exportUserState, importUserState, createBillingPortal } from "@/lib/api";
+import { computeAssessment, generateMacrocycle, deleteState, putState, getWeek, exportUserState, importUserState, createBillingPortal } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
+import { invalidateAll } from "@/lib/invalidation";
+import { useOutdoorSpots } from "@/lib/hooks/queries/use-outdoor";
+import { useAddOutdoorSpot, useDeleteOutdoorSpot } from "@/lib/hooks/mutations/use-outdoor-mutations";
 import { useSubscription } from "@/lib/hooks/use-subscription";
 import { UserButton, useAuth } from "@clerk/nextjs";
-import {
-  RegeneratePlanSheet,
-  optionToPreserveBefore,
-  type RegenerateStartOption,
-} from "@/components/training/regenerate-plan-sheet";
-import type { FocusFamily, OutdoorSpot, SlotRole } from "@/lib/types";
-import { AvailabilityEditor, type EditorPlanningPrefs } from "@/components/settings/availability-editor";
+import type { RegenerateStartOption } from "@/components/training/regenerate-plan-sheet";
+import type { FocusFamily, OutdoorSpot, SlotRole, UserState } from "@/lib/types";
+import type { EditorPlanningPrefs } from "@/components/settings/availability-editor";
 import { describeKeptSessions, keptUserSessions } from "@/lib/week-alerts";
 import { slotStructureLabel } from "@/lib/slot-structure";
 import { localToday } from "@/lib/key-sessions";
 import { toast } from "sonner";
-import { EquipmentEditor } from "@/components/settings/equipment-editor";
-import { GoalEditor } from "@/components/settings/goal-editor";
 import { LimitationsEditor, LimitationsSummary } from "@/components/settings/limitations-editor";
-import { ProfileAssessmentEditor } from "@/components/settings/profile-assessment-editor";
 import { OnsightEvidenceCard } from "@/components/settings/onsight-evidence-card";
-import { StartNewMacrocycleDialog } from "@/components/settings/start-new-macrocycle-dialog";
 import { useCanStartNewCycle } from "@/lib/hooks/use-can-start-new-cycle";
 import { usePlanPause, formatPauseDate } from "@/lib/hooks/use-plan-pause";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -57,6 +53,43 @@ import {
 } from "@/components/ui/alert-dialog";
 import { isVoiceCuesEnabled, setVoiceCuesEnabled } from "@/lib/voice-cues";
 
+/**
+ * B398 (O8) — the editors and dialogs only show after a tap (Edit, a regen, a
+ * new cycle): they no longer ride in the page's first load. The inline editors
+ * replace a card, so while their chunk loads a card-sized placeholder holds the
+ * spot; the dialogs are closed until opened, so they need none.
+ * (LimitationsEditor stays static: its module also holds LimitationsSummary,
+ * which renders on every visit, so splitting it would save nothing.)
+ */
+function EditorPlaceholder() {
+  return (
+    <div className="h-48 animate-pulse rounded-xl border border-border bg-muted/20" aria-hidden="true" />
+  );
+}
+const AvailabilityEditor = dynamic(
+  () => import("@/components/settings/availability-editor").then((m) => m.AvailabilityEditor),
+  { ssr: false, loading: () => <EditorPlaceholder /> },
+);
+const EquipmentEditor = dynamic(
+  () => import("@/components/settings/equipment-editor").then((m) => m.EquipmentEditor),
+  { ssr: false, loading: () => <EditorPlaceholder /> },
+);
+const GoalEditor = dynamic(() => import("@/components/settings/goal-editor").then((m) => m.GoalEditor), { ssr: false });
+const ProfileAssessmentEditor = dynamic(
+  () => import("@/components/settings/profile-assessment-editor").then((m) => m.ProfileAssessmentEditor),
+  { ssr: false },
+);
+// B398 (O8/O10): the regen sheet too — it is the module that kept vaul (the
+// drawer library) in this page's first load. Its helper is imported where used.
+const RegeneratePlanSheet = dynamic(
+  () => import("@/components/training/regenerate-plan-sheet").then((m) => m.RegeneratePlanSheet),
+  { ssr: false },
+);
+const StartNewMacrocycleDialog = dynamic(
+  () => import("@/components/settings/start-new-macrocycle-dialog").then((m) => m.StartNewMacrocycleDialog),
+  { ssr: false },
+);
+
 const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 
 /** A286 — indice delle sezioni di /settings, nell'ordine in cui compaiono. */
@@ -84,6 +117,20 @@ export default function SettingsPage() {
   const invalidateWeek = useCallback(() => {
     qc.invalidateQueries({ queryKey: queryKeys.weekAll });
   }, [qc]);
+  /**
+   * B398 (O4) — PUT /api/state answers with the merged state, in the same lean
+   * shape as GET (B387: `return _lean(state)`). Writing it into the cache
+   * replaces the `refresh()` that followed every save: one request and one
+   * round trip less. The `['state','status']` entry (is the macrocycle stale?)
+   * rode on refresh()'s prefix invalidation, so it is marked stale here.
+   */
+  const applyStateResponse = useCallback(
+    (next: UserState) => {
+      qc.setQueryData(queryKeys.state, next);
+      qc.invalidateQueries({ queryKey: queryKeys.stateStatus });
+    },
+    [qc],
+  );
   const {
     status: subStatus,
     isActive: subActive,
@@ -120,7 +167,11 @@ export default function SettingsPage() {
   const [savingGoal, setSavingGoal] = useState(false);
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
-  const [outdoorSpots, setOutdoorSpots] = useState<OutdoorSpot[]>([]);
+  // B398 (O11): spots from the React Query cache (was a GET on every visit).
+  const outdoorSpotsQuery = useOutdoorSpots(authReady);
+  const outdoorSpots: OutdoorSpot[] = outdoorSpotsQuery.data?.spots ?? [];
+  const addSpotMutation = useAddOutdoorSpot();
+  const deleteSpotMutation = useDeleteOutdoorSpot();
   const [addingSpot, setAddingSpot] = useState(false);
   const [newSpotName, setNewSpotName] = useState("");
   const [newSpotDiscipline, setNewSpotDiscipline] = useState<"lead" | "boulder" | "both">("boulder");
@@ -134,23 +185,14 @@ export default function SettingsPage() {
 
   useEffect(() => { setVoiceCuesOn(isVoiceCuesEnabled()); }, []);
 
-  const loadSpots = useCallback(async () => {
-    try {
-      const data = await getOutdoorSpots();
-      setOutdoorSpots(data.spots);
-    } catch { /* ignore */ }
-  }, []);
-
-  useEffect(() => { loadSpots(); }, [loadSpots]);
-
+  // B398 (O11): the mutations write the cached list from the response (no
+  // re-GET of the whole list after each add / delete).
   async function handleAddSpot() {
     if (!newSpotName.trim()) return;
     try {
-      await addOutdoorSpot({ name: newSpotName.trim(), discipline: newSpotDiscipline });
+      await addSpotMutation.mutateAsync({ name: newSpotName.trim(), discipline: newSpotDiscipline });
       setNewSpotName("");
       setAddingSpot(false);
-      await loadSpots();
-      qc.invalidateQueries({ queryKey: queryKeys.outdoorSpots });
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Failed to add spot");
     }
@@ -158,9 +200,7 @@ export default function SettingsPage() {
 
   async function handleDeleteSpot(spotId: string) {
     try {
-      await deleteOutdoorSpot(spotId);
-      await loadSpots();
-      qc.invalidateQueries({ queryKey: queryKeys.outdoorSpots });
+      await deleteSpotMutation.mutateAsync(spotId);
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Failed to delete spot");
     }
@@ -192,8 +232,7 @@ export default function SettingsPage() {
     setSavingCoachNotes(true);
     setActionError(null);
     try {
-      await putState({ preferences: { coach_notes: coachNotesValue.trim() } });
-      await refresh();
+      applyStateResponse(await putState({ preferences: { coach_notes: coachNotesValue.trim() } }));
       setCoachNotesDraft(null);
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Failed to save coach notes");
@@ -220,12 +259,14 @@ export default function SettingsPage() {
       for (const day of WEEKDAYS) {
         fullAvailability[day] = newAvailability[day] ?? null;
       }
-      await putState({ availability: fullAvailability, planning_prefs: newPrefs });
+      const saved = await putState({ availability: fullAvailability, planning_prefs: newPrefs });
       // B369: the regeneration keeps the user's own sessions (customs,
       // quick-adds, moves, edits) and removals; A300 applies the new structure
       // around them. Say what was kept, so the save is never a leap of faith.
       const regenerated = await getWeek(0, true);
-      await refresh();
+      // B398 (O4): the forced GET writes only the week plans, which the lean
+      // state leaves out — the PUT response is still the state to show.
+      applyStateResponse(saved);
       invalidateWeek();
       setEditingAvailability(false);
       const kept = keptUserSessions(regenerated?.week_plan, localToday());
@@ -242,8 +283,7 @@ export default function SettingsPage() {
   async function handleSaveLimitations(newLimitations: { active_flags?: string[]; details?: Array<{ area: string; side: string; severity: string; notes?: string }> }) {
     setActionError(null);
     try {
-      await putState({ limitations: newLimitations });
-      await refresh();
+      applyStateResponse(await putState({ limitations: newLimitations }));
       invalidateWeek();
       setEditingLimitations(false);
     } catch (e) {
@@ -256,8 +296,7 @@ export default function SettingsPage() {
     setSavingDevice(true);
     setActionError(null);
     try {
-      await putState({ preferences: { finger_training_device: dev } });
-      await refresh();
+      applyStateResponse(await putState({ preferences: { finger_training_device: dev } }));
       // Trigger plan regeneration
       setPendingRegenAction("equipment");
       setRegenSheetOpen(true);
@@ -272,8 +311,7 @@ export default function SettingsPage() {
   async function handleSaveEquipment(newEquipment: Record<string, unknown>) {
     setActionError(null);
     try {
-      await putState({ equipment: newEquipment });
-      await refresh();
+      applyStateResponse(await putState({ equipment: newEquipment }));
       invalidateWeek();
       setEditingEquipment(false);
       setEquipmentSavedOpen(true);
@@ -346,7 +384,6 @@ export default function SettingsPage() {
   async function handleRegenSheetConfirm(option: RegenerateStartOption) {
     const action = pendingRegenAction;
     setRegenSheetOpen(false);
-    const preserveBefore = optionToPreserveBefore(option);
 
     if (action === "restart") {
       setRestartingMacro(true);
@@ -356,6 +393,9 @@ export default function SettingsPage() {
     setActionError(null);
 
     try {
+      // B398 (O8): already loaded — the sheet that called us lives in it.
+      const { optionToPreserveBefore } = await import("@/components/training/regenerate-plan-sheet");
+      const preserveBefore = optionToPreserveBefore(option);
       // "restart" = full regen from week 1; everything else = incremental.
       // A218: read total_weeks from the (just-saved) goal so a goal-edit
       // that changed cycle length flows through to the regen. Backend
@@ -383,7 +423,9 @@ export default function SettingsPage() {
     setActionError(null);
     try {
       await deleteState();
-      qc.clear();
+      // B398 (O13): every query built from the deleted data goes; the catalog
+      // and the subscription (untouched by a reset) stay.
+      invalidateAll(qc);
       router.push("/onboarding/welcome");
     } catch (e) {
       setActionError(
@@ -1004,8 +1046,7 @@ export default function SettingsPage() {
                       const next = gradeSystemBoulder === "font" ? "v_scale" : "font";
                       setSavingGradeSystem(true);
                       try {
-                        await putState({ preferences: { grade_system_boulder: next } });
-                        await refresh();
+                        applyStateResponse(await putState({ preferences: { grade_system_boulder: next } }));
                       } catch (e) {
                         setActionError(e instanceof Error ? e.message : "Failed to save");
                       } finally {
@@ -1119,7 +1160,9 @@ export default function SettingsPage() {
                           const data = JSON.parse(text);
                           await importUserState(data);
                           setBackupMsg({ type: "ok", text: "Data restored successfully" });
-                          qc.clear();
+                          // B398 (O13): as for a reset — the imported data replaces every
+                          // user query; catalog and subscription stay (no TrialBanner flicker).
+                          invalidateAll(qc);
                           refresh();
                         } catch (e) {
                           const msg = e instanceof Error ? e.message : "Import failed";
