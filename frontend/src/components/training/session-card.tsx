@@ -664,6 +664,9 @@ export function SessionCard({
   // that answers after that (offline, the request waits for the network) must
   // not navigate — the athlete may be in another session by then.
   const startTapRef = useRef(0);
+  // Round 5 — a check still running when the button comes back is dropped:
+  // say so, instead of a tap that silently did nothing.
+  const confirmingRef = useRef(false);
   useEffect(() => {
     const taps = startTapRef;
     return () => {
@@ -674,6 +677,10 @@ export function SessionCard({
     if (!starting) return;
     const t = window.setTimeout(() => {
       startTapRef.current++;
+      if (confirmingRef.current) {
+        confirmingRef.current = false;
+        toast("Couldn't check your subscription — try again");
+      }
       setStarting(false);
     }, 8000);
     return () => window.clearTimeout(t);
@@ -938,8 +945,10 @@ export function SessionCard({
                   }
                   setStarting(true);
                   const tap = ++startTapRef.current;
+                  confirmingRef.current = true;
                   void confirmServerDenied(qc).then((denied) => {
                     if (startTapRef.current !== tap) return; // superseded: no late navigation
+                    confirmingRef.current = false;
                     if (!handleStartGuided(session, date, router, denied)) setStarting(false);
                   });
                 }}

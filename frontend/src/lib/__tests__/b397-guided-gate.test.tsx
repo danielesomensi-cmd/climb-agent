@@ -410,6 +410,20 @@ describe("B397 review round 3 — stale answers and later answers", () => {
     }
   });
 
+  // Review round 5 — paused or not, the server's own "no" still stands.
+  it("an OLD 'no' with the renewal paused offline still gates a fresh session", async () => {
+    qc.setQueryData(queryKeys.subscriptionStatus, EXPIRED, { updatedAt: Date.now() - 120_000 });
+    getSubscriptionStatus.mockResolvedValue(EXPIRED);
+    saveSession(KEY_A, FRESH);
+    onlineManager.setOnline(false);
+    try {
+      render(page());
+      await waitFor(() => expect(router.replace).toHaveBeenLastCalledWith("/subscribe"));
+    } finally {
+      onlineManager.setOnline(true);
+    }
+  });
+
   it("a fresh session that passed on a 'yes' is not ended by a later 'no' (the poll during the warm-up)", async () => {
     getSubscriptionStatus.mockResolvedValue(ACTIVE);
     saveSession(KEY_A, FRESH);

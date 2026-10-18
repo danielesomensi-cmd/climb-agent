@@ -268,4 +268,21 @@ describe("SessionCard Start — the paywall entry point", () => {
       onlineManager.setOnline(true);
     }
   });
+
+  // Review round 5 — a confirmation slower than the button's 8 s is dropped
+  // (no late navigation) but no longer silently.
+  it("a confirmation still running when the button comes back: a toast, and no navigation", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      qc.setQueryData(queryKeys.subscriptionStatus, EXPIRED);
+      getSubscriptionStatus.mockReturnValue(new Promise(() => {}));
+      renderCard();
+      tapStart();
+      await act(async () => { vi.advanceTimersByTime(8000); });
+      expect(toast).toHaveBeenCalledWith("Couldn't check your subscription — try again");
+      expect(router.push).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

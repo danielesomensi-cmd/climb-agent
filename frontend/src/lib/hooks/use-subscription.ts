@@ -133,9 +133,11 @@ export function isServerDenied(data: SubscriptionStatus | undefined, error: unkn
 export type ServerRuling = "denied" | "allowed" | "unknown";
 
 function rulingOf(q: { data?: SubscriptionStatus; error?: unknown; fetchStatus?: string } | undefined): ServerRuling {
-  // Round 4 — "paused" too: offline the refetch waits for the network, and the
-  // answer it will bring must decide, not the old one in the cache.
-  if (!q || q.fetchStatus === "fetching" || q.fetchStatus === "paused") return "unknown";
+  if (!q || q.fetchStatus === "fetching") return "unknown";
+  // Round 4-5 — offline the refetch is "paused" (it waits for the network).
+  // An old "yes" must not clear the gate meanwhile — the answer it will bring
+  // decides — but the server's own "no" still stands (round 5).
+  if (q.fetchStatus === "paused") return isServerDenied(q.data, q.error) ? "denied" : "unknown";
   if (isServerDenied(q.data, q.error)) return "denied";
   return q.data?.can_interact === true ? "allowed" : "unknown";
 }
