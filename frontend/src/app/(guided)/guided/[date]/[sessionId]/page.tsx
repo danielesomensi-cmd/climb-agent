@@ -139,17 +139,8 @@ export default function GuidedSessionPage() {
   // a session in progress and not a cold hit on the URL.
   const [sessionStarted, setSessionStarted] = useState(false);
 
-  // Gate: redirect expired users to subscribe page.
-  //
-  // A245 C-1 (F8) — but NEVER once a session is under way. The gate belongs at
-  // the entry point (/today's "Start session"); yanking someone to /subscribe
-  // mid-workout because the gym wifi flapped loses the session they are in the
-  // middle of. `sessionStarted` is set as soon as saved state is loaded.
-  useEffect(() => {
-    if (!subLoading && !canInteract && !sessionStarted) {
-      router.replace("/subscribe");
-    }
-  }, [canInteract, subLoading, sessionStarted, router]);
+  // The subscription gate lives right after the load effect below — it must
+  // never run before the saved session has been looked for (B397 review).
 
   const [state, setState] = useState<GuidedSessionState | null>(null);
   const [showSummary, setShowSummary] = useState(false);
@@ -182,7 +173,12 @@ export default function GuidedSessionPage() {
   // set counter used to get wrong.
   useWakeLock(state !== null && !showSummary && !isPending);
   // A316: HRmax for the bpm bands — fetched only when a cardio row has one.
-  const { state: userState } = useUserState(!!state?.exercises.some((ex) => ex.hrTarget));
+  // B397 review — and only once Clerk can sign the GET: the session is now on
+  // screen before Clerk (G1), and a tokenless /api/state is a 401 → B155 retry
+  // → hard redirect to /sign-in in the middle of the workout. Until then the
+  // ['state'] cache (persisted) still feeds `userState`.
+  const hasHrTarget = !!state?.exercises.some((ex) => ex.hrTarget);
+  const { state: userState } = useUserState(authLoaded && hasHrTarget);
   const hrMax = hrMaxFromState(userState);
 
   // Ref to always have latest state for the beforeunload handler
@@ -211,19 +207,11 @@ export default function GuidedSessionPage() {
       let saved = loaded.state;
       // B397 G7 — body weight for the test sessions' total-load maths comes
       // from the ['state'] cache (persisted, so it works offline); the GET is
-      // only the fallback when the cache does not have it.
+      // only the fallback when the cache does not have it — and it lives in its
+      // own effect below, which waits for Clerk (B397 review).
       if (saved.isTestSession && !saved.bodyweightKg) {
         const cachedBw = bodyweightFromState(qc.getQueryData(queryKeys.state));
-        if (cachedBw) {
-          saved = { ...saved, bodyweightKg: cachedBw };
-        } else {
-          getState().then((stateData) => {
-            const bw = bodyweightFromState(stateData);
-            if (bw) {
-              setState((prev) => prev ? { ...prev, bodyweightKg: bw } : prev);
-            }
-          }).catch((err) => { console.error("Failed to prefetch bodyweight:", err); });
-        }
+        if (cachedBw) saved = { ...saved, bodyweightKg: cachedBw };
       }
       // B355 — idratazione post-mount da localStorage: leggerla in render
       // romperebbe l'SSR (hydration mismatch). L'effect è la sede corretta.
@@ -254,6 +242,59 @@ export default function GuidedSessionPage() {
     // No saved state — redirect back to today
     router.replace(`/today?date=${date}`);
   }, [date, sessionId, router, authLoaded, authUserId, qc]);
+
+  // Gate: redirect expired users to subscribe page.
+  //
+  // A245 C-1 (F8) — but NEVER once a session is under way. The gate belongs at
+  // the entry point (/today's "Start session"); yanking someone to /subscribe
+  // mid-workout because the gym wifi flapped loses the session they are in the
+  // middle of. `sessionStarted` is set as soon as saved state is loaded.
+  //
+  // B396/B397 review — offline, useSubscription answers _DENY with
+  // loading:false on the very first render (Clerk can never load, so it stops
+  // waiting at once). Declared before the load effect, this gate ran in the
+  // same commit, before `sessionStarted` could be true, and sent a cold
+  // offline Start/Resume — or a reload mid-workout — to /subscribe. So:
+  //  - it is declared AFTER the load effect, and also checks `scopeRef`, which
+  //    the load sets synchronously in that same commit;
+  //  - it needs Clerk: without it a deny is a missing answer, not a ruling
+  //    (B202 still grants nothing — this only drops the redirect).
+  // A cold hit on the URL with no saved session and a real deny still lands on
+  // /subscribe (issued after the load effect's /today, so it is the last word).
+  useEffect(() => {
+    if (authLoaded && !subLoading && !canInteract && !sessionStarted && !scopeRef.current) {
+      router.replace("/subscribe");
+    }
+  }, [authLoaded, canInteract, subLoading, sessionStarted, router]);
+
+  /**
+   * B397 G7 + review — the body weight's GET fallback, once Clerk is ready.
+   *
+   * It used to leave from the load effect, which now runs before Clerk (G1):
+   * a tokenless /api/state, 401, the B155 retry, then a hard redirect to
+   * /sign-in mid-workout on a slow network. The load effect cannot simply wait
+   * — it leaves early once a session is pinned — so this effect runs again
+   * when `authLoaded` turns true. The ['state'] cache is still read first: the
+   * persisted copy may have been restored after the session was read.
+   */
+  const bodyweightFetchRef = useRef(false);
+  const needsBodyweight = !!state && !!state.isTestSession && !state.bodyweightKg;
+  useEffect(() => {
+    if (!authLoaded || !needsBodyweight || bodyweightFetchRef.current) return;
+    const cachedBw = bodyweightFromState(qc.getQueryData(queryKeys.state));
+    if (cachedBw) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setState((prev) => (prev && !prev.bodyweightKg ? { ...prev, bodyweightKg: cachedBw } : prev));
+      return;
+    }
+    bodyweightFetchRef.current = true;
+    getState().then((stateData) => {
+      const bw = bodyweightFromState(stateData);
+      if (bw) {
+        setState((prev) => (prev && !prev.bodyweightKg ? { ...prev, bodyweightKg: bw } : prev));
+      }
+    }).catch((err) => { console.error("Failed to prefetch bodyweight:", err); });
+  }, [authLoaded, needsBodyweight, qc]);
 
   // Auto-dismiss resume banner after 4 seconds
   useEffect(() => {
