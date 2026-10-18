@@ -2,9 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 import { Sparkles, X } from "lucide-react";
 import { useDailyTip } from "@/lib/hooks/queries";
 import { dismissDailyTip } from "@/lib/api";
+import { queryKeys } from "@/lib/query-keys";
+import type { DailyTipResponse } from "@/lib/types";
 
 interface DailyTipCardProps {
   /** Client-local date (YYYY-MM-DD) — seeds the deterministic daily pick. */
@@ -20,6 +23,7 @@ interface DailyTipCardProps {
  */
 export function DailyTipCard({ date }: DailyTipCardProps) {
   const { data } = useDailyTip(date);
+  const qc = useQueryClient();
   const [hidden, setHidden] = useState(false);
 
   const tip = data?.tip;
@@ -27,6 +31,11 @@ export function DailyTipCard({ date }: DailyTipCardProps) {
 
   const handleDismiss = () => {
     setHidden(true); // optimistic — the card never blocks on the network
+    // B396 — the cached tip is persisted now: without this, coming back to
+    // /today within the staleTime showed the dismissed tip again.
+    qc.setQueryData<DailyTipResponse>(queryKeys.tipsDaily(date), (old) =>
+      old ? { ...old, dismissed_today: true } : old,
+    );
     dismissDailyTip(tip.id, date).catch(() => {});
   };
 

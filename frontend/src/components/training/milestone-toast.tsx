@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { markMilestoneSeen } from "@/lib/api";
 import { useMilestones } from "@/lib/hooks/queries";
+import { queryKeys } from "@/lib/query-keys";
+import type { MilestonesResponse } from "@/lib/types";
 
 /**
  * A239 (A-GAMIFY-02): celebration toasts on /today for freshly unlocked
@@ -18,6 +21,7 @@ import { useMilestones } from "@/lib/hooks/queries";
  */
 export function MilestoneToast({ enabled = true }: { enabled?: boolean }) {
   const { data } = useMilestones();
+  const qc = useQueryClient();
   const firedRef = useRef(false);
 
   useEffect(() => {
@@ -43,7 +47,17 @@ export function MilestoneToast({ enabled = true }: { enabled?: boolean }) {
     for (const m of unseen) {
       markMilestoneSeen(m.id).catch(() => {});
     }
-  }, [data, enabled]);
+    // B396 — the cache keeps saying "unseen" until the next fetch, and the
+    // milestones are now persisted: coming back to /today (or reopening the
+    // app) within the staleTime fired the same toasts again. Mark them seen
+    // here too, the way the server now has them.
+    const seenIds = new Set(unseen.map((m) => m.id));
+    qc.setQueryData<MilestonesResponse>(queryKeys.milestones, (old) =>
+      old
+        ? { ...old, milestones: old.milestones.map((m) => (seenIds.has(m.id) ? { ...m, seen: true } : m)) }
+        : old,
+    );
+  }, [data, enabled, qc]);
 
   return null;
 }

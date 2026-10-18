@@ -34,6 +34,9 @@ vi.mock("@/lib/api", () => ({
   getSubscriptionStatus: (...args: unknown[]) => getSubscriptionStatus(...args),
 }));
 
+// B396 — useSubscription waits for Clerk; these cases run with Clerk loaded.
+vi.mock("@clerk/nextjs", () => ({ useAuth: () => ({ isLoaded: true }) }));
+
 let useSubscription: typeof import("@/lib/hooks/use-subscription").useSubscription;
 
 /** B386 — useSubscription is a React Query hook now: one fresh client per test. */

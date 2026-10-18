@@ -1,21 +1,30 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 import { useQueryClient } from "@tanstack/react-query";
-import { useSubmitLock } from "@/lib/hooks/use-submit-lock";
+import { toast } from "sonner";
 import { queryKeys } from "@/lib/query-keys";
 import { sessionResolutionState } from "@/lib/session-resolution";
 import { anchoredLoadNotes } from "@/lib/anchored-load";
 import { asMeasure } from "@/lib/measured-feedback";
 import { asLadder } from "@/lib/bw-ladder";
 import { buildGuidedStateFromExercises, guidedStorageKey, hasSavedProgress } from "@/lib/guided-session-utils";
-import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, Search, RefreshCw, Mountain, Star, AlertTriangle } from "lucide-react";
+import {
+  GUIDED_PROGRESS_EVENT,
+  discardSavedSession,
+  readSavedProgress,
+  resumeLabel,
+  type SavedProgress,
+} from "@/lib/guided-resume";
+import { localToday } from "@/lib/key-sessions";
+import { scheduleIdle } from "@/lib/hooks/queries/use-week-plan";
+import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, RefreshCw, Mountain, Star, AlertTriangle, Loader2, RotateCcw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Drawer,
   DrawerClose,
@@ -24,13 +33,6 @@ import {
   DrawerTitle,
   DrawerDescription,
 } from "@/components/ui/drawer";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,15 +45,27 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ExerciseCard } from "@/components/training/exercise-card";
 import { FEEDBACK_CHIP } from "@/components/training/feedback-colors";
-import { getExercises, addExerciseToSession, removeExerciseFromSession, setSessionSurface, apiErrorDetail } from "@/lib/api";
-import type { SessionSlot, GuidedSessionState, GuidedExercise, Exercise, WeekPlan, KeySessionRole } from "@/lib/types";
+import { removeExerciseFromSession, setSessionSurface, apiErrorDetail } from "@/lib/api";
+import type { SessionSlot, GuidedSessionState, GuidedExercise, WeekPlan, KeySessionRole } from "@/lib/types";
 import { formatSessionId, keyLabel } from "@/lib/key-sessions";
 import { focusLabel, type SessionAlert } from "@/lib/week-alerts";
-import { expandEquipment, isExerciseCompatible } from "@/lib/equipment-filter";
+import { expandEquipment } from "@/lib/equipment-filter";
 import { walkResolvedBlocks } from "@/lib/session-blocks";
 import { formatSessionName } from "@/lib/format";
-import { formatLoad, loadInputLabel, pickLoadUnit } from "@/lib/load-units";
+import { formatLoad, pickLoadUnit } from "@/lib/load-units";
 import { DailyCueLine } from "@/components/training/daily-cue-banner";
+
+// B396 — its own chunk, fetched on the first "Add exercise" (it was inlined
+// here and shipped with every /today and /week first load).
+const AddExerciseDialog = dynamic(
+  () => import("@/components/training/add-exercise-dialog").then((m) => m.AddExerciseDialog),
+  { ssr: false },
+);
+
+/** B396 — the guided player's route for a session (also what gets prefetched). */
+function guidedHref(date: string, sessionId: string): string {
+  return `/guided/${date}/${sessionId}`;
+}
 
 interface Gym {
   gym_id?: string;
@@ -289,21 +303,22 @@ function buildGuidedState(
 // B197 Bug 1: shared "Start session" handler. Guards against re-starting an
 // already-done session and preserves any pre-existing `startedAt` in localStorage
 // so the wall-clock duration survives a /today render race / accidental restart.
+// B396 — returns whether it navigated, so the button can show it is working.
 function handleStartGuided(
   session: SessionSlot,
   date: string,
   router: ReturnType<typeof useRouter>,
-): void {
+): boolean {
   // Don't allow restarting a server-side completed session — the duration
   // would otherwise be reset and clobber the real value via the resubmit path.
   if (session.status === "done" || session.status === "skipped") {
-    return;
+    return false;
   }
 
   // B181: don't overwrite saved progress — resume instead.
   if (hasSavedProgress(date, session.session_id)) {
-    router.push(`/guided/${date}/${session.session_id}`);
-    return;
+    router.push(guidedHref(date, session.session_id));
+    return true;
   }
 
   // B218 Bug 3 / B283: is_custom sessions (saved custom, adhoc, Body Part
@@ -314,7 +329,7 @@ function handleStartGuided(
   const guidedState = session.is_custom
     ? buildGuidedStateFromInline(session, date)
     : buildGuidedState(session, date);
-  if (!guidedState) return;
+  if (!guidedState) return false;
 
   // B290 (closes F54): was building the key inline with the literal "clerk".
   const key = guidedStorageKey(date, session.session_id);
@@ -335,315 +350,11 @@ function handleStartGuided(
   }
 
   localStorage.setItem(key, JSON.stringify(guidedState));
-  router.push(`/guided/${date}/${session.session_id}`);
+  router.push(guidedHref(date, session.session_id));
+  return true;
 }
 
 // Equipment expansion + compatibility logic extracted to @/lib/equipment-filter
-
-// ─── Add Exercise Dialog ─────────────────────────────────────────────
-
-function AddExerciseDialog({
-  open,
-  onOpenChange,
-  date,
-  sessionIndex,
-  weekPlan,
-  availableEquipment,
-  onSuccess,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  date: string;
-  sessionIndex: number;
-  weekPlan: WeekPlan;
-  availableEquipment: Set<string> | null;
-  onSuccess: (updatedPlan?: WeekPlan) => void;
-}) {
-  const [catalog, setCatalog] = useState<Exercise[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState<Exercise | null>(null);
-  const [sets, setSets] = useState(3);
-  const [reps, setReps] = useState(10);
-  const [workSeconds, setWorkSeconds] = useState<number | null>(null);
-  const [loadKg, setLoadKg] = useState<number | undefined>(undefined);
-  const [error, setError] = useState<string | null>(null);
-  const [showAll, setShowAll] = useState(false);
-  const [isTestMeasurement, setIsTestMeasurement] = useState(false);
-  const [isDurationBased, setIsDurationBased] = useState(false);
-
-  useEffect(() => {
-    if (open && catalog.length === 0) {
-      // B355 — set-state-in-effect: è il flag di caricamento di una fetch
-      // avviata all'apertura del dialog (sincronizzazione con un sistema
-      // esterno). Non si può calcolare in render: la fetch parte solo quando
-      // il dialog si apre e il catalogo non è ancora in memoria.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLoading(true);
-      getExercises()
-        .then((data) => setCatalog(data.exercises))
-        .catch((err) => { console.error("Failed to load exercise catalog:", err); })
-        .finally(() => setLoading(false));
-    }
-  }, [open, catalog.length]);
-
-  // Reset showAll when dialog closes
-  // B355 — set-state-in-effect: sincronizzazione stato↔prop `open`. Il dialog
-  // resta montato quando si chiude, quindi il "mostra tutti" va riportato al
-  // default alla chiusura, non al render. Pattern corretto, non un bug.
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!open) setShowAll(false);
-  }, [open]);
-
-  const filtered = useMemo(() => {
-    let result = catalog;
-
-    // Text search
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(
-        (e) =>
-          e.name.toLowerCase().includes(q) ||
-          e.exercise_id.toLowerCase().includes(q) ||
-          (Array.isArray(e.domain) ? e.domain.some(d => d.toLowerCase().includes(q)) : String(e.domain ?? "").toLowerCase().includes(q)) ||
-          (e.category?.toLowerCase().includes(q)) ||
-          (e.description?.toLowerCase().includes(q))
-      );
-    }
-
-    // Equipment filter (skip if no equipment context or showAll)
-    if (availableEquipment && !showAll) {
-      result = result.filter((e) => isExerciseCompatible(e, availableEquipment));
-    }
-
-    return result;
-  }, [catalog, search, availableEquipment, showAll]);
-
-  // Count hidden exercises for the toggle label
-  const hiddenCount = useMemo(() => {
-    if (!availableEquipment || showAll) return 0;
-    // Count how many in the text-filtered set are hidden by equipment
-    let textFiltered = catalog;
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      textFiltered = textFiltered.filter(
-        (e) =>
-          e.name.toLowerCase().includes(q) ||
-          e.exercise_id.toLowerCase().includes(q) ||
-          (Array.isArray(e.domain) ? e.domain.some(d => d.toLowerCase().includes(q)) : String(e.domain ?? "").toLowerCase().includes(q)) ||
-          (e.category?.toLowerCase().includes(q)) ||
-          (e.description?.toLowerCase().includes(q))
-      );
-    }
-    return textFiltered.length - filtered.length;
-  }, [catalog, search, availableEquipment, showAll, filtered.length]);
-
-  const selectExercise = useCallback((ex: Exercise) => {
-    setSelected(ex);
-    const defaults = ex.prescription_defaults ?? {};
-    const testMeas = ex.category === "test_measurement";
-    const ws = (defaults.work_seconds as number | null) ?? null;
-    const durationBased = !testMeas && ws != null && ws > 0;
-    setIsTestMeasurement(testMeas);
-    setIsDurationBased(durationBased);
-    setSets((defaults.sets as number) ?? (testMeas ? 1 : 3));
-    setReps((defaults.reps as number) ?? (testMeas ? 0 : 10));
-    setWorkSeconds(ws);
-    setLoadKg((defaults.load_kg as number | undefined) ?? 0);
-    setError(null);
-  }, []);
-
-  // B330: ref-based lock — two taps in one React batch would otherwise add
-  // the same exercise to the session twice.
-  const { run: handleSubmit, busy: submitting } = useSubmitLock(async () => {
-    if (!selected) return;
-    setError(null);
-    try {
-      const overrides: Record<string, unknown> = { sets };
-      if (isTestMeasurement) {
-        // test_measurement: no reps, no load, no work_seconds — user reports result in guided mode
-        overrides.reps = null;
-        overrides.work_seconds = null;
-      } else if (isDurationBased) {
-        overrides.work_seconds = workSeconds;
-        if (reps) overrides.reps = reps;
-      } else {
-        overrides.reps = reps;
-      }
-      if (loadKg != null && !isTestMeasurement) overrides.load_kg = loadKg;
-      const payload = {
-        date,
-        session_index: sessionIndex,
-        exercise_id: selected.exercise_id,
-        prescription_override: overrides,
-        week_plan: weekPlan,
-      };
-      const result = await addExerciseToSession(payload);
-      onOpenChange(false);
-      setSelected(null);
-      setSearch("");
-      onSuccess(result.week_plan);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to add exercise");
-    }
-  });
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Add Exercise</DialogTitle>
-          <DialogDescription>Search the catalog and add an exercise to this session.</DialogDescription>
-        </DialogHeader>
-
-        {!selected ? (
-          <div className="flex flex-col gap-3 flex-1 min-h-0">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-              <Input
-                placeholder="Search exercises..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-                autoFocus
-              />
-            </div>
-            {availableEquipment && (
-              <div className="flex items-center justify-between">
-                <button
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                  onClick={() => setShowAll((v) => !v)}
-                >
-                  {showAll
-                    ? "Show compatible only"
-                    : `Show all exercises${hiddenCount > 0 ? ` (+${hiddenCount} hidden)` : ""}`}
-                </button>
-              </div>
-            )}
-            <div className="flex-1 overflow-y-auto space-y-1 min-h-0 max-h-[50vh]">
-              {loading && <p className="text-xs text-muted-foreground p-2">Loading catalog...</p>}
-              {!loading && filtered.length === 0 && (
-                <p className="text-xs text-muted-foreground p-2">No exercises found</p>
-              )}
-              {filtered.map((ex) => {
-                const incompatible = showAll && availableEquipment && !isExerciseCompatible(ex, availableEquipment);
-                return (
-                  <button
-                    key={ex.exercise_id}
-                    className={`w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors ${incompatible ? "opacity-50" : ""}`}
-                    onClick={() => selectExercise(ex)}
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-sm font-medium">{ex.name}</span>
-                      {incompatible && (
-                        <Badge variant="outline" className="text-[10px] text-warning border-warning/30">
-                          Missing equipment
-                        </Badge>
-                      )}
-                    </div>
-                    {ex.description && (
-                      <div className="text-xs text-muted-foreground/80 truncate">{ex.description}</div>
-                    )}
-                    <div className="text-xs text-muted-foreground">
-                      {Array.isArray(ex.domain) ? ex.domain.join(", ") : ex.domain}
-                      {ex.category && ` · ${ex.category}`}
-                      {ex.equipment_required?.length > 0 && ` · ${ex.equipment_required.join(", ")}`}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="rounded-md border p-3">
-              <div className="text-sm font-medium">{selected.name}</div>
-              <div className="text-xs text-muted-foreground mt-0.5">{Array.isArray(selected.domain) ? selected.domain.join(", ") : selected.domain}</div>
-            </div>
-
-            {isTestMeasurement ? (
-              <div className="rounded-md border border-primary/30 bg-primary/5 p-3">
-                <p className="text-sm font-medium">1 × max attempt</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  You&apos;ll record the result during the guided session.
-                </p>
-              </div>
-            ) : (
-              <div className={`grid ${isDurationBased ? "grid-cols-3" : "grid-cols-3"} gap-3`}>
-                <div>
-                  <Label className="text-xs">Sets</Label>
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    min={1}
-                    max={20}
-                    value={sets}
-                    onChange={(e) => setSets(Number(e.target.value))}
-                  />
-                </div>
-                {isDurationBased ? (
-                  <div>
-                    <Label className="text-xs">Duration (s)</Label>
-                    <Input
-                      type="number"
-                      inputMode="numeric"
-                      min={1}
-                      max={600}
-                      value={workSeconds ?? 0}
-                      onChange={(e) => setWorkSeconds(Number(e.target.value))}
-                    />
-                  </div>
-                ) : (
-                  <div>
-                    <Label className="text-xs">Reps</Label>
-                    <Input
-                      type="number"
-                      inputMode="numeric"
-                      min={1}
-                      max={100}
-                      value={reps}
-                      onChange={(e) => setReps(Number(e.target.value))}
-                    />
-                  </div>
-                )}
-                <div>
-                  <Label className="text-xs">{loadInputLabel(selected.load_unit, "Additional weight (kg)")}</Label>
-                  <Input
-                    type="number"
-                    inputMode="decimal"
-                    min={0}
-                    step={0.5}
-                    value={loadKg ?? 0}
-                    onChange={(e) => setLoadKg(e.target.value ? Number(e.target.value) : 0)}
-                  />
-                  <p className="text-[10px] text-muted-foreground mt-1">
-                    {selected.load_unit === "per_dumbbell"
-                      ? "The weight of one dumbbell — not the sum of the two."
-                      : selected.load_unit === "implement"
-                        ? "The weight of the dumbbell or kettlebell."
-                        : "Added to bodyweight. Enter 0 for BW only."}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {error && <p className="text-xs text-destructive">{error}</p>}
-
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setSelected(null)}>
-                Back
-              </Button>
-              <Button className="flex-1" onClick={handleSubmit} disabled={submitting}>
-                {submitting ? "Adding..." : "Add exercise"}
-              </Button>
-            </div>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 // ─── Exercise Item Wrapper ───────────────────────────────────────────
 
@@ -697,6 +408,9 @@ export function SessionCard({
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [addExerciseOpen, setAddExerciseOpen] = useState(false);
+  // B396 — the dialog's chunk is fetched on the first open, then it stays
+  // mounted (so closing still animates).
+  const [addExerciseMounted, setAddExerciseMounted] = useState(false);
   const [exerciseToRemove, setExerciseToRemove] = useState<{ index: number; name: string } | null>(null);
   // A210 → B313: the "Boulder only" override lives on the slot now, not here.
   // Only the in-flight/error state is local.
@@ -863,6 +577,67 @@ export function SessionCard({
   // aerobic/endurance swaps trade aerobic capacity for volume bouldering.
   const boulderCopyVariant: "equivalent" | "volume_swap" =
     session.surface_override_from === "route_projecting_gym" ? "equivalent" : "volume_swap";
+
+  // B396 — the guided progress saved for this session, if any. Start resumes
+  // it (B181), so the button says so: "Resume · 3/8". Read before paint, again
+  // once Clerk is up (the key carries the user id), and whenever progress is
+  // discarded or restored.
+  const { isLoaded: authLoaded, isSignedIn } = useAuth();
+  const [savedProgress, setSavedProgress] = useState<SavedProgress | null>(null);
+  useLayoutEffect(() => {
+    const read = () => {
+      try {
+        setSavedProgress(readSavedProgress(window.localStorage, guidedStorageKey(date, session.session_id)));
+      } catch {
+        setSavedProgress(null); // storage blocked
+      }
+    };
+    read();
+    window.addEventListener(GUIDED_PROGRESS_EVENT, read);
+    return () => window.removeEventListener(GUIDED_PROGRESS_EVENT, read);
+  }, [date, session.session_id, authLoaded]);
+
+  /** B396 — Discard saved progress from the actions sheet, with Undo. */
+  const discardProgress = useCallback(() => {
+    let restore: (() => void) | null = null;
+    try {
+      restore = discardSavedSession(window.localStorage, guidedStorageKey(date, session.session_id));
+    } catch {
+      restore = null;
+    }
+    if (!restore) return;
+    toast("Session progress discarded", {
+      duration: 8000,
+      action: { label: "Undo", onClick: restore },
+    });
+  }, [date, session.session_id]);
+
+  // B396 — Start used to be a bare router.push: no feedback while the guided
+  // route loaded (up to seconds on a bad connection). It now shows a spinner
+  // and stays disabled until the page changes; if the navigation never
+  // happens, the button comes back after a while.
+  const [starting, setStarting] = useState(false);
+  useEffect(() => {
+    if (!starting) return;
+    const t = window.setTimeout(() => setStarting(false), 8000);
+    return () => window.clearTimeout(t);
+  }, [starting]);
+
+  // B396 — and the guided route is prefetched (full: shell + JS) once the page
+  // is idle, for today's startable session only. Never before Clerk is up: a
+  // request to a protected route without a fresh session cookie would only
+  // come back as the sign-in redirect.
+  const startable = !isFinalized && hasExercises;
+  const isTodayCard = date === localToday();
+  useEffect(() => {
+    if (!startable || !isTodayCard || !authLoaded || !isSignedIn) return;
+    if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+    return scheduleIdle(() => {
+      router.prefetch(guidedHref(date, session.session_id), {
+        kind: "full",
+      } as unknown as Parameters<typeof router.prefetch>[1]);
+    });
+  }, [startable, isTodayCard, authLoaded, isSignedIn, router, date, session.session_id]);
 
   return (
     <>
@@ -1077,13 +852,20 @@ export function SessionCard({
             {hasExercises && (
               <Button
                 className="min-h-[44px] bg-primary hover:bg-primary/90 text-primary-foreground"
+                disabled={starting}
+                aria-busy={starting || undefined}
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleStartGuided(session, date, router);
+                  if (starting) return;
+                  if (handleStartGuided(session, date, router)) setStarting(true);
                 }}
               >
-                <Play className="size-3.5 mr-1" />
-                Start session
+                {starting ? (
+                  <Loader2 className="size-3.5 mr-1 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Play className="size-3.5 mr-1" />
+                )}
+                {savedProgress ? resumeLabel(savedProgress) : "Start session"}
               </Button>
             )}
             {/* B293: a session with zero resolved exercises must never be
@@ -1340,6 +1122,7 @@ export function SessionCard({
                   className="flex items-center gap-3 w-full px-3 py-3 rounded-md hover:bg-accent transition-colors text-left"
                   onClick={() => {
                     setDrawerOpen(false);
+                    setAddExerciseMounted(true);
                     setTimeout(() => setAddExerciseOpen(true), 150);
                   }}
                 >
@@ -1377,6 +1160,20 @@ export function SessionCard({
                 >
                   <Mountain className="size-5 text-muted-foreground" />
                   <span className="text-sm">Boulder only (today)</span>
+                </button>
+              </DrawerClose>
+            )}
+
+            {/* B396 — start over: the saved guided progress goes (with Undo
+                in the toast). It used to be the banner's one-tap Discard. */}
+            {!isFinalized && savedProgress && (
+              <DrawerClose asChild>
+                <button
+                  className="flex items-center gap-3 w-full px-3 py-3 rounded-md hover:bg-accent transition-colors text-left"
+                  onClick={discardProgress}
+                >
+                  <RotateCcw className="size-5 text-muted-foreground" />
+                  <span className="text-sm">Discard saved progress</span>
                 </button>
               </DrawerClose>
             )}
@@ -1472,7 +1269,7 @@ export function SessionCard({
       </AlertDialog>
 
       {/* Add Exercise Dialog */}
-      {weekPlan && (
+      {weekPlan && addExerciseMounted && (
         <AddExerciseDialog
           open={addExerciseOpen}
           onOpenChange={setAddExerciseOpen}

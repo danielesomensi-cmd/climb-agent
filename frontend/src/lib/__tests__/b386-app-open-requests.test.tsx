@@ -73,6 +73,9 @@ vi.mock("@/lib/api", () => ({
   getFreeSessionPresets: vi.fn(),
 }));
 
+// B396 — useSubscription waits for Clerk; the cold open measured here has it loaded.
+vi.mock("@clerk/nextjs", () => ({ useAuth: () => ({ isLoaded: true }) }));
+
 import { useUserState } from "@/lib/hooks/queries/use-user-state";
 import { useWeekPlan } from "@/lib/hooks/queries/use-week-plan";
 import {

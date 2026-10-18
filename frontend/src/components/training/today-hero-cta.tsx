@@ -18,6 +18,9 @@
 
 import Link from "next/link";
 
+// B396 — every button and link here is ≥44px tall (they were 32-36px, the
+// "Change start date" text link ~16px).
+
 export type HeroState = "offday" | "empty_week" | "pre_start";
 
 export interface NextSessionInfo {
@@ -129,7 +132,7 @@ export function TodayHeroCTA(props: TodayHeroCTAProps) {
           <button
             type="button"
             onClick={onPreviewFirstSession}
-            className="inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+            className="inline-flex min-h-[44px] items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
           >
             Preview first session
           </button>
@@ -173,7 +176,7 @@ export function TodayHeroCTA(props: TodayHeroCTAProps) {
             <button
               type="button"
               onClick={onPreviewNextSession}
-              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+              className="min-h-[44px] rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
             >
               Preview session
             </button>
@@ -182,14 +185,14 @@ export function TodayHeroCTA(props: TodayHeroCTAProps) {
             <button
               type="button"
               onClick={onChangeStartDate}
-              className="text-xs text-muted-foreground underline hover:text-foreground"
+              className="min-h-[44px] px-2 text-xs text-muted-foreground underline hover:text-foreground"
             >
               Change start date
             </button>
           ) : (
             <Link
               href="/onboarding/start-week"
-              className="text-xs text-muted-foreground underline hover:text-foreground"
+              className="inline-flex min-h-[44px] items-center px-2 text-xs text-muted-foreground underline hover:text-foreground"
             >
               Change start date
             </Link>
@@ -213,7 +216,7 @@ export function TodayHeroCTA(props: TodayHeroCTAProps) {
       <div className="flex flex-col items-center gap-2">
         <Link
           href="/settings"
-          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+          className="inline-flex min-h-[44px] items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
         >
           Review availability
         </Link>
@@ -221,14 +224,14 @@ export function TodayHeroCTA(props: TodayHeroCTAProps) {
           <button
             type="button"
             onClick={onChangeStartDate}
-            className="text-xs text-muted-foreground underline hover:text-foreground"
+            className="min-h-[44px] px-2 text-xs text-muted-foreground underline hover:text-foreground"
           >
             Change start date
           </button>
         ) : (
           <Link
             href="/onboarding/start-week"
-            className="text-xs text-muted-foreground underline hover:text-foreground"
+            className="inline-flex min-h-[44px] items-center px-2 text-xs text-muted-foreground underline hover:text-foreground"
           >
             Change start date
           </Link>

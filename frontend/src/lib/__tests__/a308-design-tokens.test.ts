@@ -18,6 +18,8 @@ const read = (rel: string) => readFileSync(path.join(root, rel), "utf8");
 const FILES = [
   "app/(main)/today/page.tsx",
   "app/(main)/week/page.tsx",
+  // B396 — split out of session-card.tsx, held to the same rule.
+  "components/training/add-exercise-dialog.tsx",
   "components/training/banner.tsx",
   "components/training/coach-card.tsx",
   "components/training/daily-cue-banner.tsx",

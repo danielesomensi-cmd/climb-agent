@@ -219,6 +219,8 @@ function OtherActivityBlock({
           </Button>
         )}
       </div>
+      {/* B396 — every action of this block is ≥44px tall (size="sm" alone is
+          32px: Edit, Undo, Complete, Cancel/Save were easy to miss). */}
       {activity.status === "completed" ? (
         <div className="flex flex-wrap items-center gap-1.5">
           <Badge variant="outline" className="text-[10px] border-success/30 bg-success/15 text-success">
@@ -246,7 +248,7 @@ function OtherActivityBlock({
             <Button
               size="sm"
               variant="ghost"
-              className="text-xs text-muted-foreground ml-auto"
+              className="min-h-[44px] text-xs text-muted-foreground ml-auto"
               onClick={() => {
                 setEditName(activity.name ?? "");
                 setEditFeedback(activity.feedback ?? "ok");
@@ -262,7 +264,7 @@ function OtherActivityBlock({
             <Button
               size="sm"
               variant="ghost"
-              className={`text-xs text-muted-foreground ${!onEdit ? "ml-auto" : ""}`}
+              className={`min-h-[44px] text-xs text-muted-foreground ${!onEdit ? "ml-auto" : ""}`}
               onClick={() => onUndo(date, slot)}
             >
               <Undo2 className="size-3.5 mr-1" />
@@ -316,14 +318,14 @@ function OtherActivityBlock({
                 <Button
                   size="sm"
                   variant="outline"
-                  className="text-xs"
+                  className="min-h-[44px] text-xs"
                   onClick={() => setEditingOther(false)}
                 >
                   Cancel
                 </Button>
                 <Button
                   size="sm"
-                  className="text-xs"
+                  className="min-h-[44px] text-xs"
                   onClick={() => {
                     const dur = parseInt(editDuration, 10);
                     onEdit?.(date, slot, {
@@ -379,7 +381,7 @@ function OtherActivityBlock({
         <Button
           size="sm"
           variant="outline"
-          className="text-success border-success/30 hover:bg-success/15 hover:text-success"
+          className="min-h-[44px] text-success border-success/30 hover:bg-success/15 hover:text-success"
           onClick={() => setFeedbackPicking(true)}
         >
           <Check className="size-3.5 mr-1" />
@@ -549,6 +551,7 @@ export function DayCard({
                       : <ChevronDown className="size-4 text-muted-foreground ml-auto" />
                   )}
                 </div>
+                {/* B396 — outdoor actions ≥44px tall, like the session's. */}
                 <div className="flex flex-wrap items-center gap-1.5">
                   {day.outdoor_session_status === "done" ? (
                     <>
@@ -572,7 +575,7 @@ export function DayCard({
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="text-xs text-muted-foreground ml-auto"
+                          className="min-h-[44px] text-xs text-muted-foreground ml-auto"
                           onClick={() => onEditOutdoor(day.date)}
                         >
                           <Pencil className="size-3.5 mr-1" />
@@ -583,7 +586,7 @@ export function DayCard({
                         <Button
                           size="sm"
                           variant="ghost"
-                          className={cn("text-xs text-muted-foreground", !onEditOutdoor && "ml-auto")}
+                          className={cn("min-h-[44px] text-xs text-muted-foreground", !onEditOutdoor && "ml-auto")}
                           onClick={() => onUndoOutdoor(day.date)}
                         >
                           <Undo2 className="size-3.5 mr-1" />
@@ -596,7 +599,7 @@ export function DayCard({
                       <Button
                         asChild
                         size="sm"
-                        className="text-xs bg-success text-surface-base hover:bg-success/90"
+                        className="min-h-[44px] text-xs bg-success text-surface-base hover:bg-success/90"
                       >
                         <Link href={`/outdoor/${day.date}?spot=${encodeURIComponent(day.outdoor_spot_name ?? "")}&discipline=${day.outdoor_discipline ?? "lead"}`}>
                           <Mountain className="size-3 mr-1" />
@@ -607,7 +610,7 @@ export function DayCard({
                         <Button
                           size="sm"
                           variant="outline"
-                          className="text-xs text-success border-success/30 hover:bg-success/15 hover:text-success"
+                          className="min-h-[44px] text-xs text-success border-success/30 hover:bg-success/15 hover:text-success"
                           onClick={() => onLogOutdoor(day.date)}
                         >
                           <ClipboardList className="size-3 mr-1" />
@@ -618,7 +621,7 @@ export function DayCard({
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="text-xs text-muted-foreground"
+                          className="min-h-[44px] text-xs text-muted-foreground"
                           onClick={() => setConfirmRemove(true)}
                         >
                           <X className="size-3 mr-1" />
@@ -837,7 +840,7 @@ export function DayCard({
             {day.sessions.some((s) => s.status === "done") && (
               <Link
                 href={`/free-session?context=add_on&date=${day.date}`}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                className="inline-flex min-h-[44px] items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
               >
                 <Plus className="size-3" />
                 Log Free Session

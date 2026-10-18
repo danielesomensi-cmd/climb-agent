@@ -1,12 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
+import dynamic from "next/dynamic";
 import { Calendar, ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { WeeklyCheckinSheet } from "./weekly-checkin-sheet";
 import { getTargetMonday } from "@/lib/weekly-checkin-dates";
 import type { WeekPlan } from "@/lib/types";
 import { normalizeOtherActivities } from "@/lib/other-activity";
+import {
+  readCheckinDismissed,
+  subscribeCheckinDismissed,
+  writeCheckinDismissed,
+} from "@/lib/checkin-dismiss";
+
+// B396 — opens only on tap (and only on Sunday/Monday): not part of the
+// /today first load any more. Mounted on the first tap, see below.
+const WeeklyCheckinSheet = dynamic(
+  () => import("./weekly-checkin-sheet").then((m) => m.WeeklyCheckinSheet),
+  { ssr: false },
+);
 
 /**
  * Returns true if any session in the given week plan is already completed.
@@ -34,30 +46,24 @@ interface Props {
 
 export function WeeklyCheckinCard({ weekPlan, onPlanUpdated }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false);
-  // A286 — il dismiss veniva scritto in sessionStorage e mai riletto: la card
-  // tornava a ogni navigazione. `null` = non ancora letto (SSR + primo render):
-  // non renderizziamo, così niente accesso allo storage in render e niente
-  // flash di una card già chiusa.
-  const [dismissed, setDismissed] = useState<boolean | null>(null);
+  // B396 — the sheet's chunk is fetched on the first tap, then stays mounted
+  // (so closing still animates).
+  const [sheetMounted, setSheetMounted] = useState(false);
 
   const targetMonday = getTargetMonday();
-  const dismissKey = `checkin_dismissed_${targetMonday ?? ""}`;
 
-  useEffect(() => {
-    if (!targetMonday) return;
-    if (typeof window !== "undefined") {
-      let stored = false;
-      try {
-        stored = window.sessionStorage.getItem(dismissKey) === "1";
-      } catch {
-        /* private mode / storage disabilitato: la card resta visibile */
-      }
-      // Leggere lo storage in render romperebbe l'SSR: qui il setState è
-      // l'unico modo, ed è lo stesso pattern di /today per i banner dismissibili.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setDismissed(stored);
-    }
-  }, [targetMonday, dismissKey]);
+  // A286 — il dismiss veniva scritto in sessionStorage e mai riletto.
+  // B396 — e sessionStorage iOS lo azzera quando chiude la PWA: la card
+  // tornava a ogni riapertura. Ora sta in localStorage (lib/checkin-dismiss)
+  // ed è letto con useSyncExternalStore: nel render client è già noto (la card
+  // non compare un frame dopo spingendo giù Start); nel render server è
+  // `null` e non renderizziamo, come prima.
+  const dismissedFor = useSyncExternalStore<string | null>(
+    subscribeCheckinDismissed,
+    readCheckinDismissed,
+    () => null,
+  );
+  const dismissed = dismissedFor === null ? null : dismissedFor === targetMonday;
 
   // Tue–Sat: banner hidden entirely.
   if (!targetMonday) return null;
@@ -71,19 +77,17 @@ export function WeeklyCheckinCard({ weekPlan, onPlanUpdated }: Props) {
   if (dismissed) return null;
 
   function handleDismiss() {
-    setDismissed(true);
-    try {
-      sessionStorage.setItem(dismissKey, "1");
-    } catch {
-      /* niente storage: resta chiusa solo per questa sessione di pagina */
-    }
+    if (targetMonday) writeCheckinDismissed(targetMonday);
   }
 
   return (
     <>
       <Card
         className="border-primary/30 bg-primary/5 cursor-pointer hover:bg-primary/10 transition-colors"
-        onClick={() => setSheetOpen(true)}
+        onClick={() => {
+          setSheetMounted(true);
+          setSheetOpen(true);
+        }}
       >
         <CardContent className="flex items-center gap-3 py-4 px-4">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
@@ -96,15 +100,17 @@ export function WeeklyCheckinCard({ weekPlan, onPlanUpdated }: Props) {
         </CardContent>
       </Card>
 
-      <WeeklyCheckinSheet
-        open={sheetOpen}
-        nextWeekStart={targetMonday}
-        onClose={() => {
-          setSheetOpen(false);
-          handleDismiss();
-        }}
-        onPlanUpdated={onPlanUpdated}
-      />
+      {sheetMounted && (
+        <WeeklyCheckinSheet
+          open={sheetOpen}
+          nextWeekStart={targetMonday}
+          onClose={() => {
+            setSheetOpen(false);
+            handleDismiss();
+          }}
+          onPlanUpdated={onPlanUpdated}
+        />
+      )}
     </>
   );
 }
