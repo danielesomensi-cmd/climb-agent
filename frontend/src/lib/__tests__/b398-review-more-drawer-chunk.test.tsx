@@ -36,13 +36,19 @@ vi.mock("next/dynamic", async () => {
     },
   };
 });
-// The drawer's chunk: a factory that throws is an import that rejects.
-vi.mock("@/components/layout/more-drawer", () => {
-  if (chunk.missing) throw new Error("Loading chunk app/more-drawer failed.");
-  return {
-    MoreDrawer: ({ open }: { open: boolean }) => (open ? <div>More drawer open</div> : null),
-  };
-});
+/**
+ * The drawer's chunk, registered afresh before each test (doMock +
+ * resetModules: a factory evaluated once would be cached for the whole file).
+ * A factory that throws is an import that rejects.
+ */
+function mockDrawerChunk() {
+  vi.doMock("@/components/layout/more-drawer", () => {
+    if (chunk.missing) throw new Error("Loading chunk app/more-drawer failed.");
+    return {
+      MoreDrawer: ({ open }: { open: boolean }) => (open ? <div>More drawer open</div> : null),
+    };
+  });
+}
 
 /** Stands in for global-error: anything that reaches it replaced the app. */
 class AppRoot extends Component<{ children: ReactNode }, { crashed: boolean }> {
@@ -73,6 +79,7 @@ async function tapMore() {
 
 beforeEach(() => {
   vi.resetModules();
+  mockDrawerChunk();
   chunk.missing = false;
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
@@ -83,6 +90,12 @@ afterEach(() => {
 });
 
 describe("B398 O10 review — a missing More drawer chunk", () => {
+  it("opens the drawer when the chunk loads", async () => {
+    await renderNav();
+    await tapMore();
+    await waitFor(() => expect(screen.getByText("More drawer open")).toBeTruthy());
+  });
+
   it("leaves the nav and the rest of the app working", async () => {
     chunk.missing = true;
     await renderNav();
@@ -95,11 +108,5 @@ describe("B398 O10 review — a missing More drawer chunk", () => {
     expect(screen.getByRole("navigation", { name: "Main" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Today" })).toBeTruthy();
     expect(screen.queryByText("More drawer open")).toBeNull();
-  });
-
-  it("still opens the drawer when the chunk loads", async () => {
-    await renderNav();
-    await tapMore();
-    await waitFor(() => expect(screen.getByText("More drawer open")).toBeTruthy());
   });
 });
