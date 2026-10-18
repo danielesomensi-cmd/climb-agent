@@ -66,7 +66,12 @@ export function resumeLabel(progress: SavedProgress): string {
   return progress.total > 0 ? `Resume · ${progress.completed}/${progress.total}` : "Resume";
 }
 
-function notify(): void {
+/**
+ * Tell the cards on screen that a saved guided session changed under them
+ * (they re-read their label). Exported for the pending-feedback replay
+ * (B397 review round 2): it removes entries too.
+ */
+export function notifyGuidedProgress(): void {
   if (typeof window === "undefined" || typeof window.dispatchEvent !== "function") return;
   try {
     window.dispatchEvent(new Event(GUIDED_PROGRESS_EVENT));
@@ -93,7 +98,7 @@ export function discardSavedSession(
   } catch {
     return null;
   }
-  notify();
+  notifyGuidedProgress();
   const saved = raw;
   return () => {
     try {
@@ -101,7 +106,7 @@ export function discardSavedSession(
     } catch {
       /* storage full / blocked: nothing we can restore */
     }
-    notify();
+    notifyGuidedProgress();
   };
 }
 

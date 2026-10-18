@@ -341,3 +341,56 @@ describe("usePendingGuidedFeedback — on mount and when the network comes back"
     expect(postFeedback).toHaveBeenCalledTimes(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Review round 2 — the cards re-read their label when the replay removes an
+// entry: no "Waiting to sync" left next to a "synced" toast.
+// ---------------------------------------------------------------------------
+
+describe("B397 review round 2 — the replay tells the cards", () => {
+  function countEvents() {
+    const seen = { n: 0 };
+    const on = () => { seen.n++; };
+    window.addEventListener("climb-agent:guided-progress", on);
+    return { seen, off: () => window.removeEventListener("climb-agent:guided-progress", on) };
+  }
+
+  it("a sent entry fires the guided-progress event", async () => {
+    localStorage.setItem(KEY, JSON.stringify(pendingState()));
+    postFeedback.mockResolvedValue({ status: "ok" });
+    const { seen, off } = countEvents();
+    await flushPendingGuidedFeedback();
+    off();
+    expect(localStorage.getItem(KEY)).toBeNull();
+    expect(seen.n).toBe(1);
+  });
+
+  it("an entry refused for good (422) fires it too", async () => {
+    localStorage.setItem(KEY, JSON.stringify(pendingState()));
+    postFeedback.mockRejectedValue(new ApiError(422, "invalid"));
+    const { seen, off } = countEvents();
+    await flushPendingGuidedFeedback();
+    off();
+    expect(localStorage.getItem(KEY)).toBeNull();
+    expect(seen.n).toBe(1);
+  });
+
+  it("an entry the server already has (dropped without a POST) fires it", async () => {
+    localStorage.setItem(KEY, JSON.stringify(pendingState()));
+    const { seen, off } = countEvents();
+    await flushPendingGuidedFeedback({ alreadyLogged: () => true });
+    off();
+    expect(postFeedback).not.toHaveBeenCalled();
+    expect(seen.n).toBe(1);
+  });
+
+  it("a retryable failure keeps the entry and fires nothing", async () => {
+    localStorage.setItem(KEY, JSON.stringify(pendingState()));
+    postFeedback.mockRejectedValue(new ApiError(0, "Network too slow"));
+    const { seen, off } = countEvents();
+    await flushPendingGuidedFeedback();
+    off();
+    expect(localStorage.getItem(KEY)).not.toBeNull();
+    expect(seen.n).toBe(0);
+  });
+});

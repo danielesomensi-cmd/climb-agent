@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { ApiError, postFeedback } from "@/lib/api";
 import { buildGuidedFeedbackItems } from "@/lib/feedback-items";
 import { getKeyPrefix } from "@/lib/guided-session-utils";
+import { notifyGuidedProgress } from "@/lib/guided-resume";
 import { withFeedbackContract } from "@/lib/measured-feedback";
 import { queryKeys } from "@/lib/query-keys";
 import type { GuidedExercise, GuidedSessionState, WeekPlan } from "@/lib/types";
@@ -164,6 +165,23 @@ export function flushPendingGuidedFeedback(options: FlushOptions = {}): Promise<
 async function runFlush({ alreadyLogged }: FlushOptions): Promise<PendingSyncResult> {
   const result: PendingSyncResult = { sent: 0, alreadySaved: 0, rejected: 0, failed: 0 };
   const now = Date.now();
+  const housekeeping = { removedStale: 0 };
+  try {
+    return await flushEntries(result, housekeeping, now, alreadyLogged);
+  } finally {
+    // B397 review (round 2) — a queued entry that is gone (sent, already on
+    // the server, refused, or stale) must not leave its card on "Waiting to
+    // sync": the cards re-read their label on this event.
+    if (result.sent || result.alreadySaved || result.rejected || housekeeping.removedStale) notifyGuidedProgress();
+  }
+}
+
+async function flushEntries(
+  result: PendingSyncResult,
+  housekeeping: { removedStale: number },
+  now: number,
+  alreadyLogged: FlushOptions["alreadyLogged"],
+): Promise<PendingSyncResult> {
 
   for (const key of scopedKeys()) {
     const saved = readEntry(key);
@@ -173,7 +191,10 @@ async function runFlush({ alreadyLogged }: FlushOptions): Promise<PendingSyncRes
       // B127 housekeeping, moved here from /today: sessions older than 24h
       // that are not waiting to be sent are dropped.
       const age = saved.startedAt ? now - new Date(saved.startedAt).getTime() : NaN;
-      if (age > STALE_MS) window.localStorage.removeItem(key);
+      if (age > STALE_MS) {
+        window.localStorage.removeItem(key);
+        housekeeping.removedStale++;
+      }
       continue;
     }
     if (!saved.exercises) continue;
