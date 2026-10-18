@@ -458,8 +458,11 @@ def test_build_guard_warnings_reads_the_route_log(monkeypatch):
     _crag(plan, 5, "done", outdoor_load_score=30)
     calls = []
 
-    def fake_rows(user_id, since, until):
-        calls.append((user_id, since.isoformat(), until.isoformat()))
+    def fake_rows(user_id, since, until, *, read_since=None):
+        # B399: the guard window is unchanged; storage is asked for the key
+        # status's wider window (read_since) so one memoised read serves both.
+        calls.append((user_id, since.isoformat(), until.isoformat(),
+                      read_since.isoformat() if read_since else None))
         return [_log(_d(5), "6a")]
 
     monkeypatch.setattr(key_status, "_outdoor_rows", fake_rows)
@@ -468,7 +471,7 @@ def test_build_guard_warnings_reads_the_route_log(monkeypatch):
     assert calls == []
     # With the user: the log says it was an easy day.
     assert guard_status.build_guard_warnings(ATHLETE, plan, MON, user_id="u1") == []
-    assert calls == [("u1", _d(-7), _d(6))]
+    assert calls == [("u1", _d(-7), _d(6), _d(-10))]
 
 
 def test_check_insertion_reads_the_route_log():

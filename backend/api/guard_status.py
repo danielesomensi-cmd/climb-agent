@@ -58,6 +58,9 @@ def next_week_days(state: Mapping[str, Any], start_date: Optional[str]) -> Optio
 
 _NO_USER = object()
 
+#: B372: route-log days the guards read before the week (the previous week).
+GUARD_OUTDOOR_LOOKBACK_D = 7
+
 
 def outdoor_rows_for(user_id: Optional[str], start_date: Optional[str]) -> Optional[list]:
     """B372: the ``outdoor_logs`` rows of the previous week + the week of
@@ -69,9 +72,16 @@ def outdoor_rows_for(user_id: Optional[str], start_date: Optional[str]) -> Optio
         ws = datetime.strptime(str(start_date)[:10], "%Y-%m-%d").date()
     except ValueError:
         return None
-    from backend.api.key_status import _outdoor_rows
+    from backend.api.key_status import OUTDOOR_LOOKBACK_D, _outdoor_rows
 
-    return _outdoor_rows(user_id, ws - timedelta(days=7), ws + timedelta(days=6))
+    # B399: storage is asked for the key status's wider window and the guard
+    # window is filtered out of it — same rows, but the key status and both
+    # guard builders of one request share a single memoised read (B376)
+    # instead of two round-trips.
+    return _outdoor_rows(
+        user_id, ws - timedelta(days=GUARD_OUTDOOR_LOOKBACK_D), ws + timedelta(days=6),
+        read_since=ws - timedelta(days=max(OUTDOOR_LOOKBACK_D, GUARD_OUTDOOR_LOOKBACK_D)),
+    )
 
 
 def build_guard_warnings(
