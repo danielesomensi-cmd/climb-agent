@@ -24,8 +24,7 @@ import {
   type PendingGuidedState,
 } from "@/lib/guided-pending-feedback";
 import { applyStepUndo, closeStep, isWithinAdvanceGuard, type StepUndo } from "@/lib/guided-step-undo";
-import { unlockAudio, getAudioContext, setPlaybackAudioSession } from "@/lib/audio-unlock";
-import { isSoundMuted, SOUND_MUTED_EVENT } from "@/lib/sound-pref";
+import { unlockAudio, getAudioContext } from "@/lib/audio-unlock";
 import { useSubscription } from "@/lib/hooks/use-subscription";
 import { useSubmitLock } from "@/lib/hooks/use-submit-lock";
 import { useWakeLock } from "@/lib/hooks/use-wake-lock";
@@ -270,18 +269,6 @@ export default function GuidedSessionPage() {
       writeGuided(scopeRef.current.key, state);
     }
   }, [state]);
-
-  // B397 G4 — let the cues through the iPhone silent switch while the session
-  // is open and its sound is on; back to the default when muted or closed.
-  useEffect(() => {
-    const apply = () => setPlaybackAudioSession(!isSoundMuted());
-    apply();
-    window.addEventListener(SOUND_MUTED_EVENT, apply);
-    return () => {
-      window.removeEventListener(SOUND_MUTED_EVENT, apply);
-      setPlaybackAudioSession(false);
-    };
-  }, []);
 
   // Warn on navigation away (beforeunload)
   useEffect(() => {

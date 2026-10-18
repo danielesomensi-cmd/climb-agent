@@ -9,7 +9,6 @@ vi.mock("@/lib/audio-unlock", async (importOriginal) => {
 });
 
 import { restOverCue } from "../beep";
-import { setPlaybackAudioSession } from "../audio-unlock";
 
 class MemoryStorage {
   private map = new Map<string, string>();
@@ -101,19 +100,15 @@ describe("restOverCue", () => {
   });
 });
 
-describe("setPlaybackAudioSession", () => {
-  it("asks for `playback` while active and gives `auto` back", () => {
+// B397 integration: the `playback` audio session was dropped before merge — on
+// iOS it takes the audio focus and can pause the athlete's music at the gym.
+// The cues must never touch navigator.audioSession.
+describe("audio session", () => {
+  it("restOverCue leaves navigator.audioSession alone", () => {
+    getAudioContext.mockImplementation(() => fakeAudioContext().ctx);
     const audioSession = { type: "auto" };
     vi.stubGlobal("navigator", { audioSession });
-
-    setPlaybackAudioSession(true);
-    expect(audioSession.type).toBe("playback");
-    setPlaybackAudioSession(false);
+    restOverCue();
     expect(audioSession.type).toBe("auto");
-  });
-
-  it("is a no-op where the Audio Session API does not exist", () => {
-    vi.stubGlobal("navigator", {});
-    expect(() => setPlaybackAudioSession(true)).not.toThrow();
   });
 });

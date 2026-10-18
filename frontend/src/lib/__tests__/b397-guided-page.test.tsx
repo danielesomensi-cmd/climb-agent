@@ -11,7 +11,7 @@ import { createElement } from "react";
 import { render, screen, cleanup, act, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-const { ApiError, router, auth, postFeedback, getState, toast, setPlaybackAudioSession } = vi.hoisted(() => {
+const { ApiError, router, auth, postFeedback, getState, toast } = vi.hoisted(() => {
   class ApiError extends Error {
     status: number;
     constructor(status: number, message: string) {
@@ -32,7 +32,6 @@ const { ApiError, router, auth, postFeedback, getState, toast, setPlaybackAudioS
     postFeedback: vi.fn(),
     getState: vi.fn(),
     toast,
-    setPlaybackAudioSession: vi.fn(),
   };
 });
 
@@ -55,7 +54,6 @@ vi.mock("@/lib/hooks/use-state", () => ({ useUserState: () => ({ state: null }) 
 vi.mock("@/lib/audio-unlock", () => ({
   unlockAudio: vi.fn(),
   getAudioContext: vi.fn(() => ({ state: "running", resume: vi.fn() })),
-  setPlaybackAudioSession: (...a: unknown[]) => setPlaybackAudioSession(...a),
 }));
 vi.mock("@/components/guided/guided-exercise-step", () => ({
   GuidedExerciseStep: ({
@@ -166,7 +164,6 @@ beforeEach(() => {
   getState.mockReset();
   toast.mockClear();
   toast.dismiss.mockClear();
-  setPlaybackAudioSession.mockClear();
   clerk({ userId: "user_A" });
 });
 
@@ -237,14 +234,6 @@ describe("G1 — reload mid-session", () => {
     render(page());
 
     expect(router.replace).toHaveBeenCalledWith("/today?date=2026-10-18");
-  });
-
-  it("asks for the audio session that plays through the silent switch, and gives it back", () => {
-    saveSession(KEY_A);
-    const { unmount } = render(page());
-    expect(setPlaybackAudioSession).toHaveBeenLastCalledWith(true);
-    unmount();
-    expect(setPlaybackAudioSession).toHaveBeenLastCalledWith(false);
   });
 });
 

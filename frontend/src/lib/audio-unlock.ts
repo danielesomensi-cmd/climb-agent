@@ -53,27 +53,3 @@ export async function unlockAudio(): Promise<void> {
     /* silent — audio not supported or blocked */
   }
 }
-
-/**
- * B397 G4 — let the session's cues through the iPhone silent switch.
- *
- * Web Audio on iOS follows the ring/silent switch by default, so with the
- * phone on silent the end of a rest made no sound at all. The Audio Session
- * API (Safari 16.4+) can ask for the `playback` category, which plays through
- * the switch. Used ONLY while a guided session is open and its sound is on
- * (the player resets it to `auto` when it closes or is muted): `playback` may
- * also pause music another app is playing — that is the trade-off to check on
- * a device. Browsers without the API: no-op.
- */
-type AudioSessionType = "auto" | "playback" | "transient" | "transient-solo" | "ambient" | "play-and-record";
-
-export function setPlaybackAudioSession(active: boolean): void {
-  if (typeof navigator === "undefined") return;
-  const session = (navigator as Navigator & { audioSession?: { type: AudioSessionType } }).audioSession;
-  if (!session) return;
-  try {
-    session.type = active ? "playback" : "auto";
-  } catch {
-    /* unsupported value on this engine — keep the default */
-  }
-}
