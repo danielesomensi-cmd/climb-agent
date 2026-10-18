@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { forgetLastUser, purgePersistedCache } from "@/lib/query-persist";
 import { migrateLegacyGuidedKeys } from "@/lib/guided-session-utils";
 import { purgeLastDestination } from "@/lib/last-destination";
+import { clearCheckinDismissed } from "@/lib/checkin-dismiss";
 
 /**
  * A245 B-2 — purge every device-local trace of the previous user when the
@@ -43,6 +44,9 @@ export function SessionScopeGuard() {
     if (previous.current !== current) {
       purgePersistedCache();
       purgeLastDestination();
+      // B396 review — the "Plan your week" dismissal moved to a device-wide
+      // localStorage value: it goes with the previous user too.
+      clearCheckinDismissed();
       forgetLastUser();
       qc.clear();
       previous.current = current;

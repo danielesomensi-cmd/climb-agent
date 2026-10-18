@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
+import { toast } from "sonner";
 import { Calendar, ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { getTargetMonday } from "@/lib/weekly-checkin-dates";
@@ -12,13 +13,25 @@ import {
   subscribeCheckinDismissed,
   writeCheckinDismissed,
 } from "@/lib/checkin-dismiss";
+import { ChunkErrorBoundary } from "@/components/chunk-error-boundary";
+import { scheduleIdle } from "@/lib/hooks/queries/use-week-plan";
+import { useOnline } from "@/lib/hooks/use-auth-wait";
 
 // B396 — opens only on tap (and only on Sunday/Monday): not part of the
 // /today first load any more. Mounted on the first tap, see below.
+const loadWeeklyCheckinSheet = () => import("./weekly-checkin-sheet");
 const WeeklyCheckinSheet = dynamic(
-  () => import("./weekly-checkin-sheet").then((m) => m.WeeklyCheckinSheet),
+  () => loadWeeklyCheckinSheet().then((m) => m.WeeklyCheckinSheet),
   { ssr: false },
 );
+
+/**
+ * B396 review — offline, a sheet chunk the service worker has never seen
+ * threw from the lazy component and sent /today into its error boundary. The
+ * sheet is now behind a ChunkErrorBoundary, and preloaded while idle and
+ * online whenever the card is on screen, so it is cached before it is needed.
+ */
+const CHUNK_OFFLINE_MESSAGE = "Needs a connection — try again when you're online";
 
 /**
  * Returns true if any session in the given week plan is already completed.
@@ -65,6 +78,23 @@ export function WeeklyCheckinCard({ weekPlan, onPlanUpdated }: Props) {
   );
   const dismissed = dismissedFor === null ? null : dismissedFor === targetMonday;
 
+  // Same rules as the early returns below, computed before them (hooks).
+  const visible =
+    !!targetMonday &&
+    dismissed === false &&
+    !(new Date().getDay() === 1 && hasCompletedActivity(weekPlan));
+
+  // B396 review — preload the sheet's chunk while idle and online.
+  const online = useOnline();
+  useEffect(() => {
+    if (!visible || !online) return;
+    return scheduleIdle(() => {
+      loadWeeklyCheckinSheet().catch(() => {
+        /* offline after all: the boundary below handles the tap */
+      });
+    });
+  }, [visible, online]);
+
   // Tue–Sat: banner hidden entirely.
   if (!targetMonday) return null;
   if (dismissed === null) return null;
@@ -100,16 +130,27 @@ export function WeeklyCheckinCard({ weekPlan, onPlanUpdated }: Props) {
         </CardContent>
       </Card>
 
+      {/* B396 review — a chunk that cannot load closes the sheet with a
+          toast instead of crashing /today; unmounted so the next tap retries
+          (and says so again). The card is NOT dismissed. */}
       {sheetMounted && (
-        <WeeklyCheckinSheet
-          open={sheetOpen}
-          nextWeekStart={targetMonday}
-          onClose={() => {
+        <ChunkErrorBoundary
+          onError={() => {
             setSheetOpen(false);
-            handleDismiss();
+            setSheetMounted(false);
+            toast(CHUNK_OFFLINE_MESSAGE, { duration: 5000 });
           }}
-          onPlanUpdated={onPlanUpdated}
-        />
+        >
+          <WeeklyCheckinSheet
+            open={sheetOpen}
+            nextWeekStart={targetMonday}
+            onClose={() => {
+              setSheetOpen(false);
+              handleDismiss();
+            }}
+            onPlanUpdated={onPlanUpdated}
+          />
+        </ChunkErrorBoundary>
       )}
     </>
   );

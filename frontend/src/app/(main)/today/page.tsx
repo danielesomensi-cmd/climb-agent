@@ -27,9 +27,20 @@ const QuickAddDialog = dynamic(() => import("@/components/training/quick-add-dia
 const ReplanDialog = dynamic(() => import("@/components/training/replan-dialog").then((m) => m.ReplanDialog), { ssr: false });
 const MoveSessionDialog = dynamic(() => import("@/components/training/move-session-dialog").then((m) => m.MoveSessionDialog), { ssr: false });
 const GymPickerDialog = dynamic(() => import("@/components/training/gym-picker-dialog").then((m) => m.GymPickerDialog), { ssr: false });
+import { ChunkErrorBoundary } from "@/components/chunk-error-boundary";
+import { scheduleIdle } from "@/lib/hooks/queries/use-week-plan";
 // B396 — opens only at the end of a cycle: no reason to ship it in every
 // /today first load (it was a static import).
-const StartNewMacrocycleDialog = dynamic(() => import("@/components/settings/start-new-macrocycle-dialog").then((m) => m.StartNewMacrocycleDialog), { ssr: false });
+const loadStartNewMacrocycleDialog = () => import("@/components/settings/start-new-macrocycle-dialog");
+const StartNewMacrocycleDialog = dynamic(() => loadStartNewMacrocycleDialog().then((m) => m.StartNewMacrocycleDialog), { ssr: false });
+/**
+ * B396 review — the dialog used to be mounted as soon as the end-of-cycle
+ * banner could show: offline, a chunk the service worker had never seen threw
+ * on mount and sent /today into its error boundary without a tap. It is now
+ * mounted on the first tap, behind a ChunkErrorBoundary, and preloaded while
+ * idle and online when the banner is on screen.
+ */
+const CHUNK_OFFLINE_MESSAGE = "Needs a connection — try again when you're online";
 import { WeeklyCheckinCard } from "@/components/training/weekly-checkin-card";
 import { TestReminderCard } from "@/components/training/test-reminder-card";
 import { WeekProgressBar } from "@/components/training/week-progress-bar";
@@ -48,7 +59,7 @@ import { showAutoReschedules } from "@/lib/auto-reschedule";
 import { queueOrWarn } from "@/lib/outbox-feedback";
 import { flush as flushOutbox } from "@/lib/outbox";
 import { queryKeys } from "@/lib/query-keys";
-import { invalidateFreeSessionHistory } from "@/lib/invalidation";
+import { invalidateFreeSessionHistory, invalidateOutdoor } from "@/lib/invalidation";
 import { writeLastDestination } from "@/lib/last-destination";
 import { siblingsOf, writeWeekCache, type WeekSiblings } from "@/lib/week-cache";
 import { alertMessagesFor, describeActionAlerts } from "@/lib/week-alerts";
@@ -317,6 +328,18 @@ function TodayContent() {
   const [resumeSession, setResumeSession] = useState<InProgressSession | null>(null);
   // A-NEW-MACRO: end-of-cycle banner + dialog
   const [newCycleDialogOpen, setNewCycleDialogOpen] = useState(false);
+  // B396 review — the dialog (and its chunk) is mounted on the first tap, then
+  // stays mounted so closing still animates.
+  const [newCycleMounted, setNewCycleMounted] = useState(false);
+  const showNewCycleBanner = isViewingToday && cycleStatus.canShow;
+  useEffect(() => {
+    if (!showNewCycleBanner || !online) return;
+    return scheduleIdle(() => {
+      loadStartNewMacrocycleDialog().catch(() => {
+        /* offline after all: the boundary handles the tap */
+      });
+    });
+  }, [showNewCycleBanner, online]);
 
   // A202: feedback education banner — shown after ≥1 done session, dismissible.
   const [feedbackEduDismissed, setFeedbackEduDismissed] = useState(true);
@@ -964,8 +987,11 @@ function TodayContent() {
       // B371: the log already marked the day done server side (B273) and
       // moved the week's revision — sending complete_outdoor on the copy held
       // here would be a false stale-plan 409. Just reload.
+      // B398 (O1) review — and the outdoor sessions, as /week does: the routes
+      // on the day card come from ['outdoor','sessions'], which only the weeks
+      // were refreshing, so the card kept the routes of the cached list.
       if (info?.planSynced) {
-        await qc.invalidateQueries({ queryKey: queryKeys.weekAll });
+        await invalidateOutdoor(qc);
         return;
       }
       // D134: read-after-write — verify outdoor log was persisted before marking complete
@@ -983,6 +1009,8 @@ function TodayContent() {
         week_plan: fresh,
       });
       updateWeekCache(result.week_plan, siblingsOf(result));
+      // B398 (O1) review: the week is written above; the routes still need the new log.
+      await qc.invalidateQueries({ queryKey: queryKeys.outdoorAll });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to mark outdoor as done");
     } finally {
@@ -1070,7 +1098,13 @@ function TodayContent() {
   async function handleEditOutdoorSuccess() {
     setOutdoorEditDate(null);
     setOutdoorEditData(null);
-    refetchAll();
+    // B398 (O1) review — as on /week: refresh the outdoor routes map.
+    // `refetchAll()` reloaded state, the week and every resolved session but
+    // never the outdoor sessions the routes are read from, so the card kept
+    // the routes from before the edit. An edit touches neither the state nor
+    // any working load; it can move the week (B277 sync), hence the weeks with
+    // the outdoor keys.
+    await invalidateOutdoor(qc);
   }
 
   /** Submit session feedback (B127: always includes duration) */
@@ -1479,7 +1513,7 @@ function TodayContent() {
         )}
 
         {/* A-NEW-MACRO: end-of-cycle CTA — only on the live "today" view */}
-        {isViewingToday && cycleStatus.canShow && (
+        {showNewCycleBanner && (
           <Banner tone="primary" className="space-y-2">
             <p className="text-sm font-medium">
               {cycleStatus.isPastEndDate
@@ -1489,7 +1523,10 @@ function TodayContent() {
             <button
               type="button"
               className="min-h-[44px] rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-              onClick={() => setNewCycleDialogOpen(true)}
+              onClick={() => {
+                setNewCycleMounted(true);
+                setNewCycleDialogOpen(true);
+              }}
             >
               {cycleStatus.isPastEndDate
                 ? "Plan your next cycle →"
@@ -1657,18 +1694,28 @@ function TodayContent() {
       </Dialog>
 
       {/* A-NEW-MACRO: shared Start New Macrocycle dialog.
-          B396 — mounted (and its chunk fetched) only when the banner that
-          opens it can show. */}
-      {(cycleStatus.canShow || newCycleDialogOpen) && (
-        <StartNewMacrocycleDialog
-          open={newCycleDialogOpen}
-          onOpenChange={setNewCycleDialogOpen}
-          state={stateQuery.data ?? null}
-          onSuccess={() => {
-            qc.invalidateQueries({ queryKey: ["state"] });
-            qc.invalidateQueries({ queryKey: ["week"] });
+          B396 review — mounted (and its chunk fetched) on the first tap on
+          the banner, not as soon as the banner can show. A chunk that cannot
+          load closes it with a toast instead of crashing /today; unmounted so
+          the next tap tries again (and says so again). */}
+      {newCycleMounted && (
+        <ChunkErrorBoundary
+          onError={() => {
+            setNewCycleDialogOpen(false);
+            setNewCycleMounted(false);
+            toast(CHUNK_OFFLINE_MESSAGE, { duration: 5000 });
           }}
-        />
+        >
+          <StartNewMacrocycleDialog
+            open={newCycleDialogOpen}
+            onOpenChange={setNewCycleDialogOpen}
+            state={stateQuery.data ?? null}
+            onSuccess={() => {
+              qc.invalidateQueries({ queryKey: ["state"] });
+              qc.invalidateQueries({ queryKey: ["week"] });
+            }}
+          />
+        </ChunkErrorBoundary>
       )}
 
       {/* Outdoor edit dialog */}

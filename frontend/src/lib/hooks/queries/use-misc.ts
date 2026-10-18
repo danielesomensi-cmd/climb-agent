@@ -11,10 +11,15 @@ import {
   getSuggestedSessions,
 } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
+import { toISODateLocal } from "@/lib/dates";
 
 export function useDailyQuote(context: string, enabled = true) {
+  // B396 review — the day is in the key: a persisted quote from yesterday
+  // (still inside its 24 h staleTime) is never shown as today's. Read at each
+  // render, so a PWA resumed after midnight switches on its next render.
+  const localDate = toISODateLocal(new Date());
   return useQuery({
-    queryKey: queryKeys.quotesDaily(context),
+    queryKey: queryKeys.quotesDaily(context, localDate),
     queryFn: () => getDailyQuote(context),
     staleTime: 24 * 60 * 60_000, // 24h — quote is per-phase, daily refresh enough
     gcTime: 24 * 60 * 60_000,
