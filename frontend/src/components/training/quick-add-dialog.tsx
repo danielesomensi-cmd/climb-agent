@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Mountain, ArrowLeft, Dumbbell, Grip, Wrench } from "lucide-react";
 import { getSuggestedSessions, getSessions, getOutdoorSpots, addOutdoorSpot, getCustomSessions } from "@/lib/api";
+import { queryKeys } from "@/lib/query-keys";
 import type { SessionMeta, OutdoorSpot, CustomSessionSummary } from "@/lib/types";
 import { formatDateShort } from "@/lib/format";
 
@@ -77,6 +79,7 @@ export function QuickAddDialog({
   onApplyFreeClimbing,
   onApplyCustom,
 }: QuickAddDialogProps) {
+  const qc = useQueryClient();
   // Indoor state
   const [slot, setSlot] = useState("evening");
   const [location, setLocation] = useState<string>("gym");
@@ -231,6 +234,13 @@ export function QuickAddDialog({
         discipline: newSpotDiscipline,
       });
       const spot = result.spot as OutdoorSpot;
+      // B398 (O11) review — the spot also joins the cached list that /settings
+      // and the outdoor log read (fresh for 5 minutes since B398): without
+      // this it was missing there until the cache went stale. Only when the
+      // list is cached: seeding it with this one spot would hide the others.
+      qc.setQueryData<{ spots: OutdoorSpot[] }>(queryKeys.outdoorSpots, (old) =>
+        old ? { spots: [...old.spots, spot] } : old,
+      );
       setSpots((prev) => [...prev, spot]);
       setSelectedSpot(spot);
       setOutdoorDiscipline(newSpotDiscipline);

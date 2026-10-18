@@ -15,6 +15,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, cleanup, act, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const getOutdoorSpots = vi.fn();
 const addOutdoorSpot = vi.fn();
@@ -43,14 +44,17 @@ const clickText = async (label: string | RegExp) => {
 };
 
 function renderDialog(onApply = vi.fn()) {
+  // B398 (O11) review — the dialog writes a new spot into the React Query cache.
   render(
-    <ReplanDialog
-      open
-      date="2026-01-06"
-      gyms={[{ gym_id: "cocque", name: "Cocque", equipment: [] }]}
-      onClose={vi.fn()}
-      onApply={onApply}
-    />,
+    <QueryClientProvider client={new QueryClient()}>
+      <ReplanDialog
+        open
+        date="2026-01-06"
+        gyms={[{ gym_id: "cocque", name: "Cocque", equipment: [] }]}
+        onClose={vi.fn()}
+        onApply={onApply}
+      />
+    </QueryClientProvider>,
   );
   return onApply;
 }
