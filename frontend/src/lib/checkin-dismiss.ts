@@ -31,6 +31,25 @@ export function writeCheckinDismissed(monday: string): void {
   }
 }
 
+/**
+ * B396 review — forget the dismissal. It is one value for the whole device
+ * (the sessionStorage it replaced died with the PWA), so SessionScopeGuard
+ * calls this on sign-out and on an account switch: the next user must not
+ * inherit the previous one's "Plan your week" dismissal (A245 B-2).
+ */
+export function clearCheckinDismissed(): void {
+  try {
+    window.localStorage.removeItem(KEY);
+  } catch {
+    /* private mode / blocked storage: nothing was kept */
+  }
+  try {
+    window.dispatchEvent(new Event(EVENT));
+  } catch {
+    /* no Event constructor: subscribers just re-read on the next storage event */
+  }
+}
+
 /** useSyncExternalStore subscription: this tab's writes and other tabs'. */
 export function subscribeCheckinDismissed(onChange: () => void): () => void {
   if (typeof window === "undefined") return () => {};

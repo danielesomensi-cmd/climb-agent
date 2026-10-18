@@ -59,7 +59,11 @@ export const queryKeys = {
   milestones: ["milestones"] as const,
 
   // Quotes
-  quotesDaily: (context: string) => ["quotes", "daily", context] as const,
+  // B396 review — the daily quote is persisted (query-persist) with a 24 h
+  // staleTime: keyed without the day, reopening the app the next morning
+  // showed yesterday's quote. The client-local day is part of the key now
+  // (the request itself is unchanged).
+  quotesDaily: (context: string, localDate: string) => ["quotes", "daily", context, localDate] as const,
 
   // Daily tips (A234)
   tipsDaily: (date: string) => ["tips", "daily", date] as const,

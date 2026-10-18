@@ -21,7 +21,9 @@ import {
 } from "@/lib/guided-resume";
 import { localToday } from "@/lib/key-sessions";
 import { scheduleIdle } from "@/lib/hooks/queries/use-week-plan";
-import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, RefreshCw, Mountain, Star, AlertTriangle, Loader2, RotateCcw } from "lucide-react";
+import { useOnline } from "@/lib/hooks/use-auth-wait";
+import { ChunkErrorBoundary } from "@/components/chunk-error-boundary";
+import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, RefreshCw, Mountain, Star, AlertTriangle, Loader2, RotateCcw, CloudOff } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -57,10 +59,20 @@ import { DailyCueLine } from "@/components/training/daily-cue-banner";
 
 // B396 — its own chunk, fetched on the first "Add exercise" (it was inlined
 // here and shipped with every /today and /week first load).
+const loadAddExerciseDialog = () => import("@/components/training/add-exercise-dialog");
 const AddExerciseDialog = dynamic(
-  () => import("@/components/training/add-exercise-dialog").then((m) => m.AddExerciseDialog),
+  () => loadAddExerciseDialog().then((m) => m.AddExerciseDialog),
   { ssr: false },
 );
+
+/**
+ * B396 review — offline, a chunk the service worker has never seen cannot be
+ * fetched: the lazy dialog threw and took the whole page into the route error
+ * boundary. It is now behind a ChunkErrorBoundary, and fetched once per page
+ * while idle and online so it is in the SW cache before the gym.
+ */
+let addExercisePreloaded = false;
+const CHUNK_OFFLINE_MESSAGE = "Needs a connection — try again when you're online";
 
 /** B396 — the guided player's route for a session (also what gets prefetched). */
 function guidedHref(date: string, sessionId: string): string {
@@ -313,6 +325,19 @@ function handleStartGuided(
   // would otherwise be reset and clobber the real value via the resubmit path.
   if (session.status === "done" || session.status === "skipped") {
     return false;
+  }
+
+  // B396 review — a session whose feedback is queued on the device (B397)
+  // only ever reopens the player's "waiting to sync" view. It is never
+  // overwritten with a fresh guided state, even when nothing in it counts as
+  // progress: that entry is the only copy of the feedback.
+  try {
+    if (readSavedProgress(window.localStorage, guidedStorageKey(date, session.session_id))?.pending) {
+      router.push(guidedHref(date, session.session_id));
+      return true;
+    }
+  } catch {
+    /* storage blocked: nothing saved to protect */
   }
 
   // B181: don't overwrite saved progress — resume instead.
@@ -629,6 +654,20 @@ export function SessionCard({
   // come back as the sign-in redirect.
   const startable = !isFinalized && hasExercises;
   const isTodayCard = date === localToday();
+
+  // B396 review — the "Add exercise" chunk, preloaded while idle and online.
+  const online = useOnline();
+  const canAddExercise = !!weekPlan && !session.is_custom;
+  useEffect(() => {
+    if (!canAddExercise || !online || addExercisePreloaded) return;
+    return scheduleIdle(() => {
+      if (addExercisePreloaded) return;
+      addExercisePreloaded = true;
+      loadAddExerciseDialog().catch(() => {
+        addExercisePreloaded = false; // the next card (or reconnect) tries again
+      });
+    });
+  }, [canAddExercise, online]);
   useEffect(() => {
     if (!startable || !isTodayCard || !authLoaded || !isSignedIn) return;
     if (typeof navigator !== "undefined" && navigator.onLine === false) return;
@@ -862,9 +901,12 @@ export function SessionCard({
               >
                 {starting ? (
                   <Loader2 className="size-3.5 mr-1 animate-spin" aria-hidden="true" />
+                ) : savedProgress?.pending ? (
+                  <CloudOff className="size-3.5 mr-1" aria-hidden="true" />
                 ) : (
                   <Play className="size-3.5 mr-1" />
                 )}
+                {/* B396 review — "Waiting to sync" for a queued feedback (B397). */}
                 {savedProgress ? resumeLabel(savedProgress) : "Start session"}
               </Button>
             )}
@@ -1165,8 +1207,10 @@ export function SessionCard({
             )}
 
             {/* B396 — start over: the saved guided progress goes (with Undo
-                in the toast). It used to be the banner's one-tap Discard. */}
-            {!isFinalized && savedProgress && (
+                in the toast). It used to be the banner's one-tap Discard.
+                B396 review — never for a session whose feedback is waiting to
+                sync: that entry is the only copy of the feedback. */}
+            {!isFinalized && savedProgress && !savedProgress.pending && (
               <DrawerClose asChild>
                 <button
                   className="flex items-center gap-3 w-full px-3 py-3 rounded-md hover:bg-accent transition-colors text-left"
@@ -1268,17 +1312,28 @@ export function SessionCard({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Add Exercise Dialog */}
+      {/* Add Exercise Dialog.
+          B396 review — a chunk that cannot load (offline, never cached)
+          closes the dialog with a toast instead of crashing the page; it is
+          unmounted so the next tap tries again (and says so again). */}
       {weekPlan && addExerciseMounted && (
-        <AddExerciseDialog
-          open={addExerciseOpen}
-          onOpenChange={setAddExerciseOpen}
-          date={date}
-          sessionIndex={sessionIndex}
-          weekPlan={weekPlan}
-          availableEquipment={availableEquipment}
-          onSuccess={(updatedPlan) => onSessionUpdated?.(updatedPlan)}
-        />
+        <ChunkErrorBoundary
+          onError={() => {
+            setAddExerciseOpen(false);
+            setAddExerciseMounted(false);
+            toast(CHUNK_OFFLINE_MESSAGE, { duration: 5000 });
+          }}
+        >
+          <AddExerciseDialog
+            open={addExerciseOpen}
+            onOpenChange={setAddExerciseOpen}
+            date={date}
+            sessionIndex={sessionIndex}
+            weekPlan={weekPlan}
+            availableEquipment={availableEquipment}
+            onSuccess={(updatedPlan) => onSessionUpdated?.(updatedPlan)}
+          />
+        </ChunkErrorBoundary>
       )}
     </>
   );

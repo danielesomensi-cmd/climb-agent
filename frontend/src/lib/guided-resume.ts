@@ -17,20 +17,39 @@ import type { DayPlan, GuidedSessionState } from "@/lib/types";
 /** Fired on window when saved guided progress is discarded or restored. */
 export const GUIDED_PROGRESS_EVENT = "climb-agent:guided-progress";
 
-export type SavedProgress = { completed: number; total: number };
+export type SavedProgress = {
+  completed: number;
+  total: number;
+  /**
+   * B396 review — the session was submitted and its feedback is queued on the
+   * device (B397: `submitStatus: "feedback_pending"` + `pendingFeedback`, the
+   * ONLY copy of that feedback). Nothing to resume and nothing to discard:
+   * Start opens the player's "waiting to sync" view.
+   */
+  pending?: true;
+};
 
 /**
  * Progress saved under `key`, with the same rule as `hasSavedProgress` (what
  * "Start session" uses to decide to resume): at least one exercise done or
  * skipped, or the player moved past the first step. Null otherwise.
+ *
+ * B396 review — a session whose feedback is waiting to sync is reported as
+ * `pending` whatever its progress (it read as "Resume · n/n", and the drawer
+ * offered to discard it: that deleted feedback never sent); a `completed` one
+ * is nothing to show.
  */
 export function readSavedProgress(storage: Pick<Storage, "getItem">, key: string): SavedProgress | null {
   try {
     const raw = storage.getItem(key);
     if (!raw) return null;
     const saved = JSON.parse(raw) as GuidedSessionState;
+    if (saved?.submitStatus === "completed") return null;
     const exercises = Array.isArray(saved?.exercises) ? saved.exercises : [];
     const completed = exercises.filter((ex) => ex.status !== "pending").length;
+    if (saved?.submitStatus === "feedback_pending") {
+      return { completed, total: exercises.length, pending: true };
+    }
     if (completed === 0 && !(saved.currentIndex > 0)) return null;
     return { completed, total: exercises.length };
   } catch {
@@ -38,8 +57,12 @@ export function readSavedProgress(storage: Pick<Storage, "getItem">, key: string
   }
 }
 
-/** "Resume · 3/8" — the start button's label when it resumes. */
+/**
+ * "Resume · 3/8" — the start button's label when it resumes.
+ * B396 review — "Waiting to sync" for a session whose feedback is queued.
+ */
 export function resumeLabel(progress: SavedProgress): string {
+  if (progress.pending) return "Waiting to sync";
   return progress.total > 0 ? `Resume · ${progress.completed}/${progress.total}` : "Resume";
 }
 
