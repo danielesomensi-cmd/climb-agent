@@ -67,6 +67,7 @@ from backend.engine.anchored_load import (
     pain_for,
 )
 from backend.engine.macro_position import position_on
+from backend.engine.session_tags import derive_session_tags
 from backend.engine.stimulus import (
     FAMILY_LIMIT_POWER,
     counted_entries,
@@ -85,7 +86,7 @@ from backend.engine.stimulus import (
 DateLike = Union[date, str]
 ArchivedWeeks = Optional[Union[Mapping[str, Any], Sequence[Mapping[str, Any]]]]
 
-VERSION = "b385.1"
+VERSION = "b395.1"
 
 # ---------------------------------------------------------------------------
 # Constants. Shared with the engine, never copied: the command and the docs
@@ -402,6 +403,47 @@ def _upcoming(state: Mapping[str, Any], today: date, archived_weeks: ArchivedWee
         d = (today + timedelta(days=k)).isoformat()
         for s in days.get(d, []):
             out.append(_session_view(d, s))
+    return out
+
+
+#: B395: the tags a custom session's guards read. ``add_custom_session`` derives
+#: them once, at insertion, and stores them in the week plan.
+_DERIVED_TAG_KEYS = ("hard", "finger")
+
+
+def _stale_custom_tags(state: Mapping[str, Any], today: date, archived_weeks: ArchivedWeeks,
+                       catalog: Mapping[str, Mapping[str, Any]]) -> List[Dict[str, Any]]:
+    """B395: planned custom sessions whose stored tags differ from what
+    ``session_tags.derive_session_tags`` says today.
+
+    The replanner derives a custom's tags when it is added and never again, so
+    a fix to the tag rules reaches only customs added afterwards (prod: the
+    18/10 custom added 34 min before B392 kept ``finger: True`` and put «NO
+    dita max» on 19/10). Rule changes are rare, so nothing re-derives them
+    automatically: this check makes the drift visible where a session is
+    composed. Only the ``add_custom_session`` path (``custom_<id>``), whose
+    tags are exactly ``derive_session_tags`` — generated sessions merge
+    declared tags upward and may legitimately carry more. Read-only."""
+    days = _plan_days(state, archived_weeks)
+    pool = {str(c.get("id")): c for c in state.get("custom_sessions") or [] if isinstance(c, Mapping)}
+    out: List[Dict[str, Any]] = []
+    for k in range(UPCOMING_DAYS):
+        d = (today + timedelta(days=k)).isoformat()
+        for s in days.get(d, []):
+            sid = str(s.get("session_id") or "")
+            if not (s.get("is_custom") and sid.startswith("custom_")):
+                continue
+            if s.get("status") in ("done", "skipped"):
+                continue
+            exercises = s.get("exercises") or (pool.get(sid[len("custom_"):]) or {}).get("exercises")
+            if not exercises:
+                continue
+            derived, _intensity = derive_session_tags(exercises, catalog=catalog)
+            stored_raw = s.get("tags") if isinstance(s.get("tags"), Mapping) else {}
+            stored = {t: bool(stored_raw.get(t)) for t in _DERIVED_TAG_KEYS}
+            current = {t: bool(derived.get(t)) for t in _DERIVED_TAG_KEYS}
+            if stored != current:
+                out.append({**_session_ref(d, s), "stored": stored, "current": current})
     return out
 
 
@@ -1057,6 +1099,13 @@ def _warnings(ctx: Mapping[str, Any]) -> List[Dict[str, Any]]:
     for ex, a in ((ctx.get("anchors") or {}).get("exercises") or {}).items():
         if a and a.get("ceiling_note"):
             out.append({"code": "AT_CEILING", "exercise_id": ex, "message": a["ceiling_note"]})
+    for row in ctx.get("stale_custom_tags") or []:
+        diff = ", ".join(f"{t} {row['stored'][t]}→{row['current'][t]}" for t in _DERIVED_TAG_KEYS
+                         if row["stored"][t] != row["current"][t])
+        out.append({"code": "STALE_CUSTOM_TAGS", "date": row["date"], "session_id": row["session_id"],
+                    "message": f"tag obsoleti su {row['session_id']} del {row['date']} {row['slot']} "
+                               f"({diff}): salvati all'inserimento con regole vecchie; riallinearla con "
+                               f"remove_session + add_custom_session (dry run, OK di Daniele)"})
     out.extend(ctx.get("work_checks") or [])
     return out
 
@@ -1108,6 +1157,7 @@ def build_athlete_context(
         "key_sessions": _key_sessions(st, td, arch, rows, cat, with_proposals=with_proposals),
         "key_sessions_next_week": None,
         "upcoming": _upcoming(st, td, arch),
+        "stale_custom_tags": _stale_custom_tags(st, td, arch, cat),
         "recent": _recent(st, td, arch, rows),
         "recent_exercises": recent_exercises(st, td, archived_weeks=arch, catalog=cat),
         "athlete_notes": _athlete_notes(st, td, arch),

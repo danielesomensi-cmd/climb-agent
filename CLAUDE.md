@@ -69,6 +69,7 @@ Whenever Daniele asks for a session ("fammi un allenamento", "sessione custom / 
 - **Show the preview and wait for Daniele's explicit OK, then write.**
 - The key-session section comes from A294's `key_sessions_v1.compute_key_status` (the A293 fallback is gone): debt, resolution (proposal / deferred_next / deferred_fatigue / let_go), roles, conflicts. The `--simulate` output also prints the A294 insertion check (`key_removed` / `key_replaced` / `test_downgraded` / pre-test / finger-gap) — the same check the app runs as a `/events` dry run before adding a custom session.
 - **Any prod write through `/api/replanner/events` uses `session_ref` and is preceded by a `dry_run: true` call** (A294): the dry run returns `key_conflicts` and the reconcile `adjustments` without writing anything.
+- **Tag rules changed → realign planned customs (B395).** A custom's `tags` (`hard`/`finger`) are derived once, when it is added, and stored in the week plan. Any brief that changes `backend/engine/session_tags.py` or the catalog fields it reads (`stress_tags`, `pattern`, `role`, `domain`, `intensity_level`) must run `scripts/athlete_context.py` after deploy: a `STALE_CUSTOM_TAGS` warning names each planned custom whose stored tags no longer match. Realign it with `remove_session` + `add_custom_session` (dry run, then Daniele's OK). Past sessions are never touched.
 
 ## Execution model
 
