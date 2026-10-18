@@ -6,9 +6,10 @@ import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { TopBar } from "@/components/layout/top-bar";
+import { ChunkErrorBoundary } from "@/components/chunk-error-boundary";
 import { useUserState } from "@/lib/hooks/use-state";
 import { hrMaxFromState } from "@/lib/hr-zones";
-import { useWeekPlan } from "@/lib/hooks/queries/use-week-plan";
+import { scheduleIdle, useWeekPlan } from "@/lib/hooks/queries/use-week-plan";
 import { computeAssessment, generateMacrocycle, deleteState, putState, getWeek, exportUserState, importUserState, createBillingPortal } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
 import { invalidateAll } from "@/lib/invalidation";
@@ -64,6 +65,24 @@ import { isVoiceCuesEnabled, setVoiceCuesEnabled } from "@/lib/voice-cues";
 function EditorPlaceholder() {
   return (
     <div className="h-48 animate-pulse rounded-xl border border-border bg-muted/20" aria-hidden="true" />
+  );
+}
+/**
+ * B398 (O8) review — an editor whose chunk cannot be fetched (offline and
+ * never cached, or gone after a deploy) used to take the whole page down at
+ * the tap on Edit. The chunks are now preloaded on idle while online (the
+ * service worker keeps them, B386), and each editor sits in a
+ * ChunkErrorBoundary that closes it and says why under its card.
+ */
+function preloadInlineEditors() {
+  void import("@/components/settings/availability-editor").catch(() => undefined);
+  void import("@/components/settings/equipment-editor").catch(() => undefined);
+}
+function EditorUnavailableNote() {
+  return (
+    <p role="alert" className="mt-2 px-1 text-xs text-destructive">
+      Editor unavailable offline. Reload the page once you are back online.
+    </p>
   );
 }
 const AvailabilityEditor = dynamic(
@@ -126,6 +145,11 @@ export default function SettingsPage() {
    */
   const applyStateResponse = useCallback(
     (next: UserState) => {
+      // B398 (O4) review — a GET /api/state already in flight (a refetch on
+      // focus, the refresh() of another action) would land after this write
+      // and put the pre-save state back: the toggle just saved flipped back.
+      // Cancelling it first (reverted synchronously) keeps the PUT response.
+      void qc.cancelQueries({ queryKey: queryKeys.state, exact: true });
       qc.setQueryData(queryKeys.state, next);
       qc.invalidateQueries({ queryKey: queryKeys.stateStatus });
     },
@@ -161,6 +185,8 @@ export default function SettingsPage() {
   // say before saving which of the user's own sessions the regeneration keeps.
   const currentWeek = useWeekPlan(0, editingAvailability && authReady);
   const [editingEquipment, setEditingEquipment] = useState(false);
+  // B398 (O8) review — which inline editor failed to load (its chunk).
+  const [editorUnavailable, setEditorUnavailable] = useState<"equipment" | "availability" | null>(null);
   const [editingLimitations, setEditingLimitations] = useState(false);
   const [equipmentSavedOpen, setEquipmentSavedOpen] = useState(false);
   const [goalEditorOpen, setGoalEditorOpen] = useState(false);
@@ -184,6 +210,25 @@ export default function SettingsPage() {
   const planPause = usePlanPause(state);
 
   useEffect(() => { setVoiceCuesOn(isVoiceCuesEnabled()); }, []);
+
+  // B398 (O8) review — fetch the inline editors' chunks once the page is idle,
+  // while online (offline: as soon as the connection comes back), so Edit
+  // still opens them at the gym.
+  useEffect(() => {
+    let cancelIdle: (() => void) | undefined;
+    const schedule = () => {
+      cancelIdle = scheduleIdle(preloadInlineEditors);
+    };
+    if (navigator.onLine) {
+      schedule();
+    } else {
+      window.addEventListener("online", schedule, { once: true });
+    }
+    return () => {
+      cancelIdle?.();
+      window.removeEventListener("online", schedule);
+    };
+  }, []);
 
   // B398 (O11): the mutations write the cached list from the response (no
   // re-GET of the whole list after each add / delete).
@@ -606,11 +651,18 @@ export default function SettingsPage() {
             {/* ----- Equipment ----- */}
             <div id="sec-equipment" className="scroll-mt-32">
             {editingEquipment ? (
-              <EquipmentEditor
-                initialEquipment={equipment}
-                onSave={handleSaveEquipment}
-                onCancel={() => setEditingEquipment(false)}
-              />
+              <ChunkErrorBoundary
+                onError={() => {
+                  setEditingEquipment(false);
+                  setEditorUnavailable("equipment");
+                }}
+              >
+                <EquipmentEditor
+                  initialEquipment={equipment}
+                  onSave={handleSaveEquipment}
+                  onCancel={() => setEditingEquipment(false)}
+                />
+              </ChunkErrorBoundary>
             ) : (
               <Card>
                 <CardHeader>
@@ -620,7 +672,10 @@ export default function SettingsPage() {
                       variant="outline"
                       size="sm"
                       className="text-xs"
-                      onClick={() => setEditingEquipment(true)}
+                      onClick={() => {
+                        setEditorUnavailable(null);
+                        setEditingEquipment(true);
+                      }}
                     >
                       Edit
                     </Button>
@@ -679,6 +734,7 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
             )}
+            {editorUnavailable === "equipment" && <EditorUnavailableNote />}
             </div>
 
             {/* ----- Finger Training Device ----- */}
@@ -735,21 +791,28 @@ export default function SettingsPage() {
             {/* ----- Availability ----- */}
             <div id="sec-availability" className="scroll-mt-32">
             {editingAvailability ? (
-              <AvailabilityEditor
-                initialAvailability={availability as Record<string, Record<string, { available: boolean; preferred_location: string; gym_id?: string }>>}
-                initialPlanningPrefs={{
-                  target_training_days_per_week: (state?.planning_prefs as Record<string, number>)?.target_training_days_per_week ?? 4,
-                  hard_day_cap_per_week: (state?.planning_prefs as Record<string, number>)?.hard_day_cap_per_week ?? 3,
-                  // A283 — assente = una sessione al giorno, il comportamento di sempre.
-                  target_sessions_per_week: (state?.planning_prefs as Record<string, number | undefined>)?.target_sessions_per_week,
-                  // A300 — absent = the engine's default (all four families).
-                  complementary_rotation: (state?.planning_prefs as { complementary_rotation?: FocusFamily[] | null } | undefined)?.complementary_rotation,
+              <ChunkErrorBoundary
+                onError={() => {
+                  setEditingAvailability(false);
+                  setEditorUnavailable("availability");
                 }}
-                gyms={equipment.gyms ?? []}
-                onSave={handleSaveAvailability}
-                onCancel={() => setEditingAvailability(false)}
-                keptPreview={currentWeek.data?.week_plan ? keptUserSessions(currentWeek.data.week_plan, localToday()) : undefined}
-              />
+              >
+                <AvailabilityEditor
+                  initialAvailability={availability as Record<string, Record<string, { available: boolean; preferred_location: string; gym_id?: string }>>}
+                  initialPlanningPrefs={{
+                    target_training_days_per_week: (state?.planning_prefs as Record<string, number>)?.target_training_days_per_week ?? 4,
+                    hard_day_cap_per_week: (state?.planning_prefs as Record<string, number>)?.hard_day_cap_per_week ?? 3,
+                    // A283 — assente = una sessione al giorno, il comportamento di sempre.
+                    target_sessions_per_week: (state?.planning_prefs as Record<string, number | undefined>)?.target_sessions_per_week,
+                    // A300 — absent = the engine's default (all four families).
+                    complementary_rotation: (state?.planning_prefs as { complementary_rotation?: FocusFamily[] | null } | undefined)?.complementary_rotation,
+                  }}
+                  gyms={equipment.gyms ?? []}
+                  onSave={handleSaveAvailability}
+                  onCancel={() => setEditingAvailability(false)}
+                  keptPreview={currentWeek.data?.week_plan ? keptUserSessions(currentWeek.data.week_plan, localToday()) : undefined}
+                />
+              </ChunkErrorBoundary>
             ) : (
               <Card>
                 <CardHeader>
@@ -759,7 +822,10 @@ export default function SettingsPage() {
                       variant="outline"
                       size="sm"
                       className="text-xs"
-                      onClick={() => setEditingAvailability(true)}
+                      onClick={() => {
+                        setEditorUnavailable(null);
+                        setEditingAvailability(true);
+                      }}
                     >
                       Edit
                     </Button>
@@ -811,6 +877,7 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
             )}
+            {editorUnavailable === "availability" && <EditorUnavailableNote />}
             </div>
 
             {/* ----- Outdoor Spots ----- */}
