@@ -109,4 +109,34 @@ describe("B398 O10 review — a missing More drawer chunk", () => {
     expect(screen.getByRole("link", { name: "Today" })).toBeTruthy();
     expect(screen.queryByText("More drawer open")).toBeNull();
   });
+
+  // Review round 2 — the failure lasts for the life of the page: More falls
+  // back to a plain panel with the same links instead of going mute.
+  it("More still opens a plain panel with the links, and it closes", async () => {
+    chunk.missing = true;
+    await renderNav();
+    await tapMore();
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 20));
+    });
+    const panel = await screen.findByRole("dialog", { name: "More" });
+    expect(panel.querySelector('a[href="/settings"]')).toBeTruthy();
+    expect(panel.querySelector('a[href="/outdoor"]')).toBeTruthy();
+    await act(async () => {
+      screen.getByRole("button", { name: "Close menu" }).click();
+    });
+    expect(screen.queryByRole("dialog", { name: "More" })).toBeNull();
+    // A second tap opens it again.
+    await tapMore();
+    expect(screen.getByRole("dialog", { name: "More" })).toBeTruthy();
+  });
+
+  it("the plain panel is not shown while More is closed", async () => {
+    chunk.missing = true;
+    await renderNav();
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 1200)); // the idle mount
+    });
+    expect(screen.queryByRole("dialog", { name: "More" })).toBeNull();
+  });
 });

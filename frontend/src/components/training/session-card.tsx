@@ -24,6 +24,7 @@ import { scheduleIdle } from "@/lib/hooks/queries/use-week-plan";
 import { useOnline } from "@/lib/hooks/use-auth-wait";
 import { readServerDenied } from "@/lib/hooks/use-subscription";
 import { ChunkErrorBoundary } from "@/components/chunk-error-boundary";
+import { notifyChunkLoadFailure } from "@/lib/chunk-load";
 import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, RefreshCw, Mountain, Star, AlertTriangle, Loader2, RotateCcw, CloudOff } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -73,7 +74,6 @@ const AddExerciseDialog = dynamic(
  * while idle and online so it is in the SW cache before the gym.
  */
 let addExercisePreloaded = false;
-const CHUNK_OFFLINE_MESSAGE = "Needs a connection — try again when you're online";
 
 /** B396 — the guided player's route for a session (also what gets prefetched). */
 function guidedHref(date: string, sessionId: string): string {
@@ -676,7 +676,8 @@ export function SessionCard({
       if (addExercisePreloaded) return;
       addExercisePreloaded = true;
       loadAddExerciseDialog().catch(() => {
-        addExercisePreloaded = false; // the next card (or reconnect) tries again
+        // Not retried within this page: React.lazy and the bundler runtime
+        // keep the rejection. The next page load tries again.
       });
     });
   }, [canAddExercise, online]);
@@ -1326,14 +1327,15 @@ export function SessionCard({
 
       {/* Add Exercise Dialog.
           B396 review — a chunk that cannot load (offline, never cached)
-          closes the dialog with a toast instead of crashing the page; it is
-          unmounted so the next tap tries again (and says so again). */}
+          closes the dialog with a toast instead of crashing the page. It stays
+          unavailable for the life of the page, so the toast offers a reload
+          when online. */}
       {weekPlan && addExerciseMounted && (
         <ChunkErrorBoundary
           onError={() => {
             setAddExerciseOpen(false);
             setAddExerciseMounted(false);
-            toast(CHUNK_OFFLINE_MESSAGE, { duration: 5000 });
+            notifyChunkLoadFailure();
           }}
         >
           <AddExerciseDialog

@@ -229,7 +229,9 @@ describe("B398 O8 review — the inline editors' chunks", () => {
     expect(screen.queryByText("Page replaced by the error boundary")).toBeNull();
     expect(screen.getByText("Boulder grade system")).toBeTruthy();
     // Back to the card, with the reason under it.
-    expect(section(sectionId).getByRole("alert").textContent).toMatch(/Editor unavailable offline/);
+    expect(section(sectionId).getByRole("alert").textContent).toMatch(/editor couldn.t load/i);
+    // Review round 2: the failure lasts for the page's life — the note offers a reload.
+    expect(section(sectionId).getByRole("button", { name: "Reload" })).toBeTruthy();
     expect(section(sectionId).getByRole("button", { name: "Edit" })).toBeTruthy();
   });
 

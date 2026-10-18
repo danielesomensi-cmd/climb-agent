@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
-import { toast } from "sonner";
 import { Calendar, ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { getTargetMonday } from "@/lib/weekly-checkin-dates";
@@ -14,6 +13,7 @@ import {
   writeCheckinDismissed,
 } from "@/lib/checkin-dismiss";
 import { ChunkErrorBoundary } from "@/components/chunk-error-boundary";
+import { notifyChunkLoadFailure } from "@/lib/chunk-load";
 import { scheduleIdle } from "@/lib/hooks/queries/use-week-plan";
 import { useOnline } from "@/lib/hooks/use-auth-wait";
 
@@ -31,7 +31,6 @@ const WeeklyCheckinSheet = dynamic(
  * sheet is now behind a ChunkErrorBoundary, and preloaded while idle and
  * online whenever the card is on screen, so it is cached before it is needed.
  */
-const CHUNK_OFFLINE_MESSAGE = "Needs a connection — try again when you're online";
 
 /**
  * Returns true if any session in the given week plan is already completed.
@@ -131,14 +130,15 @@ export function WeeklyCheckinCard({ weekPlan, onPlanUpdated }: Props) {
       </Card>
 
       {/* B396 review — a chunk that cannot load closes the sheet with a
-          toast instead of crashing /today; unmounted so the next tap retries
-          (and says so again). The card is NOT dismissed. */}
+          toast instead of crashing /today (with a reload offered when online:
+          the failure lasts for the life of the page). The card is NOT
+          dismissed. */}
       {sheetMounted && (
         <ChunkErrorBoundary
           onError={() => {
             setSheetOpen(false);
             setSheetMounted(false);
-            toast(CHUNK_OFFLINE_MESSAGE, { duration: 5000 });
+            notifyChunkLoadFailure();
           }}
         >
           <WeeklyCheckinSheet

@@ -99,6 +99,50 @@ function isMoreActive(pathname: string) {
   return moreItems.some((item) => pathname.startsWith(item.href));
 }
 
+/**
+ * B398 (O10) review (round 2) — More without the drawer library: shown when the
+ * lazy drawer's chunk could not be fetched (it stays failed for the life of
+ * the page), so Settings, Outdoor, Reports & co. stay one tap away. Plain
+ * markup, imported statically with the nav.
+ */
+function MoreFallbackPanel({
+  pathname,
+  items,
+  onClose,
+}: {
+  pathname: string;
+  items: readonly MoreNavItem[];
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-label="More">
+      <button type="button" aria-label="Close menu" className="absolute inset-0 bg-black/60" onClick={onClose} />
+      <div className="absolute inset-x-0 bottom-0 rounded-t-2xl border-t border-border bg-background p-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+        <div className="grid grid-cols-3 gap-3">
+          {items.map((item) => {
+            const active = pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onClose}
+                className={`flex min-h-[72px] flex-col items-center justify-center gap-2 rounded-xl p-3 transition-colors ${
+                  active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={active ? 2.5 : 1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
+                </svg>
+                <span className="text-xs font-medium">{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function BottomNav() {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -193,9 +237,17 @@ export function BottomNav() {
           B398 (O10) review: the nav lives in the (main) layout, so a chunk that
           cannot be fetched (offline and never cached, or gone after a deploy)
           would reach global-error and replace the whole app. Behind the
-          boundary only More goes inert; the tabs and the page keep working. */}
+          boundary the tabs and the page keep working, and (review round 2)
+          More still opens: the failure lasts for the life of the page, so the
+          boundary falls back to a plain panel with the same links. */}
       {drawerMounted && (
-        <ChunkErrorBoundary>
+        <ChunkErrorBoundary
+          fallback={
+            moreOpen ? (
+              <MoreFallbackPanel pathname={pathname} items={moreItems} onClose={() => setMoreOpen(false)} />
+            ) : null
+          }
+        >
           <MoreDrawer open={moreOpen} onOpenChange={setMoreOpen} pathname={pathname} items={moreItems} />
         </ChunkErrorBoundary>
       )}

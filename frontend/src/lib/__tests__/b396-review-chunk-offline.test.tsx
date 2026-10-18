@@ -63,7 +63,13 @@ import { SessionCard } from "@/components/training/session-card";
 import { readCheckinDismissed } from "@/lib/checkin-dismiss";
 import type { SessionSlot, WeekPlan } from "@/lib/types";
 
-const OFFLINE = "Needs a connection — try again when you're online";
+import { CHUNK_OFFLINE_MESSAGE, CHUNK_RELOAD_MESSAGE } from "@/lib/chunk-load";
+
+/** Review round 2 — online the toast offers a reload (the failure lasts for the page's life). */
+const RELOAD_TOAST = [CHUNK_RELOAD_MESSAGE, expect.objectContaining({ action: expect.objectContaining({ label: "Reload" }) })];
+function setOnline(value: boolean) {
+  Object.defineProperty(navigator, "onLine", { configurable: true, value });
+}
 
 class MemoryStorage {
   private map = new Map<string, string>();
@@ -115,6 +121,7 @@ beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => {});
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date(2026, 9, 18, 9, 0)); // Sunday → the check-in card shows
+  setOnline(true);
 });
 
 afterEach(() => {
@@ -129,7 +136,7 @@ describe("WeeklyCheckinCard — the sheet's chunk cannot load", () => {
     act(() => {
       fireEvent.click(screen.getByText("Plan your week"));
     });
-    await waitFor(() => expect(toast).toHaveBeenCalledWith(OFFLINE, expect.anything()));
+    await waitFor(() => expect(toast).toHaveBeenCalledWith(...RELOAD_TOAST));
     expect(pageCrashes).toEqual([]);
     expect(screen.queryByText("Something went wrong")).toBeNull();
     expect(screen.getByText("Plan your week")).toBeTruthy();
@@ -137,7 +144,19 @@ describe("WeeklyCheckinCard — the sheet's chunk cannot load", () => {
     expect(readCheckinDismissed()).toBe("");
   });
 
-  it("a second tap says it again (the sheet was unmounted, not left broken)", async () => {
+  it("offline, the toast says it needs a connection (no reload offered)", async () => {
+    setOnline(false);
+    renderPage(<WeeklyCheckinCard weekPlan={null} onPlanUpdated={() => {}} />);
+    act(() => {
+      fireEvent.click(screen.getByText("Plan your week"));
+    });
+    await waitFor(() => expect(toast).toHaveBeenCalledWith(CHUNK_OFFLINE_MESSAGE, expect.anything()));
+    const options = toast.mock.calls[0][1] as { action?: unknown };
+    expect(options.action).toBeUndefined();
+    expect(pageCrashes).toEqual([]);
+  });
+
+  it("a second tap says it again (the page stays usable; the sheet is still unavailable)", async () => {
     renderPage(<WeeklyCheckinCard weekPlan={null} onPlanUpdated={() => {}} />);
     act(() => {
       fireEvent.click(screen.getByText("Plan your week"));
@@ -173,7 +192,7 @@ describe("SessionCard — the Add exercise chunk cannot load", () => {
     act(() => {
       fireEvent.click(screen.getByText("Add exercise"));
     });
-    await waitFor(() => expect(toast).toHaveBeenCalledWith(OFFLINE, expect.anything()));
+    await waitFor(() => expect(toast).toHaveBeenCalledWith(...RELOAD_TOAST));
     expect(pageCrashes).toEqual([]);
     expect(screen.queryByText("Something went wrong")).toBeNull();
     // The card is still there (its actions button), not the error page.

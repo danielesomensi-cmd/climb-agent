@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+import { LazyWhenOpen } from "@/components/lazy-when-open";
 import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
 import { ChevronDown, Info } from "lucide-react";
@@ -469,13 +470,17 @@ export default function PlanPage() {
         )}
       </main>
 
-      {/* ----- Macrocycle regeneration sheet ----- */}
-      <RegeneratePlanSheet
-        open={regenDialogOpen}
-        onOpenChange={setRegenDialogOpen}
-        onConfirm={handleRegenMacro}
-        loading={regenerating}
-      />
+      {/* ----- Macrocycle regeneration sheet -----
+          B398 review (round 2): lazy, so mounted from its first open and
+          behind a boundary — offline its chunk cannot crash /plan. */}
+      <LazyWhenOpen open={regenDialogOpen} onFail={() => setRegenDialogOpen(false)}>
+        <RegeneratePlanSheet
+          open={regenDialogOpen}
+          onOpenChange={setRegenDialogOpen}
+          onConfirm={handleRegenMacro}
+          loading={regenerating}
+        />
+      </LazyWhenOpen>
     </>
   );
 }

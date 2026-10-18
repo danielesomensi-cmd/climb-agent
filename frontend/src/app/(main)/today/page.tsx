@@ -28,6 +28,7 @@ const ReplanDialog = dynamic(() => import("@/components/training/replan-dialog")
 const MoveSessionDialog = dynamic(() => import("@/components/training/move-session-dialog").then((m) => m.MoveSessionDialog), { ssr: false });
 const GymPickerDialog = dynamic(() => import("@/components/training/gym-picker-dialog").then((m) => m.GymPickerDialog), { ssr: false });
 import { ChunkErrorBoundary } from "@/components/chunk-error-boundary";
+import { notifyChunkLoadFailure } from "@/lib/chunk-load";
 import { scheduleIdle } from "@/lib/hooks/queries/use-week-plan";
 // B396 — opens only at the end of a cycle: no reason to ship it in every
 // /today first load (it was a static import).
@@ -40,7 +41,6 @@ const StartNewMacrocycleDialog = dynamic(() => loadStartNewMacrocycleDialog().th
  * mounted on the first tap, behind a ChunkErrorBoundary, and preloaded while
  * idle and online when the banner is on screen.
  */
-const CHUNK_OFFLINE_MESSAGE = "Needs a connection — try again when you're online";
 import { WeeklyCheckinCard } from "@/components/training/weekly-checkin-card";
 import { TestReminderCard } from "@/components/training/test-reminder-card";
 import { WeekProgressBar } from "@/components/training/week-progress-bar";
@@ -1696,14 +1696,15 @@ function TodayContent() {
       {/* A-NEW-MACRO: shared Start New Macrocycle dialog.
           B396 review — mounted (and its chunk fetched) on the first tap on
           the banner, not as soon as the banner can show. A chunk that cannot
-          load closes it with a toast instead of crashing /today; unmounted so
-          the next tap tries again (and says so again). */}
+          load closes it with a toast instead of crashing /today. The failure
+          lasts for the life of the page (React.lazy and the bundler keep the
+          rejection), so the toast offers a reload when online. */}
       {newCycleMounted && (
         <ChunkErrorBoundary
           onError={() => {
             setNewCycleDialogOpen(false);
             setNewCycleMounted(false);
-            toast(CHUNK_OFFLINE_MESSAGE, { duration: 5000 });
+            notifyChunkLoadFailure();
           }}
         >
           <StartNewMacrocycleDialog

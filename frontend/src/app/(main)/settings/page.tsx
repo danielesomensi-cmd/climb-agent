@@ -7,6 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { TopBar } from "@/components/layout/top-bar";
 import { ChunkErrorBoundary } from "@/components/chunk-error-boundary";
+import { LazyWhenOpen } from "@/components/lazy-when-open";
 import { useUserState } from "@/lib/hooks/use-state";
 import { hrMaxFromState } from "@/lib/hr-zones";
 import { scheduleIdle, useWeekPlan } from "@/lib/hooks/queries/use-week-plan";
@@ -78,11 +79,19 @@ function preloadInlineEditors() {
   void import("@/components/settings/availability-editor").catch(() => undefined);
   void import("@/components/settings/equipment-editor").catch(() => undefined);
 }
+/**
+ * Review round 2 — the failure lasts for the life of the page (React.lazy and
+ * the bundler runtime keep the rejected chunk), even back online, and an
+ * installed iOS PWA has no reload button: the note carries one.
+ */
 function EditorUnavailableNote() {
   return (
-    <p role="alert" className="mt-2 px-1 text-xs text-destructive">
-      Editor unavailable offline. Reload the page once you are back online.
-    </p>
+    <div role="alert" className="mt-2 flex items-center justify-between gap-2 px-1 text-xs text-destructive">
+      <span>The editor couldn&apos;t load. Reload the app (online) to use it.</span>
+      <Button size="sm" variant="outline" className="min-h-[36px]" onClick={() => window.location.reload()}>
+        Reload
+      </Button>
+    </div>
   );
 }
 const AvailabilityEditor = dynamic(
@@ -1543,44 +1552,55 @@ export default function SettingsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ----- Profile/assessment editor dialog ----- */}
-      <ProfileAssessmentEditor
-        open={profileEditorOpen}
-        currentAssessment={assessment}
-        fingerDevice={fingerDevice}
-        onConfirm={handleProfileConfirm}
-        onCancel={() => setProfileEditorOpen(false)}
-        saving={savingProfile}
-      />
+      {/* ----- Profile/assessment editor dialog -----
+          B398 review (round 2): the four lazy dialogs below are mounted from
+          their first open, behind a boundary (LazyWhenOpen): offline their
+          chunks can no longer crash /settings. */}
+      <LazyWhenOpen open={profileEditorOpen} onFail={() => setProfileEditorOpen(false)}>
+        <ProfileAssessmentEditor
+          open={profileEditorOpen}
+          currentAssessment={assessment}
+          fingerDevice={fingerDevice}
+          onConfirm={handleProfileConfirm}
+          onCancel={() => setProfileEditorOpen(false)}
+          saving={savingProfile}
+        />
+      </LazyWhenOpen>
 
       {/* ----- Goal editor dialog ----- */}
-      <GoalEditor
-        open={goalEditorOpen}
-        currentGoal={goal}
-        grades={(assessment?.grades ?? {}) as Record<string, string>}
-        onConfirm={handleGoalConfirm}
-        onCancel={() => setGoalEditorOpen(false)}
-        saving={savingGoal}
-      />
+      <LazyWhenOpen open={goalEditorOpen} onFail={() => setGoalEditorOpen(false)}>
+        <GoalEditor
+          open={goalEditorOpen}
+          currentGoal={goal}
+          grades={(assessment?.grades ?? {}) as Record<string, string>}
+          onConfirm={handleGoalConfirm}
+          onCancel={() => setGoalEditorOpen(false)}
+          saving={savingGoal}
+        />
+      </LazyWhenOpen>
 
       {/* ----- Regenerate plan sheet (B114) ----- */}
-      <RegeneratePlanSheet
-        open={regenSheetOpen}
-        onOpenChange={setRegenSheetOpen}
-        onConfirm={handleRegenSheetConfirm}
-        loading={regeneratingMacro || restartingMacro}
-      />
+      <LazyWhenOpen open={regenSheetOpen} onFail={() => setRegenSheetOpen(false)}>
+        <RegeneratePlanSheet
+          open={regenSheetOpen}
+          onOpenChange={setRegenSheetOpen}
+          onConfirm={handleRegenSheetConfirm}
+          loading={regeneratingMacro || restartingMacro}
+        />
+      </LazyWhenOpen>
 
       {/* ----- Start New Macrocycle dialog (A-NEW-MACRO) ----- */}
-      <StartNewMacrocycleDialog
-        open={newCycleDialogOpen}
-        onOpenChange={setNewCycleDialogOpen}
-        state={state ?? null}
-        onSuccess={() => {
-          refresh();
-          invalidateWeek();
-        }}
-      />
+      <LazyWhenOpen open={newCycleDialogOpen} onFail={() => setNewCycleDialogOpen(false)}>
+        <StartNewMacrocycleDialog
+          open={newCycleDialogOpen}
+          onOpenChange={setNewCycleDialogOpen}
+          state={state ?? null}
+          onSuccess={() => {
+            refresh();
+            invalidateWeek();
+          }}
+        />
+      </LazyWhenOpen>
     </>
   );
 }

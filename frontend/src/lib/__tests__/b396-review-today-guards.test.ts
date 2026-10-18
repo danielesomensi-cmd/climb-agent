@@ -47,8 +47,9 @@ describe("/today — StartNewMacrocycleDialog", () => {
     const onError = before.slice(boundary);
     expect(onError).toContain("setNewCycleDialogOpen(false)");
     expect(onError).toContain("setNewCycleMounted(false)");
-    expect(onError).toContain("toast(CHUNK_OFFLINE_MESSAGE");
-    expect(code).toContain(`CHUNK_OFFLINE_MESSAGE = "Needs a connection — try again when you're online"`);
+    // Review round 2: one shared message (offline: needs a connection;
+    // online: a Reload action — the failure lasts for the page's life).
+    expect(onError).toContain("notifyChunkLoadFailure()");
   });
 
   it("its chunk is preloaded while idle and online when the banner is on screen", () => {
