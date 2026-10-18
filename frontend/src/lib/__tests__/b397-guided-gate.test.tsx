@@ -350,6 +350,68 @@ describe("B397 review round 2 — fresh session and the server's ruling", () => 
 });
 
 // ---------------------------------------------------------------------------
+// Review round 3 — the ruling is read at decision time: an old "no" being
+// renewed waits for the new answer; a session that passed on a "yes" stays.
+// ---------------------------------------------------------------------------
+
+function deferred<T>() {
+  let resolve!: (v: T) => void;
+  const promise = new Promise<T>((r) => { resolve = r; });
+  return { promise, resolve };
+}
+
+describe("B397 review round 3 — stale answers and later answers", () => {
+  it("fresh session + an OLD 'no' being renewed: waits, then stays on the new 'yes'", async () => {
+    qc.setQueryData(queryKeys.subscriptionStatus, EXPIRED, { updatedAt: Date.now() - 120_000 });
+    const answer = deferred<typeof ACTIVE>();
+    getSubscriptionStatus.mockReturnValue(answer.promise);
+    saveSession(KEY_A, FRESH);
+
+    render(page());
+    await settle();
+    expect(getSubscriptionStatus).toHaveBeenCalled();
+    expect(sentToSubscribe()).toBe(false);
+
+    await act(async () => { answer.resolve(ACTIVE); });
+    await settle();
+    expect(sentToSubscribe()).toBe(false);
+    expect(shownExercise()).toBe("a");
+  });
+
+  it("fresh session + an OLD 'no' renewed into another 'no': /subscribe once the answer lands", async () => {
+    qc.setQueryData(queryKeys.subscriptionStatus, EXPIRED, { updatedAt: Date.now() - 120_000 });
+    const answer = deferred<typeof EXPIRED>();
+    getSubscriptionStatus.mockReturnValue(answer.promise);
+    saveSession(KEY_A, FRESH);
+
+    render(page());
+    await settle();
+    expect(sentToSubscribe()).toBe(false);
+
+    await act(async () => { answer.resolve(EXPIRED); });
+    await waitFor(() => expect(router.replace).toHaveBeenLastCalledWith("/subscribe"));
+  });
+
+  it("a fresh session that passed on a 'yes' is not ended by a later 'no' (the poll during the warm-up)", async () => {
+    getSubscriptionStatus.mockResolvedValue(ACTIVE);
+    saveSession(KEY_A, FRESH);
+
+    render(page());
+    await waitFor(() => expect(getSubscriptionStatus).toHaveBeenCalled());
+    await settle();
+    expect(sentToSubscribe()).toBe(false);
+
+    getSubscriptionStatus.mockResolvedValue(EXPIRED);
+    await act(async () => {
+      await qc.refetchQueries({ queryKey: queryKeys.subscriptionStatus });
+    });
+    await settle();
+    expect(sentToSubscribe()).toBe(false);
+    expect(shownExercise()).toBe("a");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // 3 — no /api/state GET before Clerk
 // ---------------------------------------------------------------------------
 

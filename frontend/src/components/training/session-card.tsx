@@ -22,7 +22,7 @@ import {
 import { localToday } from "@/lib/key-sessions";
 import { scheduleIdle } from "@/lib/hooks/queries/use-week-plan";
 import { useOnline } from "@/lib/hooks/use-auth-wait";
-import { readServerDenied } from "@/lib/hooks/use-subscription";
+import { confirmServerDenied, hasCachedServerNo } from "@/lib/hooks/use-subscription";
 import { ChunkErrorBoundary } from "@/components/chunk-error-boundary";
 import { notifyChunkLoadFailure } from "@/lib/chunk-load";
 import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, RefreshCw, Mountain, Star, AlertTriangle, Loader2, RotateCcw, CloudOff } from "lucide-react";
@@ -313,6 +313,23 @@ function buildGuidedState(
   };
 }
 
+/**
+ * Does Start reopen what is saved on the device instead of starting anew?
+ *
+ * B396 review — a session whose feedback is queued (B397) only ever reopens
+ * the player's "waiting to sync" view: that entry is the only copy of the
+ * feedback, so it is never overwritten, even when nothing in it counts as
+ * progress. B181 — a session under way is resumed, never overwritten.
+ */
+function resumesSavedSession(session: SessionSlot, date: string): boolean {
+  try {
+    if (readSavedProgress(window.localStorage, guidedStorageKey(date, session.session_id))?.pending) return true;
+  } catch {
+    /* storage blocked: nothing saved to protect */
+  }
+  return hasSavedProgress(date, session.session_id);
+}
+
 // B197 Bug 1: shared "Start session" handler. Guards against re-starting an
 // already-done session and preserves any pre-existing `startedAt` in localStorage
 // so the wall-clock duration survives a /today render race / accidental restart.
@@ -329,30 +346,18 @@ function handleStartGuided(
     return false;
   }
 
-  // B396 review — a session whose feedback is queued on the device (B397)
-  // only ever reopens the player's "waiting to sync" view. It is never
-  // overwritten with a fresh guided state, even when nothing in it counts as
-  // progress: that entry is the only copy of the feedback.
-  try {
-    if (readSavedProgress(window.localStorage, guidedStorageKey(date, session.session_id))?.pending) {
-      router.push(guidedHref(date, session.session_id));
-      return true;
-    }
-  } catch {
-    /* storage blocked: nothing saved to protect */
-  }
-
-  // B181: don't overwrite saved progress — resume instead.
-  if (hasSavedProgress(date, session.session_id)) {
+  // Queued feedback or a session under way: reopen it, never overwrite it.
+  if (resumesSavedSession(session, date)) {
     router.push(guidedHref(date, session.session_id));
     return true;
   }
 
-  // B397 review (round 2) — a NEW session is the paywall's entry point
-  // (B202). Only the server's own "no" blocks it (`readServerDenied`): a
-  // missing answer — offline at the crag, Clerk still booting — lets Start
-  // through, and the server still refuses the feedback POST. Resume and the
-  // queued-feedback view above are never blocked (A245 C-1).
+  // B397 review (rounds 2-3) — a NEW session is the paywall's entry point
+  // (B202). Only the server's own "no" blocks it (`serverDenied`, confirmed
+  // by the caller with a fresh answer): a missing answer — offline at the
+  // crag, Clerk still booting — lets Start through, and the server still
+  // refuses the feedback POST. Resume and the queued-feedback view above are
+  // never blocked (A245 C-1).
   if (serverDenied) {
     router.push("/subscribe");
     return true;
@@ -909,7 +914,18 @@ export function SessionCard({
                 onClick={(e) => {
                   e.stopPropagation();
                   if (starting) return;
-                  if (handleStartGuided(session, date, router, readServerDenied(qc))) setStarting(true);
+                  // B397 review (round 3) — a cached "no" is confirmed with a
+                  // fresh answer before a NEW session goes to /subscribe (the
+                  // athlete may just have paid); resume and queued feedback
+                  // never wait for the network.
+                  if (!hasCachedServerNo(qc) || resumesSavedSession(session, date)) {
+                    if (handleStartGuided(session, date, router)) setStarting(true);
+                    return;
+                  }
+                  setStarting(true);
+                  void confirmServerDenied(qc).then((denied) => {
+                    if (!handleStartGuided(session, date, router, denied)) setStarting(false);
+                  });
                 }}
               >
                 {starting ? (

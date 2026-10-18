@@ -257,7 +257,7 @@ export function getInProgressSession(): InProgressSession | null {
       // Check genuinely in-progress: at least one exercise done/skipped, but not all
       const completed = saved.exercises.filter((ex) => ex.status !== "pending").length;
       const total = saved.exercises.length;
-      if (completed === 0 && saved.currentIndex === 0) continue; // fresh, never started
+      if (!hasWorkoutStarted(saved)) continue; // fresh, never started
       if (completed === total) continue; // fully done
 
       // Pick most recent by startedAt
@@ -282,6 +282,22 @@ export function getInProgressSession(): InProgressSession | null {
 /**
  * Check if a specific session has saved progress in localStorage.
  */
+/**
+ * B397 review (round 3) — has this guided session actually begun? One rule
+ * for the card's Resume, the /today banner and the player's paywall gate:
+ * an exercise closed, a set counted on the current one, or the player moved
+ * past the first exercise. They used to disagree on counted sets — the card
+ * offered "Start session" (and its paywall check, or a restart that wiped the
+ * sets) for a session the player treated as under way.
+ */
+export function hasWorkoutStarted(saved: Pick<GuidedSessionState, "exercises" | "currentIndex">): boolean {
+  const exercises = Array.isArray(saved.exercises) ? saved.exercises : [];
+  return (
+    saved.currentIndex > 0 ||
+    exercises.some((ex) => ex.status !== "pending" || (ex.completedSets ?? 0) > 0)
+  );
+}
+
 export function hasSavedProgress(date: string, sessionId: string): boolean {
   if (typeof window === "undefined") return false;
   const prefix = getKeyPrefix();
@@ -291,7 +307,7 @@ export function hasSavedProgress(date: string, sessionId: string): boolean {
     if (!raw) return false;
     const saved = JSON.parse(raw) as GuidedSessionState;
     // Has real progress (not a fresh empty session)
-    return saved.exercises.some((ex) => ex.status !== "pending") || saved.currentIndex > 0;
+    return hasWorkoutStarted(saved);
   } catch {
     return false;
   }

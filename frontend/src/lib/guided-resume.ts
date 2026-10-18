@@ -1,4 +1,5 @@
 import type { DayPlan, GuidedSessionState } from "@/lib/types";
+import { hasWorkoutStarted } from "@/lib/guided-session-utils";
 
 /**
  * B396 — resuming a guided session from /today, without a block above it.
@@ -50,7 +51,7 @@ export function readSavedProgress(storage: Pick<Storage, "getItem">, key: string
     if (saved?.submitStatus === "feedback_pending") {
       return { completed, total: exercises.length, pending: true };
     }
-    if (completed === 0 && !(saved.currentIndex > 0)) return null;
+    if (!hasWorkoutStarted({ exercises, currentIndex: saved.currentIndex })) return null;
     return { completed, total: exercises.length };
   } catch {
     return null;

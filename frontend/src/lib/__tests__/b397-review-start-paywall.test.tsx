@@ -12,10 +12,10 @@
  * climber to /subscribe. Resume and the queued-feedback view are never blocked.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-const { router, toast, ApiError } = vi.hoisted(() => {
+const { router, toast, ApiError, getSubscriptionStatus } = vi.hoisted(() => {
   class ApiError extends Error {
     status: number;
     constructor(status: number, message: string) {
@@ -28,6 +28,7 @@ const { router, toast, ApiError } = vi.hoisted(() => {
     router: { push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() },
     toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), dismiss: vi.fn() }),
     ApiError,
+    getSubscriptionStatus: vi.fn(),
   };
 });
 
@@ -36,7 +37,7 @@ vi.mock("@clerk/nextjs", () => ({ useAuth: () => ({ isLoaded: true, isSignedIn: 
 vi.mock("sonner", () => ({ toast }));
 vi.mock("@/lib/api", () => ({
   ApiError,
-  getSubscriptionStatus: vi.fn(),
+  getSubscriptionStatus: () => getSubscriptionStatus(),
   removeExerciseFromSession: vi.fn(),
   setSessionSurface: vi.fn(),
   apiErrorDetail: vi.fn(),
@@ -138,20 +139,57 @@ describe("isServerDenied — a ruling, never a missing answer", () => {
 });
 
 describe("SessionCard Start — the paywall entry point", () => {
-  it("a new session with the server's 'no' in the cache goes to /subscribe and writes nothing", () => {
+  it("a new session with the server's 'no' in the cache, confirmed by a fresh answer: /subscribe, nothing written", async () => {
     qc.setQueryData(queryKeys.subscriptionStatus, EXPIRED);
+    getSubscriptionStatus.mockResolvedValue(EXPIRED);
     renderCard();
     tapStart();
-    expect(router.push).toHaveBeenCalledWith("/subscribe");
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/subscribe"));
+    expect(getSubscriptionStatus).toHaveBeenCalledTimes(1);
     expect(window.localStorage.getItem(key)).toBeNull();
   });
 
-  it("a new session refused with a 402 goes to /subscribe", async () => {
+  it("a new session refused with a 402, confirmed: /subscribe", async () => {
     await cacheSubscriptionError(new ApiError(402, "Payment required"));
+    getSubscriptionStatus.mockRejectedValue(new ApiError(402, "Payment required"));
     renderCard();
     tapStart();
-    expect(router.push).toHaveBeenCalledWith("/subscribe");
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/subscribe"));
     expect(window.localStorage.getItem(key)).toBeNull();
+  });
+
+  // Review round 3 — someone who has just paid must not bounce off the old "no".
+  it("a cached 'no' that the fresh answer turns into a 'yes': Start opens the player", async () => {
+    qc.setQueryData(queryKeys.subscriptionStatus, EXPIRED);
+    getSubscriptionStatus.mockResolvedValue(ACTIVE);
+    renderCard();
+    tapStart();
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith(`/guided/${DATE}/${SESSION_ID}`));
+    expect(router.push).not.toHaveBeenCalledWith("/subscribe");
+    expect(window.localStorage.getItem(key)).not.toBeNull();
+  });
+
+  it("a cached 'no' and the confirmation fails in transport: the last ruling stands (/subscribe)", async () => {
+    qc.setQueryData(queryKeys.subscriptionStatus, EXPIRED);
+    getSubscriptionStatus.mockRejectedValue(new ApiError(0, "Network too slow"));
+    renderCard();
+    tapStart();
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/subscribe"));
+  });
+
+  it("a session with sets counted on the first exercise is a session under way: Resume · 0/2, never /subscribe", () => {
+    qc.setQueryData(queryKeys.subscriptionStatus, EXPIRED);
+    const saved = JSON.stringify({
+      version: 1, date: DATE, sessionId: SESSION_ID, sessionName: "Strength",
+      startedAt: new Date().toISOString(), currentIndex: 0,
+      exercises: [{ exerciseId: "max_hang", status: "pending", completedSets: 2 }, { exerciseId: "pull_up", status: "pending" }],
+    });
+    window.localStorage.setItem(key, saved);
+    renderCard();
+    tapStart(/Resume · 0\/2/);
+    expect(router.push).toHaveBeenCalledWith(`/guided/${DATE}/${SESSION_ID}`);
+    expect(getSubscriptionStatus).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem(key)).toBe(saved);
   });
 
   it("no answer at all (offline, Clerk booting): Start opens the player", () => {

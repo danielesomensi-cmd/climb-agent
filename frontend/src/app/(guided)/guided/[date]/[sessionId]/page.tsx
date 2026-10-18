@@ -16,7 +16,7 @@ import { GuidedSummary } from "@/components/guided/guided-summary";
 import { postFeedback, getState } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
 import { writeWeekCache } from "@/lib/week-cache";
-import { bodyweightFromState, loadGuidedSession } from "@/lib/guided-session-utils";
+import { bodyweightFromState, hasWorkoutStarted, loadGuidedSession } from "@/lib/guided-session-utils";
 import {
   announcePendingSync,
   buildGuidedFeedbackBody,
@@ -25,7 +25,7 @@ import {
 } from "@/lib/guided-pending-feedback";
 import { applyStepUndo, closeStep, isWithinAdvanceGuard, type StepUndo } from "@/lib/guided-step-undo";
 import { unlockAudio, getAudioContext } from "@/lib/audio-unlock";
-import { useServerDenied, useSubscription } from "@/lib/hooks/use-subscription";
+import { readServerRuling, useServerRuling, useSubscription } from "@/lib/hooks/use-subscription";
 import { useSubmitLock } from "@/lib/hooks/use-submit-lock";
 import { useWakeLock } from "@/lib/hooks/use-wake-lock";
 import { useUserState } from "@/lib/hooks/use-state";
@@ -132,8 +132,7 @@ function rebaseDurationTest(
  */
 function isFreshGuidedSession(state: GuidedSessionState | null): boolean {
   if (!state || state.submitStatus) return false;
-  if (state.currentIndex !== 0) return false;
-  return state.exercises.every((ex) => ex.status === "pending" && !ex.completedSets);
+  return !hasWorkoutStarted(state);
 }
 
 export default function GuidedSessionPage() {
@@ -143,8 +142,12 @@ export default function GuidedSessionPage() {
   const sessionId = params.sessionId as string;
   const qc = useQueryClient();
   const { canInteract, loading: subLoading } = useSubscription();
-  // B397 review (round 2) — the server's own "no", never a missing answer.
-  const serverDenied = useServerDenied();
+  // B397 review (rounds 2-3) — the server's own ruling, never a missing
+  // answer; re-renders the gate below when it changes.
+  const serverRuling = useServerRuling();
+  // Latched once a fresh session has passed the gate on the server's "yes":
+  // a later "no" (the 5-minute poll during a warm-up) does not end it.
+  const gateClearedRef = useRef(false);
   // B397 G1 — Clerk's answer, to confirm (or contradict) the user the session
   // was read for while Clerk was still booting.
   const { isLoaded: authLoaded, userId: authUserId } = useAuth();
@@ -279,9 +282,14 @@ export default function GuidedSessionPage() {
   // Start had JUST written (nothing done yet): with the server's "no" already
   // in the cache an expired account trained a whole session, then hit a 402 at
   // Submit and was told it would "sync later". A fresh session is still the
-  // entry point, so it is gated — but only on the server's ruling
-  // (`serverDenied`), never on a missing answer (offline, Clerk booting), and
-  // never once anything has been done (A245 C-1: no yanking mid-workout).
+  // entry point, so it is gated — but only on the server's own ruling, never
+  // on a missing answer (offline, Clerk booting), and never once anything has
+  // been done (A245 C-1: no yanking mid-workout).
+  //
+  // Review round 3 — the ruling is read at decision time, not from the render:
+  // a stale "no" being renewed by a refetch started in this same commit is
+  // "unknown" until the new answer lands (someone who has just paid must not
+  // bounce). And a fresh session that passed on a "yes" stays passed.
   const freshSession = isFreshGuidedSession(state);
   useEffect(() => {
     if (!authLoaded) return;
@@ -289,8 +297,11 @@ export default function GuidedSessionPage() {
       if (!subLoading && !canInteract && !sessionStarted) router.replace("/subscribe");
       return;
     }
-    if (freshSession && serverDenied) router.replace("/subscribe");
-  }, [authLoaded, canInteract, subLoading, sessionStarted, freshSession, serverDenied, router]);
+    if (!freshSession || gateClearedRef.current) return;
+    const ruling = readServerRuling(qc);
+    if (ruling === "denied") router.replace("/subscribe");
+    else if (ruling === "allowed") gateClearedRef.current = true;
+  }, [authLoaded, canInteract, subLoading, sessionStarted, freshSession, serverRuling, qc, router]);
 
   /**
    * B397 G7 + review — the body weight's GET fallback, once Clerk is ready.

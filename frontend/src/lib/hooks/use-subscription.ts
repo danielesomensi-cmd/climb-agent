@@ -124,24 +124,66 @@ export function isServerDenied(data: SubscriptionStatus | undefined, error: unkn
   return data?.can_interact === false;
 }
 
-/** B397 review (round 2) — `isServerDenied` on what the cache holds right now (for click handlers). */
-export function readServerDenied(qc: QueryClient): boolean {
+/**
+ * B397 review (round 3) — the server's ruling as the cache holds it right now:
+ * "denied" (its own "no"), "allowed" (its own "yes"), or "unknown" — no answer
+ * yet, or a newer answer already on its way (a refetch in flight must decide,
+ * not the old answer it is replacing: the athlete may just have paid).
+ */
+export type ServerRuling = "denied" | "allowed" | "unknown";
+
+function rulingOf(q: { data?: SubscriptionStatus; error?: unknown; fetchStatus?: string } | undefined): ServerRuling {
+  if (!q || q.fetchStatus === "fetching") return "unknown";
+  if (isServerDenied(q.data, q.error)) return "denied";
+  return q.data?.can_interact === true ? "allowed" : "unknown";
+}
+
+/** The ruling read at decision time (effects, click handlers). */
+export function readServerRuling(qc: QueryClient): ServerRuling {
+  return rulingOf(qc.getQueryState<SubscriptionStatus>(queryKeys.subscriptionStatus));
+}
+
+/** Does the cache hold the server's "no" — however old, even with a refetch in flight? */
+export function hasCachedServerNo(qc: QueryClient): boolean {
   const q = qc.getQueryState<SubscriptionStatus>(queryKeys.subscriptionStatus);
   return isServerDenied(q?.data, q?.error);
 }
 
 /**
- * B397 review (round 2) — `isServerDenied` as React state. A passive observer
- * (`enabled: false`): it never asks the server itself, it only follows the
- * answer `useSubscription` puts in the shared cache.
+ * B397 review (round 3) — before a NEW session is sent to /subscribe on a
+ * cached "no", ask again (joining a request already in flight): someone who
+ * has just paid must not bounce off an answer from before the payment. A
+ * transport failure leaves the last ruling standing — it was the server's.
  */
-export function useServerDenied(): boolean {
+export async function confirmServerDenied(qc: QueryClient): Promise<boolean> {
+  try {
+    const data = await qc.fetchQuery({
+      queryKey: queryKeys.subscriptionStatus,
+      queryFn: getSubscriptionStatus,
+      staleTime: 0,
+      retry: false,
+    });
+    return isServerDenied(data, null);
+  } catch (err) {
+    if (isServerDenied(undefined, err)) return true;
+    return hasCachedServerNo(qc);
+  }
+}
+
+/**
+ * B397 review (rounds 2-3) — the ruling as React state. A passive observer
+ * (`enabled: false`): it never asks the server itself, it only follows the
+ * answer `useSubscription` puts in the shared cache, so the components that
+ * read it re-render when the ruling changes. Decide with `readServerRuling`
+ * at decision time: a fetch started in the same commit is not visible here yet.
+ */
+export function useServerRuling(): ServerRuling {
   const q = useQuery({
     queryKey: queryKeys.subscriptionStatus,
     queryFn: getSubscriptionStatus,
     enabled: false,
   });
-  return isServerDenied(q.data, q.error);
+  return rulingOf({ data: q.data, error: q.error, fetchStatus: q.fetchStatus });
 }
 
 /**
