@@ -55,6 +55,7 @@ import {
 import { useUserState } from "@/lib/hooks/queries/use-user-state";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
+import { PERSIST_MAX_AGE_MS } from "@/lib/query-persist";
 import { formatLoad } from "@/lib/load-units";
 
 const PAGE_SIZE = 50;
@@ -436,7 +437,19 @@ export default function CoachPage() {
       setError(null);
       try {
         const today = localToday();
-        const week = await getWeek(0);
+        // B398 (O6): the current week from the React Query cache when it is
+        // fresh (< 30 s, e.g. what /today just loaded), else the same GET as
+        // before — one round trip less on the way to the player. A copy behind
+        // the server is still caught: the add carries its revision (B371), a
+        // stale one is a 409, and the custom session is deleted below.
+        // Same options as useWeekPlan, so the cached entry keeps its shape.
+        const week = await qc.fetchQuery({
+          queryKey: queryKeys.week(0),
+          queryFn: () => getWeek(0),
+          staleTime: 30_000,
+          structuralSharing: false,
+          gcTime: PERSIST_MAX_AGE_MS,
+        });
         if (!week.week_plan) {
           throw new Error("No current week plan — open This Week once, then retry.");
         }
@@ -472,6 +485,10 @@ export default function CoachPage() {
           tags: session.tags,
           exercises: session.exercises,
         });
+        // B398 (O6): today's read of the session (A299) does not depend on its
+        // place in the plan — start it now, in parallel with the add, instead
+        // of one more round trip after it. Used only once the add succeeded.
+        const playedPromise = getCustomSession(created.id, today).catch(() => created);
         try {
           await applyEvents({
             events: [
@@ -498,7 +515,7 @@ export default function CoachPage() {
         // doses, measures and the limit target recomputed by the same
         // functions as /week and the custom player (the create response is
         // the stored rows, without any read-time value). Fallback: the rows.
-        const played = await getCustomSession(created.id, today).catch(() => created);
+        const played = await playedPromise;
         // B283: run through the REAL guided player (progress, navigation,
         // cues, loads) — the minimal A211 playback page is retired.
         const guidedState = buildGuidedStateFromExercises(

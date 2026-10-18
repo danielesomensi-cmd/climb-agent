@@ -33,7 +33,8 @@ import { getPhaseName } from "@/lib/phase-labels";
 import { boulderGradeSystemOf } from "@/lib/gradeUtils";
 import { describeLimitSend } from "@/lib/limit-problems";
 import { useUserState } from "@/lib/hooks/queries/use-user-state";
-import { parseISODateLocal, shiftISODate } from "@/lib/dates";
+import { useMonthlyHeatmap } from "@/lib/hooks/queries/use-misc";
+import { parseISODateLocal, shiftISODate, toISODateLocal } from "@/lib/dates";
 
 // A286 — la barra Difficulty usa i token della scala assi/funzionali invece
 // di cinque colori Tailwind grezzi; le classi sono affiancate a una legenda
@@ -130,6 +131,11 @@ function WeeklyReportContent() {
   const [error, setError] = useState<string | null>(null);
   // A299: boulder display preference (the report carries Font).
   const gradeSystem = boulderGradeSystemOf(useUserState(authReady).data);
+  // B398 (O7): the heatmap mounts only once the report has loaded, so its GET
+  // started after the report's (a waterfall). Subscribing to the same query
+  // here starts both together; <MonthlyHeatmap /> then opens on the cached
+  // month. Same key as the card's own (local YYYY-MM of today).
+  useMonthlyHeatmap(toISODateLocal(new Date()).slice(0, 7), authReady);
 
   // Sync state when searchParams change (e.g. Suspense hydration, SPA navigation)
   useEffect(() => {

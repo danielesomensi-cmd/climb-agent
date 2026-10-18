@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { useAuth } from "@clerk/nextjs";
 import { useQueryClient } from "@tanstack/react-query";
 import { TopBar } from "@/components/layout/top-bar";
-import { getOutdoorSpots, getOutdoorLogByDate, deleteOutdoorLog } from "@/lib/api";
+import { deleteOutdoorLog } from "@/lib/api";
 import type { OutdoorSession, OutdoorSpot } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,10 +13,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Check, ArrowUpRight, ChevronDown, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useUserState } from "@/lib/hooks/use-state";
-import { useOutdoorSessions, useOutdoorStats } from "@/lib/hooks/queries/use-outdoor";
+import { fetchOutdoorSpots, useOutdoorSessions, useOutdoorStats } from "@/lib/hooks/queries/use-outdoor";
+import { resolveOutdoorLogTarget } from "@/lib/outdoor-log-target";
+import { toISODateLocal } from "@/lib/dates";
+import { toast } from "sonner";
 import { invalidateOutdoor } from "@/lib/invalidation";
 import { displayBoulderGrade, hardestGrade, gradeRank, type BoulderGradeSystem } from "@/lib/gradeUtils";
-import OutdoorLogForm from "@/components/training/OutdoorLogForm";
+// B398 (O9): the form only renders inside the log dialog — keep it out of the
+// page's first load, as /today and /week already do.
+const OutdoorLogForm = dynamic(() => import("@/components/training/OutdoorLogForm"), { ssr: false });
 import { deriveTryTimings, routeHasTimestamps } from "@/lib/try-timings";
 import { TryBreakdown } from "@/components/outdoor/try-breakdown";
 import { isSendResult } from "@/lib/outdoor-result";
@@ -147,7 +153,10 @@ export default function OutdoorPage() {
   const gradeSystem: BoulderGradeSystem = ((userState as Record<string, unknown>)?.preferences as Record<string, unknown>)?.grade_system_boulder as BoulderGradeSystem || "font";
   const outdoorSpots = ((userState as Record<string, unknown>)?.outdoor_spots as Array<{ name: string; discipline: "lead" | "boulder" | "both" }>) || [];
   const hasSpots = outdoorSpots.length > 0;
-  const today = new Date().toISOString().split("T")[0];
+  // B398 (O2): the athlete's LOCAL day. `toISOString()` is UTC, so between
+  // midnight and 02:00 (CEST) "today" was still yesterday: the quick log and the
+  // live session opened on the wrong date.
+  const today = toISODateLocal(new Date());
   const qc = useQueryClient();
   const sessionsQuery = useOutdoorSessions(undefined, authReady);
   const statsQuery = useOutdoorStats(undefined, authReady);
@@ -170,25 +179,34 @@ export default function OutdoorPage() {
   }, [qc]);
 
   // Issue 1+3: open log dialog, check for existing session today
+  // B398 (O5): spots and today's log are read in parallel (they were two
+  // requests in series before the dialog), the spots from the React Query
+  // cache. Through the shared resolver (A245 C-5): only a real 404 opens an
+  // empty form — offline or a 500 no longer pass for "no session today".
   const handleStartSession = useCallback(async () => {
     setCtaLoading(true);
+    // B398 (O9): fetch the form's chunk alongside the two reads, not after them.
+    void import("@/components/training/OutdoorLogForm");
     try {
-      const spotsData = await getOutdoorSpots();
-      setLogSpots(spotsData.spots);
-      try {
-        const existing = await getOutdoorLogByDate(today);
-        setEditData(existing.session);
-      } catch {
-        // 404 = no session today
+      const target = await resolveOutdoorLogTarget(today, () => fetchOutdoorSpots(qc));
+      if (target.kind === "unavailable") {
+        toast.error(target.message, { duration: 8000 });
+        return;
+      }
+      setLogSpots(target.spots);
+      if (target.kind === "edit") {
+        setEditData(target.session);
+      } else {
         setEditData(null);
+        if (target.spotsFailed) {
+          toast("Couldn't load your spots — you can still log the session.", { duration: 6000 });
+        }
       }
       setShowLogDialog(true);
-    } catch {
-      setError("Could not load spots. Please try again.");
     } finally {
       setCtaLoading(false);
     }
-  }, [today]);
+  }, [today, qc]);
 
   const handleLogSuccess = useCallback(() => {
     setShowLogDialog(false);

@@ -31,17 +31,18 @@ import { ChevronLeft, ChevronRight, ChevronDown, BarChart3, Check, NotebookText 
 const FeedbackDialog = dynamic(() => import("@/components/training/feedback-dialog").then((m) => m.FeedbackDialog), { ssr: false });
 import { useRouter } from "next/navigation";
 import { applyOverride, quickAddSession,
-  ApiError, apiErrorDetail, applyEvents, checkKeyConflicts, postFeedback, getOutdoorSpots, getOutdoorLogByDate, deleteFreeSession, getPitchLadder, setOutdoorPlan } from "@/lib/api";
+  ApiError, apiErrorDetail, applyEvents, checkKeyConflicts, postFeedback, getOutdoorLogByDate, deleteFreeSession, getPitchLadder, setOutdoorPlan } from "@/lib/api";
 import { STALE_PLAN_MESSAGE } from "@/lib/plan-revision";
 import { useUserState } from "@/lib/hooks/queries/use-user-state";
 import { useWeekPlan } from "@/lib/hooks/queries/use-week-plan";
 import { useFreeSessionsForDates } from "@/lib/hooks/queries/use-free-session";
 import { useOutdoorDoneDays } from "@/lib/hooks/queries/use-outdoor-sessions";
+import { fetchOutdoorSpots } from "@/lib/hooks/queries/use-outdoor";
 import { useWeekEvents } from "@/lib/hooks/use-week-events";
 import { showAutoReschedules } from "@/lib/auto-reschedule";
 import { queueOrWarn } from "@/lib/outbox-feedback";
 import { queryKeys } from "@/lib/query-keys";
-import { invalidateFreeSessionHistory } from "@/lib/invalidation";
+import { invalidateFreeSessionHistory, invalidateOutdoor } from "@/lib/invalidation";
 import { siblingsOf, writeWeekCache, type WeekSiblings } from "@/lib/week-cache";
 import { alertMessagesFor, describeActionAlerts } from "@/lib/week-alerts";
 import { buildDialogFeedbackItems, extractFeedbackExercises } from "@/lib/feedback-items";
@@ -689,7 +690,8 @@ export default function WeekPage() {
   async function handleLogOutdoor(date: string) {
     // A245 C-5 (F37): only a real 404 means "no log yet" — see
     // lib/outdoor-log-target.ts for why the old bare catch was wrong.
-    const target = await resolveOutdoorLogTarget(date);
+    // B398 (O5/O11): spots from the React Query cache, read in parallel with the log.
+    const target = await resolveOutdoorLogTarget(date, () => fetchOutdoorSpots(qc));
     if (target.kind === "unavailable") {
       toast.error(target.message, { duration: 8000 });
       return;
@@ -713,8 +715,11 @@ export default function WeekPage() {
       // B371: the log already marked the day done server side (B273) and
       // moved the week's revision — sending complete_outdoor on the copy held
       // here would be a false stale-plan 409. Just reload.
+      // B398 (O1): reload the outdoor sessions too — the routes on the day card
+      // come from ['outdoor','sessions'], which only the weeks were refreshing:
+      // the day turned "done" with the routes of the cached list (none, or old).
       if (info?.planSynced) {
-        await qc.invalidateQueries({ queryKey: queryKeys.weekAll });
+        await invalidateOutdoor(qc);
         return;
       }
       // D134: read-after-write — verify outdoor log was persisted before marking complete
@@ -732,6 +737,8 @@ export default function WeekPage() {
         week_plan: fresh,
       });
       updateWeekCache(result.week_plan, siblingsOf(result));
+      // B398 (O1): the week is written above; the routes still need the new log.
+      await qc.invalidateQueries({ queryKey: queryKeys.outdoorAll });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to mark outdoor as done");
     } finally {
@@ -807,7 +814,8 @@ export default function WeekPage() {
       const data = await getOutdoorLogByDate(date);
       setOutdoorEditData(data.session);
       setOutdoorEditDate(date);
-      getOutdoorSpots().then((d) => setOutdoorSpots(d.spots)).catch((err) => { console.error("Failed to load outdoor spots:", err); });
+      // B398 (O11): cached spots — a GET only when the cache is cold or stale.
+      fetchOutdoorSpots(qc).then((d) => setOutdoorSpots(d.spots)).catch((err) => { console.error("Failed to load outdoor spots:", err); });
     } catch {
       setError("No outdoor session found for this date");
     }
@@ -816,8 +824,12 @@ export default function WeekPage() {
   async function handleEditOutdoorSuccess() {
     setOutdoorEditDate(null);
     setOutdoorEditData(null);
-    // Refresh outdoor routes map
-    refetchAll();
+    // B398 (O1): refresh the outdoor routes map. `refetchAll()` reloaded state,
+    // the week and every resolved session but never the outdoor sessions the
+    // routes are read from, so the card kept the routes from before the edit.
+    // An edit touches neither the state /week reads nor any working load; it
+    // can move the week (B277 sync), hence the weeks with the outdoor keys.
+    await invalidateOutdoor(qc);
   }
 
   const today = todayISO();

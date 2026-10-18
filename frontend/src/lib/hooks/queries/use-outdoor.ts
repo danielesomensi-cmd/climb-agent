@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery, type QueryClient } from "@tanstack/react-query";
 import {
   getOutdoorSpots,
   getOutdoorSessions,
@@ -9,13 +9,27 @@ import {
 } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
 
-export function useOutdoorSpots(enabled = true) {
-  return useQuery({
+/**
+ * B398 (O11) — one definition of the spots query, shared by the hook and by the
+ * click handlers that need the list once (log / edit an outdoor day). /settings
+ * and /week used to call `getOutdoorSpots()` directly: one request per opening
+ * of /settings and per outdoor edit, for a list that rarely changes. The add /
+ * delete mutations (use-outdoor-mutations) write the cached list in place.
+ */
+export const outdoorSpotsQuery = () =>
+  queryOptions({
     queryKey: queryKeys.outdoorSpots,
     queryFn: getOutdoorSpots,
     staleTime: 5 * 60_000, // rarely changes
-    enabled,
   });
+
+export function useOutdoorSpots(enabled = true) {
+  return useQuery({ ...outdoorSpotsQuery(), enabled });
+}
+
+/** B398 (O11) — the spots for a handler: the cache when fresh, else one GET. */
+export function fetchOutdoorSpots(qc: QueryClient) {
+  return qc.fetchQuery(outdoorSpotsQuery());
 }
 
 export function useOutdoorSessions(since?: string, enabled = true) {

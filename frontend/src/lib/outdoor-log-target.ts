@@ -22,31 +22,43 @@ export type OutdoorLogTarget =
   | { kind: "new"; spots: OutdoorSpot[]; spotsFailed: boolean }
   | { kind: "unavailable"; message: string };
 
-export async function resolveOutdoorLogTarget(date: string): Promise<OutdoorLogTarget> {
+/**
+ * B398 (O5) — the two reads run in parallel (they were in series: two round
+ * trips before the dialog opened), and the spots can come from a cache: pass
+ * `loadSpots` (e.g. `() => fetchOutdoorSpots(qc)`); the default is the plain GET.
+ */
+export async function resolveOutdoorLogTarget(
+  date: string,
+  loadSpots: () => Promise<{ spots: OutdoorSpot[] }> = getOutdoorSpots,
+): Promise<OutdoorLogTarget> {
+  const [spotsResult, logResult] = await Promise.allSettled([
+    loadSpots(),
+    getOutdoorLogByDate(date),
+  ]);
+
   // Spots are best-effort: a missing list degrades the form but does not make
   // it wrong. The caller is told so it can say so.
   let spots: OutdoorSpot[] = [];
   let spotsFailed = false;
-  try {
-    spots = (await getOutdoorSpots()).spots;
-  } catch (err) {
+  if (spotsResult.status === "fulfilled") {
+    spots = spotsResult.value.spots;
+  } else {
     spotsFailed = true;
-    console.error("Failed to load outdoor spots:", err);
+    console.error("Failed to load outdoor spots:", spotsResult.reason);
   }
 
-  try {
-    const existing = await getOutdoorLogByDate(date);
-    return { kind: "edit", session: existing.session, spots };
-  } catch (err) {
-    if (err instanceof ApiError && err.status === 404) {
-      return { kind: "new", spots, spotsFailed };
-    }
-    return {
-      kind: "unavailable",
-      message:
-        err instanceof ApiError && err.status === 0
-          ? "Can't reach the server — try again when you're back online."
-          : "Couldn't check this day's outdoor log. Please try again.",
-    };
+  if (logResult.status === "fulfilled") {
+    return { kind: "edit", session: logResult.value.session, spots };
   }
+  const err = logResult.reason;
+  if (err instanceof ApiError && err.status === 404) {
+    return { kind: "new", spots, spotsFailed };
+  }
+  return {
+    kind: "unavailable",
+    message:
+      err instanceof ApiError && err.status === 0
+        ? "Can't reach the server — try again when you're back online."
+        : "Couldn't check this day's outdoor log. Please try again.",
+  };
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
 import { ChevronDown, Info } from "lucide-react";
@@ -9,18 +10,17 @@ import { RadarChart } from "@/components/onboarding/radar-chart";
 import { MacrocycleTimeline } from "@/components/training/macrocycle-timeline";
 import { MilestonesCard } from "@/components/training/milestones-card";
 import { PausedBanner } from "@/components/training/paused-banner";
+import { useQueryClient } from "@tanstack/react-query";
 import { useUserState } from "@/lib/hooks/use-state";
+import { useStateStatus } from "@/lib/hooks/queries/use-user-state";
 import { useCatalogSessions } from "@/lib/hooks/queries/use-catalog";
-import { generateMacrocycle, getStateStatus, getWeek } from "@/lib/api";
+import { generateMacrocycle, getWeek } from "@/lib/api";
+import { queryKeys } from "@/lib/query-keys";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import {
-  RegeneratePlanSheet,
-  optionToPreserveBefore,
-  type RegenerateStartOption,
-} from "@/components/training/regenerate-plan-sheet";
+import type { RegenerateStartOption } from "@/components/training/regenerate-plan-sheet";
 import { PERIODIZATION_RATIONALE, PHASE_RATIONALES } from "@/lib/phase-rationales";
 import { getDiscipline } from "@/lib/gradeUtils";
 import {
@@ -40,6 +40,13 @@ import {
 import { cn } from "@/lib/utils";
 import type { Phase } from "@/lib/types";
 import { parseISODateLocal } from "@/lib/dates";
+
+// B398 (O10): the regen sheet is the module that kept vaul (the drawer library)
+// in /plan's first load; it only opens on a tap. Its helper is imported where used.
+const RegeneratePlanSheet = dynamic(
+  () => import("@/components/training/regenerate-plan-sheet").then((m) => m.RegeneratePlanSheet),
+  { ssr: false },
+);
 
 /** A311 — placeholder shaped like the page (hero card, radar, phase rows). */
 function PlanSkeleton() {
@@ -70,7 +77,11 @@ export default function PlanPage() {
   const [expandedPhase, setExpandedPhase] = useState<string | null | undefined>(undefined);
   const [expandedRationale, setExpandedRationale] = useState<string | null>(null);
   const [aboutPlanOpen, setAboutPlanOpen] = useState(false);
-  const [isStale, setIsStale] = useState(false);
+  // B398 (O12): the stale check is a cached query (it was a GET on every mount).
+  // `['state','status']` sits under the `['state']` prefix, so whatever
+  // invalidates the state (a settings save, a regen) marks it stale too.
+  const qc = useQueryClient();
+  const isStale = useStateStatus(authReady).data?.is_macrocycle_stale ?? false;
   const [staleDismissed, setStaleDismissed] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [regenDialogOpen, setRegenDialogOpen] = useState(false);
@@ -108,21 +119,6 @@ export default function PlanPage() {
   const eliteInputs = extractEliteInputs(state);
   const showsEliteToggle = hasAnyEliteScore(computeEliteScores(eliteInputs));
 
-  const checkStale = useCallback(async () => {
-    try {
-      const { is_macrocycle_stale } = await getStateStatus();
-      setIsStale(is_macrocycle_stale);
-    } catch {
-      /* silent — non-critical */
-    }
-  }, []);
-
-  // B155: gate on Clerk readiness
-  useEffect(() => {
-    if (!authReady) return;
-    checkStale();
-  }, [checkStale, authReady]);
-
   function togglePhase(phaseId: string) {
     setExpandedPhase(openPhaseId === phaseId ? null : phaseId);
   }
@@ -133,11 +129,13 @@ export default function PlanPage() {
     try {
       await generateMacrocycle(undefined, 12, "current");
       // Force-refresh current week with preserve_before guard
+      // B398 (O10): already loaded — the sheet that called us lives in it.
+      const { optionToPreserveBefore } = await import("@/components/training/regenerate-plan-sheet");
       const preserveBefore = optionToPreserveBefore(option);
       await getWeek(0, true, preserveBefore);
       await refresh();
       setRegenDialogOpen(false);
-      setIsStale(false);
+      qc.setQueryData(queryKeys.stateStatus, { is_macrocycle_stale: false });
       setStaleDismissed(false);
     } catch (e) {
       setRegenError(e instanceof Error ? e.message : "Regeneration failed");
