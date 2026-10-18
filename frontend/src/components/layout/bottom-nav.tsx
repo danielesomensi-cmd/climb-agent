@@ -4,6 +4,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ChunkErrorBoundary } from "@/components/chunk-error-boundary";
 import type { MoreNavItem } from "./more-drawer";
 
 // B398 (O10): the drawer (and vaul with it) is not part of the first load of
@@ -188,9 +189,15 @@ export function BottomNav() {
         </div>
       </nav>
 
-      {/* More drawer — B398 (O10): a lazy chunk, mounted on idle or on the first tap. */}
+      {/* More drawer — B398 (O10): a lazy chunk, mounted on idle or on the first tap.
+          B398 (O10) review: the nav lives in the (main) layout, so a chunk that
+          cannot be fetched (offline and never cached, or gone after a deploy)
+          would reach global-error and replace the whole app. Behind the
+          boundary only More goes inert; the tabs and the page keep working. */}
       {drawerMounted && (
-        <MoreDrawer open={moreOpen} onOpenChange={setMoreOpen} pathname={pathname} items={moreItems} />
+        <ChunkErrorBoundary>
+          <MoreDrawer open={moreOpen} onOpenChange={setMoreOpen} pathname={pathname} items={moreItems} />
+        </ChunkErrorBoundary>
       )}
     </>
   );
