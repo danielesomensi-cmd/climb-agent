@@ -1124,8 +1124,16 @@ export const getMonthlyReport = (month: string) =>
   request<MonthlyReport>(`/api/reports/monthly?month=${month}`);
 
 // Quotes
-export const getDailyQuote = (context?: string) =>
-  request<Quote>(`/api/quotes/daily${context ? `?context=${context}` : ""}`);
+// B396 review — `date` is the client-local day: the server's own today is UTC,
+// so between local midnight and UTC midnight it would hand out yesterday's
+// quote under today's cache key (the backend accepts `date` since B384).
+export const getDailyQuote = (context?: string, date?: string) => {
+  const params = new URLSearchParams();
+  if (context) params.set("context", context);
+  if (date) params.set("date", date);
+  const qs = params.toString();
+  return request<Quote>(`/api/quotes/daily${qs ? `?${qs}` : ""}`);
+};
 
 // Monthly heatmap (A236)
 export const getMonthlyHeatmap = (month: string) =>

@@ -4,7 +4,9 @@
  * B396 review — the daily quote is persisted (query-persist 'quotes') with a
  * 24 h staleTime. Keyed by context only, the copy restored on the next
  * morning's open was still "fresh": /today showed yesterday's quote. The
- * client-local day is now part of the key (the request is unchanged).
+ * client-local day is now part of the key, and the request carries the same
+ * day: the server's today is UTC, so between local midnight and UTC midnight
+ * it would otherwise fill today's key with yesterday's quote.
  *
  * The daily tip was checked for the same problem: its key already carries the
  * date it is asked for.
@@ -16,7 +18,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const { getDailyQuote } = vi.hoisted(() => ({ getDailyQuote: vi.fn() }));
 vi.mock("@/lib/api", () => ({
-  getDailyQuote: (context?: string) => getDailyQuote(context),
+  getDailyQuote: (context?: string, date?: string) => getDailyQuote(context, date),
   getDailyTip: vi.fn(),
   getMilestones: vi.fn(),
   getMonthlyHeatmap: vi.fn(),
@@ -65,7 +67,15 @@ describe("daily quote cache key", () => {
     const { result } = renderHook(() => useDailyQuote("general"), { wrapper });
     await waitFor(() => expect(result.current.data).toEqual(TODAY_QUOTE));
     expect(getDailyQuote).toHaveBeenCalledTimes(1);
-    expect(getDailyQuote).toHaveBeenCalledWith("general"); // the API call is unchanged
+    expect(getDailyQuote).toHaveBeenCalledWith("general", "2026-10-18");
+  });
+
+  it("just after local midnight the request asks for the local day, not the server's UTC one", async () => {
+    // 00:30 in Rome on the 19th is still the 18th in UTC on Railway.
+    vi.setSystemTime(new Date(2026, 9, 19, 0, 30));
+    getDailyQuote.mockResolvedValue(TODAY_QUOTE);
+    renderHook(() => useDailyQuote("general"), { wrapper });
+    await waitFor(() => expect(getDailyQuote).toHaveBeenCalledWith("general", "2026-10-19"));
   });
 
   it("within the same day the restored quote is served without a request", async () => {

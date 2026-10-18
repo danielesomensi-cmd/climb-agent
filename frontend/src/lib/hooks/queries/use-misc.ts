@@ -20,7 +20,7 @@ export function useDailyQuote(context: string, enabled = true) {
   const localDate = toISODateLocal(new Date());
   return useQuery({
     queryKey: queryKeys.quotesDaily(context, localDate),
-    queryFn: () => getDailyQuote(context),
+    queryFn: () => getDailyQuote(context, localDate),
     staleTime: 24 * 60 * 60_000, // 24h — quote is per-phase, daily refresh enough
     gcTime: 24 * 60 * 60_000,
     enabled: enabled && !!context,
