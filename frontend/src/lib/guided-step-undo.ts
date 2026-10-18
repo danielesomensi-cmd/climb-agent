@@ -27,20 +27,26 @@ export interface ClosedStep {
 
 /**
  * B397 review — where the player goes after closing exercise `index`: the
- * first exercise still pending after it, else the first one still pending
- * anywhere; -1 when none is left (the summary).
+ * first exercise still pending after it; -1 when none is left after it (the
+ * summary).
  *
  * It used to be plain `index + 1`. From the summary, "Change" on an exercise
  * followed by Done then landed on the NEXT exercise — already closed — instead
  * of back on the summary, one more Done away from overwriting its log. In the
  * usual front-to-back run the next exercise is the first pending one after
  * `index`, so that flow is unchanged.
+ *
+ * It deliberately does not wrap around to a pending exercise BEFORE `index`:
+ * a warm-up skipped with the progress dots, or an exercise left open by
+ * "Finish session early", stays reachable from the summary (its rows and
+ * "Back to exercises") instead of pulling the athlete back into the player
+ * after the last Done — which is what the summary always did.
  */
 export function nextPendingIndex(exercises: GuidedExercise[], index: number): number {
   for (let i = index + 1; i < exercises.length; i++) {
     if (exercises[i].status === "pending") return i;
   }
-  return exercises.findIndex((ex, i) => i !== index && ex.status === "pending");
+  return -1;
 }
 
 /**

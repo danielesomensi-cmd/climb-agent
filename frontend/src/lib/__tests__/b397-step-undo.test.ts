@@ -76,12 +76,30 @@ describe("closeStep — Done / Skip", () => {
     expect(next.currentIndex).toBe(2);
   });
 
-  it("with nothing pending after it, goes back to the first exercise still pending", () => {
-    // Jumped ahead with the progress dots: b is still to do.
+  it("with nothing pending after it, opens the summary even if an earlier one is pending", () => {
+    // Jumped ahead with the progress dots: b is still to do, reachable from
+    // the summary — the last Done does not pull the athlete back to it.
     const s = session([ex("a", { status: "done" }), ex("b"), ex("c")], 2);
     const { next, openedSummary } = closeStep(s, 2, { status: "done", feedbackLabel: "ok" });
-    expect(openedSummary).toBe(false);
-    expect(next.currentIndex).toBe(1);
+    expect(openedSummary).toBe(true);
+    expect(next.currentIndex).toBe(2);
+  });
+
+  it("a warm-up skipped with the dots does not come back after the last Done", () => {
+    const s = session([ex("w", { category: "warmup_general" } as Partial<GuidedExercise>), ex("a"), ex("b")], 1);
+    const first = closeStep(s, 1, { status: "done", feedbackLabel: "ok" });
+    expect(first.next.currentIndex).toBe(2);
+    const last = closeStep(first.next, 2, { status: "done", feedbackLabel: "ok" });
+    expect(last.openedSummary).toBe(true);
+  });
+
+  it("Finish early, then Change on the last exercise, then Done: back to the summary", () => {
+    // b was left open by "Finish session early"; c is reopened from the summary.
+    const s = session([ex("a", { status: "done" }), ex("b"), ex("c", { status: "done" })], 2);
+    const { next, openedSummary } = closeStep(s, 2, { status: "done", feedbackLabel: "hard" });
+    expect(openedSummary).toBe(true);
+    expect(next.exercises[2].feedbackLabel).toBe("hard");
+    expect(next.exercises[1].status).toBe("pending");
   });
 
   it("the usual front-to-back run is unchanged: always the next exercise", () => {
@@ -97,10 +115,10 @@ describe("closeStep — Done / Skip", () => {
 });
 
 describe("nextPendingIndex", () => {
-  it("first pending after the index, else the first pending anywhere, else -1", () => {
+  it("first pending after the index, else -1 (never wraps around)", () => {
     const list = [ex("a"), ex("b", { status: "done" }), ex("c"), ex("d", { status: "skipped" })];
     expect(nextPendingIndex(list, 0)).toBe(2);
-    expect(nextPendingIndex(list, 2)).toBe(0);
+    expect(nextPendingIndex(list, 2)).toBe(-1);
     expect(nextPendingIndex([ex("a", { status: "done" }), ex("b", { status: "skipped" })], 0)).toBe(-1);
   });
 });
