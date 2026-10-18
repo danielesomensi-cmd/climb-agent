@@ -11,6 +11,68 @@ function customSessionIdOf(sessionId: string): string | undefined {
 
 const MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
+const ANON_SCOPE = "anon";
+
+/**
+ * B397 G1 — the SAME key as `LAST_USER_KEY` in query-persist (B292b): the last
+ * user Clerk positively identified on this device. Not a credential — every
+ * API call still needs a real Clerk token. b397-resume-key.test couples the
+ * two modules, so a rename on either side fails loudly.
+ */
+export const LAST_USER_KEY = "climb-agent-last-user";
+
+function readLastUser(): string | null {
+  try {
+    return window.localStorage.getItem(LAST_USER_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function rememberLastUser(userId: string): void {
+  try {
+    if (window.localStorage.getItem(LAST_USER_KEY) !== userId) {
+      window.localStorage.setItem(LAST_USER_KEY, userId);
+    }
+  } catch {
+    /* private mode: the fallback simply stays unavailable */
+  }
+}
+
+/**
+ * B397 G1 — who owns the guided scope right now.
+ *
+ * Clerk.js loads from the network, so `window.Clerk.user` is missing for the
+ * first few hundred ms of every cold open — and forever when the PWA opens
+ * offline. Reading it alone sent a reload mid-session to the `anon` scope: the
+ * guided page found nothing and bounced to /today, the resume banner stayed
+ * hidden and, offline, Start began again from zero.
+ *
+ *  - Clerk knows a user → that user (authoritative), remembered for later.
+ *  - Clerk loaded and says nobody → `null` (signed out: `anon`).
+ *  - Clerk not ready → the last user it identified on this device, the same
+ *    trust the offline plan cache already relies on (B292b). `confirmed:
+ *    false` tells callers to re-check once Clerk answers: the guided page drops
+ *    a session whose owner Clerk then contradicts.
+ */
+export function guidedScopeOwner(): { userId: string | null; confirmed: boolean } {
+  if (typeof window === "undefined") return { userId: null, confirmed: false };
+  const clerk = window.Clerk;
+  const clerkUserId = clerk?.user?.id;
+  if (clerkUserId) {
+    rememberLastUser(clerkUserId);
+    return { userId: clerkUserId, confirmed: true };
+  }
+  if (clerk?.loaded) return { userId: null, confirmed: true };
+  return { userId: readLastUser(), confirmed: false };
+}
+
+function prefixFor(userId: string | null): string {
+  // `anon` is a distinct scope, NOT one of the legacy prefixes: local dev and
+  // the legacy-UUID fallback must keep working without being purged below.
+  return `guided_session_${userId ?? ANON_SCOPE}_`;
+}
+
 /**
  * A245 B-2 — this used to return `guided_session_clerk_` for every signed-in
  * user: the LITERAL string "clerk", never the real id. On a shared device (or
@@ -18,16 +80,17 @@ const MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
  * writable as user B's. Harmless-looking while it only held guided progress,
  * fatal once `state`/`week` are persisted under the same convention — so the
  * scope is now the real Clerk user id everywhere.
+ *
+ * B397 G1 — the key FORMAT is unchanged (`guided_session_<userId>_`), so every
+ * session already saved under the real id is found as-is: nothing to migrate.
+ * What changed is the fallback while Clerk is not ready (see
+ * guidedScopeOwner). Entries already sitting under `anon` are deliberately NOT
+ * adopted: nothing records who wrote them, and handing them to whoever signs
+ * in next is exactly the A245 B-2 leak.
  */
 export function getKeyPrefix(): string {
-  if (typeof window === "undefined") return `guided_session_${ANON_SCOPE}_`;
-  const userId = window.Clerk?.user?.id;
-  // `anon` is a distinct scope, NOT one of the legacy prefixes: local dev and
-  // the legacy-UUID fallback must keep working without being purged below.
-  return `guided_session_${userId ?? ANON_SCOPE}_`;
+  return prefixFor(guidedScopeOwner().userId);
 }
-
-const ANON_SCOPE = "anon";
 
 /**
  * B290 (closes F54) — THE key builder for guided session state.
@@ -37,6 +100,45 @@ const ANON_SCOPE = "anon";
  */
 export function guidedStorageKey(date: string, sessionId: string): string {
   return `${getKeyPrefix()}${date}_${sessionId}`;
+}
+
+export interface LoadedGuidedSession {
+  /** The exact key the state was read from: every later write goes there. */
+  key: string;
+  /** Owner of that key (`null` = `anon`), to compare with Clerk's answer. */
+  owner: string | null;
+  state: GuidedSessionState;
+}
+
+/**
+ * B397 G1 — read a guided session and PIN the key it came from.
+ *
+ * The player used to rebuild the key on every save. Loaded under the
+ * remembered user while Clerk was still booting, a later save would land under
+ * whoever Clerk named next — copying one user's session into another's scope.
+ */
+export function loadGuidedSession(date: string, sessionId: string): LoadedGuidedSession | null {
+  if (typeof window === "undefined") return null;
+  const owner = guidedScopeOwner().userId;
+  const key = `${prefixFor(owner)}${date}_${sessionId}`;
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return null;
+    return { key, owner, state: JSON.parse(raw) as GuidedSessionState };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * B397 G7 — body weight for the test sessions' total-load maths, from the
+ * `/api/state` payload (the `['state']` cache or a fresh GET: same shape).
+ */
+export function bodyweightFromState(state: unknown): number | undefined {
+  const assessment = (state as { assessment?: { body?: { weight_kg?: unknown } } } | null | undefined)
+    ?.assessment;
+  const bw = assessment?.body?.weight_kg;
+  return typeof bw === "number" && bw > 0 ? bw : undefined;
 }
 
 /**
