@@ -237,9 +237,8 @@ export default function GuidedSessionPage() {
       // view — no resume banner, and above all no second "Submit".
       if (saved.submitStatus === "feedback_pending") return;
       // Show resume banner if there's actual progress (not a fresh session)
-      const hasProgress =
-        saved.exercises.some((ex) => ex.status !== "pending") ||
-        saved.currentIndex > 0;
+      // Review round 4 — the shared rule (counted sets count too).
+      const hasProgress = hasWorkoutStarted(saved);
       if (hasProgress) setResumed(true);
       // If all exercises are done/skipped, show summary
       const allDone = saved.exercises.every((ex) => ex.status !== "pending");

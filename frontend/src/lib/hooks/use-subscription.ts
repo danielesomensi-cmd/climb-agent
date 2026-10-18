@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useAuth } from "@clerk/nextjs";
-import { useQuery, type QueryClient } from "@tanstack/react-query";
+import { onlineManager, useQuery, type QueryClient } from "@tanstack/react-query";
 import { ApiError, getSubscriptionStatus, type SubscriptionStatus } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
 import { useAuthWaitExpired } from "@/lib/hooks/use-auth-wait";
@@ -133,7 +133,9 @@ export function isServerDenied(data: SubscriptionStatus | undefined, error: unkn
 export type ServerRuling = "denied" | "allowed" | "unknown";
 
 function rulingOf(q: { data?: SubscriptionStatus; error?: unknown; fetchStatus?: string } | undefined): ServerRuling {
-  if (!q || q.fetchStatus === "fetching") return "unknown";
+  // Round 4 — "paused" too: offline the refetch waits for the network, and the
+  // answer it will bring must decide, not the old one in the cache.
+  if (!q || q.fetchStatus === "fetching" || q.fetchStatus === "paused") return "unknown";
   if (isServerDenied(q.data, q.error)) return "denied";
   return q.data?.can_interact === true ? "allowed" : "unknown";
 }
@@ -156,6 +158,10 @@ export function hasCachedServerNo(qc: QueryClient): boolean {
  * transport failure leaves the last ruling standing — it was the server's.
  */
 export async function confirmServerDenied(qc: QueryClient): Promise<boolean> {
+  // Round 4 — offline the request would only wait (paused) for the network:
+  // the last ruling stands, as on a transport failure, and the tap gets an
+  // answer now instead of a mute button.
+  if (!onlineManager.isOnline()) return hasCachedServerNo(qc);
   try {
     const data = await qc.fetchQuery({
       queryKey: queryKeys.subscriptionStatus,

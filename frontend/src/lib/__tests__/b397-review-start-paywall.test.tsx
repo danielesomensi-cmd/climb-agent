@@ -13,7 +13,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, onlineManager } from "@tanstack/react-query";
 
 const { router, toast, ApiError, getSubscriptionStatus } = vi.hoisted(() => {
   class ApiError extends Error {
@@ -241,5 +241,31 @@ describe("SessionCard Start — the paywall entry point", () => {
     tapStart(/Waiting to sync/);
     expect(router.push).toHaveBeenCalledWith(`/guided/${DATE}/${SESSION_ID}`);
     expect(window.localStorage.getItem(key)).toBe(queued);
+  });
+
+  // Review round 4 — a check that answers after the tap is over must not navigate.
+  it("the card goes away before the confirmation answers: no late navigation", async () => {
+    qc.setQueryData(queryKeys.subscriptionStatus, EXPIRED);
+    let answer!: (v: typeof EXPIRED) => void;
+    getSubscriptionStatus.mockReturnValue(new Promise((r) => { answer = r; }));
+    const { unmount } = renderCard();
+    tapStart();
+    unmount();
+    await act(async () => { answer(EXPIRED); });
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    expect(router.push).not.toHaveBeenCalled();
+  });
+
+  it("offline with the server's 'no' in the cache: decided at once on that ruling, no paused request", async () => {
+    qc.setQueryData(queryKeys.subscriptionStatus, EXPIRED);
+    onlineManager.setOnline(false);
+    try {
+      renderCard();
+      tapStart();
+      await waitFor(() => expect(router.push).toHaveBeenCalledWith("/subscribe"));
+      expect(getSubscriptionStatus).not.toHaveBeenCalled();
+    } finally {
+      onlineManager.setOnline(true);
+    }
   });
 });

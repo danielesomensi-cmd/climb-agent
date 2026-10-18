@@ -659,9 +659,23 @@ export function SessionCard({
   // and stays disabled until the page changes; if the navigation never
   // happens, the button comes back after a while.
   const [starting, setStarting] = useState(false);
+  // B397 review (round 4) — the tap a pending subscription check belongs to.
+  // Bumped when the button comes back and when the card goes away: a check
+  // that answers after that (offline, the request waits for the network) must
+  // not navigate — the athlete may be in another session by then.
+  const startTapRef = useRef(0);
+  useEffect(() => {
+    const taps = startTapRef;
+    return () => {
+      taps.current++;
+    };
+  }, []);
   useEffect(() => {
     if (!starting) return;
-    const t = window.setTimeout(() => setStarting(false), 8000);
+    const t = window.setTimeout(() => {
+      startTapRef.current++;
+      setStarting(false);
+    }, 8000);
     return () => window.clearTimeout(t);
   }, [starting]);
 
@@ -923,7 +937,9 @@ export function SessionCard({
                     return;
                   }
                   setStarting(true);
+                  const tap = ++startTapRef.current;
                   void confirmServerDenied(qc).then((denied) => {
+                    if (startTapRef.current !== tap) return; // superseded: no late navigation
                     if (!handleStartGuided(session, date, router, denied)) setStarting(false);
                   });
                 }}

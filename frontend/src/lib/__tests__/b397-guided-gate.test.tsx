@@ -15,7 +15,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createElement } from "react";
 import { render, screen, cleanup, act, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, onlineManager } from "@tanstack/react-query";
 
 const { ApiError, router, auth, postFeedback, getState, getSubscriptionStatus, toast } = vi.hoisted(() => {
   class ApiError extends Error {
@@ -392,6 +392,24 @@ describe("B397 review round 3 — stale answers and later answers", () => {
     await waitFor(() => expect(router.replace).toHaveBeenLastCalledWith("/subscribe"));
   });
 
+  // Review round 4 — offline the renewal is "paused", not "fetching": still an
+  // answer on its way, so an OLD "yes" must not clear the gate for good.
+  it("an OLD 'yes' with the renewal paused offline does not clear the gate: the 'no' on reconnect decides", async () => {
+    qc.setQueryData(queryKeys.subscriptionStatus, ACTIVE, { updatedAt: Date.now() - 120_000 });
+    getSubscriptionStatus.mockResolvedValue(EXPIRED);
+    saveSession(KEY_A, FRESH);
+    onlineManager.setOnline(false);
+    try {
+      render(page());
+      await settle();
+      expect(sentToSubscribe()).toBe(false);
+      await act(async () => { onlineManager.setOnline(true); });
+      await waitFor(() => expect(router.replace).toHaveBeenLastCalledWith("/subscribe"));
+    } finally {
+      onlineManager.setOnline(true);
+    }
+  });
+
   it("a fresh session that passed on a 'yes' is not ended by a later 'no' (the poll during the warm-up)", async () => {
     getSubscriptionStatus.mockResolvedValue(ACTIVE);
     saveSession(KEY_A, FRESH);
@@ -408,6 +426,24 @@ describe("B397 review round 3 — stale answers and later answers", () => {
     await settle();
     expect(sentToSubscribe()).toBe(false);
     expect(shownExercise()).toBe("a");
+  });
+});
+
+describe("B397 review round 4 — the 'Session resumed' banner uses the shared rule", () => {
+  it("sets counted on the first exercise show the banner", async () => {
+    getSubscriptionStatus.mockResolvedValue(ACTIVE);
+    saveSession(KEY_A, { currentIndex: 0, exercises: [ex("a", "pending", { completedSets: 2 }), ex("b"), ex("c")] });
+    render(page());
+    await settle();
+    expect(screen.getByText(/Session resumed/)).toBeTruthy();
+  });
+
+  it("a session as Start writes it shows no banner", async () => {
+    getSubscriptionStatus.mockResolvedValue(ACTIVE);
+    saveSession(KEY_A, FRESH);
+    render(page());
+    await settle();
+    expect(screen.queryByText(/Session resumed/)).toBeNull();
   });
 });
 
