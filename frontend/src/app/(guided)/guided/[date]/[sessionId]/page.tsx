@@ -3,9 +3,12 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
+import { useAuth } from "@clerk/nextjs";
+import { toast } from "sonner";
+import { ArrowLeft, CloudOff } from "lucide-react";
 import { SoundToggle } from "@/components/guided/sound-toggle";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { SessionTimer } from "@/components/guided/session-timer";
 import { GuidedProgressBar } from "@/components/guided/guided-progress-bar";
 import { GuidedExerciseStep } from "@/components/guided/guided-exercise-step";
@@ -13,15 +16,23 @@ import { GuidedSummary } from "@/components/guided/guided-summary";
 import { postFeedback, getState } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
 import { writeWeekCache } from "@/lib/week-cache";
-import { buildGuidedFeedbackItems } from "@/lib/feedback-items";
-import { guidedStorageKey } from "@/lib/guided-session-utils";
-import { unlockAudio, getAudioContext } from "@/lib/audio-unlock";
+import { bodyweightFromState, loadGuidedSession } from "@/lib/guided-session-utils";
+import {
+  announcePendingSync,
+  buildGuidedFeedbackBody,
+  syncPendingGuidedFeedback,
+  type PendingGuidedState,
+} from "@/lib/guided-pending-feedback";
+import { applyStepUndo, closeStep, isWithinAdvanceGuard, type StepUndo } from "@/lib/guided-step-undo";
+import { unlockAudio, getAudioContext, setPlaybackAudioSession } from "@/lib/audio-unlock";
+import { isSoundMuted, SOUND_MUTED_EVENT } from "@/lib/sound-pref";
 import { useSubscription } from "@/lib/hooks/use-subscription";
+import { useSubmitLock } from "@/lib/hooks/use-submit-lock";
 import { useWakeLock } from "@/lib/hooks/use-wake-lock";
 import { useUserState } from "@/lib/hooks/use-state";
 import { hrMaxFromState } from "@/lib/hr-zones";
 import type { GuidedSessionState, GuidedExercise, LimitProblem, SessionPain, WeekPlan } from "@/lib/types";
-import { withFeedbackContract, type MeasureValues } from "@/lib/measured-feedback";
+import type { MeasureValues } from "@/lib/measured-feedback";
 
 // ---------------------------------------------------------------------------
 // localStorage helpers
@@ -31,27 +42,31 @@ import { withFeedbackContract, type MeasureValues } from "@/lib/measured-feedbac
 // `guided_session_clerk_...` — the literal string, not the user id — while the
 // readers in guided-session-utils had already moved to the real id. Writers and
 // readers stopped agreeing, so resume and the offline feedback retry both went
-// blind. There is now exactly one key builder: guidedStorageKey().
+// blind. There is now exactly one key builder (guided-session-utils).
+//
+// B397 G1: the page no longer rebuilds the key on each write. It reads the
+// session once through loadGuidedSession(), PINS the key it came from, and
+// writes only there — so a session read while Clerk was still booting can
+// never be copied under whichever user Clerk names afterwards.
 
-function loadState(date: string, sessionId: string): GuidedSessionState | null {
-  if (typeof window === "undefined") return null;
+/** Returns false when the write failed (quota, private mode). */
+function writeGuided(key: string, state: GuidedSessionState): boolean {
+  if (typeof window === "undefined") return false;
   try {
-    const raw = localStorage.getItem(guidedStorageKey(date, sessionId));
-    return raw ? (JSON.parse(raw) as GuidedSessionState) : null;
+    localStorage.setItem(key, JSON.stringify(state));
+    return true;
   } catch {
-    return null;
+    return false;
   }
 }
 
-function saveState(state: GuidedSessionState) {
+function removeGuided(key: string) {
   if (typeof window === "undefined") return;
-  const key = guidedStorageKey(state.date, state.sessionId);
-  localStorage.setItem(key, JSON.stringify(state));
-}
-
-function removeState(date: string, sessionId: string) {
-  if (typeof window === "undefined") return;
-  localStorage.removeItem(guidedStorageKey(date, sessionId));
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    /* storage unavailable — nothing to remove */
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -59,6 +74,53 @@ function removeState(date: string, sessionId: string) {
 // ---------------------------------------------------------------------------
 
 const WARMUP_CATEGORIES = ["warmup_general", "warmup_specific", "mobility"];
+
+/**
+ * B397 G1 — how long a reload waits for Clerk when nothing was found under the
+ * remembered user (a device that never identified one). Offline it does not
+ * wait at all: Clerk.js comes from the network and would never answer.
+ */
+const CLERK_WAIT_MS = 4000;
+
+/** B397 G5 — how long the "Undo" of a Done/Skip stays on screen. */
+const UNDO_TOAST_MS = 5000;
+
+function exerciseLabel(ex: GuidedExercise): string {
+  return ex.name || ex.exerciseId.replace(/_/g, " ");
+}
+
+/**
+ * B128: a finished lp_max_test_5s re-bases the lp_duration_test suggestion on
+ * 60% (intensityPct) of the new max, per hand.
+ */
+function rebaseDurationTest(
+  exercises: GuidedExercise[],
+  fromIdx: number,
+  perHand: { right?: number; left?: number },
+): GuidedExercise[] {
+  const roundHalf = (v: number) => Math.round(v * 2) / 2;
+  const out = [...exercises];
+  for (let i = fromIdx + 1; i < out.length; i++) {
+    const next = out[i];
+    if (next.exerciseId === "lp_duration_test" && next.prescription.intensityPct) {
+      const pct = next.prescription.intensityPct;
+      out[i] = {
+        ...next,
+        suggested: {
+          ...next.suggested,
+          leftHand: perHand.left != null
+            ? { externalLoadKg: roundHalf(perHand.left * pct) }
+            : next.suggested.leftHand,
+          rightHand: perHand.right != null
+            ? { externalLoadKg: roundHalf(perHand.right * pct) }
+            : next.suggested.rightHand,
+        },
+      };
+      break;
+    }
+  }
+  return out;
+}
 
 // ---------------------------------------------------------------------------
 // Page Component
@@ -71,6 +133,9 @@ export default function GuidedSessionPage() {
   const sessionId = params.sessionId as string;
   const qc = useQueryClient();
   const { canInteract, loading: subLoading } = useSubscription();
+  // B397 G1 — Clerk's answer, to confirm (or contradict) the user the session
+  // was read for while Clerk was still booting.
+  const { isLoaded: authLoaded, userId: authUserId } = useAuth();
   // A245 C-1 (F8) — true once saved state has been loaded, i.e. this really is
   // a session in progress and not a cold hit on the URL.
   const [sessionStarted, setSessionStarted] = useState(false);
@@ -89,16 +154,34 @@ export default function GuidedSessionPage() {
 
   const [state, setState] = useState<GuidedSessionState | null>(null);
   const [showSummary, setShowSummary] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [resumed, setResumed] = useState(false);
+  // B397 G6 — "Finish session early" asks first (inline, not window.confirm).
+  const [confirmFinish, setConfirmFinish] = useState(false);
+  // B397 G3 — the pending view's "Send now" result.
+  const [syncError, setSyncError] = useState<string | null>(null);
+  // B397 G2 — the session has been handed over (sent, or queued for the
+  // replay): the submit button stays disabled until the page goes away.
+  const [handedOver, setHandedOver] = useState(false);
+
+  /** B397 G1 — the key the session was read from, and who owns it. */
+  const scopeRef = useRef<{ key: string; owner: string | null } | null>(null);
+  /**
+   * B397 G2 — latched when the session is handed over. Synchronous, unlike
+   * `handedOver`: a tap landing between the end of the request and the route
+   * change must not send the feedback a second time, and nothing may write the
+   * session back to storage after it was removed.
+   */
+  const finishedRef = useRef(false);
+
+  const isPending = state?.submitStatus === "feedback_pending";
 
   // B332: keep the screen awake for the whole session, like the session-builder
   // player already did (play/page.tsx). Without it the screen sleeps on its own
   // during a 5-minute boulder rest, which suspends the timer — the condition the
   // set counter used to get wrong.
-  useWakeLock(state !== null && !showSummary);
+  useWakeLock(state !== null && !showSummary && !isPending);
   // A316: HRmax for the bpm bands — fetched only when a cardio row has one.
   const { state: userState } = useUserState(!!state?.exercises.some((ex) => ex.hrTarget));
   const hrMax = hrMaxFromState(userState);
@@ -109,13 +192,47 @@ export default function GuidedSessionPage() {
 
   // Load state from localStorage on mount
   useEffect(() => {
-    const saved = loadState(date, sessionId);
-    if (saved) {
+    // B397 G1 — a session is already on screen. It may have been read for the
+    // user remembered on this device while Clerk was still booting: once Clerk
+    // answers, it must be the same user. Otherwise drop it from the screen
+    // (its data stays where it is, under its owner) and leave.
+    if (scopeRef.current) {
+      if (authLoaded && scopeRef.current.owner !== (authUserId ?? null)) {
+        scopeRef.current = null;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setState(null);
+        router.replace(`/today?date=${date}`);
+      }
+      return;
+    }
+
+    const loaded = loadGuidedSession(date, sessionId);
+    if (loaded) {
+      scopeRef.current = { key: loaded.key, owner: loaded.owner };
+      let saved = loaded.state;
+      // B397 G7 — body weight for the test sessions' total-load maths comes
+      // from the ['state'] cache (persisted, so it works offline); the GET is
+      // only the fallback when the cache does not have it.
+      if (saved.isTestSession && !saved.bodyweightKg) {
+        const cachedBw = bodyweightFromState(qc.getQueryData(queryKeys.state));
+        if (cachedBw) {
+          saved = { ...saved, bodyweightKg: cachedBw };
+        } else {
+          getState().then((stateData) => {
+            const bw = bodyweightFromState(stateData);
+            if (bw) {
+              setState((prev) => prev ? { ...prev, bodyweightKg: bw } : prev);
+            }
+          }).catch((err) => { console.error("Failed to prefetch bodyweight:", err); });
+        }
+      }
       // B355 — idratazione post-mount da localStorage: leggerla in render
       // romperebbe l'SSR (hydration mismatch). L'effect è la sede corretta.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setState(saved);
       setSessionStarted(true);
+      // B397 G3: a session waiting for its feedback replay shows the pending
+      // view — no resume banner, and above all no second "Submit".
+      if (saved.submitStatus === "feedback_pending") return;
       // Show resume banner if there's actual progress (not a fresh session)
       const hasProgress =
         saved.exercises.some((ex) => ex.status !== "pending") ||
@@ -124,21 +241,20 @@ export default function GuidedSessionPage() {
       // If all exercises are done/skipped, show summary
       const allDone = saved.exercises.every((ex) => ex.status !== "pending");
       if (allDone) setShowSummary(true);
-      // Fetch bodyweight for test sessions (needed for total load auto-computation)
-      if (saved.isTestSession && !saved.bodyweightKg) {
-        getState().then((stateData) => {
-          const body = (stateData.assessment as Record<string, unknown> | undefined)?.body as Record<string, number> | undefined;
-          const bw = body?.weight_kg;
-          if (bw) {
-            setState((prev) => prev ? { ...prev, bodyweightKg: bw } : prev);
-          }
-        }).catch((err) => { console.error("Failed to prefetch bodyweight:", err); });
-      }
-    } else {
-      // No saved state — redirect back to today
-      router.replace(`/today?date=${date}`);
+      return;
     }
-  }, [date, sessionId, router]);
+
+    // B397 G1 — nothing under the provisional scope. While Clerk is still
+    // booting (and online, so it can answer) wait for it: this effect runs
+    // again when it does, under the confirmed user. Bounded, so a Clerk that
+    // never loads cannot leave the spinner up forever.
+    if (!authLoaded && (typeof navigator === "undefined" || navigator.onLine !== false)) {
+      const timer = setTimeout(() => router.replace(`/today?date=${date}`), CLERK_WAIT_MS);
+      return () => clearTimeout(timer);
+    }
+    // No saved state — redirect back to today
+    router.replace(`/today?date=${date}`);
+  }, [date, sessionId, router, authLoaded, authUserId, qc]);
 
   // Auto-dismiss resume banner after 4 seconds
   useEffect(() => {
@@ -147,10 +263,25 @@ export default function GuidedSessionPage() {
     return () => clearTimeout(timer);
   }, [resumed]);
 
-  // Persist state to localStorage on every change
+  // Persist state to localStorage on every change — under the pinned key only,
+  // and never after the session was handed over (B397 G1/G2).
   useEffect(() => {
-    if (state) saveState(state);
+    if (state && scopeRef.current && !finishedRef.current) {
+      writeGuided(scopeRef.current.key, state);
+    }
   }, [state]);
+
+  // B397 G4 — let the cues through the iPhone silent switch while the session
+  // is open and its sound is on; back to the default when muted or closed.
+  useEffect(() => {
+    const apply = () => setPlaybackAudioSession(!isSoundMuted());
+    apply();
+    window.addEventListener(SOUND_MUTED_EVENT, apply);
+    return () => {
+      window.removeEventListener(SOUND_MUTED_EVENT, apply);
+      setPlaybackAudioSession(false);
+    };
+  }, []);
 
   // Warn on navigation away (beforeunload)
   useEffect(() => {
@@ -209,101 +340,134 @@ export default function GuidedSessionPage() {
     []
   );
 
+  // ---------------------------------------------------------------------------
+  // B397 G5 — Done / Skip are reversible, and a double tap closes ONE exercise
+  // ---------------------------------------------------------------------------
+
+  /** When the last Done/Skip (or Undo) moved the player. */
+  const lastAdvanceRef = useRef(0);
+  const undoToastRef = useRef<string | number | null>(null);
+
+  const dismissUndo = useCallback(() => {
+    if (undoToastRef.current != null) {
+      toast.dismiss(undoToastRef.current);
+      undoToastRef.current = null;
+    }
+  }, []);
+  // An "Undo" must not outlive the player it would rewrite.
+  useEffect(() => dismissUndo, [dismissUndo]);
+
+  const handleUndo = useCallback((undo: StepUndo) => {
+    undoToastRef.current = null;
+    if (finishedRef.current) return;
+    // The restored card mounts under the finger too.
+    lastAdvanceRef.current = Date.now();
+    setState((prev) => (prev ? applyStepUndo(prev, undo) : prev));
+    setShowSummary(false);
+    setConfirmFinish(false);
+  }, []);
+
+  const offerUndo = useCallback(
+    (message: string, undo: StepUndo) => {
+      dismissUndo();
+      undoToastRef.current = toast(message, {
+        duration: UNDO_TOAST_MS,
+        action: { label: "Undo", onClick: () => handleUndo(undo) },
+        // A thumb-sized target: sonner's default action button is ~24 px tall.
+        actionButtonStyle: { minHeight: 40, paddingInline: 16, fontSize: 14 },
+      });
+    },
+    [dismissUndo, handleUndo],
+  );
+
+  /**
+   * The next card mounts with its own Done/Skip exactly where the last ones
+   * were, so the second half of a double tap would close an exercise nobody
+   * looked at. Swallow it.
+   */
+  const advanceBlocked = useCallback((): boolean => {
+    const now = Date.now();
+    if (isWithinAdvanceGuard(lastAdvanceRef.current, now)) return true;
+    lastAdvanceRef.current = now;
+    return false;
+  }, []);
+
+  /** Close the current exercise, move on, and offer the way back. */
+  const advance = useCallback(
+    (
+      current: GuidedSessionState,
+      updates: Partial<GuidedExercise>,
+      message: string,
+      extra?: (exercises: GuidedExercise[]) => GuidedExercise[],
+    ) => {
+      const idx = current.currentIndex;
+      const { openedSummary, undo } = closeStep(current, idx, updates, extra);
+      setState((prev) => (prev ? closeStep(prev, idx, updates, extra).next : prev));
+      if (openedSummary) setShowSummary(true);
+      setConfirmFinish(false);
+      offerUndo(message, undo);
+    },
+    [offerUndo],
+  );
+
   const handleDone = useCallback(
     (feedbackLabel: string | null, usedLoad?: number, usedGrade?: string, usedTotalLoad?: number, testMeasurement?: number, perHand?: { right?: number; left?: number; right_reps?: number; left_reps?: number }, measures?: MeasureValues, problems?: LimitProblem[], surface?: string) => {
-      if (!state) return;
-      const idx = state.currentIndex;
-      const exercise = state.exercises[idx];
+      if (!state || finishedRef.current) return;
+      if (advanceBlocked()) return;
+      const exercise = state.exercises[state.currentIndex];
 
       // B128: detect unilateral test measurement (e.g. lp_duration_test — seconds per hand)
       const isUnilateralMeasurement = exercise.unilateral && !!exercise.testField && !!exercise.testUnit && perHand;
 
-      if (isUnilateralMeasurement) {
-        updateExercise(idx, {
-          status: "done",
-          feedbackLabel,
-          testMeasurementRight: perHand?.right,
-          testMeasurementLeft: perHand?.left,
-        });
-      } else {
-        updateExercise(idx, {
-          status: "done",
-          feedbackLabel,
-          usedLoadKg: usedLoad,
-          usedTotalLoadKg: usedTotalLoad,
-          usedGrade,
-          testMeasurement,
-          usedLoadKgRight: perHand?.right,
-          usedLoadKgLeft: perHand?.left,
-          completedRepsRight: perHand?.right_reps,
-          completedRepsLeft: perHand?.left_reps,
-          // A295: optional measures (undefined = not measured)
-          lastSetReps: measures?.lastSetReps,
-          hangMargin: measures?.hangMargin,
-          hangHeldS: measures?.hangHeldS,
-          // A296: limit problem log (undefined = not logged)
-          problems: problems && problems.length > 0 ? problems : undefined,
-          // A299: the wall picked in the logger (custom/adhoc limit rows).
-          chosenSurface: surface,
-        });
-      }
+      const updates: Partial<GuidedExercise> = isUnilateralMeasurement
+        ? {
+            status: "done",
+            feedbackLabel,
+            testMeasurementRight: perHand?.right,
+            testMeasurementLeft: perHand?.left,
+          }
+        : {
+            status: "done",
+            feedbackLabel,
+            usedLoadKg: usedLoad,
+            usedTotalLoadKg: usedTotalLoad,
+            usedGrade,
+            testMeasurement,
+            usedLoadKgRight: perHand?.right,
+            usedLoadKgLeft: perHand?.left,
+            completedRepsRight: perHand?.right_reps,
+            completedRepsLeft: perHand?.left_reps,
+            // A295: optional measures (undefined = not measured)
+            lastSetReps: measures?.lastSetReps,
+            hangMargin: measures?.hangMargin,
+            hangHeldS: measures?.hangHeldS,
+            // A296: limit problem log (undefined = not logged)
+            problems: problems && problems.length > 0 ? problems : undefined,
+            // A299: the wall picked in the logger (custom/adhoc limit rows).
+            chosenSurface: surface,
+          };
 
       // B128: recalc suggestion for next exercise if user just completed a max test
       // When lp_max_test_5s is done, update lp_duration_test suggestion with 60% of new max
-      if (exercise.exerciseId === "lp_max_test_5s" && perHand) {
-        const roundHalf = (v: number) => Math.round(v * 2) / 2;
-        setState((prev) => {
-          if (!prev) return prev;
-          const exercises = [...prev.exercises];
-          for (let i = idx + 1; i < exercises.length; i++) {
-            const next = exercises[i];
-            if (next.exerciseId === "lp_duration_test" && next.prescription.intensityPct) {
-              const pct = next.prescription.intensityPct;
-              exercises[i] = {
-                ...next,
-                suggested: {
-                  ...next.suggested,
-                  leftHand: perHand.left != null
-                    ? { externalLoadKg: roundHalf(perHand.left * pct) }
-                    : next.suggested.leftHand,
-                  rightHand: perHand.right != null
-                    ? { externalLoadKg: roundHalf(perHand.right * pct) }
-                    : next.suggested.rightHand,
-                },
-              };
-              break;
-            }
-          }
-          return { ...prev, exercises };
-        });
-      }
+      const idx = state.currentIndex;
+      const extra =
+        exercise.exerciseId === "lp_max_test_5s" && perHand
+          ? (exercises: GuidedExercise[]) => rebaseDurationTest(exercises, idx, perHand)
+          : undefined;
 
       // Advance to next exercise or show summary
-      const nextIdx = idx + 1;
-      if (nextIdx >= state.exercises.length) {
-        setState((prev) => prev ? { ...prev, currentIndex: idx } : prev);
-        setShowSummary(true);
-      } else {
-        setState((prev) => prev ? { ...prev, currentIndex: nextIdx } : prev);
-      }
+      advance(state, updates, `Done: ${exerciseLabel(exercise)}`, extra);
     },
-    [state, updateExercise]
+    [state, advance, advanceBlocked]
   );
 
   const handleSkip = useCallback(() => {
-    if (!state) return;
-    const idx = state.currentIndex;
-
+    if (!state || finishedRef.current) return;
+    if (advanceBlocked()) return;
+    const exercise = state.exercises[state.currentIndex];
     // A295: a skipped exercise is not rated (it used to ship as "ok").
-    updateExercise(idx, { status: "skipped", feedbackLabel: null });
-    const nextIdx = idx + 1;
-    if (nextIdx >= state.exercises.length) {
-      setState((prev) => prev ? { ...prev, currentIndex: idx } : prev);
-      setShowSummary(true);
-    } else {
-      setState((prev) => prev ? { ...prev, currentIndex: nextIdx } : prev);
-    }
-  }, [state, updateExercise]);
+    advance(state, { status: "skipped", feedbackLabel: null }, `Skipped: ${exerciseLabel(exercise)}`);
+  }, [state, advance, advanceBlocked]);
 
   // A247 — anchors for the scroll-on-advance effect below.
   const headerRef = useRef<HTMLDivElement | null>(null);
@@ -350,14 +514,23 @@ export default function GuidedSessionPage() {
 
   const handleNavigate = useCallback(
     (index: number) => {
-      if (!state) return;
+      if (!state || finishedRef.current) return;
       setShowSummary(false);
+      setConfirmFinish(false);
       setState((prev) => prev ? { ...prev, currentIndex: index } : prev);
     },
     [state]
   );
 
+  /** B397 G6 — from the summary back to the player, on the first exercise left. */
+  const handleBackToExercises = useCallback(() => {
+    if (!state) return;
+    const firstPending = state.exercises.findIndex((ex) => ex.status === "pending");
+    handleNavigate(firstPending >= 0 ? firstPending : state.currentIndex);
+  }, [state, handleNavigate]);
+
   const handleFinishEarly = useCallback(() => {
+    setConfirmFinish(false);
     setShowSummary(true);
   }, []);
 
@@ -398,10 +571,14 @@ export default function GuidedSessionPage() {
     });
   }, []);
 
-  const handleSubmit = useCallback(async () => {
-    if (!state) return;
-    setSubmitting(true);
+  const submitSession = useCallback(async () => {
+    // B397 G2 — one submit per session: the lock below stops the double tap,
+    // this latch stops a tap that lands after the request but before the
+    // route change.
+    const scope = scopeRef.current;
+    if (!state || !scope || finishedRef.current) return;
     setError(null);
+    dismissUndo();
 
     try {
       // Auto-skip remaining warmups and instruction-only blocks
@@ -416,38 +593,19 @@ export default function GuidedSessionPage() {
       // /api/feedback and returns the updated week_plan. No prelude
       // getState/getWeek/applyEvents round-trips needed.
 
-      // B288: item construction lives in lib/feedback-items so the /today
-      // retry path replays the identical payload instead of a narrowed copy.
-      const exerciseFeedback = buildGuidedFeedbackItems(finalExercises);
-
       const durationSeconds = Math.max(0, Math.floor((Date.now() - new Date(state.startedAt).getTime()) / 1000));
 
+      // B288 / B397 G3: ONE builder for the first POST and for the replay, and
+      // the replay sends this very body — duration included.
+      const body = buildGuidedFeedbackBody(state, finalExercises, durationSeconds);
+
       try {
-        // A295: feedback_contract 2 + the session's "Any pain?" answer.
-        const logEntry: Record<string, unknown> = withFeedbackContract({
-          date: state.date,
-          session_id: state.sessionId,
-          // Real wall-clock start the timer already runs on (health-vault export).
-          started_at: state.startedAt,
-          session_duration_seconds: durationSeconds,
-          actual: {
-            exercise_feedback_v1: exerciseFeedback,
-          },
-        }, state.pain ?? null);
-        if (state.isTestSession) {
-          logEntry.planned = [{
-            session_id: state.sessionId,
-            tags: { test: true },
-            exercise_instances: [],
-          }];
-        }
-        const response = await postFeedback({
-          log_entry: logEntry,
-          status: "done",
-        });
+        const response = await postFeedback(body);
+        finishedRef.current = true;
+        setHandedOver(true);
 
         // Success — clean up localStorage
-        removeState(state.date, state.sessionId);
+        removeGuided(scope.key);
 
         // A194: the backend returned the updated week_plan inline. Write it
         // directly into the ['week', 0] cache so /today renders fresh on first
@@ -466,18 +624,69 @@ export default function GuidedSessionPage() {
         // A245 G-3 (F36): loads just changed — drop cached resolutions.
         qc.invalidateQueries({ queryKey: queryKeys.sessionResolveAll });
       } catch {
-        // Feedback POST failed — save for retry
-        setState((prev) => prev ? { ...prev, submitStatus: "feedback_pending" } : prev);
-        saveState({ ...state, exercises: finalExercises, submitStatus: "feedback_pending" });
+        // Feedback POST failed — save for retry, with the exact body (B397 G3).
+        const pending: PendingGuidedState = {
+          ...state,
+          exercises: finalExercises,
+          submitStatus: "feedback_pending",
+          pendingFeedback: body,
+        };
+        if (!writeGuided(scope.key, pending)) {
+          // Could not even keep it on the device: stay here, say so, let the
+          // athlete try again instead of pretending it is safe.
+          setError("Could not save your session on this device. Check your connection and try again.");
+          return;
+        }
+        finishedRef.current = true;
+        setHandedOver(true);
+        toast("Session saved on this device — it will sync when you're back online.", {
+          duration: 6000,
+        });
       }
 
       // Redirect to today regardless
       router.replace(`/today?date=${state.date}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to submit. Your progress is saved locally.");
-      setSubmitting(false);
     }
-  }, [state, router, qc]);
+  }, [state, router, qc, dismissUndo]);
+
+  // B397 G2 — B330's lock: a double tap on "Submit & finish" sends ONE POST
+  // (the server runs apply_feedback on every POST it receives).
+  const { run: runSubmit, busy: submitting } = useSubmitLock(submitSession);
+  const handleSubmit = useCallback(() => {
+    void runSubmit();
+  }, [runSubmit]);
+
+  /**
+   * B397 G3 — "Send now" in the pending view: the same single-flight replay
+   * /today runs, so it can never race it into a second POST.
+   */
+  const sendPendingNow = useCallback(async () => {
+    setSyncError(null);
+    try {
+      const result = await syncPendingGuidedFeedback(qc);
+      announcePendingSync(result);
+    } catch (err) {
+      console.error("[guided] pending feedback sync failed:", err);
+    }
+    const scope = scopeRef.current;
+    const stillQueued = (() => {
+      if (!scope) return false;
+      try {
+        return localStorage.getItem(scope.key) !== null;
+      } catch {
+        return true;
+      }
+    })();
+    if (!stillQueued) {
+      finishedRef.current = true;
+      router.replace(`/today?date=${date}`);
+      return;
+    }
+    setSyncError("Not sent yet — it stays saved on this device and will go out when the connection is back.");
+  }, [qc, router, date]);
+  const { run: runSendPending, busy: sendingPending } = useSubmitLock(sendPendingNow);
 
   // A295: session pain (0-3, zone from 2) — saved with the state, so the
   // offline retry from /today replays it.
@@ -535,6 +744,65 @@ export default function GuidedSessionPage() {
   const currentExercise = state.exercises[state.currentIndex];
   const sessionName =
     state.sessionName || state.sessionId.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+  // B397 G3 — Start reopened a session whose feedback is still queued. It used
+  // to land on the summary with a live "Submit & finish": a second POST of the
+  // same session. Now it only says where the feedback is.
+  if (isPending) {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <div className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => router.replace(`/today?date=${date}`)}
+              className="-ml-2 flex min-h-[44px] min-w-[44px] shrink-0 items-center gap-1 px-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ArrowLeft className="size-4" />
+              Back
+            </button>
+            <p className="flex-1 truncate text-center text-sm font-semibold">{sessionName}</p>
+            <div className="min-w-[44px]" />
+          </div>
+        </div>
+        <main className="p-4">
+          <Card className="gap-0 py-0">
+            <CardContent className="space-y-4 py-5">
+              <div className="flex items-start gap-3">
+                <CloudOff className="mt-0.5 size-5 shrink-0 text-warning" />
+                <div className="space-y-1">
+                  <p className="font-medium">Session saved on this device</p>
+                  <p className="text-sm text-muted-foreground">
+                    Your feedback hasn&apos;t reached the server yet. It is sent automatically
+                    when you&apos;re back online — no need to submit it again.
+                  </p>
+                </div>
+              </div>
+              {syncError && <p className="text-sm text-warning">{syncError}</p>}
+              <div className="space-y-2">
+                <Button
+                  className="min-h-[44px] w-full"
+                  onClick={() => { void runSendPending(); }}
+                  disabled={sendingPending || !authLoaded}
+                >
+                  {sendingPending ? "Sending..." : "Send now"}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="min-h-[44px] w-full"
+                  onClick={() => router.replace(`/today?date=${date}`)}
+                >
+                  Back to Today
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </main>
+      </div>
+    );
+  }
+
+  const remainingCount = state.exercises.filter((ex) => ex.status === "pending").length;
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -623,7 +891,9 @@ export default function GuidedSessionPage() {
               pain={state.pain ?? null}
               onPainChange={handlePainChange}
               onSubmit={handleSubmit}
-              submitting={submitting}
+              submitting={submitting || handedOver}
+              onBackToExercises={handleBackToExercises}
+              onEditExercise={handleNavigate}
             />
           </div>
         ) : currentExercise ? (
@@ -648,14 +918,49 @@ export default function GuidedSessionPage() {
               />
             </div>
 
-            {/* Finish early button */}
-            <Button
-              variant="ghost"
-              className="w-full text-muted-foreground text-sm"
-              onClick={handleFinishEarly}
-            >
-              Finish session early
-            </Button>
+            {/* Finish early — B397 G6: 44 px, set apart from Skip/Done by a
+                divider, and it asks first. The question text takes the
+                button's place, so a double tap lands on text, not on "Finish". */}
+            <div className="border-t border-border/50 pt-4">
+              {confirmFinish ? (
+                <div className="space-y-3 rounded-lg border border-warning/30 bg-warning-muted p-3">
+                  <p className="text-sm">
+                    End the session now?
+                    {remainingCount > 0 && (
+                      <>
+                        {" "}
+                        {remainingCount} exercise{remainingCount === 1 ? "" : "s"} still to do — you
+                        can mark or skip {remainingCount === 1 ? "it" : "them"} on the next screen.
+                      </>
+                    )}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="min-h-[44px] flex-1"
+                      onClick={() => setConfirmFinish(false)}
+                    >
+                      Keep going
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className="min-h-[44px] flex-1"
+                      onClick={handleFinishEarly}
+                    >
+                      Finish now
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  variant="ghost"
+                  className="min-h-[44px] w-full text-muted-foreground text-sm"
+                  onClick={() => setConfirmFinish(true)}
+                >
+                  Finish session early
+                </Button>
+              )}
+            </div>
           </>
         ) : null}
       </main>

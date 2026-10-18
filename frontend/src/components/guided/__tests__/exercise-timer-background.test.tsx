@@ -39,7 +39,7 @@ vi.mock("@/lib/haptics", () => ({
   confirmFeedback: vi.fn(),
   completeFeedback: vi.fn(),
 }));
-vi.mock("@/lib/beep", () => ({ countdownTick: vi.fn(), transitionBeep: vi.fn() }));
+vi.mock("@/lib/beep", () => ({ countdownTick: vi.fn(), transitionBeep: vi.fn(), restOverCue: vi.fn() }));
 vi.mock("@/lib/voice-cues", () => ({ speakPhaseTransition: vi.fn() }));
 
 import { ExerciseTimer } from "../exercise-timer";

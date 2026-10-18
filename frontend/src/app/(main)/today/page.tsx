@@ -49,7 +49,6 @@ import { siblingsOf, writeWeekCache, type WeekSiblings } from "@/lib/week-cache"
 import { alertMessagesFor, describeActionAlerts } from "@/lib/week-alerts";
 import {
   buildDialogFeedbackItems,
-  buildGuidedFeedbackItems,
   extractFeedbackExercises,
 } from "@/lib/feedback-items";
 import { resolveOutdoorLogTarget } from "@/lib/outdoor-log-target";
@@ -64,9 +63,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { getInProgressSession, clearSavedSession, getKeyPrefix, type InProgressSession } from "@/lib/guided-session-utils";
+import { getInProgressSession, clearSavedSession, type InProgressSession } from "@/lib/guided-session-utils";
+import { usePendingGuidedFeedback } from "@/lib/guided-pending-feedback";
 import { getBoulderPhaseTip } from "@/lib/boulder-phase-tips";
-import type { WeekPlan, DayPlan, OutdoorSpot, OutdoorSession, GuidedExercise, OutdoorDayType, OutdoorPitchLadder, KeyStatus, KeyProposal, SessionPain, LimitProblemDraft } from "@/lib/types";
+import type { WeekPlan, DayPlan, OutdoorSpot, OutdoorSession, OutdoorDayType, OutdoorPitchLadder, KeyStatus, KeyProposal, SessionPain, LimitProblemDraft } from "@/lib/types";
 import { boulderGradeSystemOf } from "@/lib/gradeUtils";
 import { withFeedbackContract, type MeasureValues } from "@/lib/measured-feedback";
 import { hasOtherActivity } from "@/lib/other-activity";
@@ -330,70 +330,9 @@ function TodayContent() {
     }
   }, [phaseId]);
 
-  // B127/B128: retry pending guided-session feedback from localStorage on mount.
-  // Stays outside React Query — this is recovery of pending writes, not a fetch.
-  useEffect(() => {
-    if (!authReady || typeof window === "undefined") return;
-    // A245 B-2: was rebuilding the prefix inline with the literal "clerk"
-    // instead of the real user id — same bug as guided-session-utils, and a
-    // second copy of the same expression. Single source of truth now.
-    const prefix = getKeyPrefix();
-    const now = Date.now();
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (!key || !key.startsWith(prefix)) continue;
-      try {
-        const raw = localStorage.getItem(key);
-        if (!raw) continue;
-        const saved = JSON.parse(raw) as { startedAt?: string; submitStatus?: string; date?: string; sessionId?: string; exercises?: Array<Record<string, unknown>>; pain?: SessionPain; isTestSession?: boolean };
-
-        // Cleanup sessions older than 24h that are completed
-        if (saved.startedAt) {
-          const age = now - new Date(saved.startedAt).getTime();
-          if (age > 24 * 60 * 60 * 1000 && saved.submitStatus !== "feedback_pending") {
-            localStorage.removeItem(key);
-            continue;
-          }
-        }
-
-        // Retry pending feedback
-        if (saved.submitStatus === "feedback_pending" && saved.exercises) {
-          // B288: this replay used to rebuild items by hand and kept only
-          // usedLoadKg + usedGrade — a failed POST silently degraded into a
-          // lossy one (total load, per-hand `hand` split, sets/reps, surface,
-          // notes and test measurements all dropped) and then deleted the
-          // richer local copy. Same builder as the guided player now.
-          const feedbackItems = buildGuidedFeedbackItems(
-            saved.exercises as unknown as GuidedExercise[],
-          );
-          // A295: the retry carries the contract and the session pain too —
-          // a replay must never be poorer than the original POST.
-          const retryEntry: Record<string, unknown> = {
-            date: saved.date ?? "",
-            session_id: saved.sessionId ?? "",
-            ...(saved.startedAt ? { started_at: saved.startedAt } : {}),
-            actual: { exercise_feedback_v1: feedbackItems },
-          };
-          if (saved.isTestSession) {
-            retryEntry.planned = [{ session_id: saved.sessionId ?? "", tags: { test: true }, exercise_instances: [] }];
-          }
-          postFeedback({
-            log_entry: withFeedbackContract(retryEntry, saved.pain ?? null),
-            status: "done",
-          }).then(() => {
-            localStorage.removeItem(key);
-            // refresh week plan so feedback badges appear
-            qc.invalidateQueries({ queryKey: queryKeys.weekAll });
-          }).catch((err) => {
-            console.error("Failed to retry pending feedback submission:", err);
-            // Leave in localStorage for next retry
-          });
-        }
-      } catch {
-        // Ignore malformed localStorage entries
-      }
-    }
-  }, [authReady, qc]);
+  // B127/B128 → B397 G3: pending guided-session feedback is replayed on mount
+  // AND when the connection comes back, once, with the original duration.
+  usePendingGuidedFeedback(authReady);
 
   // A245 B-4 (F4, F5) — drain the offline outbox on mount and whenever the
   // browser reports the connection is back. /today is the natural place: it is

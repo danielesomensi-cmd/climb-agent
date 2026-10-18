@@ -5,7 +5,7 @@ import { Play, Pause, RotateCcw, CheckCircle2, ChevronLeft, ChevronRight, Maximi
 import { cn } from "@/lib/utils";
 import { unlockAudio } from "@/lib/audio-unlock";
 import { confirmFeedback, tapFeedback } from "@/lib/haptics";
-import { countdownTick, transitionBeep } from "@/lib/beep";
+import { countdownTick, restOverCue, transitionBeep } from "@/lib/beep";
 import { speakPhaseTransition } from "@/lib/voice-cues";
 import { SoundToggle } from "@/components/guided/sound-toggle";
 import { OVERHOLD_CAP_S, OVERHOLD_TAP_LATENCY_S } from "@/lib/measured-feedback";
@@ -208,6 +208,8 @@ function ExerciseTimerImpl({
 
   // Voice cue: store the phase at transition time so the transitionId effect can speak it
   const pendingVoiceCueRef = useRef<Phase | null>(null);
+  /** B397 G4 — the pending transition is a watched rest ending into a tap. */
+  const pendingRestOverRef = useRef(false);
 
   // Refs for countdown beep effect (avoid re-triggering on phase/paused change)
   const phaseRef = useRef(phase);
@@ -244,9 +246,17 @@ function ExerciseTimerImpl({
   // Transition beep + voice cue + visual flash
   useEffect(() => {
     if (transitionId > 0) {
-      transitionBeep();
-      // A286 — B8: il cambio di fase si sente anche con il telefono in tasca.
-      confirmFeedback();
+      if (pendingRestOverRef.current) {
+        // B397 G4 — the rest is over and only a tap starts the next set: a cue
+        // you notice across the gym (three beeps + a long vibration), not the
+        // single 0.2 s beep that let rests run long.
+        pendingRestOverRef.current = false;
+        restOverCue();
+      } else {
+        transitionBeep();
+        // A286 — B8: il cambio di fase si sente anche con il telefono in tasca.
+        confirmFeedback();
+      }
       if (pendingVoiceCueRef.current) {
         speakPhaseTransition(pendingVoiceCueRef.current);
         pendingVoiceCueRef.current = null;
@@ -370,7 +380,13 @@ function ExerciseTimerImpl({
           setOverdueSeconds((prev) => (prev === elapsed ? prev : elapsed));
           if (consumedDeadlineRef.current !== phaseEndTimeRef.current) {
             consumedDeadlineRef.current = phaseEndTimeRef.current;
-            pendingVoiceCueRef.current = null; // beep + flash only, no voice cue
+            // B397 G4 — a rest that ended under our eyes says "Go" with the
+            // rest-over cue. Anything that expired while the timer was
+            // suspended keeps the old beep + flash: nobody was there to hear
+            // it end, and a voice on return would only startle.
+            const watchedRestOver = restNeedsTap && !expiredUnwatched;
+            pendingRestOverRef.current = watchedRestOver;
+            pendingVoiceCueRef.current = watchedRestOver ? "work" : null;
             setTransitionId((id) => id + 1);
           }
           return;

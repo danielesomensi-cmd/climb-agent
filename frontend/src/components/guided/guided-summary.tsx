@@ -4,10 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
-import { Check, SkipForward, AlertTriangle, Send, Timer } from "lucide-react";
+import { Check, SkipForward, AlertTriangle, Send, Timer, ArrowLeft, Pencil } from "lucide-react";
 import { formatDuration } from "@/components/guided/session-timer";
 import type { GuidedExercise, SessionPain } from "@/lib/types";
 import { PainPicker } from "@/components/training/measured-feedback-inputs";
+import { tapFeedback } from "@/lib/haptics";
 
 interface GuidedSummaryProps {
   exercises: GuidedExercise[];
@@ -20,6 +21,10 @@ interface GuidedSummaryProps {
   /** A295: session pain (0-3, zone from 2). */
   pain?: SessionPain | null;
   onPainChange?: (pain: SessionPain | null) => void;
+  /** B397 G6: back to the player, on the first exercise still to do. */
+  onBackToExercises?: () => void;
+  /** B397 G6: open one exercise again to correct it (one tap from here). */
+  onEditExercise?: (index: number) => void;
 }
 
 const FEEDBACK_STYLE: Record<string, string> = {
@@ -42,6 +47,8 @@ export function GuidedSummary({
   submitting,
   pain,
   onPainChange,
+  onBackToExercises,
+  onEditExercise,
 }: GuidedSummaryProps) {
   const pendingExercises = exercises.filter((ex) => ex.status === "pending");
   const nonWarmupPending = pendingExercises.filter(
@@ -55,8 +62,25 @@ export function GuidedSummary({
     formatDuration(Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000))),
   );
 
+  // B397 G6: nothing is editable once the submit is under way.
+  const canEdit = !!onEditExercise && !submitting;
+
   return (
     <div className="space-y-4">
+      {/* B397 G6 — the summary was a dead end: correcting one exercise meant
+          leaving the session. Back to the player, or tap a row below. */}
+      {onBackToExercises && (
+        <Button
+          variant="ghost"
+          className="-ml-2 min-h-[44px] px-2 text-muted-foreground"
+          onClick={onBackToExercises}
+          disabled={submitting}
+        >
+          <ArrowLeft className="size-4 mr-1" />
+          Back to exercises
+        </Button>
+      )}
+
       {/* Header */}
       <Card className="gap-0 py-0">
         <CardHeader className="py-4">
@@ -84,12 +108,32 @@ export function GuidedSummary({
             )}
           </div>
 
-          {/* Exercise list */}
+          {/* Exercise list — B397 G6: each row opens that exercise again */}
+          {canEdit && (
+            <p className="mb-1 text-xs text-muted-foreground">Tap an exercise to change it.</p>
+          )}
           <div className="space-y-1.5">
             {exercises.map((ex, i) => (
               <div
                 key={i}
-                className="flex items-center justify-between gap-2 py-1.5 border-b border-border/50 last:border-0"
+                role={canEdit ? "button" : undefined}
+                tabIndex={canEdit ? 0 : undefined}
+                aria-label={canEdit ? `Change ${ex.name || ex.exerciseId.replace(/_/g, " ")}` : undefined}
+                onClick={canEdit ? () => onEditExercise?.(i) : undefined}
+                onPointerDown={canEdit ? tapFeedback : undefined}
+                onKeyDown={
+                  canEdit
+                    ? (e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          onEditExercise?.(i);
+                        }
+                      }
+                    : undefined
+                }
+                className={`flex items-center justify-between gap-2 py-1.5 border-b border-border/50 last:border-0 ${
+                  canEdit ? "min-h-[44px] cursor-pointer rounded-sm active:bg-muted/50" : ""
+                }`}
               >
                 <div className="flex items-center gap-2 min-w-0">
                   {ex.status === "done" && (
@@ -105,16 +149,19 @@ export function GuidedSummary({
                     {ex.name || ex.exerciseId.replace(/_/g, " ")}
                   </span>
                 </div>
-                {ex.status !== "pending" && !ex.isInstructionOnly && (
-                  <Badge
-                    variant="outline"
-                    className={`text-[10px] shrink-0 ${ex.feedbackLabel ? FEEDBACK_STYLE[ex.feedbackLabel] ?? "" : "text-muted-foreground"}`}
-                    aria-label={ex.feedbackLabel ? undefined : "Not rated"}
-                  >
-                    {/* A295: not rated shows as "—", never as a fake "ok" */}
-                    {ex.feedbackLabel ? ex.feedbackLabel.replace(/_/g, " ") : "—"}
-                  </Badge>
-                )}
+                <div className="flex shrink-0 items-center gap-2">
+                  {ex.status !== "pending" && !ex.isInstructionOnly && (
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] shrink-0 ${ex.feedbackLabel ? FEEDBACK_STYLE[ex.feedbackLabel] ?? "" : "text-muted-foreground"}`}
+                      aria-label={ex.feedbackLabel ? undefined : "Not rated"}
+                    >
+                      {/* A295: not rated shows as "—", never as a fake "ok" */}
+                      {ex.feedbackLabel ? ex.feedbackLabel.replace(/_/g, " ") : "—"}
+                    </Badge>
+                  )}
+                  {canEdit && <Pencil className="size-3.5 text-muted-foreground/60" aria-hidden />}
+                </div>
               </div>
             ))}
           </div>

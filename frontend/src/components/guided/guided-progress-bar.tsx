@@ -18,15 +18,18 @@ export function GuidedProgressBar({
   return (
     <div className="flex items-center gap-2">
       {/* -my-2.5 compensa l'hit-area verticale da 44px: i pallini restano
-          visivamente identici ma diventano toccabili con le mani magnesiate. */}
-      <div className="flex items-center gap-0.5 flex-1 flex-wrap -my-2.5">
+          visivamente identici ma diventano toccabili con le mani magnesiate.
+          B397 G5 — anche in larghezza: erano ~20 px (12 di pallino + 8 di
+          padding), ora ogni bersaglio è almeno 32 px, contigui, e la riga va
+          a capo solo oltre ~9 esercizi su un iPhone. */}
+      <div className="flex items-center flex-1 flex-wrap -my-2.5">
         {exercises.map((ex, i) => (
           <button
             key={i}
             type="button"
             onClick={() => onNavigate(i)}
             onPointerDown={tapFeedback}
-            className="group flex min-h-[44px] items-center justify-center px-1"
+            className="group flex min-h-[44px] min-w-[32px] items-center justify-center"
             aria-label={`Exercise ${i + 1}: ${ex.name} (${ex.status})`}
           >
             <span
