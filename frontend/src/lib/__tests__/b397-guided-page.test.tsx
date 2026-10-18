@@ -48,6 +48,7 @@ vi.mock("@/lib/api", () => ({
 }));
 vi.mock("@/lib/hooks/use-subscription", () => ({
   useSubscription: () => ({ canInteract: true, loading: false }),
+  useServerDenied: () => false,
 }));
 vi.mock("@/lib/hooks/use-wake-lock", () => ({ useWakeLock: () => {} }));
 vi.mock("@/lib/hooks/use-state", () => ({ useUserState: () => ({ state: null }) }));

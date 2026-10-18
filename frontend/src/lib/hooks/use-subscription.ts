@@ -117,7 +117,10 @@ export function deriveSubscriptionResult(args: {
  * with 402/403. (401 is not here: api.ts already sends that to /sign-in.)
  */
 export function isServerDenied(data: SubscriptionStatus | undefined, error: unknown): boolean {
-  if (error instanceof ApiError && (error.status === 402 || error.status === 403)) return true;
+  // Read the HTTP status off the error (ApiError carries it); a transport
+  // failure has none, or 0.
+  const status = error && typeof error === "object" ? (error as { status?: unknown }).status : undefined;
+  if (status === 402 || status === 403) return true;
   return data?.can_interact === false;
 }
 
