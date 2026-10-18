@@ -32,16 +32,29 @@ def resolve_today(today: Optional[str]) -> str:
     return datetime.now().strftime("%Y-%m-%d")
 
 
-def _outdoor_rows(user_id: Optional[str], since: date, until: date) -> Optional[list]:
+def _outdoor_rows(
+    user_id: Optional[str], since: date, until: date, *, read_since: Optional[date] = None,
+) -> Optional[list]:
+    """The ``outdoor_logs`` rows dated ``since``..``until``, or None on failure.
+
+    B399: *read_since* (earlier than *since*) is the date actually asked of
+    storage, and the rows before *since* are dropped here. Consumers with
+    different look-backs (key status 10 days, guards 7) ask for the same
+    window, so the request memo (B376) serves them with ONE round-trip. The
+    result is the same: storage filters on ``session_date``, which is written
+    from ``entry.date`` (``append_outdoor_log_line``), and the rows come back
+    sorted by date, so the subset keeps its order."""
     try:
         from backend.api import deps as _deps
 
-        rows = _deps._storage.read_outdoor_logs(user_id, since.isoformat())
+        fetch_from = read_since if read_since is not None and read_since < since else since
+        rows = _deps._storage.read_outdoor_logs(user_id, fetch_from.isoformat())
+        lo = since.isoformat() if fetch_from < since else None
         out = []
         for r in rows or []:
             entry = r.get("entry") if isinstance(r, Mapping) and isinstance(r.get("entry"), Mapping) else r
             d = str((entry or {}).get("date") or "")[:10]
-            if d and d <= until.isoformat():
+            if d and d <= until.isoformat() and (lo is None or d >= lo):
                 out.append(r)
         return out
     except Exception:

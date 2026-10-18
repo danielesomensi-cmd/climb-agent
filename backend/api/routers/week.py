@@ -298,6 +298,29 @@ def _played_without_resolved(week_plan: dict) -> list:
     return out
 
 
+def _resolvable_targets(week_plan: dict, targets: list) -> list:
+    """B399: the *targets* (from :func:`_played_without_resolved`) whose
+    session :func:`_auto_resolve` actually resolved.
+
+    A played custom / generated session has no catalog template: the resolver
+    leaves its ``resolved`` at None and :func:`_cache_completed_resolved` skips
+    it — yet every read reloaded the whole state under the user lock just to
+    write nothing. These are exactly the source-side checks of
+    ``_cache_completed_resolved`` (same session_id, a ``resolved`` to copy);
+    the stored-side checks still run on the freshly loaded state, under the
+    lock, in :func:`_persist_played_resolved`.
+    """
+    out: list = []
+    for wb_idx, d_idx, s_idx, session_id in targets:
+        try:
+            src = week_plan["weeks"][wb_idx]["days"][d_idx]["sessions"][s_idx]
+        except (KeyError, IndexError, TypeError):
+            continue
+        if src.get("session_id") == session_id and src.get("resolved"):
+            out.append((wb_idx, d_idx, s_idx, session_id))
+    return out
+
+
 def _cache_completed_resolved(
     week_plan: dict,
     state: dict,
@@ -922,6 +945,9 @@ def get_week(
 
     # B120: persist resolved data for completed sessions so they survive cache
     # roundtrips and are never re-resolved with changed state (device switch).
+    # B399: only the sessions the resolver could resolve — with nothing to copy
+    # (a played custom session) the state is not reloaded and the lock not taken.
+    _to_cache = _resolvable_targets(week_plan, _to_cache) if _to_cache else []
     if _to_cache:
         _persist_played_resolved(
             week_plan, _to_cache, week_start_key, is_current_week, user_id
