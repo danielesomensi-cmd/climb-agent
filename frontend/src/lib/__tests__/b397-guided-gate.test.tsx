@@ -265,6 +265,91 @@ describe("B397 review — subscription gate with the real useSubscription", () =
 });
 
 // ---------------------------------------------------------------------------
+// Review round 2 — a FRESH session (just written by Start) is still the entry
+// point: gated on the server's own "no", never on a missing answer.
+// ---------------------------------------------------------------------------
+
+const FRESH = { currentIndex: 0, exercises: [ex("a"), ex("b"), ex("c")] };
+
+describe("B397 review round 2 — fresh session and the server's ruling", () => {
+  it("fresh session + the server's 'no' already in the cache: /subscribe", () => {
+    qc.setQueryData(queryKeys.subscriptionStatus, EXPIRED);
+    getSubscriptionStatus.mockResolvedValue(EXPIRED);
+    saveSession(KEY_A, FRESH);
+
+    render(page());
+
+    expect(router.replace).toHaveBeenLastCalledWith("/subscribe");
+  });
+
+  it("fresh session + the server's 'no' arriving after the load: /subscribe", async () => {
+    getSubscriptionStatus.mockResolvedValue(EXPIRED);
+    saveSession(KEY_A, FRESH);
+
+    render(page());
+
+    await waitFor(() => expect(router.replace).toHaveBeenLastCalledWith("/subscribe"));
+  });
+
+  it("fresh session + a 402 from the subscription endpoint: /subscribe", async () => {
+    getSubscriptionStatus.mockRejectedValue(new ApiError(402, "Payment required"));
+    saveSession(KEY_A, FRESH);
+
+    render(page());
+
+    await waitFor(() => expect(router.replace).toHaveBeenLastCalledWith("/subscribe"));
+  });
+
+  it("fresh session, offline with Clerk not loaded (no answer at all): it starts, no /subscribe", async () => {
+    setOnline(false);
+    clerk("booting");
+    storage.setItem("climb-agent-last-user", "user_A");
+    saveSession(KEY_A, FRESH);
+
+    render(page());
+    await settle();
+
+    expect(shownExercise()).toBe("a");
+    expect(sentToSubscribe()).toBe(false);
+  });
+
+  it("fresh session, Clerk loaded but the request fails in transport: it starts, no /subscribe", async () => {
+    getSubscriptionStatus.mockRejectedValue(new ApiError(0, "Network too slow"));
+    saveSession(KEY_A, FRESH);
+
+    render(page());
+    await waitFor(() => expect(getSubscriptionStatus).toHaveBeenCalled());
+    await settle();
+
+    expect(shownExercise()).toBe("a");
+    expect(sentToSubscribe()).toBe(false);
+  });
+
+  it("first exercise with sets already counted is a workout under way: no /subscribe", async () => {
+    getSubscriptionStatus.mockResolvedValue(EXPIRED);
+    saveSession(KEY_A, { currentIndex: 0, exercises: [ex("a", "pending", { completedSets: 2 }), ex("b"), ex("c")] });
+
+    render(page());
+    await waitFor(() => expect(getSubscriptionStatus).toHaveBeenCalled());
+    await settle();
+
+    expect(shownExercise()).toBe("a");
+    expect(sentToSubscribe()).toBe(false);
+  });
+
+  it("queued feedback (feedback_pending) is never gated, even with the server's 'no'", async () => {
+    getSubscriptionStatus.mockResolvedValue(EXPIRED);
+    saveSession(KEY_A, { ...FRESH, submitStatus: "feedback_pending", pendingFeedback: { log_version: "1" } });
+
+    render(page());
+    await waitFor(() => expect(getSubscriptionStatus).toHaveBeenCalled());
+    await settle();
+
+    expect(sentToSubscribe()).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // 3 — no /api/state GET before Clerk
 // ---------------------------------------------------------------------------
 

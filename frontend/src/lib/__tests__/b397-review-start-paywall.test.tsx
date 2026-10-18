@@ -1,0 +1,207 @@
+/**
+ * @vitest-environment jsdom
+ *
+ * B397 review (round 2) — "Start session" on /today is the paywall's entry
+ * point (B202). After the first review moved the guided gate behind the
+ * session load, a session Start had just written counted as "under way" and an
+ * expired account trained a whole session, then hit a 402 at Submit.
+ *
+ * A NEW session is blocked again, but only on the server's own "no"
+ * (`can_interact: false` in the cache, or a 402/403): a missing answer —
+ * offline at the crag, Clerk booting, a timeout — must never send a paying
+ * climber to /subscribe. Resume and the queued-feedback view are never blocked.
+ */
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+const { router, toast, ApiError } = vi.hoisted(() => {
+  class ApiError extends Error {
+    status: number;
+    constructor(status: number, message: string) {
+      super(message);
+      this.name = "ApiError";
+      this.status = status;
+    }
+  }
+  return {
+    router: { push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() },
+    toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), dismiss: vi.fn() }),
+    ApiError,
+  };
+});
+
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
+vi.mock("@clerk/nextjs", () => ({ useAuth: () => ({ isLoaded: true, isSignedIn: true }) }));
+vi.mock("sonner", () => ({ toast }));
+vi.mock("@/lib/api", () => ({
+  ApiError,
+  getSubscriptionStatus: vi.fn(),
+  removeExerciseFromSession: vi.fn(),
+  setSessionSurface: vi.fn(),
+  apiErrorDetail: vi.fn(),
+}));
+
+import { SessionCard } from "@/components/training/session-card";
+import { guidedStorageKey } from "@/lib/guided-session-utils";
+import { isServerDenied } from "@/lib/hooks/use-subscription";
+import { queryKeys } from "@/lib/query-keys";
+import type { SessionSlot } from "@/lib/types";
+
+class MemoryStorage {
+  private map = new Map<string, string>();
+  get length() { return this.map.size; }
+  key(i: number) { return Array.from(this.map.keys())[i] ?? null; }
+  getItem(k: string) { return this.map.get(k) ?? null; }
+  setItem(k: string, v: string) { this.map.set(k, String(v)); }
+  removeItem(k: string) { this.map.delete(k); }
+  clear() { this.map.clear(); }
+}
+
+const DATE = "2026-10-18";
+const SESSION_ID = "strength_long";
+const ACTIVE = { status: "active", is_active: true, trial_days_remaining: null, can_interact: true };
+const EXPIRED = { status: "expired", is_active: false, trial_days_remaining: null, can_interact: false };
+
+const session = {
+  session_id: SESSION_ID,
+  slot: "evening",
+  location: "gym",
+  status: "planned",
+  resolved: {
+    resolved_session: {
+      exercise_instances: [
+        { exercise_id: "max_hang", name: "Max hang", prescription: { sets: 3 } },
+        { exercise_id: "pull_up", name: "Pull up", prescription: { sets: 3 } },
+      ],
+    },
+  },
+} as unknown as SessionSlot;
+
+let qc: QueryClient;
+let key: string;
+
+function renderCard() {
+  return render(
+    <QueryClientProvider client={qc}>
+      <SessionCard session={session} date={DATE} onMove={() => {}} />
+    </QueryClientProvider>,
+  );
+}
+
+function tapStart(name: RegExp = /Start session/) {
+  act(() => {
+    fireEvent.click(screen.getByRole("button", { name }));
+  });
+}
+
+/** Put a refused subscription request in the cache, as a failed fetch leaves it. */
+async function cacheSubscriptionError(err: unknown) {
+  await qc
+    .fetchQuery({ queryKey: queryKeys.subscriptionStatus, queryFn: () => Promise.reject(err), retry: false })
+    .catch(() => {});
+}
+
+beforeEach(() => {
+  Object.defineProperty(window, "localStorage", { value: new MemoryStorage(), configurable: true });
+  (window as unknown as { Clerk: unknown }).Clerk = { loaded: true, user: { id: "user_1" } };
+  window.matchMedia = ((q: string) => ({
+    matches: false,
+    media: q,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+  })) as unknown as typeof window.matchMedia;
+  qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  key = guidedStorageKey(DATE, SESSION_ID);
+  vi.clearAllMocks();
+});
+
+afterEach(() => {
+  cleanup();
+  delete (window as unknown as { Clerk?: unknown }).Clerk;
+});
+
+describe("isServerDenied — a ruling, never a missing answer", () => {
+  it("is true only for can_interact:false or a 402/403", () => {
+    expect(isServerDenied(EXPIRED as never, null)).toBe(true);
+    expect(isServerDenied(ACTIVE as never, null)).toBe(false);
+    expect(isServerDenied(undefined, null)).toBe(false);
+    expect(isServerDenied(undefined, new ApiError(402, "x"))).toBe(true);
+    expect(isServerDenied(ACTIVE as never, new ApiError(403, "x"))).toBe(true);
+    // Transport failures and 401 (api.ts handles it with /sign-in) are not rulings.
+    expect(isServerDenied(undefined, new ApiError(0, "Network too slow"))).toBe(false);
+    expect(isServerDenied(undefined, new ApiError(401, "x"))).toBe(false);
+    expect(isServerDenied(undefined, new Error("offline"))).toBe(false);
+  });
+});
+
+describe("SessionCard Start — the paywall entry point", () => {
+  it("a new session with the server's 'no' in the cache goes to /subscribe and writes nothing", () => {
+    qc.setQueryData(queryKeys.subscriptionStatus, EXPIRED);
+    renderCard();
+    tapStart();
+    expect(router.push).toHaveBeenCalledWith("/subscribe");
+    expect(window.localStorage.getItem(key)).toBeNull();
+  });
+
+  it("a new session refused with a 402 goes to /subscribe", async () => {
+    await cacheSubscriptionError(new ApiError(402, "Payment required"));
+    renderCard();
+    tapStart();
+    expect(router.push).toHaveBeenCalledWith("/subscribe");
+    expect(window.localStorage.getItem(key)).toBeNull();
+  });
+
+  it("no answer at all (offline, Clerk booting): Start opens the player", () => {
+    renderCard();
+    tapStart();
+    expect(router.push).toHaveBeenCalledWith(`/guided/${DATE}/${SESSION_ID}`);
+    expect(router.push).not.toHaveBeenCalledWith("/subscribe");
+    expect(window.localStorage.getItem(key)).not.toBeNull();
+  });
+
+  it("a transport failure before any answer: Start opens the player", async () => {
+    await cacheSubscriptionError(new ApiError(0, "Network too slow"));
+    renderCard();
+    tapStart();
+    expect(router.push).toHaveBeenCalledWith(`/guided/${DATE}/${SESSION_ID}`);
+  });
+
+  it("an active subscription: Start opens the player", () => {
+    qc.setQueryData(queryKeys.subscriptionStatus, ACTIVE);
+    renderCard();
+    tapStart();
+    expect(router.push).toHaveBeenCalledWith(`/guided/${DATE}/${SESSION_ID}`);
+  });
+
+  it("a session under way still resumes, even with the server's 'no' (A245 C-1)", () => {
+    qc.setQueryData(queryKeys.subscriptionStatus, EXPIRED);
+    const saved = JSON.stringify({
+      version: 1, date: DATE, sessionId: SESSION_ID, sessionName: "Strength",
+      startedAt: new Date().toISOString(), currentIndex: 1,
+      exercises: [{ exerciseId: "max_hang", status: "done" }, { exerciseId: "pull_up", status: "pending" }],
+    });
+    window.localStorage.setItem(key, saved);
+    renderCard();
+    tapStart(/Resume · 1\/2/);
+    expect(router.push).toHaveBeenCalledWith(`/guided/${DATE}/${SESSION_ID}`);
+    expect(window.localStorage.getItem(key)).toBe(saved);
+  });
+
+  it("queued feedback still opens the pending view, even with the server's 'no'", () => {
+    qc.setQueryData(queryKeys.subscriptionStatus, EXPIRED);
+    const queued = JSON.stringify({
+      version: 1, date: DATE, sessionId: SESSION_ID, sessionName: "Strength",
+      startedAt: new Date().toISOString(), currentIndex: 1,
+      exercises: [{ exerciseId: "max_hang", status: "done" }, { exerciseId: "pull_up", status: "done" }],
+      submitStatus: "feedback_pending", pendingFeedback: { status: "done" },
+    });
+    window.localStorage.setItem(key, queued);
+    renderCard();
+    tapStart(/Waiting to sync/);
+    expect(router.push).toHaveBeenCalledWith(`/guided/${DATE}/${SESSION_ID}`);
+    expect(window.localStorage.getItem(key)).toBe(queued);
+  });
+});

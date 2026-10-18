@@ -25,7 +25,7 @@ import {
 } from "@/lib/guided-pending-feedback";
 import { applyStepUndo, closeStep, isWithinAdvanceGuard, type StepUndo } from "@/lib/guided-step-undo";
 import { unlockAudio, getAudioContext } from "@/lib/audio-unlock";
-import { useSubscription } from "@/lib/hooks/use-subscription";
+import { useServerDenied, useSubscription } from "@/lib/hooks/use-subscription";
 import { useSubmitLock } from "@/lib/hooks/use-submit-lock";
 import { useWakeLock } from "@/lib/hooks/use-wake-lock";
 import { useUserState } from "@/lib/hooks/use-state";
@@ -125,6 +125,17 @@ function rebaseDurationTest(
 // Page Component
 // ---------------------------------------------------------------------------
 
+/**
+ * B397 review (round 2) — a guided session as Start writes it: nothing done,
+ * nothing counted, not waiting for a feedback replay. Gated like the entry
+ * point it still is; anything past this is a workout under way (A245 C-1).
+ */
+function isFreshGuidedSession(state: GuidedSessionState | null): boolean {
+  if (!state || state.submitStatus) return false;
+  if (state.currentIndex !== 0) return false;
+  return state.exercises.every((ex) => ex.status === "pending" && !ex.completedSets);
+}
+
 export default function GuidedSessionPage() {
   const params = useParams();
   const router = useRouter();
@@ -132,6 +143,8 @@ export default function GuidedSessionPage() {
   const sessionId = params.sessionId as string;
   const qc = useQueryClient();
   const { canInteract, loading: subLoading } = useSubscription();
+  // B397 review (round 2) — the server's own "no", never a missing answer.
+  const serverDenied = useServerDenied();
   // B397 G1 — Clerk's answer, to confirm (or contradict) the user the session
   // was read for while Clerk was still booting.
   const { isLoaded: authLoaded, userId: authUserId } = useAuth();
@@ -261,11 +274,23 @@ export default function GuidedSessionPage() {
   //    (B202 still grants nothing — this only drops the redirect).
   // A cold hit on the URL with no saved session and a real deny still lands on
   // /subscribe (issued after the load effect's /today, so it is the last word).
+  //
+  // Review round 2 — `scopeRef` alone also waved through a session that /today's
+  // Start had JUST written (nothing done yet): with the server's "no" already
+  // in the cache an expired account trained a whole session, then hit a 402 at
+  // Submit and was told it would "sync later". A fresh session is still the
+  // entry point, so it is gated — but only on the server's ruling
+  // (`serverDenied`), never on a missing answer (offline, Clerk booting), and
+  // never once anything has been done (A245 C-1: no yanking mid-workout).
+  const freshSession = isFreshGuidedSession(state);
   useEffect(() => {
-    if (authLoaded && !subLoading && !canInteract && !sessionStarted && !scopeRef.current) {
-      router.replace("/subscribe");
+    if (!authLoaded) return;
+    if (!scopeRef.current) {
+      if (!subLoading && !canInteract && !sessionStarted) router.replace("/subscribe");
+      return;
     }
-  }, [authLoaded, canInteract, subLoading, sessionStarted, router]);
+    if (freshSession && serverDenied) router.replace("/subscribe");
+  }, [authLoaded, canInteract, subLoading, sessionStarted, freshSession, serverDenied, router]);
 
   /**
    * B397 G7 + review — the body weight's GET fallback, once Clerk is ready.

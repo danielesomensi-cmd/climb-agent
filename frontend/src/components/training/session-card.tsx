@@ -22,6 +22,7 @@ import {
 import { localToday } from "@/lib/key-sessions";
 import { scheduleIdle } from "@/lib/hooks/queries/use-week-plan";
 import { useOnline } from "@/lib/hooks/use-auth-wait";
+import { readServerDenied } from "@/lib/hooks/use-subscription";
 import { ChunkErrorBoundary } from "@/components/chunk-error-boundary";
 import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, RefreshCw, Mountain, Star, AlertTriangle, Loader2, RotateCcw, CloudOff } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -320,6 +321,7 @@ function handleStartGuided(
   session: SessionSlot,
   date: string,
   router: ReturnType<typeof useRouter>,
+  serverDenied = false,
 ): boolean {
   // Don't allow restarting a server-side completed session — the duration
   // would otherwise be reset and clobber the real value via the resubmit path.
@@ -343,6 +345,16 @@ function handleStartGuided(
   // B181: don't overwrite saved progress — resume instead.
   if (hasSavedProgress(date, session.session_id)) {
     router.push(guidedHref(date, session.session_id));
+    return true;
+  }
+
+  // B397 review (round 2) — a NEW session is the paywall's entry point
+  // (B202). Only the server's own "no" blocks it (`readServerDenied`): a
+  // missing answer — offline at the crag, Clerk still booting — lets Start
+  // through, and the server still refuses the feedback POST. Resume and the
+  // queued-feedback view above are never blocked (A245 C-1).
+  if (serverDenied) {
+    router.push("/subscribe");
     return true;
   }
 
@@ -896,7 +908,7 @@ export function SessionCard({
                 onClick={(e) => {
                   e.stopPropagation();
                   if (starting) return;
-                  if (handleStartGuided(session, date, router)) setStarting(true);
+                  if (handleStartGuided(session, date, router, readServerDenied(qc))) setStarting(true);
                 }}
               >
                 {starting ? (

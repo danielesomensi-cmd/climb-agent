@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useAuth } from "@clerk/nextjs";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, type QueryClient } from "@tanstack/react-query";
 import { ApiError, getSubscriptionStatus, type SubscriptionStatus } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
 import { useAuthWaitExpired } from "@/lib/hooks/use-auth-wait";
@@ -104,6 +104,41 @@ export function deriveSubscriptionResult(args: {
   if (data !== undefined) return mapResponse(data);
   if (isPending) return { ..._DENY, loading: true };
   return _DENY;
+}
+
+/**
+ * B397 review (round 2) — a RULING from the server, never a missing answer.
+ *
+ * `canInteract === false` mixes "the server said no" with "we could not ask"
+ * (offline, Clerk still booting, a timeout before the first answer). The gate
+ * on a NEW guided session must only fire on the first: blocking on the second
+ * sends a paying climber at the crag to /subscribe. So this is true only when
+ * the cached answer says `can_interact: false`, or the request was refused
+ * with 402/403. (401 is not here: api.ts already sends that to /sign-in.)
+ */
+export function isServerDenied(data: SubscriptionStatus | undefined, error: unknown): boolean {
+  if (error instanceof ApiError && (error.status === 402 || error.status === 403)) return true;
+  return data?.can_interact === false;
+}
+
+/** B397 review (round 2) — `isServerDenied` on what the cache holds right now (for click handlers). */
+export function readServerDenied(qc: QueryClient): boolean {
+  const q = qc.getQueryState<SubscriptionStatus>(queryKeys.subscriptionStatus);
+  return isServerDenied(q?.data, q?.error);
+}
+
+/**
+ * B397 review (round 2) — `isServerDenied` as React state. A passive observer
+ * (`enabled: false`): it never asks the server itself, it only follows the
+ * answer `useSubscription` puts in the shared cache.
+ */
+export function useServerDenied(): boolean {
+  const q = useQuery({
+    queryKey: queryKeys.subscriptionStatus,
+    queryFn: getSubscriptionStatus,
+    enabled: false,
+  });
+  return isServerDenied(q.data, q.error);
 }
 
 /**
