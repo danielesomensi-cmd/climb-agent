@@ -26,8 +26,26 @@ export interface ClosedStep {
 }
 
 /**
- * Close exercise `index` with `updates`, then move to the next one (or stay on
- * it and open the summary when it was the last).
+ * B397 review — where the player goes after closing exercise `index`: the
+ * first exercise still pending after it, else the first one still pending
+ * anywhere; -1 when none is left (the summary).
+ *
+ * It used to be plain `index + 1`. From the summary, "Change" on an exercise
+ * followed by Done then landed on the NEXT exercise — already closed — instead
+ * of back on the summary, one more Done away from overwriting its log. In the
+ * usual front-to-back run the next exercise is the first pending one after
+ * `index`, so that flow is unchanged.
+ */
+export function nextPendingIndex(exercises: GuidedExercise[], index: number): number {
+  for (let i = index + 1; i < exercises.length; i++) {
+    if (exercises[i].status === "pending") return i;
+  }
+  return exercises.findIndex((ex, i) => i !== index && ex.status === "pending");
+}
+
+/**
+ * Close exercise `index` with `updates`, then move to the next exercise still
+ * pending (or stay on it and open the summary when none is left).
  *
  * `extra` may rewrite later exercises (B128: a finished max test re-bases the
  * duration test's suggestion). Whatever it touches is captured in the undo
@@ -43,8 +61,8 @@ export function closeStep(
   exercises[index] = { ...exercises[index], ...updates };
   if (extra) exercises = extra(exercises);
 
-  const nextIndex = index + 1;
-  const openedSummary = nextIndex >= exercises.length;
+  const nextIndex = nextPendingIndex(exercises, index);
+  const openedSummary = nextIndex < 0;
   const next: GuidedSessionState = {
     ...state,
     exercises,

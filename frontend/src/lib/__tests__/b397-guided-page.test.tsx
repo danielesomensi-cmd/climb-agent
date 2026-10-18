@@ -327,6 +327,41 @@ describe("G6 — finish early and the summary", () => {
     fireEvent.click(screen.getByRole("button", { name: "Change c" }));
     expect(shownExercise()).toBe("c");
   });
+
+  // B397 review — Done after "Change" used to land on the next exercise,
+  // already closed, instead of going back to the summary.
+  it("Change a → Done → back on the summary, and Undo still reopens a as it was", async () => {
+    saveSession(KEY_A, { exercises: [ex("a", "done"), ex("b", "done"), ex("c", "skipped")] });
+    render(page());
+    expect(screen.getByText("Submit & finish")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Change a" }));
+    expect(shownExercise()).toBe("a");
+
+    fireEvent.click(screen.getByText("Done"));
+    expect(shownExercise()).toBeNull();
+    expect(screen.getByText("Submit & finish")).toBeTruthy();
+    await waitFor(() => expect(stored(KEY_A).exercises[0].feedbackLabel).toBe("ok"));
+    // b was not touched by a second Done.
+    expect(stored(KEY_A).exercises[1]).toMatchObject({ status: "done", feedbackLabel: null });
+
+    act(() => lastToast(/^Done: a$/)!.action!.onClick());
+    expect(shownExercise()).toBe("a");
+    await waitFor(() => expect(stored(KEY_A).exercises[0].feedbackLabel).toBeNull());
+    expect(stored(KEY_A).currentIndex).toBe(0);
+  });
+
+  it("Change a → Skip with c still pending → straight to c, over the closed b", () => {
+    saveSession(KEY_A, { exercises: [ex("a", "done"), ex("b", "done"), ex("c")] });
+    render(page());
+    fireEvent.click(screen.getByText("Finish session early"));
+    fireEvent.click(screen.getByText("Finish now"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Change a" }));
+    fireEvent.click(screen.getByText("Skip"));
+    expect(shownExercise()).toBe("c");
+    expect(stored(KEY_A).exercises[1]).toMatchObject({ status: "done", feedbackLabel: null });
+  });
 });
 
 // ---------------------------------------------------------------------------

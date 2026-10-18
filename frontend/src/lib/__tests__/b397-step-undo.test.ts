@@ -4,6 +4,7 @@ import {
   applyStepUndo,
   closeStep,
   isWithinAdvanceGuard,
+  nextPendingIndex,
 } from "@/lib/guided-step-undo";
 import type { GuidedExercise, GuidedSessionState } from "@/lib/types";
 
@@ -51,11 +52,56 @@ describe("closeStep — Done / Skip", () => {
     expect(s.exercises[0].status).toBe("pending");
   });
 
-  it("on the last exercise stays put and opens the summary", () => {
-    const s = session([ex("a"), ex("b")], 1);
+  it("on the last exercise, with nothing left pending, stays put and opens the summary", () => {
+    const s = session([ex("a", { status: "done" }), ex("b")], 1);
     const { next, openedSummary } = closeStep(s, 1, { status: "skipped", feedbackLabel: null });
     expect(next.currentIndex).toBe(1);
     expect(openedSummary).toBe(true);
+  });
+
+  // B397 review — from the summary, "Change" reopens a closed exercise: Done
+  // must not land on the next one, already closed.
+  it("Change from the summary, then Done, with nothing left pending: back to the summary", () => {
+    const s = session([ex("a", { status: "done" }), ex("b", { status: "done" }), ex("c", { status: "skipped" })], 0);
+    const { next, openedSummary } = closeStep(s, 0, { status: "done", feedbackLabel: "hard" });
+    expect(openedSummary).toBe(true);
+    expect(next.currentIndex).toBe(0);
+    expect(next.exercises[0].feedbackLabel).toBe("hard");
+  });
+
+  it("Change, then Skip, skips over closed exercises to the first one still pending", () => {
+    const s = session([ex("a", { status: "done" }), ex("b", { status: "done" }), ex("c"), ex("d")], 0);
+    const { next, openedSummary } = closeStep(s, 0, { status: "skipped", feedbackLabel: null });
+    expect(openedSummary).toBe(false);
+    expect(next.currentIndex).toBe(2);
+  });
+
+  it("with nothing pending after it, goes back to the first exercise still pending", () => {
+    // Jumped ahead with the progress dots: b is still to do.
+    const s = session([ex("a", { status: "done" }), ex("b"), ex("c")], 2);
+    const { next, openedSummary } = closeStep(s, 2, { status: "done", feedbackLabel: "ok" });
+    expect(openedSummary).toBe(false);
+    expect(next.currentIndex).toBe(1);
+  });
+
+  it("the usual front-to-back run is unchanged: always the next exercise", () => {
+    let s = session([ex("a"), ex("b"), ex("c")]);
+    const seen: number[] = [];
+    for (let i = 0; i < 3; i++) {
+      const step = closeStep(s, s.currentIndex, { status: i === 1 ? "skipped" : "done", feedbackLabel: null });
+      s = step.next;
+      seen.push(step.openedSummary ? -1 : s.currentIndex);
+    }
+    expect(seen).toEqual([1, 2, -1]);
+  });
+});
+
+describe("nextPendingIndex", () => {
+  it("first pending after the index, else the first pending anywhere, else -1", () => {
+    const list = [ex("a"), ex("b", { status: "done" }), ex("c"), ex("d", { status: "skipped" })];
+    expect(nextPendingIndex(list, 0)).toBe(2);
+    expect(nextPendingIndex(list, 2)).toBe(0);
+    expect(nextPendingIndex([ex("a", { status: "done" }), ex("b", { status: "skipped" })], 0)).toBe(-1);
   });
 });
 
@@ -113,13 +159,23 @@ describe("applyStepUndo", () => {
   });
 
   it("Undo after the last step leaves the summary for that exercise", () => {
-    const s = session([ex("a"), ex("b")], 1);
+    const s = session([ex("a", { status: "done" }), ex("b")], 1);
     const { next, undo, openedSummary } = closeStep(s, 1, { status: "done", feedbackLabel: "easy" });
     expect(openedSummary).toBe(true);
 
     const back = applyStepUndo(next, undo);
     expect(back.currentIndex).toBe(1);
     expect(back.exercises[1].status).toBe("pending");
+  });
+
+  it("Undo of a Done reached through \"Change\" restores that exercise's earlier log", () => {
+    const s = session([ex("a", { status: "done", feedbackLabel: "easy", usedLoadKg: 20 }), ex("b", { status: "done" })], 0);
+    const { next, undo, openedSummary } = closeStep(s, 0, { status: "done", feedbackLabel: "hard", usedLoadKg: 25 });
+    expect(openedSummary).toBe(true);
+
+    const back = applyStepUndo(next, undo);
+    expect(back.currentIndex).toBe(0);
+    expect(back.exercises[0]).toEqual(s.exercises[0]);
   });
 
   it("never rewrites a session already submitted or queued", () => {
