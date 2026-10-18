@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import { getOutdoorSpots, addOutdoorSpot } from "@/lib/api";
+import { queryKeys } from "@/lib/query-keys";
 import type { OutdoorSpot } from "@/lib/types";
 import { formatDateShort } from "@/lib/format";
 
@@ -88,6 +90,7 @@ export function ReplanDialog({
   onClose,
   onApply,
 }: ReplanDialogProps) {
+  const qc = useQueryClient();
   const [location, setLocation] = useState<string>("gym");
   const [intent, setIntent] = useState<string>("rest");
   // B360 — picker falesia (stesso blocco di quick-add-dialog.tsx)
@@ -116,6 +119,13 @@ export function ReplanDialog({
         discipline: newSpotDiscipline,
       });
       const spot = result.spot as OutdoorSpot;
+      // B398 (O11) review — the spot also joins the cached list that /settings
+      // and the outdoor log read (fresh for 5 minutes since B398): without
+      // this it was missing there until the cache went stale. Only when the
+      // list is cached: seeding it with this one spot would hide the others.
+      qc.setQueryData<{ spots: OutdoorSpot[] }>(queryKeys.outdoorSpots, (old) =>
+        old ? { spots: [...old.spots, spot] } : old,
+      );
       setSpots((prev) => [...prev, spot]);
       setSelectedSpot(spot);
       setAddingSpot(false);
