@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { LazyWhenOpen } from "@/components/lazy-when-open";
 import Link from "next/link";
@@ -17,6 +17,7 @@ import { useStateStatus } from "@/lib/hooks/queries/use-user-state";
 import { useCatalogSessions } from "@/lib/hooks/queries/use-catalog";
 import { generateMacrocycle, getWeek } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
+import { scheduleIdle } from "@/lib/hooks/queries/use-week-plan";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -86,6 +87,15 @@ export default function PlanPage() {
   const [staleDismissed, setStaleDismissed] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [regenDialogOpen, setRegenDialogOpen] = useState(false);
+  // B398 review (round 3) — the regen sheet mounts on its first open
+  // (LazyWhenOpen): warm its chunk while idle and online, so the service
+  // worker has it before the athlete needs it offline.
+  useEffect(() => {
+    if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+    return scheduleIdle(() => {
+      void import("@/components/training/regenerate-plan-sheet").catch(() => undefined);
+    });
+  }, []);
   const [regenError, setRegenError] = useState<string | null>(null);
 
   const macrocycle = state?.macrocycle ?? null;

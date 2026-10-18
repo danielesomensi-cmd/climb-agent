@@ -10,7 +10,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, cleanup, act } from "@testing-library/react";
-import { Component, lazy, Suspense, type ReactNode } from "react";
+import { Component, lazy, Suspense, useState, type ReactNode } from "react";
 
 const { toast } = vi.hoisted(() => ({
   toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), dismiss: vi.fn() }),
@@ -106,5 +106,34 @@ describe("LazyWhenOpen", () => {
     expect(toast).toHaveBeenCalledWith(CHUNK_RELOAD_MESSAGE, expect.objectContaining({ action: expect.anything() }));
     expect(screen.queryByText("Page replaced by the error boundary")).toBeNull();
     expect(screen.getByText("Plan page")).toBeTruthy();
+  });
+
+  // Review round 3 — the failed boundary used to stay mounted: the second open
+  // showed nothing, said nothing, and left `open` stuck at true.
+  it("after a failed open, the next open fails the same way: closed again, toast again", async () => {
+    const { Dialog } = lazyDialog("missing");
+    function Harness() {
+      const [open, setOpen] = useState(false);
+      return (
+        <RouteRoot>
+          <span data-testid="open-state">{String(open)}</span>
+          <button onClick={() => setOpen(true)}>Regenerate</button>
+          <LazyWhenOpen open={open} onFail={() => setOpen(false)}>
+            <Dialog open={open} />
+          </LazyWhenOpen>
+        </RouteRoot>
+      );
+    }
+    render(<Harness />);
+    await act(async () => { screen.getByText("Regenerate").click(); });
+    await flush();
+    expect(screen.getByTestId("open-state").textContent).toBe("false");
+    expect(toast).toHaveBeenCalledTimes(1);
+
+    await act(async () => { screen.getByText("Regenerate").click(); });
+    await flush();
+    expect(screen.getByTestId("open-state").textContent).toBe("false");
+    expect(toast).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText("Page replaced by the error boundary")).toBeNull();
   });
 });

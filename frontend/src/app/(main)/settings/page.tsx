@@ -8,6 +8,7 @@ import Link from "next/link";
 import { TopBar } from "@/components/layout/top-bar";
 import { ChunkErrorBoundary } from "@/components/chunk-error-boundary";
 import { LazyWhenOpen } from "@/components/lazy-when-open";
+import { useOnline } from "@/lib/hooks/use-auth-wait";
 import { useUserState } from "@/lib/hooks/use-state";
 import { hrMaxFromState } from "@/lib/hr-zones";
 import { scheduleIdle, useWeekPlan } from "@/lib/hooks/queries/use-week-plan";
@@ -78,6 +79,13 @@ function EditorPlaceholder() {
 function preloadInlineEditors() {
   void import("@/components/settings/availability-editor").catch(() => undefined);
   void import("@/components/settings/equipment-editor").catch(() => undefined);
+  // Review round 3 — the dialogs now mount on their first open (LazyWhenOpen):
+  // warm their chunks too, so the service worker has them before they are
+  // needed (and the regen sheet is not fetched only after a goal PUT).
+  void import("@/components/settings/goal-editor").catch(() => undefined);
+  void import("@/components/settings/profile-assessment-editor").catch(() => undefined);
+  void import("@/components/training/regenerate-plan-sheet").catch(() => undefined);
+  void import("@/components/settings/start-new-macrocycle-dialog").catch(() => undefined);
 }
 /**
  * Review round 2 — the failure lasts for the life of the page (React.lazy and
@@ -85,12 +93,21 @@ function preloadInlineEditors() {
  * installed iOS PWA has no reload button: the note carries one.
  */
 function EditorUnavailableNote() {
+  // Review round 3 — offline a reload cannot fetch the chunk: no button then
+  // (like the shared toast); it appears as soon as the connection is back.
+  const online = useOnline();
   return (
     <div role="alert" className="mt-2 flex items-center justify-between gap-2 px-1 text-xs text-destructive">
-      <span>The editor couldn&apos;t load. Reload the app (online) to use it.</span>
-      <Button size="sm" variant="outline" className="min-h-[36px]" onClick={() => window.location.reload()}>
-        Reload
-      </Button>
+      <span>
+        {online
+          ? "The editor couldn\u2019t load. Reload the app to use it."
+          : "The editor needs a connection. Reload the app once you\u2019re back online."}
+      </span>
+      {online && (
+        <Button size="sm" variant="outline" className="min-h-[36px]" onClick={() => window.location.reload()}>
+          Reload
+        </Button>
+      )}
     </div>
   );
 }

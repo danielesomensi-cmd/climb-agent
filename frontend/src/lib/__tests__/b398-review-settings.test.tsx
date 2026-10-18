@@ -235,6 +235,20 @@ describe("B398 O8 review — the inline editors' chunks", () => {
     expect(section(sectionId).getByRole("button", { name: "Edit" })).toBeTruthy();
   });
 
+  // Review round 3 — offline a reload cannot fetch the chunk: no Reload button then.
+  it("offline, the note says it needs a connection and offers no Reload", async () => {
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    try {
+      chunks.availabilityMissing = true;
+      await renderSettings();
+      await tapEdit("sec-availability");
+      expect(section("sec-availability").getByRole("alert").textContent).toMatch(/needs a connection/i);
+      expect(section("sec-availability").queryByRole("button", { name: "Reload" })).toBeNull();
+    } finally {
+      Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
+    }
+  });
+
   it("opens the editor when its chunk loads", async () => {
     await renderSettings();
     await tapEdit("sec-availability");

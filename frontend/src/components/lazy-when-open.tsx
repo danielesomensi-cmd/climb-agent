@@ -33,6 +33,11 @@ export function LazyWhenOpen({
   return (
     <ChunkErrorBoundary
       onError={() => {
+        // Review round 3 — unmount the failed boundary too: kept mounted it
+        // rendered nothing on the next open and said nothing, and `open`
+        // stayed true. Remounted on the next open, it surfaces the (still
+        // rejected) import again: closed again, toast again.
+        setMounted(false);
         onFail();
         notifyChunkLoadFailure();
       }}
