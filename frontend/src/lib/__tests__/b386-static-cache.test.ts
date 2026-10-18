@@ -29,7 +29,8 @@ describe("service worker — version-agnostic caches", () => {
   });
 
   it("does not purge the agnostic caches on activate", () => {
-    expect(SW).toMatch(/new Set\(\[CACHE_NAME, STATIC_CACHE_NAME, IMAGE_CACHE_NAME\]\)/);
+    // B396 added the Clerk scripts' cache to the survivors.
+    expect(SW).toMatch(/new Set\(\[CACHE_NAME, STATIC_CACHE_NAME, IMAGE_CACHE_NAME, CLERK_CACHE_NAME\]\)/);
   });
 
   it("serves /_next/static/* from the agnostic cache, before the per-build branch", () => {

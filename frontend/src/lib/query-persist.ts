@@ -119,8 +119,26 @@ async function resolveIdentity(): Promise<Identity> {
   return { known: false, userId: lastKnownUserId() };
 }
 
+/**
+ * B396 — the persister used to stringify ~100 KB and call the synchronous
+ * `localStorage.setItem` on EVERY cache event: 5-10 times per tap, guided
+ * session included. Writes are now throttled to one per PERSIST_THROTTLE_MS
+ * (the first one immediately, the latest snapshot at the end of the window),
+ * and flushed right away when the page is hidden — iOS gives no other warning
+ * before it kills the PWA.
+ */
+export const PERSIST_THROTTLE_MS = 1000;
+
+/**
+ * Bumped by every purge. A throttled write scheduled before a purge (sign-out,
+ * account switch) must never land after it and resurrect the previous user's
+ * payload, so each pending write remembers the generation it was made in.
+ */
+let purgeGeneration = 0;
+
 /** Wipe the persisted cache. Called on sign-out and on any user mismatch. */
 export function purgePersistedCache(): void {
+  purgeGeneration += 1;
   if (typeof window === "undefined") return;
   try {
     window.localStorage.removeItem(STORAGE_KEY);
@@ -129,7 +147,49 @@ export function purgePersistedCache(): void {
   }
 }
 
+type PendingWrite = { userId: string; client: PersistedClient; generation: number };
+
+function writeEnvelope({ userId, client }: PendingWrite): void {
+  try {
+    const payload = JSON.stringify({ userId, client } satisfies Envelope);
+    if (payload.length > MAX_BYTES) {
+      console.warn(
+        `[query-persist] cache ${payload.length}B over the ${MAX_BYTES}B guard — not persisted`,
+      );
+      return;
+    }
+    window.localStorage.setItem(STORAGE_KEY, payload);
+  } catch (err) {
+    console.warn("[query-persist] persist failed:", err);
+  }
+}
+
 export function createPersister(): Persister {
+  // B396 — throttle state (see PERSIST_THROTTLE_MS).
+  let lastWriteAt = -Infinity;
+  let pending: PendingWrite | null = null;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+
+  const flush = () => {
+    if (timer !== null) {
+      clearTimeout(timer);
+      timer = null;
+    }
+    const job = pending;
+    pending = null;
+    // Dropped if a purge happened after it was scheduled.
+    if (!job || job.generation !== purgeGeneration) return;
+    writeEnvelope(job);
+    lastWriteAt = Date.now();
+  };
+
+  if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+    window.addEventListener("pagehide", flush);
+    window.addEventListener("visibilitychange", () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") flush();
+    });
+  }
+
   return {
     persistClient(client: PersistedClient) {
       // B292b: fall back to the remembered id so a cache written while offline
@@ -138,17 +198,16 @@ export function createPersister(): Persister {
       // No identified user at all → persisting would produce a payload we could
       // never safely attribute on restore.
       if (!userId) return;
-      try {
-        const payload = JSON.stringify({ userId, client } satisfies Envelope);
-        if (payload.length > MAX_BYTES) {
-          console.warn(
-            `[query-persist] cache ${payload.length}B over the ${MAX_BYTES}B guard — not persisted`,
-          );
-          return;
-        }
-        window.localStorage.setItem(STORAGE_KEY, payload);
-      } catch (err) {
-        console.warn("[query-persist] persist failed:", err);
+      // The owner is fixed NOW, with the data it describes — not at flush time,
+      // when a different user may already be signed in.
+      pending = { userId, client, generation: purgeGeneration };
+      const sinceLast = Date.now() - lastWriteAt;
+      if (timer === null && sinceLast >= PERSIST_THROTTLE_MS) {
+        flush();
+        return;
+      }
+      if (timer === null) {
+        timer = setTimeout(flush, Math.max(0, PERSIST_THROTTLE_MS - sinceLast));
       }
     },
 
@@ -183,17 +242,30 @@ export function createPersister(): Persister {
     },
 
     removeClient() {
+      pending = null;
       purgePersistedCache();
     },
   };
 }
 
 /**
- * Only `state` and `week` are worth persisting: they are what /today and /week
- * render. Everything else (catalog, coach history, subscription, reports) is
- * either large, sensitive, or meaningless without a connection.
+ * `state` and `week` are what /today and /week render (and what makes the PWA
+ * usable offline). Everything else (catalog, coach history, subscription,
+ * reports) is either large, sensitive, or meaningless without a connection —
+ * `subscription` in particular must NEVER be here: a cold open always asks the
+ * server before granting anything (B202).
+ *
+ * B396 — plus the three small /today cards: the daily quote, the daily tip and
+ * the milestones. Not persisted, each cold open re-asked for all three — three
+ * requests, and three full reads of the user state server side, competing with
+ * state and week on the single backend process. Restored, they are served from
+ * the device while still inside their own staleTime (24 h / 1 h / 5 min). They
+ * carry no gcTime ≥ PERSIST_MAX_AGE_MS on purpose: they are not needed
+ * offline, so being evicted from the persisted copy costs only a request.
+ * Their consumers keep the cache in step with what the user did (tip
+ * dismissed, milestone seen), so a restored copy never re-shows either.
  */
-export const PERSISTED_QUERY_PREFIXES = ["state", "week"];
+export const PERSISTED_QUERY_PREFIXES = ["state", "week", "quotes", "tips", "milestones"];
 
 /**
  * A plan older than a week is not worth showing offline — the server copy is

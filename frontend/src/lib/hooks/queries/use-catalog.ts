@@ -24,6 +24,10 @@ export function useCatalogExercises(enabled = true) {
     queryKey: queryKeys.catalogExercises,
     queryFn: getExercises,
     staleTime: Infinity,
+    // B396 — the "Add exercise" dialog reads it only while open: with the
+    // default 5-minute gcTime the ~100 KB catalog was evicted between two
+    // opens and downloaded again. Immutable at runtime, so keep it.
+    gcTime: Infinity,
     enabled,
   });
 }

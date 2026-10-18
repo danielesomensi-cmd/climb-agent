@@ -34,6 +34,26 @@ const IMAGE_CACHE_NAME = "climb-agent-images-v1";
 const IMAGE_CACHE_MAX_ENTRIES = 120;
 const IMAGE_REVALIDATE_MS = 7 * 24 * 60 * 60 * 1000;
 
+// B396 — Clerk's scripts (clerk-js, @clerk/ui). They come from Clerk's own
+// domain as `/npm/@clerk/<pkg>@<major>/dist/*.js`, each behind a no-store
+// redirect to the current release, and the app waits for them before it can
+// ask the API anything. They used to fall into the per-build cache below, so
+// every deploy threw them away: ~130 KB br plus a redirect per script on the
+// critical path of the first open after each deploy.
+//
+// Their own version-agnostic cache now, served from cache and refreshed in the
+// background once the copy is older than CLERK_REVALIDATE_MS: a Clerk release
+// reaches the device within a day (the per-build copy lived until the next
+// deploy — weeks, if none came).
+//
+// Only CORS responses are stored. Clerk loads both scripts with
+// crossorigin="anonymous" (@clerk/shared loadScript, @clerk/nextjs script
+// tags), so a real answer is never opaque; the `type` check guarantees it in
+// any case — an opaque response hides its status, an error page would look
+// exactly like the script.
+const CLERK_CACHE_NAME = "climb-agent-clerk-v1";
+const CLERK_REVALIDATE_MS = 24 * 60 * 60 * 1000;
+
 // A245 B-1 (F1) — the precache used to be just ["/", "/manifest.json"], so a
 // cold start with no network could not reach any real screen.
 //
@@ -94,7 +114,7 @@ self.addEventListener("activate", (event) => {
       // (including the pre-B386 per-build `climb-agent-<sha>-images`). The two
       // version-agnostic caches survive by name.
       const keys = await caches.keys();
-      const keep = new Set([CACHE_NAME, STATIC_CACHE_NAME, IMAGE_CACHE_NAME]);
+      const keep = new Set([CACHE_NAME, STATIC_CACHE_NAME, IMAGE_CACHE_NAME, CLERK_CACHE_NAME]);
       await Promise.all(keys.filter((k) => !keep.has(k)).map((k) => caches.delete(k)));
       // Take control of all open PWA clients without requiring a reload.
       await self.clients.claim();
@@ -202,6 +222,51 @@ async function hashedStaticCacheFirst(request) {
   return fetchAndStore(STATIC_CACHE_NAME, request, STATIC_CACHE_MAX_ENTRIES);
 }
 
+/** B396 — a Clerk script on Clerk's domain (see CLERK_CACHE_NAME). */
+function isClerkScript(url) {
+  return (
+    url.origin !== self.location.origin &&
+    url.pathname.startsWith("/npm/@clerk/") &&
+    url.pathname.endsWith(".js")
+  );
+}
+
+/** B396 — only a successful, NON-opaque cross-origin answer may be stored. */
+function isStorableCorsResponse(response) {
+  return response.ok && response.type === "cors";
+}
+
+/**
+ * B396 — when a Clerk script was stored. Kept in a side entry of the same
+ * cache because the CORS response does not expose its `Date` header (not
+ * CORS-safelisted), and the stored script itself is kept byte-for-byte as
+ * Clerk served it.
+ */
+function clerkStoredAtKey(request) {
+  return request.url + (request.url.includes("?") ? "&" : "?") + "sw-stored-at";
+}
+
+async function fetchAndStoreClerkScript(cache, request) {
+  const response = await fetch(request);
+  if (isStorableCorsResponse(response)) {
+    await cache.put(request, response.clone());
+    await cache.put(clerkStoredAtKey(request), new Response(String(Date.now())));
+  }
+  return response;
+}
+
+async function clerkScriptCache(event, request) {
+  const cache = await caches.open(CLERK_CACHE_NAME);
+  const cached = await cache.match(request);
+  if (!cached) return fetchAndStoreClerkScript(cache, request);
+  const meta = await cache.match(clerkStoredAtKey(request));
+  const storedAt = meta ? Number(await meta.text()) : NaN;
+  if (!Number.isFinite(storedAt) || Date.now() - storedAt > CLERK_REVALIDATE_MS) {
+    event.waitUntil(fetchAndStoreClerkScript(cache, request).catch(() => {}));
+  }
+  return cached;
+}
+
 /**
  * A286 E2 — navigazioni stale-while-revalidate, ma SOLO su queste route.
  *
@@ -252,6 +317,15 @@ self.addEventListener("fetch", (event) => {
       hashedStaticCacheFirst(request).catch(() =>
         caches.match(request).then((c) => c || Response.error())
       )
+    );
+    return;
+  }
+
+  // B396 — Clerk's scripts: own version-agnostic cache, before the per-build
+  // branch below (their `.js` would match it and be purged on every deploy).
+  if (isClerkScript(url)) {
+    event.respondWith(
+      clerkScriptCache(event, request).catch(() => fetch(request))
     );
     return;
   }

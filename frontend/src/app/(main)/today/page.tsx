@@ -2,8 +2,7 @@
 
 import dynamic from "next/dynamic";
 
-import { Suspense, useEffect, useState, useCallback, useMemo } from "react";
-import { StartNewMacrocycleDialog } from "@/components/settings/start-new-macrocycle-dialog";
+import { Suspense, useEffect, useLayoutEffect, useState, useCallback, useMemo } from "react";
 import { useCanStartNewCycle } from "@/lib/hooks/use-can-start-new-cycle";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
@@ -28,6 +27,9 @@ const QuickAddDialog = dynamic(() => import("@/components/training/quick-add-dia
 const ReplanDialog = dynamic(() => import("@/components/training/replan-dialog").then((m) => m.ReplanDialog), { ssr: false });
 const MoveSessionDialog = dynamic(() => import("@/components/training/move-session-dialog").then((m) => m.MoveSessionDialog), { ssr: false });
 const GymPickerDialog = dynamic(() => import("@/components/training/gym-picker-dialog").then((m) => m.GymPickerDialog), { ssr: false });
+// B396 — opens only at the end of a cycle: no reason to ship it in every
+// /today first load (it was a static import).
+const StartNewMacrocycleDialog = dynamic(() => import("@/components/settings/start-new-macrocycle-dialog").then((m) => m.StartNewMacrocycleDialog), { ssr: false });
 import { WeeklyCheckinCard } from "@/components/training/weekly-checkin-card";
 import { TestReminderCard } from "@/components/training/test-reminder-card";
 import { WeekProgressBar } from "@/components/training/week-progress-bar";
@@ -35,7 +37,10 @@ import { TodaySkeleton } from "@/components/training/today-skeleton";
 import { ApiError, apiErrorDetail, applyEvents, checkKeyConflicts, postFeedback, applyOverride, quickAddSession,
   getOutdoorSpots, getOutdoorLogByDate, deleteFreeSession, getPitchLadder, setOutdoorPlan } from "@/lib/api";
 import { STALE_PLAN_MESSAGE } from "@/lib/plan-revision";
-import { useSubscription } from "@/lib/hooks/use-subscription";
+import { useSubscription, paywallDecision } from "@/lib/hooks/use-subscription";
+import { useAuthWaitExpired, useOnline } from "@/lib/hooks/use-auth-wait";
+import { behindWeekNotice, isCachedWeekStale, updatedAtLabel } from "@/lib/week-freshness";
+import { GUIDED_PROGRESS_EVENT, discardSavedSession, isResumableOnCard } from "@/lib/guided-resume";
 import { useUserState, useWeekPlan, useDailyQuote, useOutdoorDoneDays } from "@/lib/hooks/queries";
 import { useFreeSessionsForDates } from "@/lib/hooks/queries/use-free-session";
 import { useWeekEvents } from "@/lib/hooks/use-week-events";
@@ -63,8 +68,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { getInProgressSession, clearSavedSession, type InProgressSession } from "@/lib/guided-session-utils";
+import { getInProgressSession, type InProgressSession } from "@/lib/guided-session-utils";
 import { usePendingGuidedFeedback } from "@/lib/guided-pending-feedback";
+import { Play } from "lucide-react";
 import { getBoulderPhaseTip } from "@/lib/boulder-phase-tips";
 import type { WeekPlan, DayPlan, OutdoorSpot, OutdoorSession, OutdoorDayType, OutdoorPitchLadder, KeyStatus, KeyProposal, SessionPain, LimitProblemDraft } from "@/lib/types";
 import { boulderGradeSystemOf } from "@/lib/gradeUtils";
@@ -127,7 +133,7 @@ function TodayContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isLoaded: authReady } = useAuth();
-  const { canInteract } = useSubscription();
+  const subscription = useSubscription();
   const dateParam = searchParams.get("date");
   const targetDate = dateParam || todayISO();
   const isViewingToday = targetDate === todayISO();
@@ -145,20 +151,43 @@ function TodayContent() {
   const weekQuery = useWeekPlan(0, authReady);
   /** True when Clerk answered. False offline — "we could not ask", not "no one". */
   const identityKnown = authReady;
+  /**
+   * B396 — false while Clerk is still loading on a working connection (a
+   * reload, a deep link): that is "loading", not "offline". True once we have
+   * stopped waiting (the browser is offline, or Clerk never came up).
+   */
+  const authWaitExpired = useAuthWaitExpired(authReady);
+  const online = useOnline();
+  const waitingForAuth = !identityKnown && !authWaitExpired;
 
-  const weekPlan: WeekPlan | null = weekQuery.data?.week_plan ?? null;
-  const phaseId: string | null = weekQuery.data?.phase_id ?? null;
+  /**
+   * B396 — week(0) persists for up to 7 days, so on Monday the cache holds
+   * LAST week. Read as this week, it has no today and no later day: the page
+   * said "No sessions planned this week — review availability" until the GET
+   * answered, and forever offline. A copy from an earlier week is never shown
+   * as the current one: skeleton while this week's is on its way, an honest
+   * notice when it cannot come (see lib/week-freshness — what the server
+   * answers THIS week, paused or ended plans included, is shown as before).
+   */
+  const weekBehind = isCachedWeekStale(weekQuery.data?.week_plan, weekQuery.dataUpdatedAt);
+  const weekData = weekBehind ? undefined : weekQuery.data;
+  const behindNotice = weekBehind
+    ? behindWeekNotice({ online, authReady, authWaitExpired, isFetching: weekQuery.isFetching })
+    : null;
+
+  const weekPlan: WeekPlan | null = weekData?.week_plan ?? null;
+  const phaseId: string | null = weekData?.phase_id ?? null;
   // B257: distinguish a genuine new user (no macrocycle → onboarding) from an
   // existing user whose current week resolves to a past Monday (e.g. the
   // macrocycle has ended), which now fails closed with week_plan: null rather
   // than regenerating an immutable past week.
   const hasMacrocycle = !!(stateQuery.data?.macrocycle);
   // A246 (F52): the reminder rides on the week payload.
-  const testReminder = weekQuery.data?.test_reminder ?? null;
-  const keyStatus: KeyStatus | null = weekQuery.data?.key_status ?? null;
+  const testReminder = weekData?.test_reminder ?? null;
+  const keyStatus: KeyStatus | null = weekData?.key_status ?? null;
   /** A301 — the week's guard alerts (sibling of week_plan, never persisted). */
-  const guardWarnings = weekQuery.data?.guard_warnings ?? null;
-  const pastWeekUnavailable = weekQuery.data?.past_week_unavailable ?? false;
+  const guardWarnings = weekData?.guard_warnings ?? null;
+  const pastWeekUnavailable = weekData?.past_week_unavailable ?? false;
 
   // B293 — first-load interruption queue: phase modal first, milestone toasts
   // only after it settled (won't show) or was dismissed. One overlay at a time.
@@ -198,7 +227,15 @@ function TodayContent() {
     return getBoulderPhaseTip(phaseId);
   }, [discipline, phaseId]);
 
-  const loading = stateQuery.isLoading || weekQuery.isLoading;
+  // B396 — "loading" also covers two waits that used to render false
+  // messages: Clerk still coming up online with nothing cached to show (was
+  // "You're offline" for a moment on every reload), and last week's plan in
+  // cache while this week's is on its way (was "No sessions planned").
+  const loading =
+    stateQuery.isLoading ||
+    weekQuery.isLoading ||
+    (waitingForAuth && !weekPlan && !pastWeekUnavailable) ||
+    behindNotice === "loading";
   const queryError = stateQuery.error || weekQuery.error;
 
   /**
@@ -287,9 +324,19 @@ function TodayContent() {
   // phase transitions. Initialized to true and hydrated from localStorage.
   const [phaseTipDismissed, setPhaseTipDismissed] = useState(true);
 
-  // Check for in-progress session on mount
+  // Check for in-progress session on mount.
+  // B396 — a layout effect: the banner is decided before the first paint
+  // instead of pushing Start down ~80px a frame later. Re-scanned when Clerk
+  // comes up (the storage key carries the user id) and whenever saved
+  // progress is discarded or restored (GUIDED_PROGRESS_EVENT).
+  useLayoutEffect(() => {
+    const scan = () => setResumeSession(getInProgressSession());
+    scan();
+    window.addEventListener(GUIDED_PROGRESS_EVENT, scan);
+    return () => window.removeEventListener(GUIDED_PROGRESS_EVENT, scan);
+  }, [authReady]);
+
   useEffect(() => {
-    setResumeSession(getInProgressSession());
     if (typeof window !== "undefined") {
       setFeedbackEduDismissed(
         window.localStorage.getItem("feedback_education_dismissed") === "1",
@@ -484,9 +531,25 @@ function TodayContent() {
     return nextTrainingDay ? "offday" : "empty_week";
   })();
 
+  /**
+   * B396 — the paywall gate of the training actions. Still asking the server
+   * is not "denied": wait (nothing runs, nothing is granted) instead of
+   * sending a paying user to /subscribe because the answer is late.
+   */
+  function passPaywall(): boolean {
+    const decision = paywallDecision(subscription);
+    if (decision === "allow") return true;
+    if (decision === "wait") {
+      toast("Checking your subscription\u2026", { description: "Try again in a moment.", duration: 3000 });
+      return false;
+    }
+    router.push("/subscribe");
+    return false;
+  }
+
   /** Mark a session as completed */
   async function handleMarkDone(sessionId: string) {
-    if (!canInteract) { router.push("/subscribe"); return; }
+    if (!passPaywall()) return;
     if (!weekPlan) return;
     try {
       // F6 — serializzata + snapshot riletto dalla cache (vedi useWeekEvents).
@@ -511,7 +574,7 @@ function TodayContent() {
 
   /** Mark a session as skipped */
   async function handleMarkSkipped(sessionId: string) {
-    if (!canInteract) { router.push("/subscribe"); return; }
+    if (!passPaywall()) return;
     if (!weekPlan) return;
     try {
       await runWeekEvents([
@@ -1077,6 +1140,36 @@ function TodayContent() {
     ? formatDateSubtitle(targetDate)
     : undefined;
 
+  /** The day's card (and so its sessions' Start buttons) is on screen. */
+  const dayCardVisible = !loading && !error && !isPaused && !!dayPlan && !heroState;
+  // B396 — the banner is only for a session no card here can resume: when the
+  // card is on screen its button already says "Resume · n/m". Decided once
+  // the page knows what it shows (not during the skeleton), so it never
+  // appears and then vanishes above Start.
+  const showResumeBanner =
+    !loading && !!resumeSession && !isResumableOnCard(resumeSession, dayCardVisible ? dayPlan : null);
+  // B396 — a refresh that fails over a plan still on screen is a line, not
+  // the red box (which pushed Start ~140px down over a perfectly usable plan).
+  const refreshFailedOverPlan = !error && !!queryError && !!weekPlan;
+  const showErrorBox = !loading && (!!error || (!!queryError && !weekPlan && !weekBehind));
+
+  /** B396 — Discard is undoable (it used to delete the progress on one tap). */
+  function handleDiscardResume() {
+    if (!resumeSession) return;
+    let restore: (() => void) | null = null;
+    try {
+      restore = discardSavedSession(window.localStorage, resumeSession.key);
+    } catch {
+      restore = null; // storage blocked
+    }
+    setResumeSession(null);
+    if (!restore) return;
+    toast("Session progress discarded", {
+      duration: 8000,
+      action: { label: "Undo", onClick: restore },
+    });
+  }
+
   return (
     <>
       <TopBar title={title} subtitle={subtitle} />
@@ -1093,34 +1186,34 @@ function TodayContent() {
           </Banner>
         )}
 
-        {/* Resume in-progress session banner */}
-        {resumeSession && (
+        {/* Resume in-progress session banner.
+            B396 — only for a session no card on this page can resume (another
+            day, a finished card); Resume is the full-width 44px action and
+            Discard a secondary one with Undo. */}
+        {showResumeBanner && resumeSession && (
           <Banner tone="warning" className="space-y-2">
             <p className="text-sm font-medium text-warning">
               You have a session in progress — exercise {resumeSession.completedCount} of {resumeSession.totalCount}
             </p>
             <p className="text-xs text-warning/70">
               {resumeSession.state.sessionName}
+              {resumeSession.date !== targetDate && ` \u00b7 ${formatDateSubtitle(resumeSession.date)}`}
             </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                className="rounded-md bg-warning px-3 py-1.5 text-xs font-medium text-surface-base hover:bg-warning/90 transition-colors"
-                onClick={() => router.push(`/guided/${resumeSession.date}/${resumeSession.sessionId}`)}
-              >
-                Resume
-              </button>
-              <button
-                type="button"
-                className="rounded-md border border-warning/30 px-3 py-1.5 text-xs text-warning hover:bg-warning/10 transition-colors"
-                onClick={() => {
-                  clearSavedSession(resumeSession.date, resumeSession.sessionId);
-                  setResumeSession(null);
-                }}
-              >
-                Discard
-              </button>
-            </div>
+            <button
+              type="button"
+              className="flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-md bg-warning px-4 text-sm font-medium text-surface-base transition-colors hover:bg-warning/90"
+              onClick={() => router.push(`/guided/${resumeSession.date}/${resumeSession.sessionId}`)}
+            >
+              <Play className="size-4" aria-hidden="true" />
+              Resume
+            </button>
+            <button
+              type="button"
+              className="min-h-[44px] w-full rounded-md text-sm text-warning/80 transition-colors hover:bg-warning/10"
+              onClick={handleDiscardResume}
+            >
+              Discard progress
+            </button>
           </Banner>
         )}
 
@@ -1129,8 +1222,52 @@ function TodayContent() {
             centred spinner that lets the page snap from empty to full. */}
         {(loading || (stateQuery.isFetching && !hasMacrocycle)) && <TodaySkeleton />}
 
+        {/* B396 — a refresh failed, the plan on screen is the saved one. */}
+        {refreshFailedOverPlan && !loading && (
+          <div
+            role="status"
+            className="flex items-center justify-between gap-2 rounded-lg border border-border-subtle bg-surface-raised pl-3 text-xs text-fg-muted"
+          >
+            <span>
+              Saved plan{updatedAtLabel(weekQuery.dataUpdatedAt) && ` \u00b7 ${updatedAtLabel(weekQuery.dataUpdatedAt)}`}
+            </span>
+            <button
+              type="button"
+              className="min-h-[44px] rounded-md px-3 font-medium text-primary transition-colors hover:bg-primary/10"
+              onClick={refetchAll}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {/* B396 — the cached week is last week's (Monday) and this week's
+            cannot come right now: say so instead of "No sessions planned". */}
+        {behindNotice === "offline" && (
+          <div className="rounded-lg border border-dashed p-8 text-center">
+            <p className="text-lg font-medium">You&apos;re offline</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              This device only has last week&apos;s plan saved. Connect to load
+              this week&apos;s sessions.
+            </p>
+          </div>
+        )}
+        {behindNotice === "not_loaded" && (
+          <div className="rounded-lg border border-dashed p-8 text-center">
+            <p className="font-medium">This week&apos;s plan isn&apos;t here yet</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {weekQuery.isError
+                ? "We couldn\u2019t load it \u2014 check your connection and try again."
+                : "The plan saved on this device is last week\u2019s. Try again in a moment."}
+            </p>
+            <Button variant="outline" className="mt-3 min-h-[44px]" onClick={refetchAll}>
+              Retry
+            </Button>
+          </div>
+        )}
+
         {/* Error state */}
-        {(error || queryError) && !loading && (
+        {showErrorBox && (
           <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center">
             {/* A308 — a sentence first; the raw message stays, small, for support. */}
             <p className="text-sm font-medium text-destructive">
@@ -1152,7 +1289,10 @@ function TodayContent() {
          * know who this is and there is no cached plan to fall back on. Say so.
          * Before this, the page sat blank (or, worse, invited an established
          * user to redo their onboarding). */}
-        {!loading && !identityKnown && !weekPlan && !hasMacrocycle && (
+        {/* B396 — only once we have stopped waiting for Clerk (offline, or it
+            never loaded): while it loads on a working connection this flashed
+            on every reload. */}
+        {!loading && !identityKnown && authWaitExpired && !weekPlan && !hasMacrocycle && !weekBehind && (
           <div className="rounded-lg border border-dashed p-8 text-center">
             <p className="text-lg font-medium">You&apos;re offline</p>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -1181,7 +1321,7 @@ function TodayContent() {
             </p>
             <Link
               href="/onboarding/welcome"
-              className="mt-4 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+              className="mt-4 inline-flex min-h-[44px] items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
             >
               Start Onboarding
             </Link>
@@ -1210,8 +1350,10 @@ function TodayContent() {
           <TestReminderCard reminder={testReminder} onResponded={refetchAll} />
         )}
 
-        {/* Weekly check-in card (Sunday / Monday morning grace) */}
-        {!loading && !error && isViewingToday && (
+        {/* Weekly check-in card (Sunday / Monday morning grace).
+            B396 — not over last week's cached plan (Monday): it reads the
+            plan to decide whether the week already started. */}
+        {!loading && !error && isViewingToday && !weekBehind && (
           <WeeklyCheckinCard weekPlan={weekPlan} onPlanUpdated={refetchAll} />
         )}
 
@@ -1264,7 +1406,7 @@ function TodayContent() {
             onUndo={handleUndo}
             onRemoveSession={handleRemoveSession}
             onReplan={(date, sessionIndex) => { setReplanDate(date); setReplanSessionIndex(sessionIndex); }}
-            onQuickAdd={(date) => { if (!canInteract) { router.push("/subscribe"); return; } setQuickAddDate(date); }}
+            onQuickAdd={(date) => { if (!passPaywall()) return; setQuickAddDate(date); }}
             onMoveSession={(date, slot, sessionId) =>
               setMoveSession({ date, slot, sessionId })
             }
@@ -1346,7 +1488,7 @@ function TodayContent() {
             </p>
             <button
               type="button"
-              className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+              className="min-h-[44px] rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
               onClick={() => setNewCycleDialogOpen(true)}
             >
               {cycleStatus.isPastEndDate
@@ -1514,16 +1656,20 @@ function TodayContent() {
         </DialogContent>
       </Dialog>
 
-      {/* A-NEW-MACRO: shared Start New Macrocycle dialog */}
-      <StartNewMacrocycleDialog
-        open={newCycleDialogOpen}
-        onOpenChange={setNewCycleDialogOpen}
-        state={stateQuery.data ?? null}
-        onSuccess={() => {
-          qc.invalidateQueries({ queryKey: ["state"] });
-          qc.invalidateQueries({ queryKey: ["week"] });
-        }}
-      />
+      {/* A-NEW-MACRO: shared Start New Macrocycle dialog.
+          B396 — mounted (and its chunk fetched) only when the banner that
+          opens it can show. */}
+      {(cycleStatus.canShow || newCycleDialogOpen) && (
+        <StartNewMacrocycleDialog
+          open={newCycleDialogOpen}
+          onOpenChange={setNewCycleDialogOpen}
+          state={stateQuery.data ?? null}
+          onSuccess={() => {
+            qc.invalidateQueries({ queryKey: ["state"] });
+            qc.invalidateQueries({ queryKey: ["week"] });
+          }}
+        />
+      )}
 
       {/* Outdoor edit dialog */}
       <Dialog open={outdoorEditDate !== null} onOpenChange={(v) => { if (!v) { setOutdoorEditDate(null); setOutdoorEditData(null); } }}>
@@ -1547,10 +1693,19 @@ function TodayContent() {
 export default function TodayPage() {
   return (
     <Suspense
+      // B396 — the same skeleton the page shows while loading, in the same
+      // container: one transition (skeleton → content), not spinner →
+      // skeleton → content. The TopBar's date is left out: this fallback is
+      // prerendered at build time, so any date here would be the build's.
       fallback={
-        <div className="flex items-center justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        </div>
+        <>
+          {/* A non-breaking space keeps the subtitle's line, so the bar does
+              not grow when the date arrives. */}
+          <TopBar title="Today" subtitle={"\u00a0"} />
+          <main className="relative z-10 mx-auto max-w-2xl space-y-4 p-4">
+            <TodaySkeleton />
+          </main>
+        </>
       }
     >
       <TodayContent />
