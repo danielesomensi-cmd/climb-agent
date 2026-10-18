@@ -689,19 +689,48 @@ retest_decisions  → week-level: trigger (end_of_phase | end_of_phase_slipped |
                     cycle_start | maintenance | early_retest), gap by confidence
                     (28 / 42 d), phase / trip / very_hard day blockers,
                     external finger-hard + heavy-pull days, already-scheduled
-planner PASS 3a   → day-level against the week's own sessions: < 72 h finger-hard
-                    (hang; 3 calendar days, inclusive), never a slot the regen
-                    merge refills (locked_slots / locked_dates), < 48 h heavy pull (pull-up), 48 h finger gap, hard cap;
+planner PASS 3a   → day-level against the week AS THE B369 MERGE WILL SAVE IT
+                    (B400): < 72 h finger-hard (hang; 3 calendar days, inclusive),
+                    never a slot the regen merge refills (locked_slots /
+                    locked_dates), < 48 h heavy pull (pull-up), 48 h finger gap,
+                    hard cap + hard spacing, never an other-sport day;
                     paired day, hang slot before pull-up slot
 planner PASS 3    → historical, only for the axes the policy does not cover
 retest_status     → live on every GET: official max, confidence, trend (±5 %),
-                    next test (planned with reason | projected), live blockers
+                    tested_until, next test (planned with reason | projected),
+                    live blockers
 ```
 
 `None` (untested athlete) leaves the planner byte-identical and `GET /api/week`
 without `retest_status`. A cached week is never regenerated for the policy; the
 live status flags a planned test that became too close to a hard session
 instead of moving it.
+
+**PASS 3a on the merged week (B400, 2026-10-18).** The rules above used to read
+only the sessions the planner had just generated; the merge then put the user's
+own sessions back byte-identical (prod: a hang test the morning after the
+user's key re-scheduled `route_projecting_gym`). Now every rule reads
+`planner_v2._merge_preview(existing_week_plan, …)` — the real
+`replanner_v1._merge_user_content`, exactly as A305's `_week_view` (PASS 2.7):
+the user's sessions in their slot, lived days and today with a done session
+copied wholesale, the engine sessions the merge drops gone. A candidate day is
+previewed with its victims removed (the merge works day by day); the view is
+cached until `_commit` changes the week. Before today only done sessions count
+(B390, so the hard cap and spacing finally include the days already lived — a
+cap of 2 with Monday + Tuesday done hard no longer gets a third hard day from
+the tests); from today on everything but a skipped stub (malformed entries are
+ignored). "Today" is the policy's `as_of` (the server's day the decisions were
+taken on) when it comes before the planner's `today`: with "regenerate from
+tomorrow / next Monday" the planner's `today` is the merge floor, and the days
+before it are copied wholesale but still ahead. A failed preview logs and falls
+back to the generated week. On the policy side `_planned_axis_tests(exclude_week)`
+keeps the tests the merge puts back (the user's, or on a day copied wholesale)
+as `already_scheduled`, so no second test is placed next to them; PASS 3a does
+the same on its merged view for the tests the policy cannot see (a day between
+`as_of` and the floor), with a snapshot `already_scheduled` row instead of a
+`no_placement_slot`. The partner of a kept test comes alone and keeps the hang
+first on a shared day. The historical PASS 3 and PASS 1/2 stay alert-only
+(`regeneration_guard_warnings`, A301).
 
 ---
 

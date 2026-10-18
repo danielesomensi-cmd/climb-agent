@@ -821,6 +821,45 @@ def _plan_days_list(plan: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return [d for d in (first.get("days") or []) if isinstance(d, dict)]
 
 
+def _merge_preview(
+    existing_week_plan: Optional[Dict[str, Any]],
+    start_date: str,
+    week_iso: Sequence[str],
+    gen_days: Sequence[List[Dict[str, Any]]],
+    today_iso: Optional[str],
+) -> List[List[Dict[str, Any]]]:
+    """B400: the days ``week_iso`` as the B369 merge will SAVE them.
+
+    ``gen_days[i]`` holds the sessions generated for ``week_iso[i]``. They are
+    merged with ``existing_week_plan`` by the REAL
+    ``replanner_v1._merge_user_content`` — the call A305's ``_week_view`` makes,
+    ``today_iso`` as the floor: lived days and today with a done session copied
+    wholesale, the user's sessions back in their slot, the engine sessions the
+    user removed (or whose slot the user holds) gone. The merge works day by
+    day, so one day can be previewed alone. ``existing_week_plan`` of another
+    week (or ``None``) → the generated days as they are. Never raises: a failed
+    preview is logged and falls back to the generated days.
+    """
+    gen = [list(day) for day in gen_days]
+    if not (isinstance(existing_week_plan, dict)
+            and str(existing_week_plan.get("start_date") or "")[:10] == str(start_date)[:10]):
+        return gen
+    from backend.engine.replanner_v1 import _merge_user_content
+
+    try:
+        merged = _merge_user_content(
+            existing_week_plan,
+            {"start_date": start_date,
+             "weeks": [{"days": [{"date": d, "sessions": s} for d, s in zip(week_iso, gen)]}]},
+            today_iso,
+        )
+    except Exception:  # the preview must never break the week
+        logger.warning("B400: merge preview failed for week %s", start_date, exc_info=True)
+        return gen
+    by = {str(d.get("date"))[:10]: list(d.get("sessions") or []) for d in _plan_days_list(merged)}
+    return [by.get(str(d)[:10], []) for d in week_iso]
+
+
 def key_pass_week_index(start: date) -> int:
     """A305: absolute index of the week starting on Monday ``start`` (0001-01-01
     is a Monday). Its parity decides which limit session the power-endurance
@@ -1407,6 +1446,11 @@ def generate_phase_week(
             (tested < 90 days); PASS 3a places them, the historical PASS 3 keeps
             the other axes. ``None`` (default) → byte-identical to pre-A289.
             Ignored for placement when ``inject_tests`` (explicit request wins).
+            B400: PASS 3a evaluates its day blockers, the hard cap and the hard
+            spacing on the week as the B369 merge will save it
+            (``_merge_preview`` with ``existing_week_plan``). Its ``as_of``
+            (the policy's today) ends the days already lived when ``today`` is
+            a later regeneration floor ("regenerate from tomorrow").
         existing_week_plan: A300 — the plan of this same week being
             regenerated (force / stale). Read only by the complementary pass,
             the way the B369 merge will put it back: lived days count what
@@ -1419,6 +1463,9 @@ def generate_phase_week(
             outdoor day declared on the plan, a whole-day override) gets no
             engine session, exactly like an outdoor-only availability day
             (but without the ``outdoor_slot`` marker: it is not availability).
+            B400: also read by PASS 3a, through the real merge
+            (``_merge_preview``): the user's sessions it puts back block the
+            policy tests like the engine's own.
         trip_start_dates: A300 — trip departures from this Monday to the
             Tuesday after (``complementary_v1.trip_start_dates``): outdoor
             events for the legs / HIIT rules, also across the week boundary.
@@ -2488,22 +2535,46 @@ def generate_phase_week(
     #   - pull-up test: no heavy pulling (pulling + hard) in the PULL_TEST_BLOCK_H
     #     before;
     #   - hard cap and hard spacing as in the historical PASS 3.
+    # B400: every one of these rules reads the week as the B369 merge will SAVE
+    # it (`_merge_preview`, the real merge, as A305's `_week_view`): the user's
+    # sessions back in their slot, lived days (B390) and today with a done
+    # session copied wholesale, the engine sessions the merge drops gone.
+    # Before B400 they read the freshly generated sessions only, and the policy
+    # hang test landed the morning after the user's finger-hard session the
+    # merge put back (prod, week 2026-10-19). No test on an other-sport day
+    # either (`day_intensity_reduced`: no hard session there, as PASS 1).
+    # B400 review: the days already lived end at the policy's today (`as_of`)
+    # when the planner's `today` is a later regeneration floor ("regenerate
+    # from tomorrow / next Monday"): the merge copies the days in between
+    # wholesale and they are still ahead, planned sessions included. A test of
+    # the axis the merge keeps in the week (on such a day, or the user's) is
+    # already scheduled: no second test, no false `no_placement_slot`.
     # A paired decision puts both tests on ONE day, hang in an earlier slot than
-    # the pull-up. If the hang finds no day, the pull-up is skipped with the
-    # same reason and does not fall back to B297's empty-day pass on its own.
+    # the pull-up — also against a test the merge keeps on that day (B400
+    # review: a lone pull-up never goes before the hang the user moved there).
+    # If the hang finds no day, the pull-up is skipped with the same reason and
+    # does not fall back to B297's empty-day pass on its own.
     # With retest_decisions=None nothing here runs (byte-identical week).
     _rd_active = bool(retest_decisions) and not inject_tests
     _rd_covered: set = set()
     _rd_skipped: List[Dict[str, Any]] = []
     _rd_placed_offsets: set = set()
     _rd_outcomes: List[Dict[str, Any]] = []
+    # B400 review: required tests of an axis the merge already keeps a live
+    # test of in this week (snapshot `already_scheduled`, like the policy's).
+    _rd_already: List[Dict[str, Any]] = []
     # A289 review: offsets of the policy's hang tests + the hang block window,
     # read by the legacy PASS 3 below so it never puts another finger test in
     # the RETEST_BLOCK_H before a policy hang test.
     _rd_hang_offsets: List[int] = []
     _hang_block_d = 0
     if _rd_active:
-        from backend.engine.stimulus import is_finger_hard_session, is_pulling_hard_session
+        from backend.engine.stimulus import (
+            is_finger_hard_session,
+            is_pulling_hard_session,
+            is_test_session,
+            session_flag,
+        )
 
         _rd_covered = set(retest_decisions.get("covered_axes") or [])
         _block_h = retest_decisions.get("block_hours") or {}
@@ -2537,65 +2608,140 @@ def generate_phase_week(
         def _sessions_without(offset: int, victims: set) -> List[Dict[str, Any]]:
             return [e for i, e in enumerate(day_sessions[offset]) if i not in victims]
 
+        # B400: the week the rules read — `day_sessions` through the merge
+        # preview, so what the merge puts back counts (a key re-schedule, a
+        # custom, a moved session, a lived day) and what it drops does not.
+        # Before today only what was done counts (B390: a past session never
+        # marked did not happen); from today on every session but a skipped
+        # stub (it never happens: skipped never blocks). No plan of this week
+        # being regenerated → the view IS `day_sessions`. Cached until the
+        # next `_commit` changes `day_sessions`.
+        _week_iso = [d.isoformat() for d in day_dates]
+        _today_iso = today_date.isoformat() if today_date is not None else None
+        _rd_views: Dict[Any, Any] = {}
+        # B400 review: "today" for that rule is the policy's (`as_of`, the
+        # server's day GET /api/week computed the decisions on) when it comes
+        # before the planner's: with "regenerate from tomorrow" the planner's
+        # `today` is the merge floor, and the real today — copied wholesale by
+        # the merge, its planned sessions still ahead — used to count as lived
+        # (done only): the hang test landed the morning after tonight's
+        # finger-hard session. It only ever moves the boundary earlier; no
+        # `today` (a future week) stays no lived day.
+        _rd_as_of: Optional[date] = None
+        if retest_decisions.get("as_of"):
+            try:
+                _rd_as_of = _parse_date(str(retest_decisions["as_of"])[:10])
+            except ValueError:
+                _rd_as_of = None
+        _lived_until: Optional[date] = today_date
+        if today_date is not None and _rd_as_of is not None:
+            _lived_until = min(today_date, _rd_as_of)
+
+        def _counted(o: int, sessions: List[Any]) -> List[Dict[str, Any]]:
+            # B400 review: a malformed entry the merge copies back (a lived or
+            # engine-free day is copied as it was) never breaks the week.
+            live = [e for e in sessions if isinstance(e, dict)]
+            if _lived_until is not None and day_dates[o] < _lived_until:
+                return [e for e in live if e.get("status") == "done"]
+            return [e for e in live if e.get("status") != "skipped"]
+
+        def _week_view() -> List[List[Dict[str, Any]]]:
+            if "week" not in _rd_views:
+                merged = _merge_preview(existing_week_plan, start_date, _week_iso, day_sessions, _today_iso)
+                _rd_views["week"] = [_counted(o, merged[o]) for o in range(7)]
+            return _rd_views["week"]
+
+        def _day_view(offset: int, victims: set) -> List[Dict[str, Any]]:
+            """Day ``offset`` as the merge saves it once the victims leave: the
+            generated survivors the merge keeps, plus the old day's sessions it
+            puts back."""
+            if not victims:
+                return _week_view()[offset]
+            key = (offset, tuple(sorted(victims)))
+            if key not in _rd_views:
+                merged = _merge_preview(existing_week_plan, start_date, [_week_iso[offset]],
+                                        [_sessions_without(offset, victims)], _today_iso)
+                _rd_views[key] = _counted(offset, merged[0])
+            return _rd_views[key]
+
         def _test_day_ok(offset: int, sid: str, victims: set) -> bool:
             meta = _SESSION_META[sid]
-            survivors = _sessions_without(offset, victims)
+            day = _day_view(offset, victims)
+            view = _week_view()
             victim_finger = any(
                 _SESSION_META.get(day_sessions[offset][i].get("session_id", ""), {}).get("finger")
                 for i in victims
             )
             if meta.get("finger"):
-                # Same day: a finger-hard session that stays on the day (not a
-                # test placed this pass) is a max finger load next to the test.
-                if any(is_finger_hard_session(e) and not (e.get("tags") or {}).get("test")
-                       for e in survivors):
+                # Same day: a finger-hard session that stays on the day (the
+                # user's included, B400; not a test) is a max finger load next
+                # to the test.
+                if any(is_finger_hard_session(e) and not is_test_session(e) for e in day):
                     return False
                 fh = list(_ext_finger) + list(crag_offsets)  # B382(b)
                 for o in range(7):
-                    if o != offset and any(is_finger_hard_session(e) for e in day_sessions[o]):
+                    if o != offset and any(is_finger_hard_session(e) for e in view[o]):
                         fh.append(o)
                 if any(0 < offset - o <= _hang_block_d for o in fh):
                     return False
                 if not victim_finger:
                     fo_all = list(_prev_finger) + list(crag_offsets) + [
                         o for o in range(7) if o != offset
-                        and any(_SESSION_META.get(e.get("session_id", ""), {}).get("finger") for e in day_sessions[o])
+                        and any(session_flag(e, "finger") for e in view[o])
                     ]
                     if any(abs(offset - o) <= finger_gap_days for o in fo_all):
                         return False
             if sid in _RD_PULL_TEST_SIDS:
-                if any(is_pulling_hard_session(e) and not (e.get("tags") or {}).get("test")
-                       for e in survivors):
+                if any(is_pulling_hard_session(e) and not is_test_session(e) for e in day):
                     return False
                 hp = list(_ext_pull)
                 for o in range(7):
                     if o == offset:
                         continue
-                    if any(is_pulling_hard_session(e) for e in day_sessions[o]):
+                    if any(is_pulling_hard_session(e) for e in view[o]):
                         hp.append(o)
                 if any(0 < offset - o < _pull_block_d for o in hp):
                     return False
             return True
 
         def _hard_ok(offset: int, victims: set) -> bool:
-            survivors = _sessions_without(offset, victims)
-            if any((e.get("tags") or {}).get("hard") for e in survivors):
+            if any(session_flag(e, "hard") for e in _day_view(offset, victims)):
                 return True  # already a hard day: the tests add no hard day
             if any(
                 (day_sessions[offset][i].get("tags") or {}).get("hard") for i in victims
             ):
                 return True  # replaces a hard session: neutral
-            hard_now = sum(
-                1 for o in range(7)
-                if o != offset and any((e.get("tags") or {}).get("hard") for e in day_sessions[o])
-            ) + sum(1 for c in crag_in_week if c != offset)  # B382(b)
+            # B400: the distinct hard days of the week as the merge saves it —
+            # the user's sessions and the days already lived included (B390:
+            # with the cap at 2 and Monday + Tuesday done hard, the tests used
+            # to open a third hard day) — plus the crag days (B382(b)).
+            view = _week_view()
+            hard_view = [o for o in range(7) if o != offset and any(session_flag(e, "hard") for e in view[o])]
+            lived = [o for o in _past_hard_offsets if o != offset]  # B390, also on a failed preview
+            hard_now = len(set(hard_view) | set(lived) | {c for c in crag_in_week if c != offset})
             if hard_now >= effective_hard_cap:
                 return False
-            ho_all = list(_prev_hard) + list(crag_offsets) + [
-                o for o in range(7) if o != offset
-                and any((e.get("tags") or {}).get("hard") for e in day_sessions[o])
-            ]
+            ho_all = list(_prev_hard) + list(crag_offsets) + lived + hard_view
             return not any(abs(offset - o) <= hard_gap_days for o in ho_all)
+
+        def _pair_order_ok(offset: int, chosen: List[Tuple[str, Dict[str, Any], Optional[int]]],
+                           sids: List[str], victims: set) -> bool:
+            """B400 review: hang before pull-up on a shared day, also against a
+            test of the other axis the merge keeps on that day (the user moved
+            it there: the axis is already scheduled, the partner comes alone).
+            A hang done after a 2RM pull-up would be measured tired, and it
+            sets the finger loads for 90 days. A kept test without a slot ranks
+            last (only a hang can go before it)."""
+            kept = [(_TEST_SID_AXIS.get(str(e.get("session_id") or "")), _slot_rank.get(e.get("slot"), 99))
+                    for e in _day_view(offset, victims)]
+            for (slot, _i, _v), sid in zip(chosen, sids):
+                axis, rank = _TEST_SID_AXIS.get(sid), _slot_rank[slot]
+                for k_axis, k_rank in kept:
+                    if axis == "pulling" and k_axis == "finger" and not k_rank < rank:
+                        return False
+                    if axis == "finger" and k_axis == "pulling" and not rank < k_rank:
+                        return False
+            return True
 
         def _victim_cost(entry: Optional[Dict[str, Any]], test_sid: str) -> float:
             # Lower is better. Replacing the week's finger session with the hang
@@ -2630,6 +2776,8 @@ def generate_phase_week(
                         return
                     if not all(_test_day_ok(offset, sid, victims) for sid in sids):
                         return
+                    if not _pair_order_ok(offset, chosen, sids, victims):
+                        return
                     cost = sum(
                         _victim_cost(day_sessions[offset][v] if v is not None else None, sid)
                         for (_s, _i, v), sid in zip(chosen, sids)
@@ -2663,6 +2811,8 @@ def generate_phase_week(
                     continue
                 if day_is_outdoor[o] or day_dates[o] in pretrip_set:
                     continue
+                if day_intensity_reduced[o]:
+                    continue  # B400: other-sport day — no hard session there (PASS 1)
                 if o in _rd_placed_offsets:
                     continue
                 if day_dates[o].isoformat() in _rd_locked_dates:
@@ -2700,6 +2850,7 @@ def generate_phase_week(
             kept.extend(new_entries)
             kept.sort(key=lambda e: _slot_rank.get(e.get("slot"), 99))
             day_sessions[offset] = kept
+            _rd_views.clear()  # B400: the merge preview reads day_sessions
             for e in new_entries:
                 meta = _SESSION_META[e["session_id"]]
                 if meta.get("finger") and offset not in finger_day_offsets:
@@ -2743,6 +2894,33 @@ def generate_phase_week(
         _reqs = [r for r in retest_decisions.get("required_sessions") or []
                  if r.get("session_id") in _SESSION_META]
         _reqs.sort(key=lambda r: int(r.get("order") or 0))
+
+        # B400 review: a live test of the axis the merge keeps in this week —
+        # on a day between the policy's today and the regeneration floor
+        # (copied wholesale: "regenerate from tomorrow" on the test day, "from
+        # next Monday"), or the user's own — is already scheduled. The policy
+        # never sees the floor (it gets the server's today), so a second test
+        # went next to the kept one, or the week reported `no_placement_slot`
+        # for a test still in the plan. Same row as the policy's
+        # `already_scheduled`; the partner is placed alone, unpaired as the
+        # policy does it (`_pair_order_ok` keeps the hang first on a shared day).
+        def _kept_test_date(axis: Optional[str]) -> Optional[str]:
+            view = _week_view()  # before today: done only — a test never done was missed
+            for o in range(7):
+                if any(_TEST_SID_AXIS.get(str(e.get("session_id") or "")) == axis and e.get("status") != "done"
+                       for e in view[o]):
+                    return day_dates[o].isoformat()
+            return None
+
+        _kept_axes = set()
+        for _r in _reqs:
+            _kd = _kept_test_date(_r.get("axis"))
+            if _kd is not None:
+                _kept_axes.add(_r.get("axis"))
+                _rd_already.append({"axis": _r.get("axis"), "date": _kd, "trigger": _r.get("trigger")})
+        if _kept_axes:
+            _reqs = [{**r, "paired_with": None} for r in _reqs if r.get("axis") not in _kept_axes]
+
         if len(_reqs) == 2 and _reqs[0].get("paired_with") == _reqs[1]["session_id"]:
             _hang, _pull = _reqs
             _both = [d for d in _hang.get("allowed_dates") or [] if d in set(_pull.get("allowed_dates") or [])]
@@ -3214,7 +3392,8 @@ def generate_phase_week(
             "covered_axes": list(retest_decisions.get("covered_axes") or []),
             "required_sessions": _rd_outcomes,
             "skipped": list(retest_decisions.get("skipped") or []),
-            "already_scheduled": list(retest_decisions.get("already_scheduled") or []),
+            # B400 review: + the tests PASS 3a found the merge keeps in the week.
+            "already_scheduled": list(retest_decisions.get("already_scheduled") or []) + _rd_already,
         }
 
     if phase_id == "deload":

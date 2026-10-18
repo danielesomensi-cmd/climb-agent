@@ -518,7 +518,9 @@ def is_heavy_pulling_session(
 # of axis X due here, from which day, and which days are blocked before the
 # planner even looks at its own sessions". The planner then places the test
 # against its in-week sessions with the SAME blocker definitions (finger-hard
-# day, heavy pulling) — see ``planner_v2`` PASS 3.
+# day, heavy pulling) — see ``planner_v2`` PASS 3. B400: "its in-week sessions"
+# are the week as the regeneration merge will save it, the user's sessions
+# included; a test the merge keeps in that week counts as already scheduled.
 #
 # Scope: an axis is COVERED only when the athlete has a tested official max
 # for it on the week start (``official_max(...)["tested"]``: source
@@ -848,25 +850,63 @@ def _locked_by_merge(state: Mapping[str, Any], ws: date, today: Optional[date]) 
     return {"locked_slots": slots, "locked_dates": dates}
 
 
+def _merge_wholesale_dates(plan: Optional[Mapping[str, Any]], today: Optional[date]) -> set:
+    """B400: the days of *plan* the B369 merge (``_merge_user_content``) copies
+    back wholesale over a regenerated week, whatever the planner generates
+    there: the days the user owns wholesale (``engine_free_dates``: an outdoor
+    day declared on the plan, a whole-day override) and ``today`` when it holds
+    a done session or a done outdoor day. The days before ``today`` are copied
+    too, but they are past: no caller asks about them."""
+    from backend.engine.user_owned import engine_free_dates
+
+    out = {str(d)[:10] for d in engine_free_dates(plan or {})}
+    if today is None:
+        return out
+    for day in _plan_days(plan):
+        if str(day.get("date") or "")[:10] != today.isoformat():
+            continue
+        sessions = [x for x in (day.get("sessions") or []) if isinstance(x, Mapping)]
+        if any(x.get("status") == "done" for x in sessions) or day.get("outdoor_session_status") == "done":
+            out.add(today.isoformat())
+    return out
+
+
 def _planned_axis_tests(
-    state: Mapping[str, Any], axis: str, *, since: date, exclude_week: Optional[str] = None
+    state: Mapping[str, Any],
+    axis: str,
+    *,
+    since: date,
+    exclude_week: Optional[str] = None,
+    today: Optional[date] = None,
 ) -> List[Dict[str, Any]]:
     """Not-yet-done, not-skipped tests of ``axis`` dated ≥ ``since`` in the hot
-    week plans (``exclude_week`` = the week being regenerated)."""
-    from backend.engine.stimulus import iter_plan_sessions
+    week plans.
+
+    ``exclude_week`` = the week being regenerated: the regeneration replaces
+    the engine's tests of that week, so they do not count — except the ones the
+    B369 merge puts back (B400): a test the user owns (moved, forced, re-
+    scheduled…: ``user_owned.is_user_owned``) and a test on a day the merge
+    copies wholesale (``_merge_wholesale_dates``: ``today`` with a done session,
+    a day the user owns wholesale). Before B400 those were dropped too, and
+    PASS 3a placed a second test next to the one the merge kept."""
+    from backend.engine.stimulus import iter_plan_days
+    from backend.engine.user_owned import is_user_owned
 
     sids = AXIS_TEST_SESSIONS_ALL[axis]
+    kept_days = _merge_wholesale_dates(_hot_plan(state, exclude_week), today) if exclude_week else set()
     rows = []
-    for d, session, _src in iter_plan_sessions(state):
+    for d, day, _src in iter_plan_days(state):
         if d < since.isoformat():
             continue
-        if exclude_week and _monday(_as_date(d)).isoformat() == exclude_week:
-            continue
-        if session.get("session_id") not in sids:
-            continue
-        if session.get("status") in ("done", "skipped"):
-            continue
-        rows.append({"date": d, "session_id": session.get("session_id"), "slot": session.get("slot")})
+        regenerated = bool(exclude_week) and _monday(_as_date(d)).isoformat() == exclude_week
+        for session in day.get("sessions") or []:
+            if not isinstance(session, dict) or session.get("session_id") not in sids:
+                continue
+            if session.get("status") in ("done", "skipped"):
+                continue
+            if regenerated and not (is_user_owned(session) or d in kept_days):
+                continue
+            rows.append({"date": d, "session_id": session.get("session_id"), "slot": session.get("slot")})
     return sorted(rows, key=lambda r: (r["date"], str(r["slot"] or "")))
 
 
@@ -968,7 +1008,8 @@ def _axis_week_decision(
                     "slipped_to_week": (ws + timedelta(days=7)).isoformat()}
         return {**out, "status": "skipped", "skip_reason": "blocked:gap"}
     if check_already_scheduled:
-        planned = _planned_axis_tests(state, axis, since=today or ws, exclude_week=ws.isoformat())
+        planned = _planned_axis_tests(state, axis, since=today or ws, exclude_week=ws.isoformat(),
+                                      today=today)
         if planned:
             return {**out, "status": "already_scheduled", "scheduled_date": planned[0]["date"]}
         floor = _monday(today) if today is not None else ws
@@ -1014,7 +1055,9 @@ def _external_blockers(
     """Blocking days the planner cannot see in its own week: everything before
     the week (planned or done, custom sessions included, outdoor-hard days,
     free-session limit days) plus what is already DONE inside the week (a
-    mid-week regeneration preserves done sessions after generating)."""
+    mid-week regeneration preserves done sessions after generating). B400: the
+    rest of the week — the user's planned sessions the merge puts back — PASS
+    3a reads itself, on the merge preview of the week."""
     from backend.engine.stimulus import finger_hard_days, iter_plan_sessions
 
     we = ws + timedelta(days=6)
@@ -1059,10 +1102,12 @@ def retest_decisions(
              last_test_date, confidence, gap_days}
           ],
           "skipped": [{axis, session_id, trigger, reason, skip_reason, ...}],
-          "already_scheduled": [{axis, date, trigger}],
+          "already_scheduled": [{axis, date, trigger}],  # B400: + tests the merge keeps
           "axes": {axis: <week-level decision>},
           "finger_hard_dates": [...], "heavy_pull_dates": [...],
+          "locked_slots": [{date, slot}], "locked_dates": [...],
           "block_hours": {"hang": 72, "pull": 48},
+          "as_of": today,                # B400 review: PASS 3a's lived-day boundary
         }
 
     Pure: everything derives from the state (macrocycle, tests, trips,
@@ -1126,6 +1171,11 @@ def retest_decisions(
         "locked_slots": locked["locked_slots"],
         "locked_dates": locked["locked_dates"],
         "block_hours": {"hang": RETEST_BLOCK_H, "pull": PULL_TEST_BLOCK_H},
+        # B400 review: the day these decisions were taken on. PASS 3a counts
+        # the days before it as lived; the planner's own ``today`` can be a
+        # later regeneration floor ("regenerate from tomorrow"). Not stored
+        # in the week's profile_snapshot.
+        "as_of": td.isoformat() if td else None,
     }
 
 
@@ -1188,6 +1238,7 @@ def retest_status(
     Per axis::
 
         {axis, covered, official_total_kg, test_date, age_days, protocol,
+         tested_until,           # B400: last day the max counts as tested
          confidence, confidence_exposures, trend, delta_pct, previous_date,
          earliest_retest, signals: {count, needed}, fatigue,
          next_test: {date, session_id, source: planned|projected, trigger,
@@ -1195,7 +1246,11 @@ def retest_status(
          next_test_reason}       # why there is no next test, when None
 
     ``covered`` False → the axis is scheduled by the legacy planner rules
-    (untested, test older than 90 days, loading pin).
+    (untested, test older than 90 days, loading pin); ``tested_until`` None.
+    ``next_test_reason`` is the last skip the projection met — else
+    ``not_tested_recently`` when it reaches the 90-day expiry (B400: a real
+    skip is no longer overwritten there), ``not_due_within_horizon`` when it
+    runs out of weeks.
     """
     td = _as_date(today)
     out_axes: Dict[str, Dict[str, Any]] = {}
@@ -1211,6 +1266,10 @@ def retest_status(
             "test_date": om.get("date"),
             "age_days": om.get("age_days"),
         }
+        # B400: the last day the official max still counts as tested (fresh
+        # for TEST_FRESH_DAYS days, the test day included); None once expired.
+        row["tested_until"] = ((_as_date(om["date"]) + timedelta(days=TEST_FRESH_DAYS - 1)).isoformat()
+                               if row["covered"] else None)
         conf = axis_confidence(state, om, archived_weeks=archived_weeks)
         row.update({"confidence": conf["confidence"], "confidence_exposures": conf["exposures"],
                     "confidence_min_exposures": conf["min_required"]})
@@ -1258,7 +1317,11 @@ def retest_status(
             dec = _axis_week_decision(state, axis, wk, today=td, finger_device=finger_device,
                                       archived_weeks=archived_weeks, check_already_scheduled=False)
             if dec is None:
-                last_skip = "not_tested_recently"
+                # The official max reaches its 90-day expiry inside the horizon.
+                # B400: a real skip met on the way (no_placement_slot, a trip…)
+                # stays the reason — it used to be overwritten here, and the
+                # card said "not due yet" about a test the plan had dropped.
+                last_skip = last_skip or "not_tested_recently"
                 break
             if dec["status"] == "due" and _hot_plan(state, wk.isoformat()) is not None:
                 # The week is already generated and holds no planned test of

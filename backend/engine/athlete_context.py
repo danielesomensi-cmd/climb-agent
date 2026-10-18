@@ -86,7 +86,7 @@ from backend.engine.stimulus import (
 DateLike = Union[date, str]
 ArchivedWeeks = Optional[Union[Mapping[str, Any], Sequence[Mapping[str, Any]]]]
 
-VERSION = "b395.1"
+VERSION = "b400.1"
 
 # ---------------------------------------------------------------------------
 # Constants. Shared with the engine, never copied: the command and the docs
@@ -1601,7 +1601,9 @@ def render_text(ctx: Mapping[str, Any], *, plan_notes: Optional[str] = None,
         nxt = (f"prossimo {nt['date']} ({nt.get('source')}, {nt.get('trigger')})"
                + (f" BLOCCHI: {', '.join(b.get('code', '') for b in nt.get('blockers') or [])}" if nt and nt.get("blockers") else "")
                if nt else f"nessun test in vista ({row.get('next_test_reason')})")
-        L.append(f"  {axis}: ufficiale {_fmt_kg(row.get('official_total_kg'))} kg ({row.get('test_date')}), "
+        # B400: the last day the official max counts as tested (then the axis leaves the policy).
+        valid = f", massimale valido fino al {row['tested_until']}" if row.get("tested_until") else ""
+        L.append(f"  {axis}: ufficiale {_fmt_kg(row.get('official_total_kg'))} kg ({row.get('test_date')}){valid}, "
                  f"confidenza {row.get('confidence')}, non prima del {row.get('earliest_retest')}; {nxt}; "
                  f"segnali {row.get('signals', {}).get('count')}/{row.get('signals', {}).get('needed')}")
 
@@ -1903,7 +1905,9 @@ def _retest_lines_en(ctx: Mapping[str, Any]) -> List[str]:
         else:
             nxt = f"no test due yet ({str(row.get('next_test_reason') or '').replace('_', ' ')})"
         sig = row.get("signals") or {}
-        out.append(f"- {_AXIS_EN.get(axis, axis)}: {nxt}; not before {row.get('earliest_retest')}; "
+        # B400: the day the tested max stops counting (the axis then leaves the policy).
+        valid = f"; tested max valid until {row['tested_until']}" if row.get("tested_until") else ""
+        out.append(f"- {_AXIS_EN.get(axis, axis)}: {nxt}; not before {row.get('earliest_retest')}{valid}; "
                    f"measured retest signals {sig.get('count')}/{sig.get('needed')}")
     return out
 
