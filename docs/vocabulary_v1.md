@@ -966,7 +966,7 @@ Verify with: `python _archive/scripts/audit_templates.py`
 
 Sessions live in `backend/catalog/sessions/v1/`. Each produces a full resolved session.
 
-- `arms_shoulders_handstand_lunch` *(strength_general, gym — A318 lunch, family `arms_shoulders`: handstand first (heel pulls + wall hold), overhead press, lateral raise, overhead triceps extension, hammer curl; RIR 1-2, dumbbell loads per dumbbell)*
+- `arms_shoulders_handstand_lunch` *(strength_general, gym — A318 lunch, family `arms_shoulders`: handstand first (toe pulls + wall hold), overhead press, lateral raise, overhead triceps extension, hammer curl; RIR 1-2, dumbbell loads per dumbbell)*
 - `boulder_circuit_gym` *(volume_climbing, gym)*
 - `complementary_conditioning` *(strength_general, home)*
 - `core_training` *(core, home)*

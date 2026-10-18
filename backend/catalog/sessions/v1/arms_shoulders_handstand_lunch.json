@@ -89,7 +89,7 @@
       "priority": 100,
       "module_role": "primary",
       "order": "after_warmup",
-      "notes": "Balance first, while the nervous system is fresh: heel pulls from a chest-to-wall handstand, the bridge to a freestanding handstand.",
+      "notes": "Balance first, while the nervous system is fresh: toe pulls from a chest-to-wall handstand, the bridge to a freestanding handstand.",
       "selection": {
         "primary": {
           "exercise_id": "heel_pulls_chest_to_wall",
@@ -97,7 +97,7 @@
             "sets": 3,
             "reps": 3,
             "rest_between_sets_seconds": 60,
-            "notes": "3 x 3 attempts: walk up chest to the wall, peel one heel off, then the other, and hunt for the balance line for a few seconds. Correct with finger pressure, not with the shoulders. Stop the set when the line gets sloppy: this is practice, not a set to failure."
+            "notes": "3 x 3 attempts: walk up chest to the wall (only the toes touch it), pull the toes of one foot off, then the other, and hunt for the balance line for a few seconds. Correct with finger pressure, not with the shoulders. Stop the set when the line gets sloppy: this is practice, not a set to failure."
           },
           "filters": {
             "role": [
