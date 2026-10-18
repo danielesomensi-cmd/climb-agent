@@ -169,6 +169,16 @@ Your daily workflow:
 
 **Done** and **Skip** are always reversible — tap **Undo completion** (to reverse Done) or **Undo skip** (to reverse Skip) — don't worry about misclicks. Undoing a skip brings back the exact session you skipped, your own custom sessions included, and the usual recovery rules still apply to it.
 
+**Opening the app on a slow or missing connection.** Today shows the plan saved on your phone straight away, then refreshes it:
+
+- On **Monday**, before the new week has loaded, you see a loading placeholder instead of last week's sessions. Offline, Today says that only last week's plan is saved. It never claims "No sessions planned this week" just because the new week hasn't arrived yet.
+- If a refresh fails while your plan is on screen, a single line says **Saved plan · updated HH:MM · Retry**. The plan stays visible.
+- While the app is still checking your subscription, **Done**, **Skip** and **Add** show "Checking your subscription…" instead of sending you to the subscription page.
+
+**Picking up a session you started.** If you left a guided session halfway, the session's button reads **Resume · 3/8** (exercises done out of the total) and opens where you stopped. To throw that progress away, use **Discard saved progress** in the session menu; you get a few seconds to **Undo**. A separate resume banner appears only for a saved session that no card on the page can resume, for example one from another day.
+
+Dismissing **Plan your week** keeps it hidden until the next week, even if you close the app. A dismissed "Did you know?" tip and milestone toasts do not come back when you return to Today.
+
 ### Same main exercise for the whole phase (once you have tested)
 
 Once you have a recent strength test (max hang or weighted pull-up, within the last 90 days), the main exercises stay **fixed for the whole phase**, so you can see your progress week on week:
@@ -269,6 +279,14 @@ Audio cues require one initial tap to activate (iOS requirement).
 - Skip an exercise within the guided session
 - Adjust the weight/load if the prescribed load isn't available
 - Exit the guided session and mark the session manually
+
+**Mistakes are reversible.** After **Done** or **Skip** on an exercise, a toast with **Undo** puts that exercise back as it was. A quick double tap counts as one. **Finish session early** asks you to confirm (**Keep going** / **Finish now**). From the summary, **Back to exercises** returns to the session, and tapping an exercise in the list reopens it; after you correct it, **Done** brings you back to the summary.
+
+**Closing the app mid-session.** If the phone reloads the app or you close it, opening the session again (from Today: **Resume**) brings you back to where you were, even offline.
+
+**Finishing without a connection.** If **Submit & finish** cannot reach the server, your feedback is saved on the phone. It is sent once, with the real session duration, as soon as the connection comes back while Today is open; a toast confirms it. In the meantime the session's button reads **Waiting to sync** (it cannot be discarded) and opens "saved on this device" with **Send now**, never a second submit.
+
+**End of a rest on rep-based work**: three beeps and the voice cue "Go", so you notice without looking at the phone. Like every cue, the beeps follow the phone's silent switch, and on iPhone there is no vibration (Safari does not allow it).
 
 ---
 
