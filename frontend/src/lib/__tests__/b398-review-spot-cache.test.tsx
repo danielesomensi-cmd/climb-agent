@@ -119,3 +119,50 @@ describe.each(dialogs)("B398 O11 review — $name: a spot added inline", ({ open
     expect(qc.getQueryData(queryKeys.outdoorSpots)).toBeUndefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Review round 2 — useAddOutdoorSpot (the /settings path since B398 O11) had
+// the same trap: an empty or failed cache was seeded with the new spot alone.
+// ---------------------------------------------------------------------------
+
+import { renderHook } from "@testing-library/react";
+import { createElement, type ReactNode } from "react";
+import { useAddOutdoorSpot } from "@/lib/hooks/mutations/use-outdoor-mutations";
+
+describe("B398 review round 2 — useAddOutdoorSpot", () => {
+  const wrapper = ({ children }: { children: ReactNode }) => createElement(QueryClientProvider, { client: qc }, children);
+
+  async function addWithHook() {
+    const { result } = renderHook(() => useAddOutdoorSpot(), { wrapper });
+    await act(async () => {
+      await result.current.mutateAsync({ name: "Berdorf", discipline: "lead" } as never);
+    });
+  }
+
+  it("appends to a cached list", async () => {
+    qc.setQueryData(queryKeys.outdoorSpots, { spots: [ARCO] });
+    await addWithHook();
+    expect(qc.getQueryData(queryKeys.outdoorSpots)).toEqual({ spots: [ARCO, BERDORF] });
+  });
+
+  it("does not duplicate a spot the list already has", async () => {
+    qc.setQueryData(queryKeys.outdoorSpots, { spots: [ARCO, BERDORF] });
+    await addWithHook();
+    expect(qc.getQueryData(queryKeys.outdoorSpots)).toEqual({ spots: [ARCO, BERDORF] });
+  });
+
+  it("with no cached list, does not seed it with the new spot alone", async () => {
+    await addWithHook();
+    // Nothing was cached: the next reader fetches the whole list.
+    expect(qc.getQueryData(queryKeys.outdoorSpots)).toBeUndefined();
+  });
+
+  it("with a failed list in the cache, it is invalidated, not replaced by the new spot alone", async () => {
+    await qc
+      .fetchQuery({ queryKey: queryKeys.outdoorSpots, queryFn: () => Promise.reject(new Error("offline")) })
+      .catch(() => {});
+    await addWithHook();
+    expect(qc.getQueryData(queryKeys.outdoorSpots)).toBeUndefined();
+    expect(qc.getQueryState(queryKeys.outdoorSpots)?.isInvalidated).toBe(true);
+  });
+});
