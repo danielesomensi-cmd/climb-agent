@@ -14378,7 +14378,7 @@
         "cns": "low",
         "skin": "none"
       },
-      "description": "The handstand entry skill: from standing, hands to the floor and a controlled kick-up with a straight lead leg, finishing with the heels against the wall (back to the wall). Complementary to the wall walk-up, which enters from the floor — here you train the push calibration itself, which is what a freestanding handstand needs. The wall is a brake, not a target: aim to arrive just short of it. For the chest-to-wall balance drill, see Heel Pulls (Chest-to-Wall).",
+      "description": "The handstand entry skill: from standing, hands to the floor and a controlled kick-up with a straight lead leg, finishing with the heels against the wall (back to the wall). Complementary to the wall walk-up, which enters from the floor — here you train the push calibration itself, which is what a freestanding handstand needs. The wall is a brake, not a target: aim to arrive just short of it. For the chest-to-wall balance drill, see Toe Pulls (Chest-to-Wall Handstand).",
       "cues": [
         "Hands on the floor 20-25 cm from the wall, shoulder-width apart",
         "Straight lead leg swings up, the other leg pushes off the floor",
@@ -14395,7 +14395,7 @@
     },
     {
       "id": "heel_pulls_chest_to_wall",
-      "name": "Heel Pulls (Chest-to-Wall)",
+      "name": "Toe Pulls (Chest-to-Wall Handstand)",
       "category": "complementary",
       "time_min": 8,
       "role": [
@@ -14419,7 +14419,7 @@
         "work_seconds": null,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 75,
-        "notes": "Chest to the wall, peel one heel off at a time looking for balance. 4x3-5 attempts."
+        "notes": "Chest-to-wall handstand, hands 10-20 cm from the wall. Pull the toes of one foot off the wall, then both, looking for balance. 4x3-5 attempts."
       },
       "stress_tags": {
         "fingers": "low",
@@ -14427,13 +14427,13 @@
         "cns": "medium",
         "skin": "none"
       },
-      "description": "The canonical drill for moving from a wall-supported handstand to a freestanding one: walk up into a chest-to-wall handstand, then peel the heels off the wall one at a time to find the balance line. It is the bridge between the wall hold and freestanding practice — it teaches you to correct with the fingers instead of resting against the wall.",
+      "description": "The canonical drill for moving from a wall-supported handstand to a freestanding one: walk up into a chest-to-wall handstand (facing the wall, only the toes touching it), then pull the toes off the wall one foot at a time, then both, to find the balance line. It is the bridge between the wall hold and freestanding practice — it teaches you to correct with the fingers instead of resting against the wall. (Heel pulls are the back-to-wall version of this drill: facing the wall, the heels point away from it.)",
       "cues": [
-        "Chest and thighs in contact with the wall, body in one line",
-        "Peel one heel off, then the other: hunt for the balance point",
+        "Walk up facing the wall, hands 10-20 cm from it: only the toes touch the wall, body in one line",
+        "Pull the toes of one foot off the wall, then the other: hunt for the balance point",
         "Correct with finger pressure, not with the shoulders",
         "Pelvis tucked, ribs closed",
-        "If you fall forward, step out to the side — do not arch"
+        "If you overbalance away from the wall, cartwheel out to the side — do not arch"
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
