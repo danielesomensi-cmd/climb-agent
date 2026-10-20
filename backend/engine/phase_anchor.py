@@ -140,9 +140,10 @@ def is_max_finger_load(ex: Mapping[str, Any]) -> bool:
     return str((ex.get("stress_tags") or {}).get("fingers") or "") == "high"
 
 # Session id prefixes whose done instances count as max-hang / heavy-pull
-# exposure even when the family table has nothing (legacy test logs).
+# exposure even when the family table has nothing (legacy test logs). A319: the
+# combined test session is both (its finger side matches "test_max_hang").
 _FINGER_TEST_PREFIXES = ("test_max_hang", "test_lp_max")
-_PULL_TEST_PREFIXES = ("test_max_weighted_pullup",)
+_PULL_TEST_PREFIXES = ("test_max_weighted_pullup", rp.COMBINED_TEST_SESSION)
 
 
 def _as_date(value: Any) -> Optional[date]:

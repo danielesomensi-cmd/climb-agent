@@ -69,7 +69,10 @@ TEST_FRESH_DAYS = 90
 #: tested family in the LOW_CONF_WINDOW_D days before it → "low".
 LOW_CONF_MIN_EXPOSURES = 2
 LOW_CONF_WINDOW_D = 21
-#: A low-confidence test may be repeated after this many days.
+#: Floor of the EARLY retest only (``early_retest``: EARLY_RETEST_SIGNALS
+#: measured sessions above the max): it may come this many days after the last
+#: test. A319: no longer the gap after a low-confidence test — every other test
+#: waits HIGH_CONF_RETEST_D, whatever its confidence. Name and value kept.
 LOW_CONF_RETEST_D = 28
 
 #: Re-entry ramp. ENGINEERING CONSTANTS. A gap of at least REENTRY_GAP_D days
@@ -531,16 +534,19 @@ def is_heavy_pulling_session(
 #
 # Triggers (one test per axis per trigger; the first that applies wins):
 #   end_of_phase           last week of strength_power
-#   end_of_phase_slipped   the week after it, when the gap since the last test
-#                          kept the whole end-of-phase week out of reach (ONE
-#                          slip of one week — "option B", decision 2026-10-04)
 #   cycle_start            first week of a macrocycle
 #   maintenance            MAINTENANCE_RETEST_D since the last test
 #   early_retest           EARLY_RETEST_SIGNALS measured sessions above the max
 #                          (``progression_counters.retest_signals``, B364)
-# Week blockers: performance / deload phase, gap since the last test
-# (LOW_CONF_RETEST_D when the test had low confidence, HIGH_CONF_RETEST_D
-# otherwise). Day blockers: ≤ PRE_TRIP_BLOCK_D days before a trip (or during
+# Week blockers: performance / deload phase, gap since the last test:
+# HIGH_CONF_RETEST_D after ANY test (A319: the confidence is still computed
+# and shown, it no longer moves a date), LOW_CONF_RETEST_D for the early
+# retest only. An end-of-phase week the gap keeps out of reach is
+# ``blocked:gap`` — A319 removed the one-week slip (``end_of_phase_slipped``,
+# "option B" of 2026-10-04): the next test comes with the next trigger. A319
+# review: a trigger the gap keeps out of the week yields to the early retest
+# when that one's own floor falls in the week (its evidence is not lost).
+# Day blockers: ≤ PRE_TRIP_BLOCK_D days before a trip (or during
 # it), very_hard feedback in the VERY_HARD_BLOCK_D days before, a finger-hard
 # day < RETEST_BLOCK_H before a hang test, a heavy pull < PULL_TEST_BLOCK_H
 # before a pull-up test, pain >= 2 on the axis zone in the PAIN_BLOCK_D days
@@ -565,10 +571,18 @@ AXIS_PROTOCOL: Dict[str, str] = {
     AXIS_FINGER: PROTOCOL_HANG_7S,
     AXIS_PULLING: PROTOCOL_PULLUP_2RM,
 }
-#: Sessions that test an axis (for "is a test already planned").
+#: A319: both max tests in ONE session (max hang 7 s, then the weighted
+#: pull-up 2RM, then the secondary measurements). PASS 3a places it when both
+#: axes are due and no day offers two ordered slots — never the two tests on
+#: two days. It tests BOTH axes. The id is load-bearing: ``test_`` (test log,
+#: ``is_test_session``), ``test_max`` (key_sessions_v1 pending tests),
+#: ``test_max_hang`` (finger-test prefixes) and ``pullup`` (composer guard).
+COMBINED_TEST_SESSION = "test_max_hang_pullup"
+#: Sessions that test an axis (for "is a test already planned"). The combined
+#: one is listed under both axes.
 AXIS_TEST_SESSIONS_ALL: Dict[str, Tuple[str, ...]] = {
-    AXIS_FINGER: ("test_max_hang_7s", "test_max_hang_5s", "test_lp_max_5s"),
-    AXIS_PULLING: ("test_max_weighted_pullup", "test_pullup_bw"),
+    AXIS_FINGER: ("test_max_hang_7s", "test_max_hang_5s", "test_lp_max_5s", COMBINED_TEST_SESSION),
+    AXIS_PULLING: ("test_max_weighted_pullup", "test_pullup_bw", COMBINED_TEST_SESSION),
 }
 #: Exercises whose measured sessions feed ``retest_signals`` per axis.
 AXIS_SIGNAL_EXERCISES: Dict[str, Tuple[str, ...]] = {
@@ -576,7 +590,9 @@ AXIS_SIGNAL_EXERCISES: Dict[str, Tuple[str, ...]] = {
     AXIS_PULLING: ("weighted_pullup", "weighted_chinup"),
 }
 
-#: Gap after a high-confidence test (the planner's historical 42-day freshness).
+#: Gap after ANY test (the planner's historical 42-day freshness). A319: the
+#: confidence no longer shortens it — only the early retest has its own
+#: floor (LOW_CONF_RETEST_D).
 HIGH_CONF_RETEST_D = 42
 #: A tested axis is re-measured at the latest after 12 weeks (same as the
 #: planner's MAX_WEEKS_UNTESTED; after 90 days the axis is no longer "tested"
@@ -590,6 +606,12 @@ STATUS_HORIZON_WEEKS = 16
 TREND_STABLE_PCT = 5.0
 
 TRIGGER_END_OF_PHASE = "end_of_phase"
+#: LEGACY (A319): the one-week slip of the end-of-phase test is gone and this
+#: trigger is never produced again. Snapshots written before A319 still carry
+#: it (``profile_snapshot.retest_decisions``, e.g. Daniele's week 2026-10-19 in
+#: prod), with ``skip_reason: slipped:gap`` + ``slipped_to_week`` on the week
+#: before: the readers pass them through as stored (``_planned_reason``,
+#: ``_generated_week_skip``).
 TRIGGER_END_OF_PHASE_SLIPPED = "end_of_phase_slipped"
 TRIGGER_CYCLE_START = "cycle_start"
 TRIGGER_MAINTENANCE = "maintenance"
@@ -597,10 +619,6 @@ TRIGGER_EARLY = "early_retest"
 
 _TRIGGER_TEXT: Dict[str, str] = {
     TRIGGER_END_OF_PHASE: "End of the strength phase: measure what the block built.",
-    TRIGGER_END_OF_PHASE_SLIPPED: (
-        "End-of-strength retest moved one week: the last test needs {gap} days "
-        "before it can be repeated ({confidence} confidence)."
-    ),
     TRIGGER_CYCLE_START: "New cycle: a fresh baseline for the loads.",
     TRIGGER_MAINTENANCE: "12 weeks since the last test: keep the max honest.",
     TRIGGER_EARLY: "Two measured sessions above your tested max: time to raise it.",
@@ -614,8 +632,15 @@ def _monday(d: date) -> date:
 
 
 def retest_gap_days(confidence: Optional[str]) -> int:
-    """Days before a test of the same axis may be repeated."""
-    return LOW_CONF_RETEST_D if confidence == "low" else HIGH_CONF_RETEST_D
+    """Days before a test of the same axis may be repeated: HIGH_CONF_RETEST_D
+    after any test.
+
+    A319 (decision of 2026-10-18): the confidence of the last test is still
+    computed and shown, it no longer moves any date — a low-confidence test
+    used to be repeatable after LOW_CONF_RETEST_D, which put two tests of an
+    axis four weeks apart. Only the early retest keeps that floor (measured
+    evidence, ``_axis_week_decision``). The parameter stays for the callers."""
+    return HIGH_CONF_RETEST_D
 
 
 def axis_official(
@@ -910,18 +935,29 @@ def _planned_axis_tests(
     return sorted(rows, key=lambda r: (r["date"], str(r["slot"] or "")))
 
 
+def _early_retest_day(signals: Mapping[str, Any], we: date) -> Optional[date]:
+    """The early retest's own first day — the day after the last of
+    EARLY_RETEST_SIGNALS measured signals — when it comes by ``we``, else None
+    (the gap since the last test is the caller's)."""
+    if signals.get("count", 0) >= EARLY_RETEST_SIGNALS and signals.get("last_date"):
+        t_e = _as_date(signals["last_date"]) + timedelta(days=1)
+        if t_e <= we:
+            return t_e
+    return None
+
+
 def _trigger_for_week(
     macrocycle: Mapping[str, Any],
     ws: date,
     last: date,
-    earliest: date,
     signals: Mapping[str, Any],
 ) -> Tuple[Optional[str], Optional[date]]:
     """(trigger, trigger_earliest) for the week starting ``ws``, or (None, None).
 
     ``trigger_earliest`` is the first day the trigger itself allows (the
     early retest waits for the day after its last signal); the gap since the
-    last test is applied by the caller.
+    last test is applied by the caller. A319: no slip — the week after the
+    end-of-phase week is never a trigger of its own.
     """
     from backend.engine.macro_position import position_on
 
@@ -931,18 +967,11 @@ def _trigger_for_week(
         return None, None
     if pos["phase_id"] == "strength_power" and pos["is_last_week_of_phase"] and last < ws:
         return TRIGGER_END_OF_PHASE, ws
-    prev_ws = ws - timedelta(days=7)
-    prev = position_on(dict(macrocycle), prev_ws.isoformat())
-    if (prev and not prev["before_start"] and prev["phase_id"] == "strength_power"
-            and prev["is_last_week_of_phase"] and last < prev_ws
-            and earliest > prev_ws + timedelta(days=6) and earliest <= we):
-        return TRIGGER_END_OF_PHASE_SLIPPED, ws
     if pos["abs_week"] == 1 and last < ws:
         return TRIGGER_CYCLE_START, ws
-    if signals.get("count", 0) >= EARLY_RETEST_SIGNALS and signals.get("last_date"):
-        t_e = _as_date(signals["last_date"]) + timedelta(days=1)
-        if t_e <= we:
-            return TRIGGER_EARLY, t_e
+    t_e = _early_retest_day(signals, we)
+    if t_e is not None:
+        return TRIGGER_EARLY, t_e
     maint = last + timedelta(days=MAINTENANCE_RETEST_D)
     if maint <= we:
         return TRIGGER_MAINTENANCE, maint
@@ -985,27 +1014,33 @@ def _axis_week_decision(
         "gap_days": gap,
         "earliest_date": earliest.isoformat(),
     }
-    trigger, t_earliest = _trigger_for_week(macrocycle, ws, last, earliest, signals)
+    trigger, t_earliest = _trigger_for_week(macrocycle, ws, last, signals)
     if trigger is None:
         return {**base, "status": "not_due"}
+    we = ws + timedelta(days=6)
+    if trigger != TRIGGER_EARLY and max(earliest, t_earliest or ws, ws) > we:
+        # A319 review: the gap keeps this week's trigger (end of phase, cycle
+        # start) out of reach, but the measured evidence of an early retest
+        # has its own floor: when that floor falls in the week, the early
+        # retest takes the week. Before, it came the week after — the end of
+        # the strength phase lost one week to a trigger that could not run.
+        t_e = _early_retest_day(signals, we)
+        if t_e is not None and max(last + timedelta(days=LOW_CONF_RETEST_D), t_e, ws) <= we:
+            trigger, t_earliest = TRIGGER_EARLY, t_e
     if trigger == TRIGGER_EARLY:
-        # Measured evidence says the max is too low: the confidence of the old
-        # test no longer matters, only the low-confidence floor applies.
+        # Measured evidence says the max is too low: only the early retest's
+        # own floor applies (A319: the row says so, gap_days included).
         earliest = last + timedelta(days=LOW_CONF_RETEST_D)
         base["earliest_date"] = earliest.isoformat()
-    we = ws + timedelta(days=6)
+        base["gap_days"] = LOW_CONF_RETEST_D
     first = max(earliest, t_earliest or ws, ws)
-    reason = _TRIGGER_TEXT[trigger].format(gap=gap, confidence=conf["confidence"])
-    out = {**base, "trigger": trigger, "reason": reason}
+    out = {**base, "trigger": trigger, "reason": _TRIGGER_TEXT[trigger]}
     pos = position_on(dict(macrocycle), ws.isoformat()) or {}
     if pos.get("phase_id") in RETEST_BLOCKED_PHASES:
         return {**out, "status": "skipped", "skip_reason": "blocked:phase"}
     if first > we:
-        # The end-of-phase week that cannot reach the gap slips once.
-        nxt_we = we + timedelta(days=7)
-        if trigger == TRIGGER_END_OF_PHASE and earliest <= nxt_we:
-            return {**out, "status": "skipped", "skip_reason": "slipped:gap",
-                    "slipped_to_week": (ws + timedelta(days=7)).isoformat()}
+        # A319: the gap keeps the whole week out of reach — skipped, also at
+        # the end of the strength phase (no slip to the week after).
         return {**out, "status": "skipped", "skip_reason": "blocked:gap"}
     if check_already_scheduled:
         planned = _planned_axis_tests(state, axis, since=today or ws, exclude_week=ws.isoformat(),
@@ -1145,11 +1180,13 @@ def retest_decisions(
         })
     if len(required) == 2:
         # Paired test day: hang first, then the pull-up (decision 2026-10-04).
+        # A319: one day always — PASS 3a falls back to the combined session
+        # (COMBINED_TEST_SESSION) when no day has two ordered slots.
         required[0]["paired_with"] = required[1]["session_id"]
         required[1]["paired_with"] = required[0]["session_id"]
     skipped = [
         {k: dec.get(k) for k in ("axis", "session_id", "trigger", "reason", "skip_reason",
-                                 "earliest_date", "slipped_to_week", "deferred_to_week")
+                                 "earliest_date", "deferred_to_week")
          if dec.get(k) is not None}
         for dec in axes.values() if dec["status"] == "skipped"
     ]
@@ -1247,6 +1284,9 @@ def retest_status(
 
     ``covered`` False → the axis is scheduled by the legacy planner rules
     (untested, test older than 90 days, loading pin); ``tested_until`` None.
+    ``earliest_retest`` (A319): the first day any test of the axis may come
+    (test + HIGH_CONF_RETEST_D, or the early retest's first day when that comes
+    sooner).
     ``next_test_reason`` is the last skip the projection met — else
     ``not_tested_recently`` when it reaches the 90-day expiry (B400: a real
     skip is no longer overwritten there), ``not_due_within_horizon`` when it
@@ -1274,9 +1314,19 @@ def retest_status(
         row.update({"confidence": conf["confidence"], "confidence_exposures": conf["exposures"],
                     "confidence_min_exposures": conf["min_required"]})
         row.update(axis_trend(state, om))
-        gap = retest_gap_days(conf["confidence"])
-        row["earliest_retest"] = (_as_date(om["date"]) + timedelta(days=gap)).isoformat()
         sig = axis_signals(state, axis, om)
+        # A319: the first day ANY test may come — the gap after the test, or,
+        # with the measured evidence of an early retest, the first day
+        # `_axis_week_decision` lets that one in (LOW_CONF_RETEST_D floor, the
+        # day after the last signal) when it comes sooner. The card and
+        # athlete_context's "not before" never contradict a projected test.
+        test_d = _as_date(om["date"])
+        earliest = test_d + timedelta(days=retest_gap_days(conf["confidence"]))
+        if sig["count"] >= EARLY_RETEST_SIGNALS and sig["last_date"]:
+            early = max(test_d + timedelta(days=LOW_CONF_RETEST_D),
+                        _as_date(sig["last_date"]) + timedelta(days=1))
+            earliest = min(earliest, early)
+        row["earliest_retest"] = earliest.isoformat()
         row["signals"] = {"count": sig["count"], "needed": sig["needed"]}
         try:
             from backend.engine.anchored_load import fatigue_for
@@ -1395,4 +1445,6 @@ __all__ = [
     "TRIGGER_CYCLE_START", "TRIGGER_MAINTENANCE", "TRIGGER_EARLY", "retest_gap_days",
     "axis_official", "axis_confidence", "axis_trend", "axis_signals", "very_hard_dates",
     "trip_blocked", "pain_blocked", "retest_decisions", "test_day_blockers", "retest_status",
+    # A319
+    "COMBINED_TEST_SESSION",
 ]

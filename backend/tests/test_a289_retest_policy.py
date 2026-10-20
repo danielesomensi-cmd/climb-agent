@@ -2,13 +2,15 @@
 
 Covers:
 - ``retest_policy.retest_decisions``: who is covered (tested axes only),
-  triggers (end of SP, one-week slip, cycle start, maintenance, early retest
-  from measured signals), week blockers (phase, gap by confidence) and day
-  blockers (trip, very_hard), already-scheduled tests, determinism.
+  triggers (end of SP, cycle start, maintenance, early retest from measured
+  signals), week blockers (phase; the gap — A319: 42 days after any test,
+  whatever its confidence, 28 only for the early retest) and day blockers
+  (trip, very_hard), already-scheduled tests, determinism.
 - ``planner_v2.generate_phase_week(retest_decisions=...)``: byte-identical with
   None, paired placement (hang before pull-up, same day), the unified blockers
-  (finger-hard < 72 h, heavy pull < 48 h — 48 h exactly allowed), fallbacks,
-  the legacy PASS 3 left to the uncovered axes, inject_tests wins.
+  (finger-hard < 72 h, heavy pull < 48 h — 48 h exactly allowed), fallbacks
+  (A319: the combined session, else the hang alone), the legacy PASS 3 left to
+  the uncovered axes, inject_tests wins.
 - ``retest_status``: official max, confidence, ±5 % trend, next test (planned
   with reason, projected), live blockers on the planned day.
 - GET /api/week: retest_status attached, manual 6-week reminder suppressed
@@ -16,8 +18,16 @@ Covers:
 - Past sessions immutable through a regeneration with decisions.
 
 Daniele's case (synthetic copy of the 2026-10-04 snapshot): both 24/09 tests
-have LOW confidence (0 exposures in 03-23/09) → earliest 22/10; the
-end-of-SP week 12-18/10 cannot reach it → slips once to 19-25/10.
+have LOW confidence (0 exposures in 03-23/09). A319: the confidence no longer
+moves a date — earliest 05/11 (+42 days). The end-of-SP week 12-18/10 cannot
+reach it → ``blocked:gap``, no slip to 19-25/10 (A289's "option B" is gone);
+every later week of this macrocycle (it ends 06/12) is ``not_due``: the 84-day
+maintenance (17/12) falls after its end.
+
+``_due_1019()`` is the due decision the planner, blocker and status tests
+need: the macrocycle from 14/09 (end-of-SP week 19-25/10) and the two tests on
+10/09 → earliest 22/10, allowed 22-25/10, trigger ``end_of_phase`` — the dates
+the slip used to give ``_daniele()``.
 """
 
 from __future__ import annotations
@@ -93,6 +103,16 @@ def _daniele(**over) -> dict:
         "week_plans": {},
     }
     state.update(over)
+    return state
+
+
+def _due_1019(**over) -> dict:
+    """A319: both axes due in the end-of-SP week 19-25/10 (macrocycle from
+    14/09), the two tests of 24/09 moved to 10/09 → earliest 22/10 (+42 days),
+    allowed 22-25/10, trigger end_of_phase, confidence low."""
+    state = _daniele(macrocycle=_macrocycle("2026-09-14"), **over)
+    for key in ("max_strength", "pulling_strength"):
+        state["tests"][key][-1]["date"] = "2026-09-10"
     return state
 
 
@@ -180,58 +200,91 @@ class TestCoverage:
         assert dec["covered_axes"] == ["pulling"]
 
 
+def _without_confidence(dec: dict) -> dict:
+    """A decision with every ``confidence`` field dropped (A319: the only
+    thing the confidence still changes)."""
+    out = deepcopy(dec)
+    for row in list(out["axes"].values()) + out["required_sessions"] + out["skipped"]:
+        row.pop("confidence", None)
+    return out
+
+
 class TestTriggersDaniele:
-    def test_confidence_low_earliest_22_10(self):
+    def test_confidence_low_earliest_05_11(self):
+        # A319: low confidence, and still 42 days — the confidence is computed
+        # and shown, it no longer moves the date.
         st = _daniele()
         om = rp.axis_official(st, "finger", "2026-10-19")
         assert rp.axis_confidence(st, om)["confidence"] == "low"
-        dec = _decision(st, "2026-10-19")
-        assert {r["axis"] for r in dec["required_sessions"]} == {"finger", "pulling"}
-        for r in dec["required_sessions"]:
-            assert r["earliest_date"] == "2026-10-22"
-            assert r["confidence"] == "low"
-            assert r["gap_days"] == 28
+        for ws in ("2026-10-05", "2026-10-12", "2026-10-19", "2026-11-02"):
+            dec = _decision(st, ws)
+            for axis in ("finger", "pulling"):
+                row = dec["axes"][axis]
+                assert (row["confidence"], row["earliest_date"], row["gap_days"]) == ("low", "2026-11-05", 42), ws
 
-    def test_end_of_sp_week_slips_once(self):
+    def test_end_of_sp_week_blocked_by_gap_no_slip(self):
         st = _daniele()
         dec = _decision(st, "2026-10-12")
         assert dec["required_sessions"] == []
-        reasons = {s["axis"]: s["skip_reason"] for s in dec["skipped"]}
-        assert reasons == {"finger": "slipped:gap", "pulling": "slipped:gap"}
-        assert all(s["slipped_to_week"] == "2026-10-19" for s in dec["skipped"])
+        reasons = {s["axis"]: (s["skip_reason"], s["trigger"]) for s in dec["skipped"]}
+        assert reasons == {"finger": ("blocked:gap", rp.TRIGGER_END_OF_PHASE),
+                           "pulling": ("blocked:gap", rp.TRIGGER_END_OF_PHASE)}
+        assert not any("slipped_to_week" in row for row in dec["skipped"])
+        assert not any("slipped_to_week" in row for row in dec["axes"].values())
+        # The week after is no trigger of its own any more (A289's one-week slip).
+        nxt = _decision(st, "2026-10-19")
+        assert nxt["required_sessions"] == [] and nxt["skipped"] == []
+        assert {a: r["status"] for a, r in nxt["axes"].items()} == {"finger": "not_due", "pulling": "not_due"}
 
-    def test_slipped_week_is_paired_hang_first(self):
-        dec = _decision(_daniele(), "2026-10-19")
+    def test_end_of_sp_week_is_paired_hang_first(self):
+        dec = _decision(_due_1019(), "2026-10-19")
         hang, pull = dec["required_sessions"]
         assert (hang["session_id"], pull["session_id"]) == ("test_max_hang_7s", "test_max_weighted_pullup")
         assert hang["order"] == 1 and pull["order"] == 2
         assert hang["paired_with"] == pull["session_id"] and pull["paired_with"] == hang["session_id"]
-        assert hang["trigger"] == rp.TRIGGER_END_OF_PHASE_SLIPPED
+        assert hang["trigger"] == pull["trigger"] == rp.TRIGGER_END_OF_PHASE
         assert hang["allowed_dates"] == ["2026-10-22", "2026-10-23", "2026-10-24", "2026-10-25"]
+        assert (hang["confidence"], hang["gap_days"]) == ("low", 42)
 
     def test_following_weeks_not_due(self):
+        # No test left in this macrocycle: it ends 06/12, and the 84-day
+        # maintenance (24/09 + 84 = 17/12) comes after its end.
         st = _daniele()
-        for ws in ("2026-10-26", "2026-11-02"):
-            assert _decision(st, ws)["required_sessions"] == []
+        ws = date(2026, 10, 19)
+        while ws <= date(2026, 11, 30):
+            dec = _decision(st, ws.isoformat())
+            assert dec["required_sessions"] == [] and dec["skipped"] == [], ws
+            assert {r["status"] for r in dec["axes"].values()} == {"not_due"}, ws
+            ws += timedelta(days=7)
 
-    def test_high_confidence_waits_42_days_and_cannot_slip(self):
-        # Two exposures in the 21 days before the test → high → earliest 05/11:
-        # the end-of-SP week and its one-week slip are both out of reach.
-        st = _with_exposures(_daniele(), {"finger_max": ["2026-09-10", "2026-09-17"],
-                                          "pulling_max": ["2026-09-10", "2026-09-17"]})
-        dec12 = _decision(st, "2026-10-12")
-        assert {s["skip_reason"] for s in dec12["skipped"]} == {"blocked:gap"}
-        assert _decision(st, "2026-10-19")["required_sessions"] == []
-        om = rp.axis_official(st, "finger", "2026-10-19")
-        assert rp.axis_confidence(st, om)["confidence"] == "high"
+    def test_confidence_never_moves_the_dates(self):
+        # A319: two exposures in the 21 days before the test → high confidence.
+        # Every decision is the low-confidence one but for that field — the
+        # blocked end-of-SP week and the due one alike.
+        for low, ws_list, before in (
+            (_daniele(), ("2026-10-05", "2026-10-12", "2026-10-19", "2026-11-02"), ["2026-09-10", "2026-09-17"]),
+            (_due_1019(), ("2026-10-12", "2026-10-19", "2026-10-26"), ["2026-08-27", "2026-09-03"]),
+        ):
+            high = _with_exposures(low, {"finger_max": before, "pulling_max": before})
+            for axis in ("finger", "pulling"):
+                om = rp.axis_official(high, axis, "2026-10-19")
+                assert rp.axis_confidence(high, om)["confidence"] == "high"
+            for ws in ws_list:
+                a, b = _decision(low, ws), _decision(high, ws)
+                assert {r["confidence"] for r in a["axes"].values()} == {"low"}
+                assert {r["confidence"] for r in b["axes"].values()} == {"high"}
+                assert _without_confidence(a) == _without_confidence(b), ws
 
     def test_stored_computed_confidence_wins(self):
         st = _daniele()
         st["tests"]["max_strength"][-1]["confidence"] = "high"
         st["tests"]["max_strength"][-1]["confidence_basis"] = {"exposures": 3, "min_required": 2}
-        dec = _decision(st, "2026-10-19")
-        axes = {r["axis"] for r in dec["required_sessions"]}
-        assert axes == {"pulling"}  # finger: high → 42 days → not reachable
+        dec = _decision(st, "2026-10-12")
+        assert dec["axes"]["finger"]["confidence"] == "high"
+        assert dec["axes"]["pulling"]["confidence"] == "low"
+        for axis in ("finger", "pulling"):  # A319: the same gap whatever the confidence
+            row = dec["axes"][axis]
+            assert (row["earliest_date"], row["gap_days"], row["skip_reason"]) == ("2026-11-05", 42, "blocked:gap")
 
 
 class TestOtherTriggers:
@@ -239,6 +292,9 @@ class TestOtherTriggers:
         st = _daniele(macrocycle=_macrocycle("2026-11-02"))
         dec = _decision(st, "2026-11-02", today="2026-11-02")
         assert {r["trigger"] for r in dec["required_sessions"]} == {rp.TRIGGER_CYCLE_START}
+        # A319: 42 days after 24/09 even at low confidence → from Thu 05/11.
+        assert all(r["allowed_dates"] == ["2026-11-05", "2026-11-06", "2026-11-07", "2026-11-08"]
+                   for r in dec["required_sessions"])
 
     def test_maintenance_after_84_days(self):
         # A long PE phase so the 84-day mark is not in performance/deload.
@@ -265,12 +321,17 @@ class TestOtherTriggers:
         assert dec["required_sessions"] == []
         assert {s["skip_reason"] for s in dec["skipped"]} == {"blocked:phase"}
 
-    def test_early_retest_from_two_measured_signals(self):
+    @pytest.mark.parametrize("confidence", ["low", "high"])
+    def test_early_retest_from_two_measured_signals(self, confidence):
         st = _daniele()
-        st["progression_counters"] = {"retest_signals": {
+        if confidence == "high":
+            st = _with_exposures(st, {"pulling_max": ["2026-09-10", "2026-09-17"]})
+        om = rp.axis_official(st, "pulling", "2026-11-02")
+        assert rp.axis_confidence(st, om)["confidence"] == confidence
+        st.setdefault("progression_counters", {})["retest_signals"] = {
             "weighted_pullup": {"count": 2, "dates": ["2026-10-27", "2026-10-30"],
                                 "last_date": "2026-10-30", "official_date": "2026-09-24"},
-        }}
+        }
         # The current week (26/10) is already generated: the early retest whose
         # signals end on 30/10 is not deferred to it (A289 review).
         st["week_plans"] = {"2026-10-26": _plan_with_tests("2026-10-26")}
@@ -280,6 +341,10 @@ class TestOtherTriggers:
         assert set(req) == {"pulling"}
         assert req["pulling"]["trigger"] == rp.TRIGGER_EARLY
         assert req["pulling"]["earliest_date"] == "2026-11-02"
+        # A319: the early retest keeps the 28-day floor with any confidence,
+        # and its row says so (it used to say 42 next to a +28 date).
+        assert req["pulling"]["gap_days"] == 28
+        assert dec["axes"]["pulling"]["earliest_date"] == "2026-10-22"
 
     def test_signals_against_an_older_test_do_not_count(self):
         st = _daniele()
@@ -308,25 +373,25 @@ class TestOtherTriggers:
 
 class TestDayBlockers:
     def test_trip_blocks_days(self):
-        st = _daniele(trips=[{"name": "x", "start_date": "2026-11-03", "end_date": "2026-11-08"}])
+        st = _due_1019(trips=[{"name": "x", "start_date": "2026-11-03", "end_date": "2026-11-08"}])
         dec = _decision(st, "2026-10-19")
         # 24/10 + 10 = 03/11 → 24 and 25 blocked; 22 and 23 still allowed.
         assert dec["required_sessions"][0]["allowed_dates"] == ["2026-10-22", "2026-10-23"]
 
     def test_trip_blocks_whole_window(self):
-        st = _daniele(trips=[{"name": "x", "start_date": "2026-10-30", "end_date": "2026-11-08"}])
+        st = _due_1019(trips=[{"name": "x", "start_date": "2026-10-30", "end_date": "2026-11-08"}])
         dec = _decision(st, "2026-10-19")
         assert dec["required_sessions"] == []
         assert {s["skip_reason"] for s in dec["skipped"]} == {"blocked:trip"}
 
     def test_very_hard_blocks_three_days(self):
-        st = _daniele(feedback_log=[{"date": "2026-10-21", "difficulty": "very_hard",
-                                     "session_id": "limit_boulder_gym"}])
+        st = _due_1019(feedback_log=[{"date": "2026-10-21", "difficulty": "very_hard",
+                                      "session_id": "limit_boulder_gym"}])
         dec = _decision(st, "2026-10-19", today="2026-10-21")
         assert dec["required_sessions"][0]["allowed_dates"] == ["2026-10-25"]
 
     def test_external_blockers_include_custom_and_previous_week(self):
-        st = _daniele()
+        st = _due_1019()
         st["week_plans"] = {"2026-10-12": {"start_date": "2026-10-12", "weeks": [{"days": [
             {"date": "2026-10-18", "sessions": [
                 {"session_id": "custom_cs_x", "status": "planned", "is_custom": True,
@@ -335,33 +400,33 @@ class TestDayBlockers:
             ]},
         ]}]}}
         dec = _decision(st, "2026-10-19")
-        assert dec is not None
-        # Nothing due this week? (due: yes, slipped) — the blockers are computed
-        # only when something is due, and here both tests are due.
+        # The blockers are computed only when something is due — both tests are.
+        assert len(dec["required_sessions"]) == 2
         assert "2026-10-18" in dec["finger_hard_dates"]
         assert "2026-10-18" in dec["heavy_pull_dates"]
 
     def test_already_scheduled_in_another_week(self):
-        st = _daniele()
+        st = _due_1019()
         st["week_plans"] = {"2026-10-12": {"start_date": "2026-10-12", "weeks": [{"days": [
             {"date": "2026-10-17", "sessions": [{"session_id": "test_max_hang_7s"}]},
         ]}]}}
         dec = _decision(st, "2026-10-19")
         assert [r["axis"] for r in dec["required_sessions"]] == ["pulling"]
         assert dec["already_scheduled"] == [{"axis": "finger", "date": "2026-10-17",
-                                             "trigger": rp.TRIGGER_END_OF_PHASE_SLIPPED}]
+                                             "trigger": rp.TRIGGER_END_OF_PHASE}]
 
     def test_skipped_test_does_not_count_as_scheduled(self):
-        st = _daniele()
+        st = _due_1019()
         st["week_plans"] = {"2026-10-12": {"start_date": "2026-10-12", "weeks": [{"days": [
             {"date": "2026-10-17", "sessions": [{"session_id": "test_max_hang_7s", "status": "skipped"}]},
         ]}]}}
         assert len(_decision(st, "2026-10-19")["required_sessions"]) == 2
 
     def test_deterministic(self):
-        st = _daniele()
+        st = _due_1019()
         a = _decision(st, "2026-10-19")
         b = _decision(deepcopy(st), "2026-10-19")
+        assert len(a["required_sessions"]) == 2  # a real decision, not an empty one
         assert a == b
         json.dumps(a)  # serialisable (stored in profile_snapshot)
 
@@ -386,7 +451,7 @@ class TestPlanner:
             assert "retest_decisions" not in a["profile_snapshot"]
 
     def test_paired_placement_hang_before_pull(self):
-        dec = _decision(_daniele(), "2026-10-19")
+        dec = _decision(_due_1019(), "2026-10-19")
         plan = generate_phase_week(**_pe_week(retest_decisions=dec))
         tests = _test_days(plan)
         assert set(tests) >= {"test_max_hang_7s", "test_max_weighted_pullup"}
@@ -397,14 +462,16 @@ class TestPlanner:
         assert snap["applied"] is True
         assert [r["status"] for r in snap["required_sessions"]] == ["placed", "placed"]
         assert all(r["placed_date"] == hd for r in snap["required_sessions"])
+        assert not any("combined" in r for r in snap["required_sessions"])
         entry = next(s for _d, s in _sessions(plan) if s["session_id"] == "test_max_hang_7s")
         assert "pass3:retest_policy" in entry["explain"]
-        assert any(e.startswith("retest:end_of_phase_slipped") for e in entry["explain"])
+        # Exact tag: a startswith would also match the legacy end_of_phase_slipped.
+        assert "retest:end_of_phase" in entry["explain"]
 
     def test_finger_hard_day_before_blocks_hang_72h(self):
         # A finger-hard session on Wed 21/10 outside the planner's view (external)
         # → 22 and 23 blocked (< 3 days), 24 allowed.
-        dec = _decision(_daniele(), "2026-10-19")
+        dec = _decision(_due_1019(), "2026-10-19")
         dec = deepcopy(dec)
         dec["finger_hard_dates"] = ["2026-10-21"]
         plan = generate_phase_week(**_pe_week(retest_decisions=dec))
@@ -412,7 +479,7 @@ class TestPlanner:
         assert hd >= "2026-10-24"
 
     def test_heavy_pull_two_days_before_is_allowed_one_day_blocks(self):
-        dec = deepcopy(_decision(_daniele(), "2026-10-19"))
+        dec = deepcopy(_decision(_due_1019(), "2026-10-19"))
         # Restrict to Sun 25 so the outcome is readable (Sat 24 is inside the
         # 72 h hang block of the plan's own finger-hard Wednesday, A289 review).
         for r in dec["required_sessions"]:
@@ -423,26 +490,32 @@ class TestPlanner:
         dec["heavy_pull_dates"] = ["2026-10-24"]  # 24 h before: blocked
         plan = generate_phase_week(**_pe_week(retest_decisions=dec))
         tests = _test_days(plan)
+        # A319: the combined session holds the 2RM too — the same 48 h rule
+        # refuses it; the hang goes alone, the pull-up waits (never another day).
         assert tests["test_max_hang_7s"][0] == "2026-10-25"
-        assert "test_max_weighted_pullup" not in tests
+        assert "test_max_weighted_pullup" not in tests and "test_max_hang_pullup" not in tests
         skipped = {s["test_id"]: s["reason"] for s in plan["skipped_tests"]}
         assert skipped["test_max_weighted_pullup"] == "blocked:no_paired_slot"
+        rows = plan["profile_snapshot"]["retest_decisions"]["required_sessions"]
+        assert [(r["session_id"], r["status"]) for r in rows] == [
+            ("test_max_hang_7s", "placed"), ("test_max_weighted_pullup", "skipped")]
 
     def test_hang_unplaced_skips_pull_with_same_reason(self):
-        dec = deepcopy(_decision(_daniele(), "2026-10-19"))
+        dec = deepcopy(_decision(_due_1019(), "2026-10-19"))
         dec["finger_hard_dates"] = ["2026-10-24", "2026-10-25"]  # nothing left with < 72 h free
         for r in dec["required_sessions"]:
             r["allowed_dates"] = ["2026-10-25", "2026-10-26"]
         plan = generate_phase_week(**_pe_week(retest_decisions=dec))
         tests = _test_days(plan)
-        assert "test_max_hang_7s" not in tests and "test_max_weighted_pullup" not in tests
+        assert not {"test_max_hang_7s", "test_max_weighted_pullup", "test_max_hang_pullup"} & set(tests)
         reasons = {s["test_id"]: (s["reason"], s.get("required")) for s in plan["skipped_tests"]}
         assert reasons["test_max_hang_7s"] == ("no_placement_slot", True)
         assert reasons["test_max_weighted_pullup"] == ("no_placement_slot", True)
 
-    def test_slipped_week_legacy_does_not_place_covered_axes(self):
+    def test_blocked_gap_week_legacy_does_not_place_covered_axes(self):
         # End-of-SP week: legacy PASS 3 would place the hang + pull-up tests;
-        # with the policy they slipped, only the (uncovered) repeater remains.
+        # with the policy the gap blocks them (A319: no slip), only the
+        # (uncovered) repeater remains.
         kw = _kwargs("strength_power", "2026-10-12", is_last_week_of_phase=True)
         legacy = _test_days(generate_phase_week(**kw))
         assert "test_max_hang_7s" in legacy
@@ -450,19 +523,22 @@ class TestPlanner:
         plan = generate_phase_week(**kw, retest_decisions=dec)
         tests = _test_days(plan)
         assert "test_max_hang_7s" not in tests and "test_max_weighted_pullup" not in tests
+        assert "test_repeater_7_3" in tests
         reasons = {s["test_id"]: s["reason"] for s in plan["skipped_tests"] if s.get("source") == "retest_policy"}
-        assert reasons == {"test_max_hang_7s": "slipped:gap", "test_max_weighted_pullup": "slipped:gap"}
+        assert reasons == {"test_max_hang_7s": "blocked:gap", "test_max_weighted_pullup": "blocked:gap"}
 
     def test_inject_tests_wins_over_decisions(self):
-        dec = _decision(_daniele(), "2026-10-12")
-        kw = _kwargs("strength_power", "2026-10-12", is_last_week_of_phase=True, inject_tests=True)
+        dec = _decision(_due_1019(), "2026-10-19")
+        assert len(dec["required_sessions"]) == 2  # a real decision, ignored all the same
+        kw = _kwargs("strength_power", "2026-10-19", is_last_week_of_phase=True, inject_tests=True)
         a = _strip_volatile(generate_phase_week(**kw))
         b = _strip_volatile(generate_phase_week(**kw, retest_decisions=dec))
         b["profile_snapshot"].pop("retest_decisions")
         assert a == b
 
     def test_hard_cap_respected(self):
-        dec = _decision(_daniele(), "2026-10-19")
+        dec = _decision(_due_1019(), "2026-10-19")
+        assert len(dec["required_sessions"]) == 2
         plan = generate_phase_week(**_pe_week(retest_decisions=dec, hard_cap_per_week=2,
                                               planning_prefs={"target_training_days_per_week": 6,
                                                               "hard_day_cap_per_week": 2}))
@@ -470,9 +546,10 @@ class TestPlanner:
         assert len(hard_days) <= 2
 
     def test_deterministic_plan(self):
-        dec = _decision(_daniele(), "2026-10-19")
+        dec = _decision(_due_1019(), "2026-10-19")
         a = _strip_volatile(generate_phase_week(**_pe_week(retest_decisions=dec)))
         b = _strip_volatile(generate_phase_week(**_pe_week(retest_decisions=deepcopy(dec))))
+        assert {r["status"] for r in a["profile_snapshot"]["retest_decisions"]["required_sessions"]} == {"placed"}
         assert a == b
 
     def test_past_sessions_immutable_after_regeneration(self):
@@ -482,8 +559,10 @@ class TestPlanner:
                 "actual_exercises": [{"exercise_id": "max_hang_7s", "used_total_load_kg": 104.5}],
                 "feedback_summary": {"difficulty": "ok"}}
         mon["sessions"] = [deepcopy(done)]
-        dec = _decision(_daniele(), "2026-10-19", today="2026-10-20")
+        dec = _decision(_due_1019(), "2026-10-19", today="2026-10-20")
+        assert len(dec["required_sessions"]) == 2  # the regeneration really places tests
         fresh = generate_phase_week(**_pe_week(retest_decisions=dec, today="2026-10-20"))
+        assert _test_days(fresh)
         merged = regenerate_preserving_completed(old, fresh, preserve_before="2026-10-20")
         mon_after = merged["weeks"][0]["days"][0]
         assert mon_after["sessions"] == [done]
@@ -516,11 +595,18 @@ class TestStatus:
         assert (f["official_total_kg"], f["test_date"], f["confidence"]) == (116.0, "2026-09-24", "low")
         assert (f["trend"], f["delta_pct"]) == ("stable", -4.9)
         assert (p["trend"], p["delta_pct"]) == ("stable", 0.8)
-        assert f["earliest_retest"] == "2026-10-22"
-        assert f["next_test"]["source"] == "projected"
-        assert f["next_test"]["date"] == "2026-10-22"
-        assert f["next_test"]["trigger"] == rp.TRIGGER_END_OF_PHASE_SLIPPED
         assert retest["stable_band_pct"] == 5.0
+        # A319: 42 days whatever the confidence. The end-of-SP week 12/10 is out
+        # of reach and nothing else comes before the 90-day expiry: no test,
+        # the reason the projection met (B400) — not a slipped week.
+        for row in (f, p):
+            assert row["earliest_retest"] == "2026-11-05"
+            assert row["next_test"] is None
+            assert row["next_test_reason"] == "blocked:gap"
+        # Due in the end-of-SP week: projected from the first allowed day.
+        nt = rp.retest_status(_due_1019(), "2026-10-04", finger_device="hangboard")["axes"]["finger"]["next_test"]
+        assert (nt["source"], nt["date"], nt["trigger"], nt["week_start"]) == (
+            "projected", "2026-10-22", rp.TRIGGER_END_OF_PHASE, "2026-10-19")
 
     def test_trend_outside_band(self):
         st = _daniele()
@@ -530,8 +616,9 @@ class TestStatus:
 
     def test_planned_test_reason_and_no_blockers_24_10(self):
         # Daniele's real layout: PE gym (pulling + hard) on Thu 22/10, the pair
-        # on Sat 24/10 → 48 h exactly: allowed by the unified rule.
-        st = _daniele()
+        # on Sat 24/10 → 48 h exactly: allowed by the unified rule. No snapshot:
+        # the reason is the policy's own reading of the week (end of SP).
+        st = _due_1019()
         st["week_plans"] = {"2026-10-19": _plan_with_tests("2026-10-24", extra_sessions=[
             ("2026-10-20", {"session_id": "finger_strength_home", "slot": "evening",
                             "tags": {"hard": True, "finger": True}}),
@@ -542,7 +629,7 @@ class TestStatus:
         for axis in ("finger", "pulling"):
             nt = status["axes"][axis]["next_test"]
             assert nt["source"] == "planned" and nt["date"] == "2026-10-24"
-            assert nt["trigger"] == rp.TRIGGER_END_OF_PHASE_SLIPPED
+            assert nt["trigger"] == rp.TRIGGER_END_OF_PHASE
             assert nt["blockers"] == []
 
     def test_live_flags_custom_and_very_hard(self):
@@ -671,12 +758,25 @@ class TestReviewFixes:
 
     def test_hang_block_is_inclusive_three_days(self):
         # Finger-hard Wed 21 evening → Sat 24 morning is ~60 h < 72 h: blocked.
-        dec = deepcopy(_decision(_daniele(), "2026-10-19"))
-        dec["finger_hard_dates"] = ["2026-10-21"]
+        # A319 review: a week whose own sessions leave Saturday free for the
+        # tests (Mon/Wed/Sat available; the full week had its own finger
+        # sessions around Saturday), so the external day is the one in play:
+        # none or 4 days before (Tue 20) → the pair on Saturday, 3 days
+        # before (Wed 21) → blocked.
+        dec = deepcopy(_decision(_due_1019(), "2026-10-19"))
+        assert len(dec["required_sessions"]) == 2
         for r in dec["required_sessions"]:
             r["allowed_dates"] = ["2026-10-24"]
-        plan = generate_phase_week(**_pe_week(retest_decisions=dec))
-        assert "test_max_hang_7s" not in _test_days(plan)
+        kw = {"availability": _avail(days=("mon", "wed", "sat"))}
+        for ext in ([], ["2026-10-20"]):
+            dec["finger_hard_dates"] = ext
+            free = _test_days(generate_phase_week(**_pe_week(retest_decisions=dec, **kw)))
+            assert free["test_max_hang_7s"][0] == free["test_max_weighted_pullup"][0] == "2026-10-24", ext
+        dec["finger_hard_dates"] = ["2026-10-21"]
+        plan = generate_phase_week(**_pe_week(retest_decisions=dec, **kw))
+        assert not {"test_max_hang_7s", "test_max_hang_pullup"} & set(_test_days(plan))
+        assert {r["skip_reason"] for r in plan["profile_snapshot"]["retest_decisions"]["required_sessions"]} == {
+            "no_placement_slot"}
         live = rp.test_day_blockers(_daniele(week_plans={"2026-10-19": _plan_with_tests(
             "2026-10-24", extra_sessions=[("2026-10-21", {
                 "session_id": "finger_strength_home", "slot": "evening",
@@ -686,7 +786,7 @@ class TestReviewFixes:
     def test_no_finger_hard_session_planned_in_hang_test_window(self):
         # Plan-wide invariant: no finger-hard session in the 3 days before the hang test.
         from backend.engine.stimulus import is_finger_hard_session
-        dec = _decision(_daniele(), "2026-10-19")
+        dec = _decision(_due_1019(), "2026-10-19")
         plan = generate_phase_week(**_pe_week(retest_decisions=dec))
         hd = date.fromisoformat(_test_days(plan)["test_max_hang_7s"][0])
         for d, s in _sessions(plan):
@@ -717,7 +817,7 @@ class TestReviewFixes:
         # The old plan has a session skipped in advance on Sun 25 morning: the
         # merge puts it back over that slot, so PASS 3a must not use it
         # (unlocked, the hang lands exactly there and is overwritten).
-        st = _daniele()
+        st = _due_1019()
         old = _plan_with_tests("2026-10-25")
         for d in old["weeks"][0]["days"]:
             d["sessions"] = []
@@ -741,7 +841,7 @@ class TestReviewFixes:
     def test_today_with_done_session_is_locked(self):
         # Today (Thu 22) holds a done session: the merge copies the day
         # wholesale, so a test placed there would vanish.
-        st = _daniele()
+        st = _due_1019()
         old = _plan_with_tests("2026-10-25")
         for d in old["weeks"][0]["days"]:
             d["sessions"] = []
@@ -760,9 +860,9 @@ class TestReviewFixes:
         assert reasons["test_max_hang_7s"] == "no_placement_slot"
 
     def test_projection_skips_a_generated_week_without_the_test(self):
-        # The slipped week 19/10 is already generated without tests (PASS 3a
+        # The end-of-SP week 19/10 is already generated without tests (PASS 3a
         # skipped them): no "next test from 22/10" promise.
-        st = _daniele()
+        st = _due_1019()
         plan = _plan_with_tests("2026-10-25")
         for d in plan["weeks"][0]["days"]:
             d["sessions"] = []

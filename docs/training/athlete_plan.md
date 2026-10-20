@@ -72,7 +72,10 @@ Il test conta come esposizione. Durante il rientro, max hang al massimo 5 serie.
 - **Custom (A302):** ogni riga con carico che non è una delle quattro ancorate (curl, RDL, wrist curl…) porta il carico di lavoro del giorno, come una sessione del motore; il kg salvato resta come riferimento. Una riga in modalità fissa tiene il kg scritto.
 
 **Retest:** solo la retest policy programma i test (A289).
+- **Distanza (A319):** 42 gg dopo ogni test, qualunque sia la confidenza (si calcola e si mostra, ma non sposta più nessuna data); 28 gg solo per il retest anticipato. Niente slittamento a fine SP: se la distanza tiene fuori la settimana di fine SP, quel test salta e il prossimo arriva col trigger successivo (inizio ciclo, o 12 settimane dall'ultimo test). Il retest anticipato invece prende anche la settimana di fine SP, se il suo primo giorno ci cade dentro.
 - **Retest anticipato:** solo verso l'alto, misurato e due volte. Ultima serie di trazione con e1RM sopra il 1RM ufficiale, oppure sospensione tenuta oltre target+5 s al ≥90%.
+- **Un solo giorno di test (A319):** con entrambi i test dovuti, sospensione in uno slot prima della trazione; se nessun giorno ha due slot, una sola seduta `test_max_hang_pullup` (sospensione massimale, poi il 2RM alla trazione dopo 5' di recupero, poi le misure secondarie). Mai due sere diverse: se neanche la combinata entra, la sospensione va da sola e la trazione aspetta. Lo stesso quando un test resta dove l'ho spostato (o dove lo tiene una rigenerazione «da domani»): l'altro entra in quel giorno, nello slot giusto, oppure aspetta.
+- **Il 2RM vuole i pesi (A319):** test trazione e combinata solo dove ci sono trave/sbarra **e** pesi. Per Daniele: Bkl (lunedì sera) o casa, non Cocque (niente pesi).
 - **Blocchi:**
   - test dita entro 72 h da un giorno dita-hard;
   - test trazione entro 48 h da una seduta di tirata pesante;

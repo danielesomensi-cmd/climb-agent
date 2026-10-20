@@ -57,8 +57,16 @@ _SESSION_META: Dict[str, Dict[str, Any]] = {
     "test_lp_max_5s": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["loading_pin"]},
     "test_repeater_7_3": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["hangboard"]},
     "test_lp_repeater": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["loading_pin"]},
-    "test_max_weighted_pullup": {"hard": True, "finger": False, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["pullup_bar"]},
+    # A319 (d): the 2RM is a weighted pull-up — without weights the resolver
+    # used to fill the block with a non-test pull (B261 non-test fallback:
+    # dip, archer pull-up) and the test wrote no max. dumbbell / kettlebell /
+    # barbell imply "weight" (equipment_utils.expand_equipment).
+    "test_max_weighted_pullup": {"hard": True, "finger": False, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["pullup_bar", "weight"]},
     "test_pullup_bw": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["pullup_bar"]},
+    # A319 (c): both max tests in one session (PASS 3a only). Finger + hard,
+    # and a pull-up test (`_RD_PULL_TEST_SIDS`); no `pulling` flag — its
+    # pulling side comes from the 2RM exercise / SESSION_FALLBACK_STIMULI.
+    "test_max_hang_pullup": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["hangboard", "pullup_bar", "weight"]},
     "easy_climbing_deload": {"hard": False, "finger": False, "intensity": "low", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"]},
     "finger_maintenance_gym": {"hard": False, "finger": True, "intensity": "medium", "climbing": True, "location": ("gym",), "required_equipment": ["hangboard"]},
     "route_endurance_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",), "required_equipment": ["gym_routes"]},
@@ -184,7 +192,22 @@ _TEST_SID_AXIS: Dict[str, str] = {
     "test_repeater_7_3": "repeater", "test_lp_repeater": "repeater",
     "test_max_weighted_pullup": "pulling", "test_pullup_bw": "pulling",
 }
-_RD_PULL_TEST_SIDS = frozenset({"test_max_weighted_pullup", "test_pullup_bw"})
+# A319 (c): the combined test session — max hang 7 s + weighted pull-up 2RM in
+# ONE session (`retest_policy.COMBINED_TEST_SESSION`, same id). PASS 3a places
+# it when both axes are due and no day offers two ordered slots. It tests BOTH
+# axes, so it has no single-axis row in `_TEST_SID_AXIS`: `_test_sid_axes`.
+_COMBINED_TEST_SID = "test_max_hang_pullup"
+_COMBINED_TEST_AXES: Tuple[str, ...] = ("finger", "pulling")
+_RD_PULL_TEST_SIDS = frozenset({"test_max_weighted_pullup", "test_pullup_bw", _COMBINED_TEST_SID})
+
+
+def _test_sid_axes(sid: str) -> Tuple[str, ...]:
+    """A319: the axes a test session measures — both for the combined one,
+    the `_TEST_SID_AXIS` axis otherwise, none for a non-test session."""
+    if sid == _COMBINED_TEST_SID:
+        return _COMBINED_TEST_AXES
+    axis = _TEST_SID_AXIS.get(sid)
+    return (axis,) if axis else ()
 
 
 def _validate_session_meta_equipment() -> None:
@@ -2552,6 +2575,12 @@ def generate_phase_week(
     # A paired decision puts both tests on ONE day, hang in an earlier slot than
     # the pull-up — also against a test the merge keeps on that day (B400
     # review: a lone pull-up never goes before the hang the user moved there).
+    # A319: never on two days (two hard evenings in prod, 22/10 + 24/10). No
+    # day with two ordered slots → ONE slot of one day with the combined test
+    # session (`_COMBINED_TEST_SID`: max hang, then the 2RM), under the rules
+    # of both tests; none → the hang alone, the pull-up `blocked:no_paired_slot`.
+    # A319 review: the partner of a test kept on a day of this week (the
+    # user's, or one the merge copies back) joins that day or waits.
     # If the hang finds no day, the pull-up is skipped with the same reason and
     # does not fall back to B297's empty-day pass on its own.
     # With retest_decisions=None nothing here runs (byte-identical week).
@@ -2731,15 +2760,16 @@ def generate_phase_week(
             it there: the axis is already scheduled, the partner comes alone).
             A hang done after a 2RM pull-up would be measured tired, and it
             sets the finger loads for 90 days. A kept test without a slot ranks
-            last (only a hang can go before it)."""
-            kept = [(_TEST_SID_AXIS.get(str(e.get("session_id") or "")), _slot_rank.get(e.get("slot"), 99))
+            last (only a hang can go before it). A319: a test reads as every
+            axis it measures (`_test_sid_axes`) — the combined one as both."""
+            kept = [(_test_sid_axes(str(e.get("session_id") or "")), _slot_rank.get(e.get("slot"), 99))
                     for e in _day_view(offset, victims)]
             for (slot, _i, _v), sid in zip(chosen, sids):
-                axis, rank = _TEST_SID_AXIS.get(sid), _slot_rank[slot]
-                for k_axis, k_rank in kept:
-                    if axis == "pulling" and k_axis == "finger" and not k_rank < rank:
+                axes, rank = _test_sid_axes(sid), _slot_rank[slot]
+                for k_axes, k_rank in kept:
+                    if "pulling" in axes and "finger" in k_axes and not k_rank < rank:
                         return False
-                    if axis == "finger" and k_axis == "pulling" and not rank < k_rank:
+                    if "finger" in axes and "pulling" in k_axes and not rank < k_rank:
                         return False
             return True
 
@@ -2839,11 +2869,19 @@ def generate_phase_week(
                     phase_id, day_keys[offset], default_gym_id, gyms or [],
                     "pass3:retest_policy", home_equipment=home_equipment,
                 )
-                entry["explain"].append(f"retest:{req.get('trigger')}")
-                if req.get("reason"):
-                    entry["explain"].append(str(req["reason"]))
-                if req.get("paired_with"):
-                    entry["explain"].append(f"paired_with={req['paired_with']}")
+                if req.get("combined_of"):
+                    # A319: the combined test session — one tag + reason per
+                    # axis (the two triggers may differ).
+                    for part in req["combined_of"]:
+                        entry["explain"].append(f"retest:{part.get('axis')}:{part.get('trigger')}")
+                        if part.get("reason"):
+                            entry["explain"].append(str(part["reason"]))
+                else:
+                    entry["explain"].append(f"retest:{req.get('trigger')}")
+                    if req.get("reason"):
+                        entry["explain"].append(str(req["reason"]))
+                    if req.get("paired_with"):
+                        entry["explain"].append(f"paired_with={req['paired_with']}")
                 new_entries.append(entry)
             victims = {v for _s, _i, v in plan if v is not None}
             kept = [e for i, e in enumerate(day_sessions[offset]) if i not in victims]
@@ -2872,7 +2910,8 @@ def generate_phase_week(
                     return o
             return None
 
-        def _outcome(req: Dict[str, Any], offset: Optional[int], reason: Optional[str]) -> None:
+        def _outcome(req: Dict[str, Any], offset: Optional[int], reason: Optional[str],
+                     combined: bool = False) -> None:
             row = {k: req.get(k) for k in ("axis", "session_id", "trigger", "reason", "earliest_date",
                                            "paired_with", "order", "confidence", "last_test_date")}
             if offset is not None:
@@ -2882,6 +2921,8 @@ def generate_phase_week(
                     (e.get("slot") for e in day_sessions[offset] if e.get("session_id") == req["session_id"]),
                     None,
                 )
+                if combined:
+                    row["combined"] = True  # A319 (additive): this axis is tested by the combined session
             else:
                 row["status"] = "skipped"
                 row["skip_reason"] = reason
@@ -2902,12 +2943,14 @@ def generate_phase_week(
         # never sees the floor (it gets the server's today), so a second test
         # went next to the kept one, or the week reported `no_placement_slot`
         # for a test still in the plan. Same row as the policy's
-        # `already_scheduled`; the partner is placed alone, unpaired as the
-        # policy does it (`_pair_order_ok` keeps the hang first on a shared day).
+        # `already_scheduled`; the partner comes alone, unpaired as the policy
+        # does it (`_pair_order_ok` keeps the hang first on a shared day) — A319
+        # review: on the kept test's day only (`_kept_day` below).
+        # A319: a kept combined test session schedules BOTH axes.
         def _kept_test_date(axis: Optional[str]) -> Optional[str]:
             view = _week_view()  # before today: done only — a test never done was missed
             for o in range(7):
-                if any(_TEST_SID_AXIS.get(str(e.get("session_id") or "")) == axis and e.get("status") != "done"
+                if any(axis in _test_sid_axes(str(e.get("session_id") or "")) and e.get("status") != "done"
                        for e in view[o]):
                     return day_dates[o].isoformat()
             return None
@@ -2921,6 +2964,22 @@ def generate_phase_week(
         if _kept_axes:
             _reqs = [{**r, "paired_with": None} for r in _reqs if r.get("axis") not in _kept_axes]
 
+        # A319 review: the partner of a test kept on a day of this week — the
+        # policy's `already_scheduled` (the user's test, a day the merge copies
+        # wholesale) or the merge's above — joins that day, in the pair's slot
+        # order (`_pair_order_ok`), or waits: the pull-up `blocked:no_paired_slot`,
+        # the hang `no_placement_slot` (it had no day). Never on another day:
+        # "regenerate from tomorrow" on the lone hang's day put the 2RM two
+        # evenings later (22/10 + 24/10, the shape A319 removed). A kept test
+        # in another week is another week's decision (next trigger).
+        _kept_day: Dict[str, str] = {}
+        for _a in list(retest_decisions.get("already_scheduled") or []) + _rd_already:
+            if not isinstance(_a, dict):
+                continue
+            _kd = str(_a.get("date") or "")[:10]
+            if _kd in _week_iso and _a.get("axis") in ("finger", "pulling"):
+                _kept_day.setdefault(str(_a["axis"]), _kd)
+
         if len(_reqs) == 2 and _reqs[0].get("paired_with") == _reqs[1]["session_id"]:
             _hang, _pull = _reqs
             _both = [d for d in _hang.get("allowed_dates") or [] if d in set(_pull.get("allowed_dates") or [])]
@@ -2929,16 +2988,36 @@ def generate_phase_week(
                 _outcome(_hang, _off, None)
                 _outcome(_pull, _off, None)
             else:
-                _off_h = _place([_hang], _hang.get("allowed_dates") or [])
-                _outcome(_hang, _off_h, None if _off_h is not None else "no_placement_slot")
-                if _off_h is None:
-                    _outcome(_pull, None, "no_placement_slot")
+                # A319: no day with two ordered slots → ONE slot of one of the
+                # shared days with the combined session, under the rules of
+                # both tests (`_test_day_ok`: finger-hard 72 h before, 48 h
+                # finger gap, heavy pull 48 h before, same-day finger-hard and
+                # pulling-hard) and their equipment at the slot (hangboard +
+                # pull-up bar + weights). Before A319 the pull-up went to a
+                # later day: two hard evenings (prod, 22/10 + 24/10).
+                _off = _place([{"session_id": _COMBINED_TEST_SID, "combined_of": [_hang, _pull]}], _both)
+                if _off is not None:
+                    # One snapshot row per axis, each with its own trigger,
+                    # reason, dates and confidence; `paired_with` None.
+                    for _r in (_hang, _pull):
+                        _outcome({**_r, "session_id": _COMBINED_TEST_SID, "paired_with": None}, _off, None,
+                                 combined=True)
                 else:
-                    _off_p = _place([_pull], [d for d in _pull.get("allowed_dates") or []
-                                              if d > day_dates[_off_h].isoformat()])
-                    _outcome(_pull, _off_p, None if _off_p is not None else "blocked:no_paired_slot")
+                    # Neither fits: the hang alone (its own days and rules),
+                    # the pull-up waits for its next trigger — never alone on
+                    # another day.
+                    _off_h = _place([_hang], _hang.get("allowed_dates") or [])
+                    _outcome(_hang, _off_h, None if _off_h is not None else "no_placement_slot")
+                    _outcome(_pull, None, "blocked:no_paired_slot" if _off_h is not None else "no_placement_slot")
         else:
             for _r in _reqs:
+                _kd = _kept_day.get("pulling" if _r.get("axis") == "finger" else "finger")
+                if _kd is not None:
+                    # A319 review: the kept partner's day or nothing (see above).
+                    _o = _place([_r], [d for d in _r.get("allowed_dates") or [] if d == _kd])
+                    _miss = "blocked:no_paired_slot" if _r.get("axis") == "pulling" else "no_placement_slot"
+                    _outcome(_r, _o, None if _o is not None else _miss)
+                    continue
                 _o = _place([_r], _r.get("allowed_dates") or [])
                 _outcome(_r, _o, None if _o is not None else "no_placement_slot")
         for _sk in retest_decisions.get("skipped") or []:
@@ -2995,6 +3074,8 @@ def generate_phase_week(
         _finger_test_sid = "test_lp_max_5s" if finger_device == "loading_pin" else "test_max_hang_7s"
         _repeater_test_sid = "test_lp_repeater" if finger_device == "loading_pin" else "test_repeater_7_3"
         # Pulling test routing — skip BW gate for users with pulling baseline
+        # (A319 (d): pass 1 below falls back to the bodyweight test where the
+        # 2RM finds no weights).
         _pulling_test_sid = _pick_pulling_test_session(pulling_baseline, max_pullups_bw)
         _test_schedule = [
             (_finger_test_sid, True),
@@ -3072,6 +3153,10 @@ def generate_phase_week(
                 continue
             # Test sessions bypass phase intensity cap — they're assessment protocols
             placed = False
+            # A319 (d): the first day where the 2RM passes every gate below but
+            # its slot has no weights while the bodyweight test fits there —
+            # (offset, victim index, slot) — used only when no day takes the 2RM.
+            _bw_day: Optional[Tuple[int, int, Tuple[str, Dict[str, Any]]]] = None
             for offset in range(7):
                 if placed:
                     break
@@ -3138,6 +3223,13 @@ def generate_phase_week(
                                          default_gym_id=default_gym_id,
                                          occupied_slots=occupied_by_survivors)
                 if result is None:
+                    if test_sid == "test_max_weighted_pullup" and _bw_day is None:
+                        _bw_slot = _find_best_slot(day_avail, _SESSION_META["test_pullup_bw"], locations,
+                                                   prefer_evening=True, home_equipment=home_equipment, gyms=gyms,
+                                                   default_gym_id=default_gym_id,
+                                                   occupied_slots=occupied_by_survivors)
+                        if _bw_slot is not None:
+                            _bw_day = (offset, replace_idx, _bw_slot)
                     continue
                 slot, slot_info = result
                 test_entry = _make_session_entry(
@@ -3151,6 +3243,31 @@ def generate_phase_week(
                     hard_days += 1
                     hard_day_offsets.append(offset)
                 if test_meta["finger"] and not old_meta.get("finger"):
+                    finger_day_offsets.append(offset)
+                test_placed_offsets.add(offset)
+                placed = True
+            if not placed and _bw_day is not None:
+                # A319 (d) review: no day takes the 2RM with weights → the
+                # bodyweight pull-up test (pull-up bar only) on the first day
+                # the 2RM passed every gate but found no weights: where the 2RM
+                # went before A319 and resolved to a non-test pull. Decided on
+                # the outcome, not on the week's raw equipment: weights only on
+                # the day the finger test took used to lose the pull test
+                # silently (optional → never shown). A 2RM that misses for
+                # spacing / cap / no day gets no stand-in, as before A319.
+                offset, replace_idx, (slot, slot_info) = _bw_day
+                _bw_meta = _SESSION_META["test_pullup_bw"]
+                old_meta = _SESSION_META.get(day_sessions[offset][replace_idx].get("session_id", ""), {})
+                day_sessions[offset][replace_idx] = _make_session_entry(
+                    slot, "test_pullup_bw", _bw_meta, slot_info, locations,
+                    phase_id, day_keys[offset],
+                    default_gym_id, gyms or [], "pass3:test_session",
+                    home_equipment=home_equipment,
+                )
+                if _bw_meta["hard"] and not old_meta.get("hard"):
+                    hard_days += 1
+                    hard_day_offsets.append(offset)
+                if _bw_meta["finger"] and not old_meta.get("finger"):
                     finger_day_offsets.append(offset)
                 test_placed_offsets.add(offset)
                 placed = True

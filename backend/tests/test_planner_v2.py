@@ -869,7 +869,7 @@ class TestEquipmentAwarePlacement(unittest.TestCase):
         ]}]
 
     def test_pullup_test_at_gym_when_home_lacks_pullup_bar(self):
-        """test_max_weighted_pullup requires pullup_bar.
+        """test_max_weighted_pullup requires pullup_bar + weight (A319).
         Home has NO pullup_bar → planner must place it at gym.
         B128: pass pulling_baseline to route to weighted test."""
         from backend.engine.planner_v2 import generate_test_week
@@ -891,8 +891,9 @@ class TestEquipmentAwarePlacement(unittest.TestCase):
         self.fail("test_max_weighted_pullup not found in test week")
 
     def test_pullup_test_at_home_when_home_has_pullup_bar(self):
-        """test_max_weighted_pullup requires pullup_bar.
-        Home HAS pullup_bar + preference is home → planner places it at home.
+        """test_max_weighted_pullup requires pullup_bar + weight (A319).
+        Home HAS pullup_bar (and a dumbbell: weight) + preference is home →
+        planner places it at home.
         B128: pass pulling_baseline to route to weighted test."""
         from backend.engine.planner_v2 import generate_test_week
         plan = generate_test_week(
@@ -909,6 +910,28 @@ class TestEquipmentAwarePlacement(unittest.TestCase):
                 if s["session_id"] == "test_max_weighted_pullup":
                     self.assertEqual(s["location"], "home",
                                      "pullup test should be at home when home has pullup_bar and preference is home")
+                    return
+        self.fail("test_max_weighted_pullup not found in test week")
+
+    def test_pullup_test_at_gym_when_home_lacks_weights(self):
+        """A319 (d): a pull-up bar is not enough for the 2RM. Home has the bar
+        and the hangboard but no weights, preference is home → the gym (with
+        dumbbells / kettlebells → weight)."""
+        from backend.engine.planner_v2 import generate_test_week
+        plan = generate_test_week(
+            start_date="2026-03-02",
+            availability=self._gym_home_avail(),
+            allowed_locations=["gym", "home"],
+            gyms=self._full_gym(),
+            default_gym_id="test_gym",
+            pulling_baseline={"max_total_load_kg": 100},
+            home_equipment=["hangboard", "band", "pullup_bar"],  # no weights
+        )
+        for day in plan["weeks"][0]["days"]:
+            for s in day["sessions"]:
+                if s["session_id"] == "test_max_weighted_pullup":
+                    self.assertEqual(s["location"], "gym",
+                                     "the 2RM needs weights: home has none, the gym does")
                     return
         self.fail("test_max_weighted_pullup not found in test week")
 

@@ -212,17 +212,17 @@
   {
     "id": "cue_036",
     "text": "Log sleep, fueling, and fatigue before starting. Numbers without context aren't data \u2014 they're noise you'll trust by mistake.",
-    "session_types": ["test_max_hang_7s", "test_max_hang_5s", "test_lp_max_5s", "test_lp_repeater", "test_repeater_7_3", "test_max_weighted_pullup", "test_pullup_bw"]
+    "session_types": ["test_max_hang_7s", "test_max_hang_5s", "test_lp_max_5s", "test_lp_repeater", "test_repeater_7_3", "test_max_weighted_pullup", "test_pullup_bw", "test_max_hang_pullup"]
   },
   {
     "id": "cue_037",
     "text": "Ramp the warm-up gradually \u2014 light loads, never to failure. The first max attempt must feel fresh, not pre-fatigued.",
-    "session_types": ["test_max_hang_7s", "test_max_hang_5s", "test_lp_max_5s", "test_lp_repeater", "test_repeater_7_3", "test_max_weighted_pullup", "test_pullup_bw"]
+    "session_types": ["test_max_hang_7s", "test_max_hang_5s", "test_lp_max_5s", "test_lp_repeater", "test_repeater_7_3", "test_max_weighted_pullup", "test_pullup_bw", "test_max_hang_pullup"]
   },
   {
     "id": "cue_038",
     "text": "Rest 5+ minutes between max attempts \u2014 neural recovery isn't optional. Rushing back wastes the rep and biases the score low.",
-    "session_types": ["test_max_hang_7s", "test_max_hang_5s", "test_lp_max_5s", "test_max_weighted_pullup"],
+    "session_types": ["test_max_hang_7s", "test_max_hang_5s", "test_lp_max_5s", "test_max_weighted_pullup", "test_max_hang_pullup"],
     "source": "Hörst Ch.2 (self-assessment protocols)"
   },
   {
@@ -238,12 +238,12 @@
   {
     "id": "cue_041",
     "text": "Full extension at the bottom, chin clearly over the bar at the top. Half-reps and kips don't count toward your score.",
-    "session_types": ["test_max_weighted_pullup", "test_pullup_bw"]
+    "session_types": ["test_max_weighted_pullup", "test_pullup_bw", "test_max_hang_pullup"]
   },
   {
     "id": "cue_042",
     "text": "Once form breaks, the rep doesn't count \u2014 and the next won't either. Stop while the data is still clean.",
-    "session_types": ["test_pullup_bw", "test_max_weighted_pullup", "test_repeater_7_3", "test_lp_repeater"]
+    "session_types": ["test_pullup_bw", "test_max_weighted_pullup", "test_repeater_7_3", "test_lp_repeater", "test_max_hang_pullup"]
   },
   {
     "id": "cue_043",

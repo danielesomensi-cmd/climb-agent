@@ -19,7 +19,8 @@ other-sport day, and ``retest_status`` keeps the real skip reason at the 90-day
 expiry and exposes ``tested_until``. Review: "today" for the lived days is the
 policy's ``as_of`` when the planner's is a later regeneration floor
 ("regenerate from tomorrow"), a test the merge keeps is already scheduled for
-PASS 3a too, and the lone partner of a moved test keeps the hang first.
+PASS 3a too, and the lone partner of a moved test keeps the hang first (A319
+review: on that test's day, or it waits — never on another day).
 
 Fixture (A319-proof): the decision must stay due under the A289 rules AND the
 next brief A319's (42-day gap for every test, no end-of-phase slip). Macrocycle
@@ -120,8 +121,18 @@ def _custom_finger(slot: str) -> dict:
             "status": "planned", "constraints_applied": ["custom_add"], "tags": {"hard": False, "finger": True}}
 
 
+def _unpaired(dec: dict) -> dict:
+    """Synthetic: the decision with its two required tests unpaired
+    (``paired_with: None``) — PASS 3a then places them one after the other in
+    one run. A319: a real pair never goes on two days."""
+    dec = deepcopy(dec)
+    for r in dec["required_sessions"]:
+        r["paired_with"] = None
+    return dec
+
+
 def _regen(old: dict, state: dict, *, today=None, floor=None, policy_today="2026-10-18",
-           device="hangboard", allowed=None, **kw):
+           device="hangboard", allowed=None, unpaired=False, **kw):
     """GET /api/week's force / stale path: the decisions on the state holding
     *old* (the server's today), the planner with ``existing_week_plan``, then
     the B369 merge. Planner ``today`` and merge ``preserve_before`` are the
@@ -134,6 +145,8 @@ def _regen(old: dict, state: dict, *, today=None, floor=None, policy_today="2026
         dec = deepcopy(dec)
         for r in dec["required_sessions"]:
             r["allowed_dates"] = list(allowed)
+    if unpaired:
+        dec = _unpaired(dec)
     floor = floor or today
     fresh = generate_phase_week(**_pe_week(retest_decisions=dec, existing_week_plan=deepcopy(old),
                                            today=floor, **kw))
@@ -467,16 +480,19 @@ class TestRulesOnTheMergedWeek:
         _dec, fresh, _m = _regen(lived, st, today=WED, allowed=[THU], session_pool=POOL)
         assert _skip_reasons(fresh) == {HANG: "no_placement_slot"}
 
-    def test_a_split_pair_sees_the_hang_placed_first(self):
-        # Evenings only: the pair cannot share a day. The hang goes first; the
-        # pull-up's day is chosen on the week WITH that hang — never the day
-        # after it (hard spacing), with or without a plan of the week.
+    def test_a_second_test_sees_the_first_one_placed(self):
+        # Evenings only, two UNPAIRED required tests (synthetic): PASS 3a
+        # commits twice in one run. The hang goes first; the pull-up's day is
+        # chosen on the week WITH that hang — never the day after it (hard
+        # spacing), with or without a plan of the week (the cached view is
+        # dropped after every commit). A319: a real pair never splits — one
+        # day or the combined session (test_a319_retest_rules.py).
         st = _due_state()
         kw = {"availability": _avail(slots=("evening",)), "session_pool": POOL}
-        dec = rp.retest_decisions(st, WS, today="2026-10-18", finger_device="hangboard")
+        dec = _unpaired(rp.retest_decisions(st, WS, today="2026-10-18", finger_device="hangboard"))
         plan = generate_phase_week(**_pe_week(retest_decisions=dec, **kw))
         assert _placed(plan) == {HANG: (FRI, "evening"), PULL: (SUN, "evening")}
-        _dec, fresh, merged = _regen(generate_phase_week(**_pe_week(**kw)), st, **kw)
+        _dec, fresh, merged = _regen(generate_phase_week(**_pe_week(**kw)), st, unpaired=True, **kw)
         assert _placed(fresh) == {HANG: (FRI, "evening"), PULL: (SUN, "evening")}
         assert _tests(merged) == [(FRI, "evening", HANG), (SUN, "evening", PULL)]
 
@@ -608,24 +624,35 @@ class TestTestsTheMergeKeeps:
         """The partner of a test the user moved comes alone: never earlier on
         the same day than the moved hang, never later than the moved pull-up
         (a hang after a 2RM pull-up is measured tired, and it sets the finger
-        loads for 90 days)."""
+        loads for 90 days). A319 review: and on that day only — when the day
+        has no slot on the right side, the pull-up is ``blocked:no_paired_slot``
+        and the hang ``no_placement_slot``, never on another day."""
         st = _due_state()
 
         def moved(sid: str, slot: str) -> dict:
             return _owned(sid, slot, marker="user_moved", tags={"hard": True, "finger": sid == HANG, "test": True})
 
         old = generate_phase_week(**_pe_week())
-        _put(old, FRI, moved(HANG, "evening"))
+        _put(old, FRI, moved(HANG, "morning"))
         _dec, fresh, merged = _regen(old, st)
-        assert _placed(fresh) == {PULL: (SUN, "morning")}
-        _dec, fresh, merged = _regen(old, st, allowed=[FRI])  # Friday: only slots before the hang
-        assert _skip_reasons(fresh) == {PULL: "no_placement_slot"}
-        assert _tests(merged) == [(FRI, "evening", HANG)]
+        assert _placed(fresh) == {PULL: (FRI, "lunch")}  # after the hang, on its day
+        assert _tests(merged) == [(FRI, "lunch", PULL), (FRI, "morning", HANG)]
+        old = generate_phase_week(**_pe_week())
+        _put(old, FRI, moved(HANG, "evening"))
+        for allowed in (None, [FRI]):  # Friday: only slots before the hang
+            _dec, fresh, merged = _regen(old, st, allowed=allowed)
+            assert _skip_reasons(fresh) == {PULL: "blocked:no_paired_slot"}
+            assert _tests(merged) == [(FRI, "evening", HANG)]
+        old = generate_phase_week(**_pe_week())
+        _put(old, SUN, moved(PULL, "evening"))
+        _dec, fresh, merged = _regen(old, st)
+        assert _placed(fresh) == {HANG: (SUN, "morning")}  # before the pull-up, on its day
         old = generate_phase_week(**_pe_week())
         _put(old, SUN, moved(PULL, "morning"))
-        _dec, fresh, merged = _regen(old, st, allowed=[SUN])  # Sunday: only slots after the pull-up
-        assert _skip_reasons(fresh) == {HANG: "no_placement_slot"}
-        assert _tests(merged) == [(SUN, "morning", PULL)]
+        for allowed in (None, [SUN]):  # Sunday: only slots after the pull-up
+            _dec, fresh, merged = _regen(old, st, allowed=allowed)
+            assert _skip_reasons(fresh) == {HANG: "no_placement_slot"}
+            assert _tests(merged) == [(SUN, "morning", PULL)]
 
     def test_engine_tests_of_the_regenerated_week_are_replaced(self):
         """The engine's own tests are not kept as "already scheduled": the
@@ -694,22 +721,36 @@ class TestRegenerationFloor:
         assert _tests(merged) == _tests(old)
         assert _placement_failures(merged) == []
 
-    def test_one_kept_test_its_partner_comes_alone(self):
-        # Evenings only: the pair was split, hang Friday, pull-up Sunday. From
-        # tomorrow on Friday: the hang stays (Friday copied back), the merge
-        # drops the engine's Sunday pull-up — the pull-up alone is placed
-        # again, unpaired as the policy would do it.
+    def test_one_kept_test_its_partner_waits(self):
+        # A week with the pair split over two evenings, hang Friday, pull-up
+        # Sunday (what PASS 3a did before A319, still in weeks generated then —
+        # built here from an unpaired decision). From tomorrow on Friday: the
+        # hang stays (Friday copied back), the merge drops the engine's Sunday
+        # pull-up. Its partner comes alone, unpaired as the policy would do it
+        # (B400 review), and A319 review: on the hang's day only — Friday is
+        # before the floor, so the pull-up waits (`blocked:no_paired_slot`),
+        # never back on Sunday (the two hard evenings A319 removed).
         st = _due_state()
         kw = {"availability": _avail(slots=("evening",)), "session_pool": POOL}
-        old = generate_phase_week(**_pe_week(retest_decisions=rp.retest_decisions(
-            st, WS, today="2026-10-18", finger_device="hangboard"), **kw))
+        old = generate_phase_week(**_pe_week(retest_decisions=_unpaired(rp.retest_decisions(
+            st, WS, today="2026-10-18", finger_device="hangboard")), **kw))
         assert _tests(old) == [(FRI, "evening", HANG), (SUN, "evening", PULL)]
         _dec, fresh, merged = _regen(old, st, today=FRI, floor=SAT, **kw)
         snap = fresh["profile_snapshot"]["retest_decisions"]
         assert [(r["axis"], r["date"]) for r in snap["already_scheduled"]] == [("finger", FRI)]
-        assert [(r["session_id"], r["status"], r["placed_date"], r["paired_with"])
-                for r in snap["required_sessions"]] == [(PULL, "placed", SUN, None)]
-        assert _tests(merged) == [(FRI, "evening", HANG), (SUN, "evening", PULL)]
+        assert [(r["session_id"], r["status"], r["skip_reason"], r["paired_with"])
+                for r in snap["required_sessions"]] == [(PULL, "skipped", "blocked:no_paired_slot", None)]
+        assert _tests(merged) == [(FRI, "evening", HANG)]
+        assert [(s["test_id"], s["reason"]) for s in _placement_failures(fresh)] == [(PULL, "blocked:no_paired_slot")]
+        # Non-vacuity: the same regeneration asked for the pull-up alone (the
+        # finger axis not required, so no kept partner to join) puts it on a
+        # free evening after Friday.
+        st2 = deepcopy(st)
+        st2["week_plans"] = {WS: deepcopy(old)}
+        dec = rp.retest_decisions(st2, WS, today=FRI, finger_device="hangboard")
+        dec = {**dec, "required_sessions": [r for r in _unpaired(dec)["required_sessions"] if r["axis"] == "pulling"]}
+        free = generate_phase_week(**_pe_week(retest_decisions=dec, existing_week_plan=deepcopy(old), today=SAT, **kw))
+        assert _placed(free)[PULL][0] in (SAT, SUN)
 
     def test_from_next_monday_the_kept_tests_are_no_placement_failure(self):
         # Every day of the week is copied back; the pair stays on Sunday.
@@ -845,7 +886,7 @@ class TestStatus:
 
     def test_athlete_context_shows_tested_until(self):
         ctx = ac.build_athlete_context(_status_state(), WS, with_proposals=False, include_next_week=False)
-        assert ctx["version"] == ac.VERSION == "b400.1"
+        assert ctx["version"] == ac.VERSION == "a319.1"
         text = ac.render_text(ctx)
         assert "finger: ufficiale 116 kg (2026-09-10), massimale valido fino al 2026-12-08," in text
         assert "nessun test in vista (no_placement_slot)" in text

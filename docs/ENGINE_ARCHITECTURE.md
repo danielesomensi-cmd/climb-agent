@@ -256,7 +256,7 @@ Triggers on the last week of `base` or `strength_power` phase, or when `inject_t
 
 **Test schedule:**
 1. `test_max_hang_5s` (or `test_lp_max_5s` if `finger_device == "loading_pin"`) — finger test
-2. Pulling test — `test_max_weighted_pullup` or `test_pullup_bw` (B128: routed by `_pick_pulling_test_session()`)
+2. Pulling test — `test_max_weighted_pullup` or `test_pullup_bw` (B128: routed by `_pick_pulling_test_session()`; A319: when no day takes the 2RM with weights, `test_pullup_bw` on the first day the 2RM passed every pass-1 rule but found no weights — where it went before A319)
 3. `test_repeater_7_3` (or `test_lp_repeater`) — finger test, 48h gap from #1
 
 **Freshness filter (B128):** Tests completed within `TEST_FRESHNESS_DAYS` = 42 days are skipped.
@@ -685,16 +685,19 @@ days). `GET /api/week` computes it when it GENERATES a week (archived weeks and
 outdoor rows read fail-soft) and passes it to `generate_phase_week(retest_decisions=...)`:
 
 ```
-retest_decisions  → week-level: trigger (end_of_phase | end_of_phase_slipped |
-                    cycle_start | maintenance | early_retest), gap by confidence
-                    (28 / 42 d), phase / trip / very_hard day blockers,
-                    external finger-hard + heavy-pull days, already-scheduled
+retest_decisions  → week-level: trigger (end_of_phase | cycle_start |
+                    maintenance | early_retest), gap 42 d after any test
+                    (A319; 28 d only for early_retest), phase / trip /
+                    very_hard day blockers, external finger-hard + heavy-pull
+                    days, already-scheduled
 planner PASS 3a   → day-level against the week AS THE B369 MERGE WILL SAVE IT
                     (B400): < 72 h finger-hard (hang; 3 calendar days, inclusive),
                     never a slot the regen merge refills (locked_slots /
                     locked_dates), < 48 h heavy pull (pull-up), 48 h finger gap,
                     hard cap + hard spacing, never an other-sport day;
-                    paired day, hang slot before pull-up slot
+                    paired day, hang slot before pull-up slot — else ONE slot
+                    with the combined test_max_hang_pullup (A319), else the
+                    hang alone + pull-up blocked:no_paired_slot
 planner PASS 3    → historical, only for the axes the policy does not cover
 retest_status     → live on every GET: official max, confidence, trend (±5 %),
                     tested_until, next test (planned with reason | projected),
@@ -705,6 +708,65 @@ retest_status     → live on every GET: official max, confidence, trend (±5 %)
 without `retest_status`. A cached week is never regenerated for the policy; the
 live status flags a planned test that became too close to a hard session
 instead of moving it.
+
+**One gap, no slip, one test day (A319, 2026-10-20).** From climb-coach's
+bug-inbox of 2026-10-18 ("tests too close together"): Daniele's low-confidence
+tests of 24/09 were due again 28 days later, the end-of-SP test slipped one week
+and the pair was split over two hard evenings (22/10 + 24/10). Now:
+- `retest_gap_days` is `HIGH_CONF_RETEST_D` (42) after any test — the
+  confidence is computed and shown, it moves no date. `LOW_CONF_RETEST_D` (28)
+  is only the floor of `early_retest` (two measured signals), whose row says
+  `gap_days: 28`. `retest_status.earliest_retest` = test + 42, or, with the
+  early-retest evidence, the early retest's first day (test + 28, the day after
+  the last signal) when that comes sooner — the "not before" never contradicts
+  a projected test.
+- No slip: an end-of-phase week the gap keeps out of reach is `blocked:gap`;
+  the next test comes with the next trigger. `end_of_phase_slipped`,
+  `slipped:gap` and `slipped_to_week` are never produced; the snapshots written
+  before A319 still carry them and are read as stored (`_planned_reason`,
+  `_generated_week_skip`: pure passthrough, no closed-set check).
+- The pair is never split over two days. No day with two ordered slots →
+  PASS 3a tries ONE slot of one of the shared allowed days with
+  `test_max_hang_pullup` (max hang 7 s, then the 2RM after a full rest, then
+  the secondary measurements; its two max blocks pinned `order: after_warmup`
+  so the instance sort keeps them first), through the same `_place` /
+  `_test_day_ok` / `_hard_ok` machinery: it is a finger test AND a pull-up
+  test (72 h finger-hard, 48 h finger gap, same-day finger-hard and
+  pulling-hard, 48 h heavy pull) and its slot needs hangboard + pull-up bar +
+  weights. Two snapshot rows, one per axis, `session_id: test_max_hang_pullup`,
+  same `placed_date` / `placed_slot`, `combined: true`, `paired_with: null`;
+  the entry's explain carries `retest:finger:<trigger>` and
+  `retest:pulling:<trigger>`. Still nothing → the hang alone and the pull-up
+  `blocked:no_paired_slot` (no new reason codes). The combined id is in
+  `AXIS_TEST_SESSIONS_ALL` under both axes (already-scheduled, planned
+  next_test, removed-ref locks), in `SESSION_FALLBACK_STIMULI` (finger_max +
+  pulling_max for the unresolved slot), `_RD_PULL_TEST_SIDS`, the phase-anchor
+  pull-test prefixes and athlete_context's `pull_test_soon`; PASS 3a's
+  `_test_sid_axes` reads it as both axes (`_kept_test_date`, `_pair_order_ok`).
+  One test log writes both official maxes (progression_v1 unchanged: the
+  `test_` prefix / `tags.test` gate, then per exercise id). Out of scope: the
+  historical PASS 3 and `inject_tests` never use it.
+- A319 review — the partner of a kept test: a test of one axis the week keeps
+  (the user's, or on a day the merge copies back — the policy's
+  `already_scheduled` row or PASS 3a's own B400 one) takes its partner on its
+  day only, in the pair's slot order; else the pull-up `blocked:no_paired_slot`,
+  the hang `no_placement_slot`. Before, the partner went alone on any allowed
+  day: "regenerate from tomorrow" on the lone hang's day put the 2RM two
+  evenings later.
+- A319 review — a trigger the gap keeps out of the week (`end_of_phase`,
+  `cycle_start`) yields to `early_retest` when the early retest's own first
+  day (last test + 28, the day after the last signal) falls in the week;
+  before, the measured evidence waited one more week.
+- `test_max_weighted_pullup` requires `pullup_bar` + `weight` (dumbbell /
+  kettlebell / barbell imply it): without weights its 2RM block resolved to a
+  non-test pull (B261 non-test fallback) and wrote no max. The historical
+  PASS 3 (pass 1) gives the 2RM a day with weights when one passes its rules;
+  else `test_pullup_bw` on the first day the 2RM passed every rule but found
+  no weights (review: decided on the outcome — weights only on the day the
+  finger test took used to lose the pull test silently). `change_gym` reads
+  the same catalog requirement: a 2RM or combined moved to a gym without
+  weights becomes `complementary_conditioning` (the combined loses its max
+  hang too — open, `A319-CHANGE-GYM`).
 
 **PASS 3a on the merged week (B400, 2026-10-18).** The rules above used to read
 only the sessions the planner had just generated; the merge then put the user's
@@ -729,7 +791,8 @@ as `already_scheduled`, so no second test is placed next to them; PASS 3a does
 the same on its merged view for the tests the policy cannot see (a day between
 `as_of` and the floor), with a snapshot `already_scheduled` row instead of a
 `no_placement_slot`. The partner of a kept test comes alone and keeps the hang
-first on a shared day. The historical PASS 3 and PASS 1/2 stay alert-only
+first on a shared day — A319 review: on that day only, or it waits. The
+historical PASS 3 and PASS 1/2 stay alert-only
 (`regeneration_guard_warnings`, A301).
 
 ---
@@ -793,7 +856,7 @@ Processes event lists. Supported event types:
 - `remove_session` — delete from day
 - `complete_other_activity` / `add_other_activity` — non-climbing activities
 - `add_outdoor` / `complete_outdoor` / `undo_outdoor` / `remove_outdoor` — outdoor sessions
-- `change_gym` — equipment-aware session replacement via `_find_gym_change_replacement()`
+- `change_gym` — equipment-aware session replacement via `_find_gym_change_replacement()` (A319: a 2RM or combined test moved to a gym without weights is replaced too — see the A319 notes of §8.2)
 - `set_availability` — **retired in B367**: `ValueError` in the engine, 422 at `/events`. It regenerated the week with a fraction of the `GET /api/week` inputs (no tests, retest decisions, taper, finger device) and overwrote the snapshot; availability changes go through settings / `PUT /api/weekly-override/{week_start}`
 
 **`apply_day_add(plan, *, session_id, target_date, slot, location, phase_id, gym_id) → tuple`**
@@ -1012,7 +1075,7 @@ Key session categories:
 - **Complementary:** `prehab_maintenance`, `flexibility_full`, `yoga_recovery`, `handstand_practice`, `complementary_conditioning`, `regeneration_easy`
 - **Climbing easy:** `endurance_aerobic_gym`, `technique_focus_gym`, `easy_climbing_deload`, `route_endurance_gym`, `boulder_circuit_gym`
 - **Supplementary (quick-add only):** `pulling_strength_gym`, `heavy_conditioning_gym`, `lower_body_gym`, `upper_body_weights`, `legs_strength`, `core_training`
-- **Tests:** `test_max_hang_5s`, `test_lp_max_5s`, `test_repeater_7_3`, `test_lp_repeater`, `test_max_weighted_pullup`, `test_pullup_bw`
+- **Tests:** `test_max_hang_5s`, `test_max_hang_7s`, `test_lp_max_5s`, `test_repeater_7_3`, `test_lp_repeater`, `test_max_weighted_pullup`, `test_pullup_bw`, `test_max_hang_pullup` (A319: both max tests in one session, PASS 3a only)
 - **Deload:** `deload_recovery`
 
 ### Week plan structure (in `user_state.week_plans`)

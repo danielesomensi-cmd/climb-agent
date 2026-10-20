@@ -1,0 +1,185 @@
+{
+  "id": "test_max_hang_pullup",
+  "name": "Test Session — Max Hang 7s + Weighted Pullup 2RM",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "finger_max_strength",
+    "secondary_goals": ["pulling_strength"],
+    "notes": "A319: both max tests in one session, for the week the retest policy has both axes due and no day with two free slots (never the two tests on two days). Max hang 7s total load first (MVC-7, D85), then the weighted pullup 2RM after a full rest (D84; 1RM estimated via Epley/Brzycki average), then the secondary measurements. Each test is measured exactly as in its own session (test_max_hang_7s, test_max_weighted_pullup); the two max blocks sit right after the warm-up (order: after_warmup)."
+  },
+  "required_equipment": ["hangboard", "pullup_bar", "weight"],
+  "compatibility": {
+    "slot": ["long"],
+    "sports": ["climbing"]
+  },
+  "time_budget": {
+    "target_duration_min": 75,
+    "hard_cap_min": 105
+  },
+  "modules": [
+    {
+      "template_id": "general_warmup",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup"
+    },
+    {
+      "block_id": "finger_warmup",
+      "required": true,
+      "priority": 95,
+      "module_role": "warmup_specific",
+      "order": "after_warmup",
+      "notes": "The finger warm-up of test_max_hang_7s (finger_max_strength_test, warmup_specific), after the general warm-up.",
+      "prescription": {
+        "sets": 3,
+        "work_seconds": 10,
+        "rest_between_sets_seconds": 50,
+        "notes": "Easy dead hangs to warm up fingers. Stay well below failure."
+      },
+      "selection": {
+        "primary": {
+          "exercise_id": "dead_hang_easy",
+          "filters": {
+            "role": ["warmup"],
+            "domain": ["finger_strength"]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "max_hang_test",
+      "required": true,
+      "priority": 90,
+      "module_role": "main_set",
+      "order": "after_warmup",
+      "notes": "The finger test first, while fresh: the main block of finger_max_strength_test (MVC-7, D85).",
+      "prescription": {
+        "sets": 5,
+        "work_seconds": 7,
+        "rest_between_sets_seconds": 180,
+        "intensity_pct_of_total_load": 1.0,
+        "notes": "Test protocol: find your 7s max hang total load on 20mm (MVC-7). Rest fully between sets."
+      },
+      "selection": {
+        "primary": {
+          "exercise_id": "max_hang_7s",
+          "filters": {
+            "role": ["main"],
+            "domain": ["finger_strength"]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "pullup_2rm_test",
+      "required": true,
+      "priority": 85,
+      "module_role": "main_set",
+      "order": "after_warmup",
+      "notes": "The pulling test right after the max hang and before any secondary measurement: the main block of pulling_strength_test (2RM, D84), after a full rest.",
+      "prescription": {
+        "sets": 5,
+        "reps": 2,
+        "rest_between_sets_seconds": 180,
+        "test_protocol": "2RM",
+        "notes": "Rest 5 full minutes after your last max hang before the first set: two max efforts, each measured fresh. 2RM test protocol (D84). Pyramid up: set 1 ~50% est. max, set 2 ~70%, set 3 ~85%, set 4 ~95%, set 5 max attempt. 2 reps per set. Full rest between sets. Stop if form breaks."
+      },
+      "selection": {
+        "primary": {
+          "exercise_id": "weighted_pullup",
+          "filters": {
+            "role": ["main"],
+            "domain": ["strength_general"]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "test_hang_duration",
+      "required": true,
+      "priority": 80,
+      "module_role": "test_measurement",
+      "prescription": {
+        "sets": 1,
+        "notes": "Hang on 20mm at body weight until failure. Record total seconds."
+      },
+      "selection": {
+        "primary": {
+          "exercise_id": "test_max_hang_duration_20mm",
+          "filters": {
+            "role": ["test"],
+            "domain": ["finger_strength"]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "test_l_sit",
+      "required": true,
+      "priority": 75,
+      "module_role": "test_measurement",
+      "prescription": {
+        "sets": 1,
+        "notes": "Full L-sit with straight legs. Hold as long as possible. Record total seconds."
+      },
+      "selection": {
+        "primary": {
+          "exercise_id": "test_l_sit_hold",
+          "filters": {
+            "role": ["test"],
+            "domain": ["core"]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "test_hip_flexibility",
+      "required": true,
+      "priority": 70,
+      "module_role": "test_measurement",
+      "prescription": {
+        "sets": 1,
+        "notes": "Seated straddle split. Measure distance between heels in cm."
+      },
+      "selection": {
+        "primary": {
+          "exercise_id": "test_hip_flexibility",
+          "filters": {
+            "role": ["test"],
+            "domain": ["flexibility"]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "cooldown_prehab",
+      "required": true,
+      "priority": 60,
+      "module_role": "cooldown_prehab",
+      "prescription": {
+        "sets": 2,
+        "reps": 15,
+        "rest_between_sets_seconds": 60,
+        "notes": "Light wrist/forearm prehab after max finger work."
+      },
+      "selection": {
+        "primary": {
+          "exercise_id": "wrist_curl",
+          "filters": {
+            "role": ["prehab"],
+            "domain": ["prehab_elbow"]
+          }
+        }
+      }
+    },
+    {
+      "template_id": "cooldown_stretch",
+      "required": false,
+      "priority": 40,
+      "module_role": "cooldown"
+    }
+  ],
+  "tags": {
+    "test": true
+  }
+}

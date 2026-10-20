@@ -217,11 +217,16 @@ class TestResolution:
                 if m.get("order"):
                     found.append((p.stem, m["block_id"], m["order"]))
         # A318: the lunch handstand goes first while fresh, then the heaviest lift.
+        # A319: the combined test session — the finger warm-up, the max hang,
+        # then the 2RM, ahead of every secondary measurement.
         assert found == [("arms_shoulders_handstand_lunch", "handstand_balance", "after_warmup"),
                          ("arms_shoulders_handstand_lunch", "handstand_hold", "after_warmup"),
                          ("arms_shoulders_handstand_lunch", "shoulder_press", "after_warmup"),
                          ("lead_tryhard_gym", "falls_block", "after_warmup"),
-                         ("route_projecting_gym", "falls_primer", "after_warmup")]
+                         ("route_projecting_gym", "falls_primer", "after_warmup"),
+                         ("test_max_hang_pullup", "finger_warmup", "after_warmup"),
+                         ("test_max_hang_pullup", "max_hang_test", "after_warmup"),
+                         ("test_max_hang_pullup", "pullup_2rm_test", "after_warmup")]
 
 
 # ---------------------------------------------------------------------------

@@ -86,7 +86,7 @@ from backend.engine.stimulus import (
 DateLike = Union[date, str]
 ArchivedWeeks = Optional[Union[Mapping[str, Any], Sequence[Mapping[str, Any]]]]
 
-VERSION = "b400.1"
+VERSION = "a319.1"
 
 # ---------------------------------------------------------------------------
 # Constants. Shared with the engine, never copied: the command and the docs
@@ -596,7 +596,7 @@ def _guards(
                 out.append(str(s.get("session_id")))
         return out
 
-    def tests_within(d: date, n_days: int, prefix: str) -> List[str]:
+    def tests_within(d: date, n_days: int, prefix: Union[str, Tuple[str, ...]]) -> List[str]:
         out = []
         for k in range(1, n_days + 1):
             for s in sessions_on(d + timedelta(days=k)):
@@ -667,7 +667,9 @@ def _guards(
         if pl:
             reasons_pull.append(f"il giorno dopo c'è {', '.join(pl)}: niente trazione ≥85% né front lever")
             codes_pull.append({"code": "pre_limit", "detail": f"{next_d} {', '.join(pl)}"})
-        pull_tests = tests_within(d, PULL_TEST_BLOCK_H // 24, "test_max_weighted_pullup")
+        # A319: the combined test session holds the 2RM too (its hang side
+        # already matches "test_max_hang" above).
+        pull_tests = tests_within(d, PULL_TEST_BLOCK_H // 24, ("test_max_weighted_pullup", rp.COMBINED_TEST_SESSION))
         if pull_tests:
             reasons_pull.append(f"test trazione entro {PULL_TEST_BLOCK_H} h: {', '.join(pull_tests)}")
             codes_pull.append({"code": "pull_test_soon", "detail": ", ".join(pull_tests)})

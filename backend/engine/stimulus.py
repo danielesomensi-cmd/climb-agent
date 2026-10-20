@@ -168,6 +168,10 @@ SESSION_FALLBACK_STIMULI: Dict[str, Tuple[str, ...]] = {
     "test_max_hang_7s": (FAMILY_FINGER_MAX,),
     "test_lp_max_5s": (FAMILY_FINGER_MAX,),
     "test_max_weighted_pullup": (FAMILY_PULLING_MAX,),
+    # A319: the combined test session (max hang 7 s + weighted pull-up 2RM).
+    # A planned slot is unresolved: without this row PASS 2.7, the key status
+    # and is_pulling_hard_session would not see its pulling side.
+    "test_max_hang_pullup": (FAMILY_FINGER_MAX, FAMILY_PULLING_MAX),
     "pulling_strength_gym": (FAMILY_PULLING_MAX,),
     "limit_boulder_gym": (FAMILY_LIMIT_POWER,),
     "power_contact_gym": (FAMILY_LIMIT_POWER,),

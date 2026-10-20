@@ -7,7 +7,7 @@
     "secondary_goals": [],
     "notes": "Weighted pullup 2RM baseline refresh (D84). 1RM estimated via Epley/Brzycki average."
   },
-  "required_equipment": ["pullup_bar"],
+  "required_equipment": ["pullup_bar", "weight"],
   "compatibility": {
     "slot": ["long"],
     "sports": ["climbing"]
