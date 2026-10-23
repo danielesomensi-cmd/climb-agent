@@ -70,7 +70,8 @@ not just the tip**: the history of HEAD and every commit its reflogs remember (w
 `ORIG_HEAD`, `refs/worktree/*`, `refs/bisect/*`). A commit followed by its revert, or dropped with `reset --hard`, has a
 tip "equal to main" but the work exists only there — removing the worktree and `update-ref -d` on its branch delete those
 reflogs, so the commit would become unreachable. Commits **rewritten on purpose** do not count: the old value of a
-`commit --amend` or of a rebase was replaced by the user. Intermediate commits of a squash merge that a later commit
+`commit --amend`, and the whole pre-rebase series of a rebase that **finished** (`rebase (finish)` in the branch reflog;
+an aborted rebase leaves `rebase (start)` too, and rewrites nothing). Intermediate commits of a squash merge that a later commit
 revised are kept for a human to look at (squash is not used here). `origin/main` is always the full ref
 `refs/remotes/origin/main`, so a local branch named `origin/main` cannot shadow it. A worktree whose history or reflogs
 hold work not on main is **IN CORSO / FERMO**, not SU MAIN, so after 3 days it is escalated like any forgotten work.

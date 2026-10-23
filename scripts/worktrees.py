@@ -23,7 +23,7 @@ origin/main (fast-forward, cherry-pick, rebase sì; un merge commit con contenut
 suo o una correzione di soli spazi no). Conta OGNI commit della storia e dei
 reflog, non solo la punta: un lavoro seguito dal suo revert, o buttato con un
 `reset --hard`, esiste solo lì. Non contano i commit riscritti apposta (il
-vecchio valore di un `commit --amend` o di un rebase).
+vecchio valore di un `commit --amend`, la serie di prima di un rebase FINITO).
 
 `--clean` toglie un worktree solo se: non è il primario né su main; non ha file
 modificati, non tracciati o nascosti (skip-worktree / assume-unchanged); non ha
@@ -90,8 +90,9 @@ IN_PROGRESS_MARKERS = (
 )
 # Voci di reflog che vogliono dire «qui è nato un commit»; fast-forward, reset e
 # checkout no (un worktree vuoto aggiornato a un main più nuovo resta vuoto).
-# Voci di reflog che riscrivono di proposito il commit precedente.
-REWRITE_RE = re.compile(r"^(commit \(amend\)|rebase)")
+# Voci di reflog che riscrivono di proposito il commit precedente. Solo un rebase
+# FINITO: anche uno interrotto con --abort lascia «rebase (start)» nel reflog.
+REWRITE_RE = re.compile(r"^(commit \(amend\)|rebase( -i)? \(finish\))")
 OWN_COMMIT_RE = re.compile(
     r"^(commit|cherry-pick|revert|rebase( -i)? \((pick|squash|fixup|reword|edit)\))"
     r"|^(merge|pull)\b.*: Merge made by"
@@ -177,18 +178,27 @@ def off_main(live: set[str], logs: list[Path] = (), extra: set[str] = frozenset(
     riscritti apposta (valore vecchio di un `commit --amend` o di un rebase) non
     contano: l'utente li ha sostituiti.
     """
-    tips, rewritten = set(live) | set(extra), set()
+    tips, rewritten_tips = set(live) | set(extra), set()
     for log in logs:
         for old, new, message in reflog_entries(log):
             if new.strip("0"):
                 tips.add(new)
             if old.strip("0") and REWRITE_RE.match(message):
-                rewritten.add(old)
-    tips = existing_commits({t for t in tips if t and (t in live or t not in rewritten)})
+                rewritten_tips.add(old)
+    live_tips = existing_commits({t for t in live if t})
+    live_pending = set(rev_list(live_tips))
+    # Riscritta è tutta la serie di prima (un rebase riscrive ogni commit, non solo
+    # la punta), tranne ciò che la storia viva usa ancora.
+    rewritten = (set(rev_list(existing_commits(rewritten_tips))) | rewritten_tips) - live_pending
+    tips = existing_commits({t for t in tips if t and t not in rewritten})
+    return [sha for sha in rev_list(tips) if sha not in rewritten and not contained(sha)]
+
+
+def rev_list(tips: list[str]) -> list[str]:
+    """Commit raggiungibili da `tips` che non sono antenati di origin/main."""
     if not tips:
         return []
-    pending = git("rev-list", "--stdin", stdin="\n".join(tips + [f"^{BASE}"]) + "\n").stdout.split()
-    return [sha for sha in pending if sha not in rewritten and not contained(sha)]
+    return git("rev-list", "--stdin", stdin="\n".join(tips + [f"^{BASE}"]) + "\n").stdout.split()
 
 
 # ── worktree ─────────────────────────────────────────────────────────────────

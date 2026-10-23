@@ -800,3 +800,47 @@ def test_orphan_worktree_without_commits_is_read_not_an_error(repo):
     out = script(repo).stdout
     line = next(ln for ln in out.splitlines() if "proj-orphan" in ln)
     assert "IN CORSO" in line and "1 file non committato" in line
+
+
+def test_aborted_rebase_is_not_a_rewrite(repo):
+    """Un rebase interrotto lascia «rebase (start)» nel reflog ma non sostituisce niente."""
+    wt = add_worktree(repo, "p6", "brief/P6-x")
+    (wt / "app.txt").write_text("branch\n")
+    g(wt, "commit", "-q", "-a", "-m", "lavoro")
+    work = g(wt, "rev-parse", "HEAD")
+    (repo / "app.txt").write_text("main\n")
+    g(repo, "commit", "-q", "-a", "-m", "main side")
+    g(repo, "push", "-q", "origin", "main")
+    g(wt, "fetch", "-q", "origin")
+    subprocess.run(["git", "rebase", "origin/main"], cwd=wt, capture_output=True)
+    g(wt, "rebase", "--abort")
+    g(wt, "reset", "-q", "--hard", "origin/main")
+    age(repo, wt, "brief/P6-x", 30 * DAY)
+    out = script(repo).stdout
+    assert "FERMO" in out and work[:7] in out
+    script(repo, "--clean")
+    assert wt.exists()
+
+
+@needs_lsof
+def test_rebase_with_several_commits_rewrites_the_whole_series(repo):
+    wt = add_worktree(repo, "p7", "brief/P7-x")
+    (wt / "app.txt").write_text("branch 1\n")
+    g(wt, "commit", "-q", "-a", "-m", "uno")
+    (wt / "app.txt").write_text("branch 2\n")
+    g(wt, "commit", "-q", "-a", "-m", "due")
+    (repo / "app.txt").write_text("main\n")
+    g(repo, "commit", "-q", "-a", "-m", "main side")
+    g(repo, "push", "-q", "origin", "main")
+    g(wt, "fetch", "-q", "origin")
+    for _ in range(2):
+        subprocess.run(["git", "rebase", "origin/main"], cwd=wt, capture_output=True)
+        (wt / "app.txt").write_text("risolto\n")
+        g(wt, "add", "app.txt")
+        subprocess.run(["git", "-c", "core.editor=true", "rebase", "--continue"], cwd=wt, capture_output=True)
+        if not (Path(g(wt, "rev-parse", "--absolute-git-dir")) / "rebase-merge").exists():
+            break
+    push_to_main(wt)
+    age(repo, wt, "brief/P7-x", 3 * HOUR)
+    script(repo, "--clean")
+    assert not wt.exists()
