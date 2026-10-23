@@ -75,11 +75,13 @@ not just the tip**: the history of HEAD and every commit its reflogs remember (w
 tip "equal to main" but the work exists only there — removing the worktree and `update-ref -d` on its branch delete those
 reflogs, so the commit would become unreachable. What a **deliberate rewrite** replaced does not count: for a
 `commit (amend)` reflog entry, `old ^new` (the commit before the amend); for a finished rebase (`rebase … (finish)`,
-also `pull --rebase … (finish)`), only the commits of `old ^new` that have an heir in `new ^old` (same author, author
-date, message) or were `fixup!` / `squash!` / `amend!` commits folded on purpose. Never the result (after a rebase and a
-`reset --hard` the rebased copy is the only one left), never ancestors the rewrite did not touch, never an aborted
-rebase (it leaves only `rebase (start)`), and never a commit the rebase dropped (`--skip`, `drop`, a wrong `--onto`):
-it has no heir, so it stays and a human decides. A commit a conflict resolution emptied (rebase drops it) is kept too:
+also `pull --rebase … (finish)`), only the commits of `old ^new` that have an heir among the commits the rebase
+**wrote** — `new ^old ^onto`, with `onto` read from the reflog entry (same author, author date, message); a
+same-identity commit already on main is not an heir, and without `onto` nothing is replaced. Never the result (after a
+rebase and a `reset --hard` the rebased copy is the only one left), never ancestors the rewrite did not touch, never an
+aborted rebase (it leaves only `rebase (start)`), and never a commit the rebase dropped (`--skip`, `drop`, a wrong
+`--onto`, or one git skipped as "previously applied" because its whitespace-insensitive patch-id matched a copy on
+main): it has no heir, so it stays and a human decides. A folded `fixup!` counts only if its content is on main. A commit a conflict resolution emptied (rebase drops it) is kept too:
 from the reflog it cannot be told apart from a `--skip`. Intermediate commits of a squash merge that a later commit
 revised are kept for a human to look at (squash is not used here). `origin/main` is always the full ref
 `refs/remotes/origin/main`, so a local branch named `origin/main` cannot shadow it. A worktree whose history or reflogs

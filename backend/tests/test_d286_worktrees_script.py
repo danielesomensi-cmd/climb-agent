@@ -1039,3 +1039,29 @@ def test_binary_change_with_the_same_identity_is_not_a_copy(repo):
     age(repo, wt, "brief/T5-x", 30 * DAY)
     script(repo, "--clean")
     assert wt.exists()
+
+
+
+# ── revisione avversariale, quinto giro ─────────────────────────────────────
+
+
+def test_commit_git_drops_as_already_applied_is_not_replaced(repo):
+    """Un amend --no-edit con una correzione di indentazione ha la stessa identità della copia
+    su main: il rebase lo scarta («previously applied»), ma non ha un erede scritto dal rebase."""
+    wt = add_worktree(repo, "u2", "brief/U2-x")
+    (wt / "f.py").write_text("def f(xs):\n    for x in xs:\n        pass\n        return 1\n")
+    g(wt, "add", "f.py")
+    g(wt, "commit", "-q", "-m", "feature")
+    g(repo, "cherry-pick", "brief/U2-x")
+    g(repo, "push", "-q", "origin", "main")
+    g(wt, "fetch", "-q", "origin")
+    (wt / "f.py").write_text("def f(xs):\n    for x in xs:\n        pass\n    return 1\n")   # return fuori dal ciclo
+    g(wt, "commit", "-q", "-a", "--amend", "--no-edit")
+    fixed = g(wt, "rev-parse", "HEAD")
+    g(wt, "rebase", "-q", "origin/main")
+    assert g(wt, "rev-parse", "HEAD") == g(wt, "rev-parse", "origin/main")   # git l'ha scartato
+    age(repo, wt, "brief/U2-x", 30 * DAY)
+    out = script(repo).stdout
+    assert fixed[:7] in out and "SU MAIN" not in out
+    script(repo, "--clean")
+    assert wt.exists() and has_branch(repo, "brief/U2-x")

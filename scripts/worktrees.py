@@ -25,8 +25,8 @@ un cherry-pick o un rebase senza conflitti). Conta OGNI commit della storia e de
 reflog, non solo la punta: un lavoro seguito dal suo revert, o buttato con un
 `reset --hard`, esiste solo lì. Non conta ciò che una riscrittura voluta ha
 sostituito: il commit prima di un `commit --amend`; in un rebase finito (anche da
-`pull --rebase`) i commit che hanno un erede nella serie nuova o erano
-`fixup!`/`squash!` — uno saltato o tolto (`--skip`, `drop`) resta.
+`pull --rebase`) i commit che hanno un erede fra quelli scritti dal rebase — uno
+saltato, tolto o scartato da git come «già applicato» resta.
 
 `--clean` toglie un worktree solo se: non è il primario né su main; non ha file
 modificati, non tracciati o nascosti (skip-worktree / assume-unchanged); non ha
@@ -246,30 +246,29 @@ def off_main(live: set[str], logs: list[Path] = (), extra: set[str] = frozenset(
     return [sha for sha in rev_list(tips) if sha not in rewritten and not contained(sha)]
 
 
-FOLDED_PREFIXES = ("fixup! ", "squash! ", "amend! ")
+ONTO_RE = re.compile(r"\(finish\): \S+ onto ([0-9a-f]{40,64})\s*$")
 
 
 def replaced_by(old: str, new: str, message: str) -> set[str]:
     """Commit che una voce di riscrittura ha davvero sostituito.
 
     Un amend sostituisce il commit di prima (vecchio ^nuovo). Un rebase sostituisce
-    solo i commit della serie vecchia che hanno un erede nella nuova (stessa
-    identità: autore, data d'autore, messaggio) o che erano `fixup!`/`squash!`
-    ripiegati apposta. Un commit saltato (`rebase --skip`) o tolto (`drop`) non
-    ha erede: resta, e decide una persona.
+    solo i commit della serie vecchia che hanno un erede (stessa identità: autore,
+    data d'autore, messaggio) fra i commit che il rebase ha SCRITTO — `nuovo ^vecchio
+    ^onto`, mai quelli di main su cui si è appoggiato: un commit con la stessa
+    identità su main non è un erede. Un commit saltato (`--skip`, `drop`, scartato
+    da git come «già applicato») non ha erede: resta, e decide una persona. Senza
+    `onto` nel reflog non si sostituisce niente.
     """
     series = set(rev_list([old], exclude=[new]))
     if message.startswith("commit (amend)"):
         return series
-    # Gli eredi anche se sono già su main (rev_list li escluderebbe).
-    heirs = {identity(c)[1] for c in out("rev-list", new, f"^{old}").split()}
-    replaced = set()
-    for c in series:
-        ident = identity(c)[1]
-        subject = ident.split("\x1f")[-1]
-        if ident in heirs or subject.startswith(FOLDED_PREFIXES):
-            replaced.add(c)
-    return replaced
+    onto = ONTO_RE.search(message)
+    if not onto or not existing_commits({onto.group(1)}):
+        return set()
+    written = out("rev-list", new, f"^{old}", f"^{onto.group(1)}").split()
+    heirs = {identity(c)[1] for c in written}
+    return {c for c in series if identity(c)[1] in heirs}
 
 
 def rev_list(tips: list[str], exclude: list[str] = ()) -> list[str]:
