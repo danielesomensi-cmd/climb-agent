@@ -329,7 +329,7 @@ no-op, plan byte-identical. See vocabulary §5.7.3.
 - `preferred_location: "other_sport"` → slot unavailable
 - A300: valid `role` (≠ `any`), `max_minutes`, `focus` copied onto the slot only when present
 
-**Emptied slots and crag days (B382, 2026-10-17).** (a) "I took a session out" means *that slot stays empty*. `apply_events` `remove_session` logs `removed_slot` (the slot the session really sat in — the app sends the id only) and `removed_owned`; `user_owned.slot_emptied(removal_records(plan))` returns the `(date, slot)` pairs with a slot that are not the removal of the user's own session (removals, move sources, overrides, key re-schedules). The planner sets those slots `available: False` in `normalized` (same week, from `today` on) so no pass fills them, and `_merge_user_content` drops any engine session in them whatever its id. The removed session may land on another day (D1). Legacy removals with no slot keep the by-id reading. D2: a `remove_outdoor` cancels the `removed` records of that day logged before its last `add_outdoor` (or before the event, with no `add_outdoor` on record) — the day returns to the engine. (b) A declared crag day (an engine-free day declared outdoor, done or not past; the previous week's declared days done or not past, as negative offsets) counts in `hard_days` before PASS 1 and joins `hard_day_offsets` / `finger_day_offsets` after PASS 1.5; PASS 1 / 1.5 check it symmetrically (`_near_crag`), PASS 3a counts it in `_hard_ok` / `_test_day_ok`, PASS 2.7 in `_has` and in the guards view (`crag_fields`). `finger_days` in the summary excludes the seeded crag offsets.
+**Emptied slots and crag days (B382, 2026-10-17).** (a) "I took a session out" means *that slot stays empty*. `apply_events` `remove_session` logs `removed_slot` (the slot the session really sat in — the app sends the id only) and `removed_owned`; `user_owned.slot_emptied(removal_records(plan))` returns the `(date, slot)` pairs with a slot that are not the removal of the user's own session (removals, move sources, overrides, key re-schedules). The planner sets those slots `available: False` in `normalized` (same week, from `today` on) so no pass fills them, and `_merge_user_content` drops any engine session in them whatever its id. The removed session may land on another day (D1) — not a retest-policy test: removing or replacing it declines it for that week (A320, §8.2), and the regeneration does not put it back elsewhere. Legacy removals with no slot keep the by-id reading. D2: a `remove_outdoor` cancels the `removed` records of that day logged before its last `add_outdoor` (or before the event, with no `add_outdoor` on record) — the day returns to the engine. (b) A declared crag day (an engine-free day declared outdoor, done or not past; the previous week's declared days done or not past, as negative offsets) counts in `hard_days` before PASS 1 and joins `hard_day_offsets` / `finger_day_offsets` after PASS 1.5; PASS 1 / 1.5 check it symmetrically (`_near_crag`), PASS 3a counts it in `_hard_ok` / `_test_day_ok`, PASS 2.7 in `_has` and in the guards view (`crag_fields`). `finger_days` in the summary excludes the seeded crag offsets.
 
 **Days the user owns wholesale (B379).** When `generate_phase_week` receives `existing_week_plan` for the same week, every day from `today` on that is in `user_owned.engine_free_dates(existing_week_plan)` — a whole-day / outdoor override, or an outdoor day the user declared on the plan (spot, `outdoor_plan`, outdoor block planned/done; `user_owned.is_declared_outdoor_day`, which `stimulus` delegates to) — is treated like an outdoor-only availability day: no session from any pass (primary, complementary, PASS 2.7 key pass via its `blocked` slots, tests), and the spacing/caps of the other days are computed without it. The day does **not** get `outdoor_slot` (that marker means availability). The complementary pass (`place_complementary`) and the retest policy (`_locked_by_merge` → `locked_dates`) read the same predicate. B379 also closed a B297 gap: PASS 3 pass 2 never places a required test on a day before `today` (the merge would have dropped it silently) — it is reported as `no_placement_slot` instead.
 
@@ -689,7 +689,8 @@ retest_decisions  → week-level: trigger (end_of_phase | cycle_start |
                     maintenance | early_retest), gap 42 d after any test
                     (A319; 28 d only for early_retest), phase / trip /
                     very_hard day blockers, external finger-hard + heavy-pull
-                    days, already-scheduled
+                    days, already-scheduled; the athlete's declines (A320:
+                    skipped declined | postponed, the axis stays covered)
 planner PASS 3a   → day-level against the week AS THE B369 MERGE WILL SAVE IT
                     (B400): < 72 h finger-hard (hang; 3 calendar days, inclusive),
                     never a slot the regen merge refills (locked_slots /
@@ -795,6 +796,62 @@ first on a shared day — A319 review: on that day only, or it waits. The
 historical PASS 3 and PASS 1/2 stay alert-only
 (`regeneration_guard_warnings`, A301).
 
+**Declines (A320, 2026-10-23).** From climb-coach's bug-inbox of 2026-10-18 ("a
+retest cannot be declined"). `POST /api/retest/decline` stores a record in
+`state.retest_declines` (endpoint-owned; record management in the pure
+`retest_declines.py`); `_axis_week_decision` reads the ACTIVE ones (same axis,
+`official_date` = the official max it reads — a new test makes them inert):
+- a `decline` suppresses its own trigger kind (`_trigger_for_week(..., skip)`,
+  the default `()` is the pre-A320 reading): end_of_phase / cycle_start only
+  in the macrocycle declined in; the early retest by any active decline until
+  2 measured signals are dated after `declined_at` (also in A319's gap →
+  early fallback); another kind still fires;
+- a `postpone`: weeks entirely before `until` skipped `postponed`; from the
+  week holding `until` on, due from `until` with trigger `postponed` (a natural
+  trigger that is not declined keeps its name); `until` must come after the
+  pending test's own day (a postpone never brings a test forward), and a later
+  `decline` ends the axis' postpones (`retest_declines.upsert`: the athlete's
+  latest word wins — kept, the postpone brought the declined test straight
+  back as `postponed`);
+- implicit: a policy test the athlete removed or replaced in week K (the
+  plan's removal records, not a move, not an automatic A315 re-schedule:
+  `plan_edit_removal`) declines the axis for K only (`source: plan_edit`); a
+  test of the axis the athlete puts back in K (an explicit add, still to do
+  from today on) lifts it; taking back an extra test of their own declines
+  nothing while the policy's test is still in K. This reading comes before a
+  stored decline or postpone of the same week, so the regenerated snapshot
+  carries the `plan_edit` view (a slot-only removal — a whole-day override —
+  keeps matching through it, and a DELETE never reopens K).
+All are decided BEFORE the phase / gap / already-scheduled checks and return
+`skipped` (`declined` / `postponed`, with the `declined` view: reason code from
+a closed set, never the note) — never `None`: the axis stays covered, so the
+historical PASS 3 / `test_queue` never take it and the 6-week reminder stays
+hidden. The snapshot copies the row unchanged, `skipped_tests` its reason
+(planner_v2 unchanged). The endpoint removes the engine's planned tests of the
+axis dated from the later of the server's and the athlete's today (both
+copies: `week_plans[K]` and `current_week_plan`), with no adaptation event (a
+`remove_session` record would empty the slot, B382), stamps the revision and
+marks those weeks stale — and the cached week the test now belongs to (a
+postpone's `until`, the next trigger of another kind: `week_to_reopen`), which
+a cache never regenerates on its own: the next `GET /api/week` regenerates
+them under the decline (the freed slot gets a normal engine session). The
+athlete's own planned tests are kept and reported. `DELETE
+/api/retest/decline/{axis}` removes the records, takes out the engine's tests
+placed under a postpone (snapshot trigger `postponed`: nothing backs them
+once it is undone — kept, the original week saw them "already scheduled" and
+the next regeneration of their own week dropped them) and marks stale those
+weeks and the weeks generated under the records. `retest_status`: `declines`,
+`plan_edit_declines` (the weeks whose decision is the implicit decline),
+`next_test_reason` `declined` | `postponed` (outranks the other reasons), and a
+`_stale` week is projected like a week not generated yet (`_hot_plan` itself
+unchanged: `_locked_by_merge` still reads stale plans).
+`key_sessions_v1._replaceable` never takes the slot of a test the policy
+placed (`is_policy_test`: PASS 3a's `retest:` stamp — A294 proposals, A315
+automatic application); a test of an uncovered axis is read as before, so an
+untested athlete stays byte-identical. The coach block puts the retest section
+before the guards when it carries a decline, so a budget cut never drops it.
+`inject_tests` bypasses the policy by design: declines are not consulted there.
+
 ---
 
 ### 8.3 Key sessions — `key_sessions_v1.py` (A294)
@@ -812,7 +869,7 @@ The single owner of "which sessions of the week carry the phase's key stimuli". 
 - **Review fixes (A294):** `/events` passes `today` to `apply_events` → `_reconcile(frozen_before=today)`: past days are counted, never rewritten (the Sunday→Monday seed used to downshift an unticked past Monday). Proposals are validated cumulatively and against the heavy-pulling rules (24 h before limit / strength_long, ≤ 2 per 7 days); candidates outside the phase pool are allowed after the in-pool ones. Try-hard needs a fall-practice block (or outdoor-hard / free limit), technique needs feet / positioning drills (outdoor no longer counts) and can turn critical. The coach block sits behind `COACH_ATHLETE_CONTEXT`.
 - **Try-hard in the catalog (C276)**: `lead_tryhard_gym` (falls + 2 lead routes with a declared rule) and `route_projecting_gym` (2-3 falls after the warm-up) carry a pinned, strict fall block. `try_hard.session_ids` lists them: `tryhard_hit` counts them by id only while unresolved (no exercise entries), then the fall exercise itself decides. `try_hard.propose` stays empty, so A294 proposals are unchanged; the session is in no phase pool until A305 places it.
 - Known divergence: `closed_loop_v1.stimulus_recency` still classifies by session id/tags; the key status reads the A288 exposure view. Not unified in A294.
-- **Automatic re-schedule (A315)**: `_propose_for` runs two passes. Pass 1 is the A294 search over free slots, unchanged. Only when it finds nothing, pass 2 tries to **replace** a planned engine session that holds no key role (`key_index`) and that the user does not own (`user_owned.is_preservable` false: never custom, done/skipped, forced, edited, quick-added, moved, overridden, an earlier re-schedule); the replacement is a declared side effect (`replaces`, `side_effects`) and is rejected when any other key of the week would owe more (`_week_debts` before/after, reason `key_worse`) or the group gains nothing (`no_gain`). The event is `add_planned_session` + `replace_session_ref`, re-checked in the replanner, which keeps the replaced session in `replaced_original` and logs `replaced_session_id` (so `user_owned.removed_refs` keeps a regeneration from bringing it back). `backend/api/auto_reschedule.py` applies the proposals **only after a write** (`/events` without dry run, `/override`) and only for the keys whose debt went **up** in that call (an old debt the user let go is never re-applied by an unrelated write), never for a key the user undid that week (`auto_reschedule_declined`); the session carries `auto_reschedule` + `auto_reschedule_id` and the week an `auto_reschedule` adaptation. `undo_auto_reschedule {adaptation_id}` takes it back while the session is untouched (planned, not edited, date ≥ today) and puts `replaced_original` back byte for byte. Response field `auto_reschedules[]` (`would_auto_reschedule[]` on a dry run); `adjustments` stays empty. Kill switch `KEY_AUTO_RESCHEDULE=0` (call time); fail-soft (any error leaves only the user's own action). **Why this is not what A301 forbade:** A301 stopped the engine from rewriting the plan *in reaction to the guards*; this is the application of a proposal validated to add no guard alert and to leave no other key worse off, declared in the response and undone with one tap.
+- **Automatic re-schedule (A315)**: `_propose_for` runs two passes. Pass 1 is the A294 search over free slots, unchanged. Only when it finds nothing, pass 2 tries to **replace** a planned engine session that holds no key role (`key_index`) and that the user does not own (`user_owned.is_preservable` false: never custom, done/skipped, forced, edited, quick-added, moved, overridden, an earlier re-schedule) — A320: never a test the retest policy placed (`retest_policy.is_policy_test`: the `retest:` stamp of PASS 3a; a test of an uncovered axis is read as before); the replacement is a declared side effect (`replaces`, `side_effects`) and is rejected when any other key of the week would owe more (`_week_debts` before/after, reason `key_worse`) or the group gains nothing (`no_gain`). The event is `add_planned_session` + `replace_session_ref`, re-checked in the replanner, which keeps the replaced session in `replaced_original` and logs `replaced_session_id` (so `user_owned.removed_refs` keeps a regeneration from bringing it back). `backend/api/auto_reschedule.py` applies the proposals **only after a write** (`/events` without dry run, `/override`) and only for the keys whose debt went **up** in that call (an old debt the user let go is never re-applied by an unrelated write), never for a key the user undid that week (`auto_reschedule_declined`); the session carries `auto_reschedule` + `auto_reschedule_id` and the week an `auto_reschedule` adaptation. `undo_auto_reschedule {adaptation_id}` takes it back while the session is untouched (planned, not edited, date ≥ today) and puts `replaced_original` back byte for byte. Response field `auto_reschedules[]` (`would_auto_reschedule[]` on a dry run); `adjustments` stays empty. Kill switch `KEY_AUTO_RESCHEDULE=0` (call time); fail-soft (any error leaves only the user's own action). **Why this is not what A301 forbade:** A301 stopped the engine from rewriting the plan *in reaction to the guards*; this is the application of a proposal validated to add no guard alert and to leave no other key worse off, declared in the response and undone with one tap.
 
 ### 8.4 Measured feedback — `measured_feedback.py` (A295)
 
@@ -1202,6 +1259,11 @@ retest_policy.py                      (A288 — official_max / test_confidence /
                                        A289 — retest_decisions / retest_status)
   ├── stimulus.{exposure_dates, count_exposures, session_flag, ...}
   └── progression_v1.estimate_1rm_from_2rm  (lazy import)
+
+retest_declines.py                    (A320 — decline / postpone records, pure; the policy
+                                       reads them, POST/DELETE /api/retest/decline write them)
+  ├── retest_policy.{axis_official, axis_declines, _axis_week_decision, _hot_plan, ...}
+  └── user_owned.is_user_owned  (lazy import)
 ```
 
 ### Shared constants

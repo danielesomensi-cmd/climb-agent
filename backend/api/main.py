@@ -36,6 +36,7 @@ from backend.api.routers import (
     quotes,
     replanner,
     reports,
+    retest,
     session,
     state,
     subscription,
@@ -179,6 +180,7 @@ app.include_router(mobility.router)
 app.include_router(weather.router)
 app.include_router(coach.router)
 app.include_router(bw_progression.router)
+app.include_router(retest.router)
 
 # Stripe webhook — registered directly to preserve raw body for signature verification
 app.add_api_route(

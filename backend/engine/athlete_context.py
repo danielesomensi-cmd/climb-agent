@@ -86,7 +86,7 @@ from backend.engine.stimulus import (
 DateLike = Union[date, str]
 ArchivedWeeks = Optional[Union[Mapping[str, Any], Sequence[Mapping[str, Any]]]]
 
-VERSION = "a319.1"
+VERSION = "a320.1"
 
 # ---------------------------------------------------------------------------
 # Constants. Shared with the engine, never copied: the command and the docs
@@ -1608,6 +1608,14 @@ def render_text(ctx: Mapping[str, Any], *, plan_notes: Optional[str] = None,
         L.append(f"  {axis}: ufficiale {_fmt_kg(row.get('official_total_kg'))} kg ({row.get('test_date')}){valid}, "
                  f"confidenza {row.get('confidence')}, non prima del {row.get('earliest_retest')}; {nxt}; "
                  f"segnali {row.get('signals', {}).get('count')}/{row.get('signals', {}).get('needed')}")
+        # A320: what the athlete declined (stored records, plan edits) — codes, never the note.
+        for d in row.get("declines") or []:
+            if d.get("kind") == rp.DECLINE_KIND_POSTPONE:
+                L.append(f"    RINVIATO al {_iso_day(d.get('until'))} ({_decline_reason(d)})")
+            else:
+                L.append(f"    RIFIUTATO il {_iso_day(d.get('declined_at'))} ({_decline_reason(d)})")
+        for d in row.get("plan_edit_declines") or []:
+            L.append(f"    rifiutato in settimana {_iso_day(d.get('week_start'))} (modifica del piano)")
 
     L.append("")
     g = ctx.get("guards") or {}
@@ -1911,6 +1919,52 @@ def _retest_lines_en(ctx: Mapping[str, Any]) -> List[str]:
         valid = f"; tested max valid until {row['tested_until']}" if row.get("tested_until") else ""
         out.append(f"- {_AXIS_EN.get(axis, axis)}: {nxt}; not before {row.get('earliest_retest')}{valid}; "
                    f"measured retest signals {sig.get('count')}/{sig.get('needed')}")
+        out.extend(_decline_lines_en(axis, row))
+    return out
+
+
+def _iso_day(value: Any) -> Optional[str]:
+    try:
+        return date.fromisoformat(str(value)[:10]).isoformat()
+    except (TypeError, ValueError):
+        return None
+
+
+def _decline_reason(d: Mapping[str, Any]) -> str:
+    """A320: a decline's reason code from the closed set, else "other" — both
+    renderings are read by an LLM (the coach block, and the CLI text the
+    climb-coach agent reads): nothing but codes and dates goes out."""
+    return str(d.get("reason")) if d.get("reason") in rp.DECLINE_REASONS else "other"
+
+
+def _retest_has_declines(ctx: Mapping[str, Any]) -> bool:
+    """A320: a covered axis carries a decline of the athlete (stored, or a
+    plan edit the policy reads as one)."""
+    return any(row.get("covered") and (row.get("declines") or row.get("plan_edit_declines"))
+               for row in ((ctx.get("retest") or {}).get("axes") or {}).values())
+
+
+def _decline_lines_en(axis: str, row: Mapping[str, Any]) -> List[str]:
+    """A320: the athlete's declines of the axis' retest for the coach. Codes and
+    dates only — the free-text note never reaches the LLM (injection surface),
+    and a reason outside the closed set reads "other"."""
+    label = _AXIS_EN.get(axis, axis)
+    out: List[str] = []
+    for d in row.get("declines") or []:
+        reason = _decline_reason(d).replace("_", " ")
+        if d.get("kind") == rp.DECLINE_KIND_POSTPONE:
+            until = _iso_day(d.get("until"))
+            if until:
+                out.append(f"- {label}: retest postponed to {until} (reason: {reason})")
+            continue
+        at = _iso_day(d.get("declined_at"))
+        out.append(f"- {label}: retest declined by the athlete" + (f" on {at}" if at else "")
+                   + f" (reason: {reason}); it comes back with a new test, a different trigger "
+                   "or two new measured sessions")
+    for d in row.get("plan_edit_declines") or []:
+        week = _iso_day(d.get("week_start"))
+        if week:
+            out.append(f"- {label}: retest declined for the week of {week} (the athlete took it out of the plan)")
     return out
 
 
@@ -1983,6 +2037,15 @@ def render_coach_block(ctx: Mapping[str, Any], *, max_chars: int = COACH_BLOCK_M
         L.append("Key sessions this week — never suggest dropping or replacing one without saying which "
                  "stimulus is lost; a missed key stimulus of a past week is gone, not owed:")
         L.extend(keys.splitlines())
+    retest = _retest_lines_en(ctx)
+    # A320 review: a decline of the athlete is never lost to the budget cut.
+    # With one, the retest section comes before the guards, whose farthest
+    # days a cut drops first (on Daniele's real context, ~4 000 chars, the cut
+    # took the whole retest section); without one the layout is unchanged.
+    declined = _retest_has_declines(ctx)
+    if retest and declined:
+        L.append("Retest policy (only the policy schedules tests):")
+        L.extend(retest)
     hc = (ctx.get("guards") or {}).get("hard_cap") or {}
     restricted = _restricted_days_en(ctx, limit=5)
     if restricted or hc.get("cap") is not None:
@@ -1990,8 +2053,7 @@ def render_coach_block(ctx: Mapping[str, Any], *, max_chars: int = COACH_BLOCK_M
                  + (f" (hard days this week {hc.get('count')}/{hc.get('cap')})" if hc.get("cap") is not None else "")
                  + ":")
         L.extend(restricted or ["- no finger / pulling restrictions in the next days"])
-    retest = _retest_lines_en(ctx)
-    if retest:
+    if retest and not declined:
         L.append("Retest policy (only the policy schedules tests):")
         L.extend(retest)
     limit = _limit_lines_en(ctx)

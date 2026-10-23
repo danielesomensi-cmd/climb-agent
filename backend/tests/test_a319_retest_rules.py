@@ -416,7 +416,9 @@ class TestNoSlip:
         assert rp.TRIGGER_END_OF_PHASE_SLIPPED == "end_of_phase_slipped"
         assert "TRIGGER_END_OF_PHASE_SLIPPED" in rp.__all__
         assert rp.TRIGGER_END_OF_PHASE_SLIPPED not in rp._TRIGGER_TEXT
-        assert all("{" not in text for text in rp._TRIGGER_TEXT.values())
+        # A320: only the postponed test's text takes a value (its date).
+        assert all("{" not in text for trig, text in rp._TRIGGER_TEXT.items() if trig != rp.TRIGGER_POSTPONED)
+        assert rp._TRIGGER_TEXT[rp.TRIGGER_POSTPONED].format(until="2026-11-02").endswith("2026-11-02.")
 
 
 # ---------------------------------------------------------------------------
@@ -760,10 +762,17 @@ class TestCombinedPolicyReads:
 
     def test_removed_combined_locks_its_date(self):
         # A legacy removal by id (no slot): the merge drops that id there again.
+        # A320: the athlete took the combined test out of the week — both axes
+        # are declined there (nothing left to place: the decisions skip the
+        # lock computation); the merge's lock itself is unchanged.
         st = _due_1019()
         st["week_plans"] = {WS: _week_plan(WS, {}, adaptations=[
             {"type": "event", "event": {"event_type": "remove_session", "date": FRI, "session_ref": COMBO}}])}
-        assert FRI in _decision(st, WS, today=WS)["locked_dates"]
+        dec = _decision(st, WS, today=WS)
+        assert dec["required_sessions"] == []
+        assert {s["axis"]: s["skip_reason"] for s in dec["skipped"]} == {"finger": "declined", "pulling": "declined"}
+        ws = date.fromisoformat(WS)
+        assert FRI in rp._locked_by_merge(st, ws, ws)["locked_dates"]
 
     def test_users_combined_is_already_scheduled_for_both_axes(self):
         # Moved by the user (user-owned): the regeneration keeps it.
@@ -915,7 +924,7 @@ class TestCombinedGuards:
         assert "hang_test_soon" in {c["code"] for c in thu["finger_codes"]}
         assert "pull_test_soon" in {c["code"] for c in thu["pull_codes"]}
         assert thu["finger_max_ok"] is False and thu["heavy_pull_ok"] is False
-        assert ctx["version"] == ac.VERSION == "a319.1"
+        assert ctx["version"] == ac.VERSION == "a320.1"
 
     def test_composer_guard_excludes_finger_and_pulling(self):
         from backend.tests.test_a294_key_sessions import _sess, _state

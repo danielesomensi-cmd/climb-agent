@@ -40,7 +40,9 @@ python scripts/athlete_context.py --date YYYY-MM-DD                        # se 
   - Avvisi `HIIT_ON_GUARD_DAY` / `WORK_RECURRENCE_PHASE_CHANGE`: le ricorrenze «Work —» di Daniele vanno riviste (spostate o rese Z2) e proposte a lui, non ignorate.
   - Avviso `STALE_CUSTOM_TAGS` (B395): una custom ancora da fare ha i tag salvati con regole vecchie (es. `finger` True→False), quindi guardie e spacing leggono un dato falso. Proponi a Daniele di riallinearla: `remove_session` + `add_custom_session` sulla stessa data/slot via `/api/replanner/events`, dry run prima (deve cambiare solo quel tag), poi scrittura con il suo OK.
 - Uno stimolo chiave `NOT_DUE` (per esempio il limit in PE dentro il gap di 12 giorni) **non** si aggiunge.
-- **Retest:** decide la retest policy (sezione «Retest»). Non si sposta e non si aggiunge un test a mano. Si riporta la riga «ufficiale / lavoro / prossimo test».
+- **Retest:** decide la retest policy (sezione «Retest»). Non si sposta e non si aggiunge un test a mano. Si riporta la riga «ufficiale / lavoro / prossimo test» (e le righe `RIFIUTATO` / `RINVIATO` / `rifiutato in settimana`, A320).
+  - Un retest si **rifiuta o si rinvia** solo con `POST /api/retest/decline` (A320): `{axis, kind: decline|postpone, until?, reason: fatigue|injury|illness|travel|schedule|not_needed|other, note?, trigger?, source: "coach"}` — prima `dry_run: true` (mostra `tests_removed`, `kept_user_owned_tests`, settimane rese stale), poi l'OK di Daniele, poi la scrittura. Il test rifiutato torna con un nuovo test, un trigger di altro tipo o due nuove sessioni misurate sopra il massimale; quello rinviato è dovuto dal giorno `until`, che deve venire **dopo** il giorno del test in sospeso (un rinvio non anticipa mai un test: altrimenti `422 invalid_until`). Un rifiuto chiude anche un rinvio attivo dello stesso asse (`replaced` lo mostra). Annullare: `DELETE /api/retest/decline/{axis}` (anche qui `?dry_run=true` prima): toglie anche il test che il rinvio aveva piazzato e lascia che la settimana originale lo rimetta. Un test già rifiutato non è più in programma (`409 no_pending_retest`): per trasformare un rifiuto in rinvio, prima il DELETE, poi il POST del rinvio.
+  - **Mai** togliere o spostare un test modificando `week_plans` con `PUT /api/state`: non lascia nessun marker utente e la rigenerazione successiva lo rimette. Un test che Daniele toglie o sostituisce lui dal piano vale come rifiuto per quella settimana (non torna in un altro giorno; per riaverlo in quella settimana si rimette con un'aggiunta esplicita, che toglie il rifiuto).
 - **Ogni sessione non di puro recupero** contiene un **blocco tecnica** (piedi o posizione, drill id + livello di scala) **oppure** un **blocco try-hard**, con **UN target misurabile** nelle note. I drill e la loro misura li stampa lo script («Libreria tecnica / try-hard»); il livello di scala corrente sta nelle «Note atleta». Esempi: «campione ≤1 aggiustamento», «hover 2 s 4/5», «non-send chiusi in FALL», «F2, paura ≤3». La tecnica va fatta da freschi, a inizio seduta, vicino al limite (flash..RP-2): mai dopo il limit, mai 6b+/6C.
 - **La forza continua a progredire:** non togliere né ridurre finger_max, pulling_max e limit per far posto ad altro. Tecnica e try-hard sostituiscono volume.
 
@@ -82,15 +84,15 @@ python scripts/athlete_context.py --simulate bozza.json --target-date YYYY-MM-DD
 `bozza.json` = il body di `POST /api/custom-session` (`{"name": ..., "exercises": [...]}`), salvato nello scratchpad.
 
 - Se una sessione **CHIAVE** viene declassata, cambi giorno o contenuto e risimuli. Non si scrive.
-- Una collisione di slot si risolve con `--replace`, solo su una sessione non chiave.
+- Una collisione di slot si risolve con `--replace`, solo su una sessione non chiave e **mai su un test della retest policy**: toglierlo vale come rifiuto del test per quella settimana (A320, non torna in un altro giorno). La simulazione lo segnala (`TEST retest …` e l'avviso «toglierebbe un TEST della retest policy»): cambia slot o giorno; se Daniele vuole davvero saltare il test, si passa da `POST /api/retest/decline` (§2, «Retest»).
 - Mostra a Daniele l'anteprima: righe, carichi con nota di calcolo, target misurabile, cosa cambia nel piano. **Aspetta l'OK esplicito**, anche se ha detto «mettila nell'app».
 
 ## 5. Scrivi (solo dopo l'OK)
 
 1. `POST /api/custom-session` risponde **201**: non rilanciare, duplicheresti la sessione.
-2. In una chiamata **separata**: `POST /api/replanner/events` con `remove_session` (se serve) + `add_custom_session`. Il router legge `custom_sessions` prima degli eventi.
+2. In una chiamata **separata**: `POST /api/replanner/events` con `remove_session` (se serve) + `add_custom_session`. Il router legge `custom_sessions` prima degli eventi. Mai `remove_session` su un test della retest policy (A320: è un rifiuto del test per la settimana).
 3. Auth: Clerk prod (memoria `reference_prod_user_debug`). Il JWT dura circa 60 s: rigeneralo ogni circa 12 chiamate.
-4. Mai `add_generated_session` per esercizi del catalogo. Mai usarlo per spostare un test: per quello si usa `PUT /api/state` sul `week_plans[<lunedì>]`.
+4. Mai `add_generated_session` per esercizi del catalogo. Mai usarlo per spostare un test. Un test non si sposta né si toglie con `PUT /api/state` sul `week_plans[<lunedì>]` (nessun marker utente: la rigenerazione lo rimette): si rifiuta o si rinvia con `POST /api/retest/decline` (dry run → OK di Daniele → scrittura). Solo se Daniele chiede di spostarlo (non di rifiutarlo): `move_session` via `/api/replanner/events`, dry run prima — il test spostato resta dove lo mette.
 5. Rileggi il piano (rilancia lo script): le sessioni chiave ci sono ancora, la custom è dove deve essere.
 
 ## Errori già fatti (non ripeterli)
