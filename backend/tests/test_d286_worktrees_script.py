@@ -833,9 +833,9 @@ def test_rebase_with_several_commits_rewrites_the_whole_series(repo):
     g(repo, "commit", "-q", "-a", "-m", "main side")
     g(repo, "push", "-q", "origin", "main")
     g(wt, "fetch", "-q", "origin")
-    for _ in range(2):
-        subprocess.run(["git", "rebase", "origin/main"], cwd=wt, capture_output=True)
-        (wt / "app.txt").write_text("risolto\n")
+    subprocess.run(["git", "rebase", "origin/main"], cwd=wt, capture_output=True)
+    for step in (1, 2):   # due conflitti, due risoluzioni diverse: nessun commit diventa vuoto
+        (wt / "app.txt").write_text(f"risolto {step}\n")
         g(wt, "add", "app.txt")
         subprocess.run(["git", "-c", "core.editor=true", "rebase", "--continue"], cwd=wt, capture_output=True)
         if not (Path(g(wt, "rev-parse", "--absolute-git-dir")) / "rebase-merge").exists():
@@ -948,3 +948,94 @@ def test_pushing_main_marks_the_pushed_commit_as_on_main(repo):
 def test_pre_push_hook_passes_the_main_push_to_the_report():
     hook = (REPO_ROOT / ".githooks" / "pre-push").read_text()
     assert "refs/heads/main" in hook and "--pushing-main" in hook
+
+
+
+# ── revisione avversariale, quarto giro ─────────────────────────────────────
+
+
+def test_amend_no_edit_that_adds_work_is_not_a_copy_of_main(repo):
+    """Amend --no-edit conserva autore, data e messaggio: senza la stessa modifica non è una copia."""
+    wt = add_worktree(repo, "t1", "brief/T1-x")
+    commit(wt, name="feature.py", msg="feature")
+    push_to_main(wt)
+    (wt / "forgotten_test.py").write_text("def test(): pass\n")
+    g(wt, "add", "forgotten_test.py")
+    g(wt, "commit", "-q", "--amend", "--no-edit")
+    age(repo, wt, "brief/T1-x", 30 * DAY)
+    line = next(ln for ln in script(repo).stdout.splitlines() if "proj-t1" in ln)
+    assert "SU MAIN" not in line and "FERMO" in line
+    script(repo, "--clean")
+    assert (wt / "forgotten_test.py").exists()
+
+
+def test_fixup_squashed_into_a_commit_already_on_main_is_not_merged(repo):
+    wt = add_worktree(repo, "t2", "brief/T2-x")
+    commit(wt, name="a.txt", msg="A")
+    g(repo, "cherry-pick", "brief/T2-x")
+    g(repo, "push", "-q", "origin", "main")
+    g(wt, "fetch", "-q", "origin")
+    (wt / "b.txt").write_text("fix\n")
+    g(wt, "add", "b.txt")
+    g(wt, "commit", "-q", "--fixup", "HEAD")
+    subprocess.run(["git", "rebase", "-q", "-i", "--autosquash", "HEAD~2"], cwd=wt, check=True, capture_output=True,
+                   env={**os.environ, "GIT_SEQUENCE_EDITOR": "true"})
+    age(repo, wt, "brief/T2-x", 30 * DAY)
+    script(repo, "--clean")
+    assert (wt / "b.txt").exists() and has_branch(repo, "brief/T2-x")
+
+
+@needs_lsof
+def test_fixup_folded_by_autosquash_then_merged_is_clean(repo):
+    wt = add_worktree(repo, "t3", "brief/T3-x")
+    commit(wt, name="a.txt", msg="A")
+    (wt / "b.txt").write_text("fix\n")
+    g(wt, "add", "b.txt")
+    g(wt, "commit", "-q", "--fixup", "HEAD")
+    subprocess.run(["git", "rebase", "-q", "-i", "--autosquash", "origin/main"], cwd=wt, check=True, capture_output=True,
+                   env={**os.environ, "GIT_SEQUENCE_EDITOR": "true"})
+    push_to_main(wt)
+    age(repo, wt, "brief/T3-x", 3 * HOUR)
+    script(repo, "--clean")
+    assert not wt.exists()
+
+
+@pytest.mark.parametrize("how", ["skip", "drop"])
+def test_commit_dropped_by_a_rebase_is_not_replaced(repo, how):
+    wt = add_worktree(repo, "t4", "brief/T4-x")
+    (wt / "feature.py").write_text("x = 1\n")
+    (wt / "app.txt").write_text("brief\n")
+    g(wt, "add", "-A")
+    g(wt, "commit", "-q", "-m", "feature + riga in conflitto")
+    commit(wt, name="later.txt", msg="altro lavoro")
+    moved_main(repo)
+    g(wt, "fetch", "-q", "origin")
+    if how == "skip":
+        subprocess.run(["git", "rebase", "origin/main"], cwd=wt, capture_output=True)
+        g(wt, "rebase", "--skip")
+    else:
+        editor = "sed -i.bak '1s/^pick/drop/'"
+        subprocess.run(["git", "rebase", "-i", "origin/main"], cwd=wt, check=True, capture_output=True,
+                       env={**os.environ, "GIT_SEQUENCE_EDITOR": editor})
+    assert not (wt / "feature.py").exists()
+    push_to_main(wt)
+    age(repo, wt, "brief/T4-x", 30 * DAY)
+    script(repo, "--clean")
+    assert wt.exists() and has_branch(repo, "brief/T4-x")
+
+
+def test_binary_change_with_the_same_identity_is_not_a_copy(repo):
+    """Senza --binary due modifiche binarie diverse allo stesso file danno la stessa patch."""
+    when = {"GIT_AUTHOR_DATE": "2026-01-01T10:00:00+01:00"}
+    wt = add_worktree(repo, "t5", "brief/T5-x")
+    (repo / "blob.bin").write_bytes(b"\x00\x01 versione di main")
+    g(repo, "add", "blob.bin")
+    subprocess.run(["git", "commit", "-q", "-m", "binario"], cwd=repo, check=True, env={**os.environ, **when})
+    g(repo, "push", "-q", "origin", "main")
+    g(repo, "fetch", "-q", "origin")
+    (wt / "blob.bin").write_bytes(b"\x00\x02 versione del brief, diversa")
+    g(wt, "add", "blob.bin")
+    subprocess.run(["git", "commit", "-q", "-m", "binario"], cwd=wt, check=True, env={**os.environ, **when})
+    age(repo, wt, "brief/T5-x", 30 * DAY)
+    script(repo, "--clean")
+    assert wt.exists()

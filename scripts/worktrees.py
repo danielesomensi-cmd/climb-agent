@@ -20,11 +20,13 @@ Uso:
 Un commit è «su main» se è antenato di origin/main, se unirlo non cambierebbe
 niente (`git merge-tree` dà esattamente l'albero di origin/main: un merge commit
 con contenuto suo o una correzione di soli spazi no), o se main ne ha la copia
-(stesso autore, data d'autore e messaggio: cherry-pick e rebase la lasciano anche
-con i conflitti risolti). Conta OGNI commit della storia e dei reflog, non solo
-la punta: un lavoro seguito dal suo revert, o buttato con un `reset --hard`,
-esiste solo lì. Non conta ciò che una riscrittura voluta ha sostituito (vecchio
-^nuovo di un `commit --amend` o di un rebase finito, anche da `pull --rebase`).
+esatta (stesso autore, data d'autore e messaggio E stessa modifica byte per byte:
+un cherry-pick o un rebase senza conflitti). Conta OGNI commit della storia e dei
+reflog, non solo la punta: un lavoro seguito dal suo revert, o buttato con un
+`reset --hard`, esiste solo lì. Non conta ciò che una riscrittura voluta ha
+sostituito: il commit prima di un `commit --amend`; in un rebase finito (anche da
+`pull --rebase`) i commit che hanno un erede nella serie nuova o erano
+`fixup!`/`squash!` — uno saltato o tolto (`--skip`, `drop`) resta.
 
 `--clean` toglie un worktree solo se: non è il primario né su main; non ha file
 modificati, non tracciati o nascosti (skip-worktree / assume-unchanged); non ha
@@ -124,19 +126,20 @@ def common_dir() -> Path:
 # ── «è già su main?» ─────────────────────────────────────────────────────────
 
 _contained: dict[str, bool] = {}
-_main_identities: set[str] | None = None
+_main_by_identity: dict[str, list[str]] | None = None
 # Commit che il pre-push sta per mettere su main: nel report contano già come su main.
 ASSUMED_ON_MAIN: list[str] = []
+IDENTITY_FORMAT = "%an%x1f%ae%x1f%at%x1f%B"
 
 
 def reset_caches() -> None:
-    global _main_identities
+    global _main_by_identity
     _contained.clear()
-    _main_identities = None
+    _main_by_identity = None
 
 
 def contained(sha: str) -> bool:
-    """`sha` è già su main: antenato, unirlo non cambierebbe niente, o main ne ha la copia."""
+    """`sha` è già su main: antenato, unirlo non cambierebbe niente, o main ne ha la copia esatta."""
     if sha not in _contained:
         bases = [BASE, *ASSUMED_ON_MAIN]
         if any(git("merge-base", "--is-ancestor", sha, b).returncode == 0 for b in bases):
@@ -148,22 +151,42 @@ def contained(sha: str) -> bool:
     return _contained[sha]
 
 
-IDENTITY_FORMAT = "%an%x1f%ae%x1f%at%x1f%B"
+def identity(sha: str) -> tuple[int, str]:
+    """(numero di genitori, autore + data d'autore + messaggio) di un commit."""
+    row = git("log", "-1", f"--format=%P%x1e{IDENTITY_FORMAT}", sha).stdout
+    parents, _, ident = row.partition("\x1e")
+    return len(parents.split()), ident.strip("\n")
+
+
+def patch_id(sha: str) -> str | None:
+    """patch-id della modifica, byte per byte: spazi e contenuto dei binari compresi."""
+    diff = git("diff-tree", "-p", "--binary", "--full-index", "--root", "--no-commit-id", sha).stdout
+    if not diff:
+        return None
+    ids = git("patch-id", "--verbatim", stdin=diff).stdout.split()
+    return ids[0] if ids else None
 
 
 def copied_on_main(sha: str) -> bool:
-    """Main ha un commit con lo stesso autore, la stessa data d'autore e lo stesso messaggio:
-    la copia che fanno un cherry-pick o un rebase (anche con conflitti risolti), quindi il
-    lavoro è arrivato su main anche se un commit successivo dello stesso brief lo ha rivisto."""
-    global _main_identities
-    row = git("log", "-1", f"--format=%P%x1e{IDENTITY_FORMAT}", sha).stdout
-    parents, _, identity = row.partition("\x1e")
-    if len(parents.split()) != 1:
+    """Main ha la copia esatta di `sha`: stesso autore, data d'autore e messaggio (cherry-pick
+    e rebase li conservano) E la stessa modifica byte per byte. Solo l'identità non basta:
+    un `commit --amend --no-edit` la conserva anche quando aggiunge lavoro."""
+    global _main_by_identity
+    parents, ident = identity(sha)
+    if parents != 1:
         return False   # i merge commit si giudicano solo sul contenuto
-    if _main_identities is None:
-        raw = git("log", "--no-merges", f"--format={IDENTITY_FORMAT}%x1e", BASE).stdout
-        _main_identities = {chunk.strip("\n") for chunk in raw.split("\x1e") if chunk.strip()}
-    return identity.strip("\n") in _main_identities
+    if _main_by_identity is None:
+        _main_by_identity = {}
+        raw = git("log", "--no-merges", f"--format=%H%x1f{IDENTITY_FORMAT}%x1e", BASE).stdout
+        for chunk in raw.split("\x1e"):
+            commit_sha, _, main_ident = chunk.strip("\n").partition("\x1f")
+            if commit_sha:
+                _main_by_identity.setdefault(main_ident.strip("\n"), []).append(commit_sha)
+    candidates = _main_by_identity.get(ident, [])
+    if not candidates:
+        return False
+    mine = patch_id(sha)
+    return mine is not None and any(patch_id(c) == mine for c in candidates)
 
 
 def unmerged_count(sha: str) -> int:
@@ -201,12 +224,11 @@ def reflog_entries(log: Path) -> list[tuple[str, str, str]]:
 
 def off_main(live: set[str], logs: list[Path] = (), extra: set[str] = frozenset()) -> list[str]:
     """Commit che toglierli perderebbe: raggiungibili da `live`, dai reflog `logs` o da `extra`,
-    e che unire in main cambierebbe.
+    e non già su main.
 
     Ogni commit della storia conta, non solo la punta: un lavoro seguito dal suo
-    revert ha una punta «uguale a main», ma il lavoro esiste solo lì. I commit
-    riscritti apposta (valore vecchio di un `commit --amend` o di un rebase) non
-    contano: l'utente li ha sostituiti.
+    revert ha una punta «uguale a main», ma il lavoro esiste solo lì. Non conta
+    solo ciò che una riscrittura voluta ha sostituito (vedi `replaced_by`).
     """
     tips, rewrites = set(live) | set(extra), []
     for log in logs:
@@ -214,16 +236,40 @@ def off_main(live: set[str], logs: list[Path] = (), extra: set[str] = frozenset(
             if new.strip("0"):
                 tips.add(new)
             if old.strip("0") and new.strip("0") and old != new and REWRITE_RE.match(message):
-                rewrites.append((old, new))
-    # Riscritto è solo ciò che la voce ha sostituito (vecchio ^nuovo: la serie di
-    # prima di un rebase, il commit prima di un amend), mai ciò che la storia viva usa ancora.
+                rewrites.append((old, new, message))
     rewritten: set[str] = set()
-    for old, new in rewrites:
+    for old, new, message in rewrites:
         if len(existing_commits({old, new})) == 2:
-            rewritten |= set(rev_list([old], exclude=[new]))
+            rewritten |= replaced_by(old, new, message)
     rewritten -= set(rev_list(existing_commits({t for t in live if t})))
     tips = existing_commits({t for t in tips if t and t not in rewritten})
     return [sha for sha in rev_list(tips) if sha not in rewritten and not contained(sha)]
+
+
+FOLDED_PREFIXES = ("fixup! ", "squash! ", "amend! ")
+
+
+def replaced_by(old: str, new: str, message: str) -> set[str]:
+    """Commit che una voce di riscrittura ha davvero sostituito.
+
+    Un amend sostituisce il commit di prima (vecchio ^nuovo). Un rebase sostituisce
+    solo i commit della serie vecchia che hanno un erede nella nuova (stessa
+    identità: autore, data d'autore, messaggio) o che erano `fixup!`/`squash!`
+    ripiegati apposta. Un commit saltato (`rebase --skip`) o tolto (`drop`) non
+    ha erede: resta, e decide una persona.
+    """
+    series = set(rev_list([old], exclude=[new]))
+    if message.startswith("commit (amend)"):
+        return series
+    # Gli eredi anche se sono già su main (rev_list li escluderebbe).
+    heirs = {identity(c)[1] for c in out("rev-list", new, f"^{old}").split()}
+    replaced = set()
+    for c in series:
+        ident = identity(c)[1]
+        subject = ident.split("\x1f")[-1]
+        if ident in heirs or subject.startswith(FOLDED_PREFIXES):
+            replaced.add(c)
+    return replaced
 
 
 def rev_list(tips: list[str], exclude: list[str] = ()) -> list[str]:

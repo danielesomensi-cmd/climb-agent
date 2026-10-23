@@ -65,17 +65,22 @@ nothing when there is only the primary, clean, on main.
 **"On main" means nothing would be lost**: an ancestor of origin/main; or merging it would change nothing (`git
 merge-tree --write-tree origin/main <sha>` returns exactly origin/main's tree — unlike `git cherry`, this does not wave
 through content that lives only in a merge commit, a conflict resolution or an "evil merge", nor a whitespace-only fix:
-patch-ids ignore whitespace, Python indentation does not); or origin/main holds its **copy** — a non-merge commit with
-the same author, author date and message, which cherry-pick and rebase keep even when they resolve conflicts, so a
-series cherry-picked onto main counts even if a later commit of the same brief revised an earlier one. **Every commit counts,
+patch-ids ignore whitespace, Python indentation does not); or origin/main holds its **exact copy** — a non-merge commit with
+the same author, author date and message **and** the same change byte for byte (`git patch-id --verbatim` on a
+`--binary` diff), as a conflict-free cherry-pick or rebase leaves; so a series cherry-picked onto main counts even if a
+later commit of the same brief revised an earlier one. Identity alone is not enough: `commit --amend --no-edit` and
+`--fixup` + autosquash keep author, date and message while adding work. **Every commit counts,
 not just the tip**: the history of HEAD and every commit its reflogs remember (worktree `logs/HEAD`, branch reflog,
 `ORIG_HEAD`, `refs/worktree/*`, `refs/bisect/*`). A commit followed by its revert, or dropped with `reset --hard`, has a
 tip "equal to main" but the work exists only there — removing the worktree and `update-ref -d` on its branch delete those
-reflogs, so the commit would become unreachable. What a **deliberate rewrite** replaced does not count: for each
-`commit (amend)` or finished rebase (`rebase … (finish)`, also `pull --rebase … (finish)`) reflog entry, exactly `old
-^new` — the commit before the amend, the pre-rebase series. Never the result (after a rebase and a `reset --hard` the
-rebased copy is the only one left), never ancestors the rewrite did not touch, and never an aborted rebase (it leaves
-only `rebase (start)`). Intermediate commits of a squash merge that a later commit
+reflogs, so the commit would become unreachable. What a **deliberate rewrite** replaced does not count: for a
+`commit (amend)` reflog entry, `old ^new` (the commit before the amend); for a finished rebase (`rebase … (finish)`,
+also `pull --rebase … (finish)`), only the commits of `old ^new` that have an heir in `new ^old` (same author, author
+date, message) or were `fixup!` / `squash!` / `amend!` commits folded on purpose. Never the result (after a rebase and a
+`reset --hard` the rebased copy is the only one left), never ancestors the rewrite did not touch, never an aborted
+rebase (it leaves only `rebase (start)`), and never a commit the rebase dropped (`--skip`, `drop`, a wrong `--onto`):
+it has no heir, so it stays and a human decides. A commit a conflict resolution emptied (rebase drops it) is kept too:
+from the reflog it cannot be told apart from a `--skip`. Intermediate commits of a squash merge that a later commit
 revised are kept for a human to look at (squash is not used here). `origin/main` is always the full ref
 `refs/remotes/origin/main`, so a local branch named `origin/main` cannot shadow it. A worktree whose history or reflogs
 hold work not on main is **IN CORSO / FERMO**, not SU MAIN, so after 3 days it is escalated like any forgotten work.
