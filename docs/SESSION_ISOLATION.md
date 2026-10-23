@@ -49,7 +49,7 @@ roadmap called it closed (lesson of 2026-09-28).
 | Where | What runs |
 |---|---|
 | every Claude session start | `SessionStart` hook in `.claude/settings.json` (versioned since D286) → `worktrees.py --quiet` |
-| every `git push` | end of `.githooks/pre-push`, after the counters check → `--quiet`, never blocks |
+| every `git push` | end of `.githooks/pre-push`, after the counters check → `--quiet`, never blocks; a push to `main` passes its sha with `--pushing-main`, so the brief being pushed is not reported as "not on main" |
 | `start_brief.py` | prints the same report before creating the new worktree |
 | after a merge | `python scripts/worktrees.py --clean` (`--dry-run` to preview) |
 
@@ -62,16 +62,20 @@ left to a human), `climb-agent-*` directories that look like worktrees git no lo
 `.git` is another repo and is skipped), stashes, and a primary worktree that is dirty or off main. `--quiet` prints
 nothing when there is only the primary, clean, on main.
 
-**"On main" means merging it into origin/main would change nothing**: an ancestor of origin/main, or `git merge-tree
---write-tree origin/main <sha>` returns exactly origin/main's tree. This recognises fast-forward, cherry-pick and rebase,
-and — unlike `git cherry` — does not wave through content that lives only in a merge commit (a conflict resolution, an
-"evil merge") or a whitespace-only fix (patch-ids ignore whitespace; Python indentation does not). **Every commit counts,
+**"On main" means nothing would be lost**: an ancestor of origin/main; or merging it would change nothing (`git
+merge-tree --write-tree origin/main <sha>` returns exactly origin/main's tree — unlike `git cherry`, this does not wave
+through content that lives only in a merge commit, a conflict resolution or an "evil merge", nor a whitespace-only fix:
+patch-ids ignore whitespace, Python indentation does not); or origin/main holds its **copy** — a non-merge commit with
+the same author, author date and message, which cherry-pick and rebase keep even when they resolve conflicts, so a
+series cherry-picked onto main counts even if a later commit of the same brief revised an earlier one. **Every commit counts,
 not just the tip**: the history of HEAD and every commit its reflogs remember (worktree `logs/HEAD`, branch reflog,
 `ORIG_HEAD`, `refs/worktree/*`, `refs/bisect/*`). A commit followed by its revert, or dropped with `reset --hard`, has a
 tip "equal to main" but the work exists only there — removing the worktree and `update-ref -d` on its branch delete those
-reflogs, so the commit would become unreachable. Commits **rewritten on purpose** do not count: the old value of a
-`commit --amend`, and the whole pre-rebase series of a rebase that **finished** (`rebase (finish)` in the branch reflog;
-an aborted rebase leaves `rebase (start)` too, and rewrites nothing). Intermediate commits of a squash merge that a later commit
+reflogs, so the commit would become unreachable. What a **deliberate rewrite** replaced does not count: for each
+`commit (amend)` or finished rebase (`rebase … (finish)`, also `pull --rebase … (finish)`) reflog entry, exactly `old
+^new` — the commit before the amend, the pre-rebase series. Never the result (after a rebase and a `reset --hard` the
+rebased copy is the only one left), never ancestors the rewrite did not touch, and never an aborted rebase (it leaves
+only `rebase (start)`). Intermediate commits of a squash merge that a later commit
 revised are kept for a human to look at (squash is not used here). `origin/main` is always the full ref
 `refs/remotes/origin/main`, so a local branch named `origin/main` cannot shadow it. A worktree whose history or reflogs
 hold work not on main is **IN CORSO / FERMO**, not SU MAIN, so after 3 days it is escalated like any forgotten work.
@@ -105,4 +109,4 @@ script cannot read shows as ERRORE without silencing the others. `--force` is ne
 `GIT_OPTIONAL_LOCKS=0` (the report never rewrites another session's index) and without `GIT_DIR`, `GIT_INDEX_FILE` &
 co. — inside the pre-push hook git exports them for the pushing worktree, and every other worktree would be read
 against that index. Tests: `backend/tests/test_d286_worktrees_script.py` (real repos in `tmp_path`, ageing via mtime;
-one regression test per defect found by the two adversarial review rounds).
+one regression test per defect found by the adversarial review rounds).

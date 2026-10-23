@@ -844,3 +844,107 @@ def test_rebase_with_several_commits_rewrites_the_whole_series(repo):
     age(repo, wt, "brief/P7-x", 3 * HOUR)
     script(repo, "--clean")
     assert not wt.exists()
+
+
+# ── revisione avversariale, terzo giro ──────────────────────────────────────
+
+
+def moved_main(repo, line="main\n"):
+    (repo / "app.txt").write_text(line)
+    g(repo, "commit", "-q", "-a", "-m", "main va avanti")
+    g(repo, "push", "-q", "origin", "main")
+
+
+@pytest.mark.parametrize("interactive", [False, True])
+def test_finished_rebase_then_reset_keeps_the_work(repo, interactive):
+    """Il risultato del rebase non è «riscritto»: dopo un reset --hard è l'unica copia del lavoro."""
+    wt = add_worktree(repo, "s1", "brief/S1-x")
+    commit(wt, name="work.txt", msg="lavoro")
+    commit(repo, name="other.txt", msg="main va avanti")
+    g(repo, "push", "-q", "origin", "main")
+    g(wt, "fetch", "-q", "origin")
+    if interactive:
+        subprocess.run(["git", "rebase", "-i", "origin/main"], cwd=wt, capture_output=True, check=True,
+                       env={**os.environ, "GIT_SEQUENCE_EDITOR": "true"})
+    else:
+        g(wt, "rebase", "-q", "origin/main")
+    g(wt, "reset", "-q", "--hard", "origin/main")
+    age(repo, wt, "brief/S1-x", 30 * DAY)
+    assert "FERMO" in script(repo).stdout
+    script(repo, "--clean")
+    assert wt.exists() and has_branch(repo, "brief/S1-x")
+
+
+def test_amend_rewrites_only_the_amended_commit_not_its_ancestors(repo):
+    wt = add_worktree(repo, "s2", "brief/S2-x")
+    commit(wt, name="feature.py", msg="feature")
+    g(wt, "revert", "--no-edit", "HEAD")
+    g(wt, "commit", "-q", "--amend", "-m", "parcheggio la feature")
+    g(wt, "reset", "-q", "--hard", "origin/main")
+    age(repo, wt, "brief/S2-x", 30 * DAY)
+    script(repo, "--clean")
+    assert wt.exists() and has_branch(repo, "brief/S2-x")
+
+
+@needs_lsof
+@pytest.mark.parametrize("pull_args", [["pull", "-q", "--rebase"], ["-c", "pull.rebase=true", "pull", "-q"]])
+def test_pull_rebase_counts_as_a_rewrite(repo, pull_args):
+    wt = add_worktree(repo, "s3", "brief/S3-x")
+    (wt / "app.txt").write_text("brief\n")
+    g(wt, "commit", "-q", "-a", "-m", "brief")
+    commit(repo, name="other.txt", msg="main va avanti")
+    g(repo, "push", "-q", "origin", "main")
+    g(wt, *pull_args)
+    push_to_main(wt)
+    g(repo, "pull", "-q", "--ff-only")
+    moved_main(repo, "main riscrive la riga\n")   # il commit prima del rebase non si unisce più pulito
+    g(wt, "fetch", "-q", "origin")
+    age(repo, wt, "brief/S3-x", 3 * HOUR)
+    script(repo, "--clean")
+    assert not wt.exists()
+
+
+@needs_lsof
+def test_series_cherry_picked_on_main_with_a_later_revision_is_merged(repo):
+    """c2 rivede la riga di c1; main ha le copie di entrambi: c1 non è lavoro perso."""
+    wt = add_worktree(repo, "s4", "brief/S4-x")
+    (wt / "app.txt").write_text("prima\n")
+    g(wt, "commit", "-q", "-a", "-m", "c1")
+    (wt / "app.txt").write_text("rivista\n")
+    g(wt, "commit", "-q", "-a", "-m", "c2")
+    commit(repo, name="other.txt", msg="main va avanti")
+    g(repo, "cherry-pick", "brief/S4-x~1", "brief/S4-x")
+    g(repo, "push", "-q", "origin", "main")
+    g(repo, "fetch", "-q", "origin")
+    age(repo, wt, "brief/S4-x", 3 * HOUR)
+    script(repo, "--clean")
+    assert not wt.exists()
+
+
+def test_remote_preview_branch_amended_and_force_pushed_is_on_main(repo):
+    wt = add_worktree(repo, "s5", "brief/S5-x")
+    (wt / "app.txt").write_text("anteprima\n")
+    g(wt, "commit", "-q", "-a", "-m", "v1")
+    g(wt, "push", "-q", "origin", "HEAD:brief/S5-x")
+    (wt / "app.txt").write_text("v1 corretta\n")
+    g(wt, "commit", "-q", "-a", "--amend", "-m", "v1 corretta")
+    g(wt, "push", "-q", "-f", "origin", "HEAD:brief/S5-x")
+    push_to_main(wt)
+    line = next(ln for ln in script(repo).stdout.splitlines() if "REMOTO" in ln)
+    assert "già su main" in line, line
+
+
+def test_pushing_main_marks_the_pushed_commit_as_on_main(repo):
+    wt = add_worktree(repo, "s6", "brief/S6-x")
+    commit(wt)
+    sha = g(wt, "rev-parse", "HEAD")
+    before = next(ln for ln in script(repo).stdout.splitlines() if "proj-s6" in ln)
+    assert "commit non su main" in before
+    after = next(ln for ln in script(repo, "--pushing-main", sha).stdout.splitlines() if "proj-s6" in ln)
+    assert "commit non su main" not in after and "SU MAIN" in after
+    assert script(repo, "--clean", "--pushing-main", sha, check=False).returncode == 2
+
+
+def test_pre_push_hook_passes_the_main_push_to_the_report():
+    hook = (REPO_ROOT / ".githooks" / "pre-push").read_text()
+    assert "refs/heads/main" in hook and "--pushing-main" in hook

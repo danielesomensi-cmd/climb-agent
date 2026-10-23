@@ -31,6 +31,15 @@ else
     exit 1
 fi
 
+# D286: cosa sta per arrivare su main (stdin di git: <local ref> <local sha> <remote ref> <remote sha>),
+# così il report non segnala come «non su main» il brief che questo push ci sta portando.
+PUSH_MAIN_ARGS=()
+while read -r _local_ref local_sha remote_ref _remote_sha; do
+    if [ "$remote_ref" = "refs/heads/main" ] && [ -n "${local_sha//0/}" ]; then
+        PUSH_MAIN_ARGS+=(--pushing-main "$local_sha")
+    fi
+done
+
 echo "Running sync_status.py ($PYTHON)..."
 "$PYTHON" scripts/sync_status.py
 
@@ -53,6 +62,6 @@ echo "All counters in sync."
 WT_SCRIPT="$(git rev-parse --show-toplevel)/scripts/worktrees.py"
 [ -f "$WT_SCRIPT" ] || WT_SCRIPT="$MAIN_ROOT/scripts/worktrees.py"
 if [ -f "$WT_SCRIPT" ]; then
-    "$PYTHON" "$WT_SCRIPT" --quiet || true
+    "$PYTHON" "$WT_SCRIPT" --quiet "${PUSH_MAIN_ARGS[@]}" || true
 fi
 exit 0

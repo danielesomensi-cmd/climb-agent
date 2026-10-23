@@ -17,13 +17,14 @@ Uso:
     python scripts/worktrees.py --clean --dry-run  # cosa toglierebbe
     python scripts/worktrees.py --clean            # fetch, poi toglie
 
-Un commit è «su main» se unirlo in origin/main non cambierebbe niente:
-antenato di origin/main, oppure `git merge-tree` dà esattamente l'albero di
-origin/main (fast-forward, cherry-pick, rebase sì; un merge commit con contenuto
-suo o una correzione di soli spazi no). Conta OGNI commit della storia e dei
-reflog, non solo la punta: un lavoro seguito dal suo revert, o buttato con un
-`reset --hard`, esiste solo lì. Non contano i commit riscritti apposta (il
-vecchio valore di un `commit --amend`, la serie di prima di un rebase FINITO).
+Un commit è «su main» se è antenato di origin/main, se unirlo non cambierebbe
+niente (`git merge-tree` dà esattamente l'albero di origin/main: un merge commit
+con contenuto suo o una correzione di soli spazi no), o se main ne ha la copia
+(stesso autore, data d'autore e messaggio: cherry-pick e rebase la lasciano anche
+con i conflitti risolti). Conta OGNI commit della storia e dei reflog, non solo
+la punta: un lavoro seguito dal suo revert, o buttato con un `reset --hard`,
+esiste solo lì. Non conta ciò che una riscrittura voluta ha sostituito (vecchio
+^nuovo di un `commit --amend` o di un rebase finito, anche da `pull --rebase`).
 
 `--clean` toglie un worktree solo se: non è il primario né su main; non ha file
 modificati, non tracciati o nascosti (skip-worktree / assume-unchanged); non ha
@@ -90,9 +91,10 @@ IN_PROGRESS_MARKERS = (
 )
 # Voci di reflog che vogliono dire «qui è nato un commit»; fast-forward, reset e
 # checkout no (un worktree vuoto aggiornato a un main più nuovo resta vuoto).
-# Voci di reflog che riscrivono di proposito il commit precedente. Solo un rebase
-# FINITO: anche uno interrotto con --abort lascia «rebase (start)» nel reflog.
-REWRITE_RE = re.compile(r"^(commit \(amend\)|rebase( -i)? \(finish\))")
+# Voci di reflog che riscrivono di proposito il commit precedente: un amend, un
+# rebase FINITO (anche da `pull --rebase`; uno interrotto con --abort lascia solo
+# «rebase (start)»). Conta solo ciò che la voce ha sostituito: vecchio ^nuovo.
+REWRITE_RE = re.compile(r"^(commit \(amend\)|(rebase|pull)\b[^:]*\(finish\):)")
 OWN_COMMIT_RE = re.compile(
     r"^(commit|cherry-pick|revert|rebase( -i)? \((pick|squash|fixup|reword|edit)\))"
     r"|^(merge|pull)\b.*: Merge made by"
@@ -122,18 +124,46 @@ def common_dir() -> Path:
 # ── «è già su main?» ─────────────────────────────────────────────────────────
 
 _contained: dict[str, bool] = {}
+_main_identities: set[str] | None = None
+# Commit che il pre-push sta per mettere su main: nel report contano già come su main.
+ASSUMED_ON_MAIN: list[str] = []
+
+
+def reset_caches() -> None:
+    global _main_identities
+    _contained.clear()
+    _main_identities = None
 
 
 def contained(sha: str) -> bool:
-    """Unire `sha` in origin/main non cambierebbe niente."""
+    """`sha` è già su main: antenato, unirlo non cambierebbe niente, o main ne ha la copia."""
     if sha not in _contained:
-        if git("merge-base", "--is-ancestor", sha, BASE).returncode == 0:
+        bases = [BASE, *ASSUMED_ON_MAIN]
+        if any(git("merge-base", "--is-ancestor", sha, b).returncode == 0 for b in bases):
             _contained[sha] = True
         else:
             merged = git("merge-tree", "--write-tree", "--no-messages", BASE, sha)
             base_tree = out("rev-parse", f"{BASE}^{{tree}}")
-            _contained[sha] = merged.returncode == 0 and merged.stdout.split()[:1] == [base_tree]
+            _contained[sha] = (merged.returncode == 0 and merged.stdout.split()[:1] == [base_tree]) or copied_on_main(sha)
     return _contained[sha]
+
+
+IDENTITY_FORMAT = "%an%x1f%ae%x1f%at%x1f%B"
+
+
+def copied_on_main(sha: str) -> bool:
+    """Main ha un commit con lo stesso autore, la stessa data d'autore e lo stesso messaggio:
+    la copia che fanno un cherry-pick o un rebase (anche con conflitti risolti), quindi il
+    lavoro è arrivato su main anche se un commit successivo dello stesso brief lo ha rivisto."""
+    global _main_identities
+    row = git("log", "-1", f"--format=%P%x1e{IDENTITY_FORMAT}", sha).stdout
+    parents, _, identity = row.partition("\x1e")
+    if len(parents.split()) != 1:
+        return False   # i merge commit si giudicano solo sul contenuto
+    if _main_identities is None:
+        raw = git("log", "--no-merges", f"--format={IDENTITY_FORMAT}%x1e", BASE).stdout
+        _main_identities = {chunk.strip("\n") for chunk in raw.split("\x1e") if chunk.strip()}
+    return identity.strip("\n") in _main_identities
 
 
 def unmerged_count(sha: str) -> int:
@@ -178,27 +208,30 @@ def off_main(live: set[str], logs: list[Path] = (), extra: set[str] = frozenset(
     riscritti apposta (valore vecchio di un `commit --amend` o di un rebase) non
     contano: l'utente li ha sostituiti.
     """
-    tips, rewritten_tips = set(live) | set(extra), set()
+    tips, rewrites = set(live) | set(extra), []
     for log in logs:
         for old, new, message in reflog_entries(log):
             if new.strip("0"):
                 tips.add(new)
-            if old.strip("0") and REWRITE_RE.match(message):
-                rewritten_tips.add(old)
-    live_tips = existing_commits({t for t in live if t})
-    live_pending = set(rev_list(live_tips))
-    # Riscritta è tutta la serie di prima (un rebase riscrive ogni commit, non solo
-    # la punta), tranne ciò che la storia viva usa ancora.
-    rewritten = (set(rev_list(existing_commits(rewritten_tips))) | rewritten_tips) - live_pending
+            if old.strip("0") and new.strip("0") and old != new and REWRITE_RE.match(message):
+                rewrites.append((old, new))
+    # Riscritto è solo ciò che la voce ha sostituito (vecchio ^nuovo: la serie di
+    # prima di un rebase, il commit prima di un amend), mai ciò che la storia viva usa ancora.
+    rewritten: set[str] = set()
+    for old, new in rewrites:
+        if len(existing_commits({old, new})) == 2:
+            rewritten |= set(rev_list([old], exclude=[new]))
+    rewritten -= set(rev_list(existing_commits({t for t in live if t})))
     tips = existing_commits({t for t in tips if t and t not in rewritten})
     return [sha for sha in rev_list(tips) if sha not in rewritten and not contained(sha)]
 
 
-def rev_list(tips: list[str]) -> list[str]:
-    """Commit raggiungibili da `tips` che non sono antenati di origin/main."""
+def rev_list(tips: list[str], exclude: list[str] = ()) -> list[str]:
+    """Commit raggiungibili da `tips` che non sono antenati di origin/main (né di `exclude`)."""
     if not tips:
         return []
-    return git("rev-list", "--stdin", stdin="\n".join(tips + [f"^{BASE}"]) + "\n").stdout.split()
+    negated = [f"^{rev}" for rev in (BASE, *ASSUMED_ON_MAIN, *exclude)]
+    return git("rev-list", "--stdin", stdin="\n".join(list(tips) + negated) + "\n").stdout.split()
 
 
 # ── worktree ─────────────────────────────────────────────────────────────────
@@ -415,9 +448,9 @@ class Branch:
     last_activity: float = 0.0
 
 
-def branch_unmerged(sha: str, log: Path) -> int:
-    """Commit non su main di un branch: dalla punta, o dalla sua storia e dal suo reflog."""
-    return unmerged_count(sha) or len(off_main({sha}, [log]))
+def branch_unmerged(sha: str, *logs: Path) -> int:
+    """Commit non su main di un branch: dalla punta, o dalla sua storia e dai suoi reflog."""
+    return unmerged_count(sha) or len(off_main({sha}, list(logs)))
 
 
 def busy_branches(trees: list[Worktree]) -> set[str]:
@@ -447,8 +480,9 @@ def remote_branches(common: Path) -> list[Branch]:
         ref, sha, ts, *symref = row.split(" ")
         if ref in ("refs/remotes/origin/HEAD", BASE) or any(symref):
             continue
+        local_log = common / "logs" / "refs" / "heads" / ref.removeprefix("refs/remotes/origin/")
         branches.append(Branch(ref.removeprefix("refs/remotes/"), sha, float(ts or 0),
-                               branch_unmerged(sha, common / "logs" / ref)))
+                               branch_unmerged(sha, common / "logs" / ref, local_log)))
     return branches
 
 
@@ -530,7 +564,7 @@ class Report:
 
 
 def build_report(now: float) -> Report:
-    _contained.clear()
+    reset_caches()
     common = common_dir()
     all_trees = list_worktrees()
     primary, trees = all_trees[0], all_trees[1:]
@@ -631,7 +665,7 @@ def recheck(wt: Worktree) -> Worktree | None:
     """Lo stesso worktree riletto da capo, subito prima di toglierlo."""
     for fresh in list_worktrees()[1:]:
         if os.path.realpath(fresh.path) == os.path.realpath(wt.path):
-            _contained.clear()
+            reset_caches()
             inspect(fresh, time.time(), common_dir())
             return fresh
     return None
@@ -674,7 +708,7 @@ def clean(report: Report, dry_run: bool, now: float) -> list[str]:
             done.append(f"resta    branch {br.name} — toccato {ago(now - br.last_activity)} fa")
             continue
         if not dry_run:
-            _contained.clear()
+            reset_caches()
             common = common_dir()
             if br.name in busy_branches(list_worktrees()) or branch_unmerged(br.sha, common / "logs" / "refs" / "heads" / br.name):
                 done.append(f"resta    branch {br.name} — è cambiato durante la pulizia")
@@ -712,7 +746,8 @@ def fetch_origin(dry_run: bool) -> tuple[bool, list[str]]:
         sha = git("rev-parse", "--verify", "--quiet", ref).stdout.strip()
         if not sha:
             continue
-        if not branch_unmerged(sha, common_dir() / "logs" / ref):
+        local_log = common_dir() / "logs" / "refs" / "heads" / match.group(1).removeprefix("origin/")
+        if not branch_unmerged(sha, common_dir() / "logs" / ref, local_log):
             if not dry_run:
                 git("update-ref", "-d", ref, sha)
             notes.append(f"{'toglierei' if dry_run else 'tolto':<8} {match.group(1)} (cancellato su origin, già su main)")
@@ -727,7 +762,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--quiet", action="store_true", help="niente output se non c'è niente da segnalare")
     parser.add_argument("--clean", action="store_true", help="fetch di origin, poi toglie ciò che è già su main")
     parser.add_argument("--dry-run", action="store_true", help="con --clean: elenca soltanto")
+    parser.add_argument("--pushing-main", metavar="SHA", action="append", default=[],
+                        help="(pre-push) commit che il push sta mettendo su main: nel report conta già come su main")
     args = parser.parse_args(argv)
+    if args.pushing_main and args.clean:
+        parser.error("--pushing-main vale solo per il report, mai con --clean")
+    ASSUMED_ON_MAIN[:] = [sha for sha in args.pushing_main if sha.strip("0")]
 
     if git("rev-parse", "--git-dir").returncode != 0:
         return 0
