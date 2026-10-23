@@ -57,6 +57,11 @@ def _validate_import(data: Any) -> None:
     if bwp is not None and not isinstance(bwp, dict):
         raise ValueError("Campo non valido: 'bw_progression' deve essere un oggetto JSON")
 
+    # A320: optional, but when present it must be the list of retest declines.
+    declines = data.get("retest_declines")
+    if declines is not None and not isinstance(declines, list):
+        raise ValueError("Campo non valido: 'retest_declines' deve essere una lista")
+
     for key, msg in _REQUIRED_DICT_KEYS.items():
         if key not in data:
             raise ValueError(f"Campo obbligatorio mancante: {key!r}")

@@ -556,6 +556,42 @@ def is_heavy_pulling_session(
 # are not timed), so "< 72 h after X" means "fewer than 3 calendar days after
 # the day of X" and "< 48 h" means "fewer than 2". A session two days earlier
 # in the same slot is exactly 48 h away and does NOT block a pull-up test.
+#
+# Declines (A320). The athlete (or the coach, with the athlete's OK) declines
+# the pending test of an axis or postpones it — POST /api/retest/decline
+# stores a record in ``state["retest_declines"]``. A record is ACTIVE while
+# its ``official_date`` is the axis' official max date: a new test makes it
+# inert and the next trigger proposes the test again. Re-proposal rules:
+#   decline   suppresses its own trigger kind — end_of_phase / cycle_start
+#             only in the macrocycle it was declined in (``macrocycle_start``:
+#             the next cycle's cycle_start comes back); the early retest is
+#             suppressed by ANY active decline until EARLY_RETEST_SIGNALS
+#             measured signals are dated after ``declined_at`` (signals that
+#             were already there never override a decline). A trigger of
+#             another kind still fires (a decline of the end-of-phase test
+#             does not stop the 84-day maintenance).
+#   postpone  "not before ``until``": every week entirely before ``until`` is
+#             skipped ``postponed``; from the week holding ``until`` on, the
+#             test is due from ``until`` with the trigger ``postponed`` (a
+#             natural trigger that is not declined keeps its own name), in
+#             every covered week until a new test. The endpoint takes an
+#             ``until`` only after the pending test's own day, and a later
+#             decline ends the postpone (``retest_declines.upsert``).
+# Implicit decline: a policy test the USER removed or replaced in a week
+# (the plan's removal records — not a move, not an automatic A315
+# re-schedule, not an extra test of their own taken back while the policy's
+# is still there) declines the axis for THAT week (``source: plan_edit``),
+# derived from the plan every time, never stored: the regeneration does not
+# put it back on another day of the week (B382's D1 does not apply to it).
+# It is read before the stored records of the week, so the regenerated
+# snapshot always carries it. The way back is an explicit add: a test of the
+# axis the athlete puts back in the week, still to do, lifts it.
+# A declined axis is ``skipped`` (``declined`` / ``postponed``), NEVER None:
+# None would uncover it, and the legacy PASS 3 / test_queue would schedule
+# the test (and GET /api/week show the 6-week reminder again).
+# ``inject_tests`` (an explicit "I want tests": onboarding, start-new-cycle,
+# the test-reminder confirm) bypasses the policy by design — declines are not
+# consulted there.
 
 AXIS_FINGER = "finger"
 AXIS_PULLING = "pulling"
@@ -616,13 +652,45 @@ TRIGGER_END_OF_PHASE_SLIPPED = "end_of_phase_slipped"
 TRIGGER_CYCLE_START = "cycle_start"
 TRIGGER_MAINTENANCE = "maintenance"
 TRIGGER_EARLY = "early_retest"
+#: A320: a postponed test, due from the athlete's ``until`` on (lowest priority:
+#: a natural trigger that is not declined keeps its own name).
+TRIGGER_POSTPONED = "postponed"
 
 _TRIGGER_TEXT: Dict[str, str] = {
     TRIGGER_END_OF_PHASE: "End of the strength phase: measure what the block built.",
     TRIGGER_CYCLE_START: "New cycle: a fresh baseline for the loads.",
     TRIGGER_MAINTENANCE: "12 weeks since the last test: keep the max honest.",
     TRIGGER_EARLY: "Two measured sessions above your tested max: time to raise it.",
+    TRIGGER_POSTPONED: "You postponed this test to {until}.",
 }
+
+#: A320 — declines (see the comment block above). Top-level state key, owned
+#: by POST/DELETE /api/retest/decline (not writable through PUT /api/state).
+DECLINES_KEY = "retest_declines"
+DECLINE_KIND_DECLINE = "decline"
+DECLINE_KIND_POSTPONE = "postpone"
+DECLINE_KINDS = (DECLINE_KIND_DECLINE, DECLINE_KIND_POSTPONE)
+#: Closed sets of a stored record: the reason CODE is all the decisions, the
+#: snapshot, retest_status and the coach ever see of a decline (the free-text
+#: note stays in the record), and who asked.
+DECLINE_REASONS = ("fatigue", "injury", "illness", "travel", "schedule", "not_needed", "other")
+DECLINE_SOURCES = ("app", "coach", "cli")
+#: ``source`` of an implicit decline: the athlete removed / replaced the test
+#: in the week's plan (never stored; the stored sources are app | coach | cli).
+DECLINE_SOURCE_PLAN_EDIT = "plan_edit"
+#: skip_reason / next_test_reason of a declined / postponed axis.
+SKIP_DECLINED = "declined"
+SKIP_POSTPONED = "postponed"
+_DECLINE_SKIPS = (SKIP_DECLINED, SKIP_POSTPONED)
+#: Triggers tied to one week of one macrocycle: a decline matches them only in
+#: the macrocycle it was declined in.
+_WEEK_BOUND_TRIGGERS = (TRIGGER_END_OF_PHASE, TRIGGER_CYCLE_START)
+#: The triggers a record can carry (the pending test's, normalized).
+_DECLINE_TRIGGERS = (TRIGGER_END_OF_PHASE, TRIGGER_CYCLE_START, TRIGGER_MAINTENANCE, TRIGGER_EARLY,
+                     TRIGGER_POSTPONED)
+#: B369's flag on a cached week the next GET /api/week regenerates
+#: (``deps.STALE_KEY``; the engine never imports the API layer).
+_STALE_KEY = "_stale"
 
 _DAY_NAMES = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 
@@ -946,18 +1014,212 @@ def _early_retest_day(signals: Mapping[str, Any], we: date) -> Optional[date]:
     return None
 
 
+# ---------------------------------------------------------------------------
+# A320 — declines (record management: ``backend.engine.retest_declines``)
+# ---------------------------------------------------------------------------
+
+def normalize_trigger(trigger: Any) -> Optional[str]:
+    """The trigger a decline is keyed on: the legacy ``end_of_phase_slipped``
+    (pre-A319 snapshots) is the end-of-phase test."""
+    if not trigger:
+        return None
+    trigger = str(trigger)
+    return TRIGGER_END_OF_PHASE if trigger == TRIGGER_END_OF_PHASE_SLIPPED else trigger
+
+
+def axis_declines(state: Mapping[str, Any], axis: str, om: Mapping[str, Any]) -> List[Mapping[str, Any]]:
+    """The ACTIVE stored declines of ``axis``: same axis, ``official_date`` the
+    official max ``om`` the policy reads (a newer test makes a record inert)."""
+    out: List[Mapping[str, Any]] = []
+    for rec in state.get(DECLINES_KEY) or []:
+        if (isinstance(rec, Mapping) and rec.get("axis") == axis and rec.get("kind") in DECLINE_KINDS
+                and str(rec.get("official_date") or "")[:10] == str(om.get("date"))):
+            out.append(rec)
+    return out
+
+
+def decline_view(rec: Mapping[str, Any]) -> Dict[str, Any]:
+    """What the decisions, the snapshot and retest_status show of a decline: the
+    reason CODE only — never the free-text note (it would land in persisted
+    snapshots and in the coach prompt). A reason or source outside its closed
+    set (a record carried in by an import, which only checks the list) reads
+    ``other`` / None, and so does (None) a trigger, axis or kind outside
+    theirs or a date that is not an ISO date (A320 review): no free text goes
+    out through any field."""
+    reason, source = rec.get("reason"), rec.get("source")
+    trigger = normalize_trigger(rec.get("trigger"))
+    declined_at, until = _parse_date(rec.get("declined_at")), _parse_date(rec.get("until"))
+    return {
+        "axis": rec.get("axis") if rec.get("axis") in RETEST_AXES else None,
+        "kind": rec.get("kind") if rec.get("kind") in DECLINE_KINDS else None,
+        "trigger": trigger if trigger in _DECLINE_TRIGGERS else None,
+        "reason": reason if reason in DECLINE_REASONS else "other",
+        "declined_at": declined_at.isoformat() if declined_at else None,
+        "until": until.isoformat() if until else None,
+        "source": source if source in DECLINE_SOURCES else None,
+    }
+
+
+def _active_postpone(declines: Sequence[Mapping[str, Any]]) -> Optional[Mapping[str, Any]]:
+    """The active postpone with the latest ``until`` (the athlete's last "not
+    before"), or None."""
+    best: Optional[Mapping[str, Any]] = None
+    for rec in declines:
+        if rec.get("kind") != DECLINE_KIND_POSTPONE or _parse_date(rec.get("until")) is None:
+            continue
+        if best is None or _as_date(rec["until"]) > _as_date(best["until"]):
+            best = rec
+    return best
+
+
+def _matching_decline(
+    declines: Sequence[Mapping[str, Any]],
+    trigger: str,
+    macrocycle: Mapping[str, Any],
+    signals: Mapping[str, Any],
+) -> Optional[Mapping[str, Any]]:
+    """The active ``decline`` record that suppresses ``trigger``, or None.
+
+    Same kind; a week-bound kind (end_of_phase, cycle_start) only in the
+    macrocycle it was declined in. The early retest is suppressed by any
+    active decline until EARLY_RETEST_SIGNALS measured signals are dated
+    after its ``declined_at``."""
+    for rec in declines:
+        if rec.get("kind") != DECLINE_KIND_DECLINE:
+            continue
+        if trigger == TRIGGER_EARLY:
+            at = str(rec.get("declined_at") or "")[:10]
+            fresh = [d for d in signals.get("dates") or [] if str(d)[:10] > at]
+            if len(fresh) < EARLY_RETEST_SIGNALS:
+                return rec
+            continue
+        if normalize_trigger(rec.get("trigger")) != trigger:
+            continue
+        if trigger in _WEEK_BOUND_TRIGGERS and rec.get("macrocycle_start") != macrocycle.get("start_date"):
+            continue
+        return rec
+    return None
+
+
+def is_policy_test(session: Any) -> bool:
+    """A320: a test this policy placed — PASS 3a stamps its entry's ``explain``
+    with ``retest:<trigger>`` (``retest:<axis>:<trigger>`` on the combined
+    session), and nothing else does. A test of an axis the policy does not
+    cover (the historical PASS 3, ``test_queue``, ``inject_tests``, a
+    quick-add) is not one: an untested athlete's plans stay as they were."""
+    if not isinstance(session, Mapping):
+        return False
+    return any(isinstance(e, str) and e.startswith("retest:") for e in session.get("explain") or [])
+
+
+def plan_edit_removal(
+    plan: Optional[Mapping[str, Any]],
+    axis: str,
+    *,
+    today: Optional[date] = None,
+) -> Optional[Dict[str, Any]]:
+    """A320: the first record of *plan* where the USER removed or replaced a
+    test of ``axis`` — ``{date, slot, session_id}`` — or None.
+
+    Read from the plan's own removal records (``user_owned.removal_records``):
+    a ``remove_session``, a day override that replaced it, an
+    ``add_planned_session`` key re-schedule in its place, a move that
+    overwrote it at the target. NOT the source side of a move (the test still
+    exists: B400 counts it where it landed) and NOT an automatic A315
+    re-schedule (``auto``: the engine's action, not the athlete's). The combined
+    test counts for both axes. A record that names only a slot (a whole-day
+    override, a removal by slot) matches the test PASS 3a placed there
+    (snapshot ``placed_date`` / ``placed_slot``) — or, once the week was
+    regenerated without it, the plan-edit decline that regeneration recorded
+    for that date (snapshot ``skipped``). None as well when the athlete put a
+    test of the axis back in the week (an explicit add, a forced or moved
+    test, still to do from ``today`` on — a past one never done is no way
+    back): that is the way back, and B400 counts that test where it is.
+
+    A320 review: the removal of the athlete's OWN test (``removed_owned``: an
+    extra test they had added) declines the axis only when no test of the axis
+    is left to do in the week — taking back an extra test is not declining the
+    policy's one; the policy's test that the athlete moved and then removed
+    still is. ``today`` None reads every day of the week."""
+    from backend.engine.user_owned import is_user_owned, removal_records
+
+    if not isinstance(plan, Mapping):
+        return None
+    sids = AXIS_TEST_SESSIONS_ALL[axis]
+    floor = today.isoformat() if today is not None else ""
+    left = False  # a test of the axis still to do in the week (the engine's)
+    for day in _plan_days(plan):
+        if str(day.get("date") or "")[:10] < floor:
+            continue
+        for s in day.get("sessions") or []:
+            if not isinstance(s, Mapping) or s.get("session_id") not in sids \
+                    or s.get("status") in ("done", "skipped"):
+                continue
+            if is_user_owned(s):
+                return None
+            left = True
+    snap = (plan.get("profile_snapshot") or {}).get("retest_decisions") or {}
+    placed: Dict[Tuple[str, Any], Any] = {}
+    for row in snap.get("required_sessions") or []:
+        if isinstance(row, Mapping) and row.get("axis") == axis and row.get("status") == "placed":
+            placed[(str(row.get("placed_date") or "")[:10], row.get("placed_slot"))] = row.get("session_id")
+    carried = set()
+    for row in snap.get("skipped") or []:
+        if not isinstance(row, Mapping) or row.get("axis") != axis or row.get("skip_reason") != SKIP_DECLINED:
+            continue
+        view = row.get("declined")
+        if isinstance(view, Mapping) and view.get("source") == DECLINE_SOURCE_PLAN_EDIT:
+            carried.add(str(view.get("declined_at") or "")[:10])
+    auto = set()
+    for a in plan.get("adaptations") or []:
+        ev = a.get("event") if isinstance(a, Mapping) and a.get("type") == "event" else None
+        if isinstance(ev, Mapping) and ev.get("event_type") == "add_planned_session" and ev.get("auto"):
+            auto.add((str(ev.get("target_date") or "")[:10], ev.get("replaced_slot") or ev.get("slot"),
+                      ev.get("replaced_session_id")))
+    for rec in removal_records(plan):
+        if rec.get("kind") not in ("removed", "replaced"):
+            continue
+        d = str(rec.get("date") or "")[:10]
+        if rec["kind"] == "replaced" and (d, rec.get("slot"), rec.get("ref")) in auto:
+            continue
+        if rec.get("owned") and left:
+            continue  # an extra test of the athlete's taken back: the policy's is still there
+        if rec.get("ref"):
+            sid = rec["ref"] if rec["ref"] in sids else None
+        else:
+            sid = placed.get((d, rec.get("slot")))
+            if sid is None and d in carried:
+                sid = AXIS_TEST_SESSION[axis]
+        if sid is not None:
+            return {"date": d, "slot": rec.get("slot"), "session_id": sid}
+    return None
+
+
+def _plan_edit_view(axis: str, trigger: Optional[str], removal: Mapping[str, Any]) -> Dict[str, Any]:
+    return {"axis": axis, "kind": DECLINE_KIND_DECLINE, "trigger": trigger, "reason": None,
+            "declined_at": removal.get("date") or None, "until": None, "source": DECLINE_SOURCE_PLAN_EDIT}
+
+
+def _trigger_reason(trigger: str, postpone: Optional[Mapping[str, Any]] = None) -> str:
+    until = _parse_date((postpone or {}).get("until"))
+    return _TRIGGER_TEXT[trigger].format(until=until.isoformat() if until else None)
+
+
 def _trigger_for_week(
     macrocycle: Mapping[str, Any],
     ws: date,
     last: date,
     signals: Mapping[str, Any],
+    skip: Sequence[str] = (),
 ) -> Tuple[Optional[str], Optional[date]]:
     """(trigger, trigger_earliest) for the week starting ``ws``, or (None, None).
 
     ``trigger_earliest`` is the first day the trigger itself allows (the
     early retest waits for the day after its last signal); the gap since the
     last test is applied by the caller. A319: no slip — the week after the
-    end-of-phase week is never a trigger of its own.
+    end-of-phase week is never a trigger of its own. A320: the kinds in
+    ``skip`` (declined by the athlete) are passed over; the default is the
+    pre-A320 reading.
     """
     from backend.engine.macro_position import position_on
 
@@ -965,15 +1227,16 @@ def _trigger_for_week(
     pos = position_on(dict(macrocycle), ws.isoformat())
     if not pos or pos["before_start"] or pos["after_end"]:
         return None, None
-    if pos["phase_id"] == "strength_power" and pos["is_last_week_of_phase"] and last < ws:
+    if TRIGGER_END_OF_PHASE not in skip and pos["phase_id"] == "strength_power" \
+            and pos["is_last_week_of_phase"] and last < ws:
         return TRIGGER_END_OF_PHASE, ws
-    if pos["abs_week"] == 1 and last < ws:
+    if TRIGGER_CYCLE_START not in skip and pos["abs_week"] == 1 and last < ws:
         return TRIGGER_CYCLE_START, ws
-    t_e = _early_retest_day(signals, we)
+    t_e = _early_retest_day(signals, we) if TRIGGER_EARLY not in skip else None
     if t_e is not None:
         return TRIGGER_EARLY, t_e
     maint = last + timedelta(days=MAINTENANCE_RETEST_D)
-    if maint <= we:
+    if TRIGGER_MAINTENANCE not in skip and maint <= we:
         return TRIGGER_MAINTENANCE, maint
     return None, None
 
@@ -993,7 +1256,11 @@ def _axis_week_decision(
     With ``check_already_scheduled`` (the planner's call) a test that was
     already due in an EARLIER week (from the current week on) that is not
     generated yet is deferred to that week: the week it lands in does not
-    depend on which week the athlete opens first (A289 review)."""
+    depend on which week the athlete opens first (A289 review).
+
+    A320: a declined / postponed axis is ``skipped`` (``declined`` /
+    ``postponed``, with the ``declined`` view), decided before the phase, gap
+    and already-scheduled checks — never ``None``: the axis stays covered."""
     from backend.engine.macro_position import position_on
 
     om = axis_official(state, axis, ws, finger_device=finger_device)
@@ -1014,18 +1281,56 @@ def _axis_week_decision(
         "gap_days": gap,
         "earliest_date": earliest.isoformat(),
     }
-    trigger, t_earliest = _trigger_for_week(macrocycle, ws, last, signals)
+    we = ws + timedelta(days=6)
+    # A320: the athlete's active declines of this test (the trigger comment
+    # block above). A week entirely before a postponed date has no test.
+    declines = axis_declines(state, axis, om)
+    postpone = _active_postpone(declines)
+    held = postpone is not None and _as_date(postpone["until"]) > we
+    skip: List[str] = []
+    suppressed: Optional[Tuple[str, Mapping[str, Any]]] = None
+    # Each pass skips one more kind, so it ends within the number of kinds; the
+    # bound only guards a request against a kind that would ignore ``skip``.
+    for _ in range(len(_TRIGGER_TEXT)):
+        trigger, t_earliest = _trigger_for_week(macrocycle, ws, last, signals, skip=skip)
+        rec = _matching_decline(declines, trigger, macrocycle, signals) if trigger else None
+        if rec is None:
+            break
+        suppressed = suppressed or (trigger, rec)
+        skip.append(trigger)
+    else:
+        trigger, t_earliest = None, None
+    if trigger is None and postpone is not None and not held:
+        trigger, t_earliest = TRIGGER_POSTPONED, _as_date(postpone["until"])
+    if trigger is not None or suppressed is not None or held:
+        # A320: the athlete took the policy's test out of this week's plan. Read
+        # before the stored declines (A320 review): the plan-edit view is the
+        # one the regenerated snapshot carries, which keeps a slot-only removal
+        # (a whole-day override) matching after the regeneration — and a DELETE
+        # of the stored record never reopens the week.
+        edit = plan_edit_removal(_hot_plan(state, ws.isoformat()), axis, today=today)
+        if edit is not None:
+            trig = trigger or (suppressed[0] if suppressed is not None else TRIGGER_POSTPONED)
+            return {**base, "trigger": trig, "reason": _trigger_reason(trig, postpone), "status": "skipped",
+                    "skip_reason": SKIP_DECLINED, "declined": _plan_edit_view(axis, trig, edit)}
+    if held:
+        return {**base, "trigger": TRIGGER_POSTPONED, "reason": _trigger_reason(TRIGGER_POSTPONED, postpone),
+                "status": "skipped", "skip_reason": SKIP_POSTPONED, "declined": decline_view(postpone)}
+    if trigger is None and suppressed is not None:
+        return {**base, "trigger": suppressed[0], "reason": _trigger_reason(suppressed[0]), "status": "skipped",
+                "skip_reason": SKIP_DECLINED, "declined": decline_view(suppressed[1])}
     if trigger is None:
         return {**base, "status": "not_due"}
-    we = ws + timedelta(days=6)
     if trigger != TRIGGER_EARLY and max(earliest, t_earliest or ws, ws) > we:
         # A319 review: the gap keeps this week's trigger (end of phase, cycle
         # start) out of reach, but the measured evidence of an early retest
         # has its own floor: when that floor falls in the week, the early
         # retest takes the week. Before, it came the week after — the end of
         # the strength phase lost one week to a trigger that could not run.
+        # A320: not an early retest the athlete declined.
         t_e = _early_retest_day(signals, we)
-        if t_e is not None and max(last + timedelta(days=LOW_CONF_RETEST_D), t_e, ws) <= we:
+        if t_e is not None and max(last + timedelta(days=LOW_CONF_RETEST_D), t_e, ws) <= we \
+                and _matching_decline(declines, TRIGGER_EARLY, macrocycle, signals) is None:
             trigger, t_earliest = TRIGGER_EARLY, t_e
     if trigger == TRIGGER_EARLY:
         # Measured evidence says the max is too low: only the early retest's
@@ -1034,7 +1339,10 @@ def _axis_week_decision(
         base["earliest_date"] = earliest.isoformat()
         base["gap_days"] = LOW_CONF_RETEST_D
     first = max(earliest, t_earliest or ws, ws)
-    out = {**base, "trigger": trigger, "reason": _TRIGGER_TEXT[trigger]}
+    if postpone is not None:
+        # A320: never before the day the athlete postponed the test to.
+        first = max(first, _as_date(postpone["until"]))
+    out = {**base, "trigger": trigger, "reason": _trigger_reason(trigger, postpone)}
     pos = position_on(dict(macrocycle), ws.isoformat()) or {}
     if pos.get("phase_id") in RETEST_BLOCKED_PHASES:
         return {**out, "status": "skipped", "skip_reason": "blocked:phase"}
@@ -1137,6 +1445,9 @@ def retest_decisions(
              last_test_date, confidence, gap_days}
           ],
           "skipped": [{axis, session_id, trigger, reason, skip_reason, ...}],
+                                    # A320: + ``declined`` {axis, kind, trigger, reason,
+                                    # declined_at, until, source} on a declined /
+                                    # postponed axis (skip_reason declined | postponed)
           "already_scheduled": [{axis, date, trigger}],  # B400: + tests the merge keeps
           "axes": {axis: <week-level decision>},
           "finger_hard_dates": [...], "heavy_pull_dates": [...],
@@ -1146,8 +1457,11 @@ def retest_decisions(
         }
 
     Pure: everything derives from the state (macrocycle, tests, trips,
-    feedback_log, progression_counters, week plans), the archived weeks and
-    outdoor rows passed in, and ``today`` — never ``date.today()``.
+    feedback_log, progression_counters, week plans, A320 ``retest_declines``),
+    the archived weeks and outdoor rows passed in, and ``today`` — never
+    ``date.today()``. A320: PASS 3a copies a ``skipped`` row as it is into the
+    week's snapshot (``declined`` view included) and its ``skip_reason`` /
+    ``trigger`` into ``skipped_tests`` — planner_v2 unchanged.
     """
     ws = _monday(_as_date(week_start))
     td = _as_date(today) if today else None
@@ -1186,7 +1500,7 @@ def retest_decisions(
         required[1]["paired_with"] = required[0]["session_id"]
     skipped = [
         {k: dec.get(k) for k in ("axis", "session_id", "trigger", "reason", "skip_reason",
-                                 "earliest_date", "deferred_to_week")
+                                 "earliest_date", "deferred_to_week", "declined")
          if dec.get(k) is not None}
         for dec in axes.values() if dec["status"] == "skipped"
     ]
@@ -1280,7 +1594,9 @@ def retest_status(
          earliest_retest, signals: {count, needed}, fatigue,
          next_test: {date, session_id, source: planned|projected, trigger,
                      reason, blockers: [...]} | None,
-         next_test_reason}       # why there is no next test, when None
+         next_test_reason,       # why there is no next test, when None
+         declines,               # A320 (covered axes): the active stored declines
+         plan_edit_declines}     # A320 (covered axes): weeks the athlete took the test out of
 
     ``covered`` False → the axis is scheduled by the legacy planner rules
     (untested, test older than 90 days, loading pin); ``tested_until`` None.
@@ -1290,7 +1606,16 @@ def retest_status(
     ``next_test_reason`` is the last skip the projection met — else
     ``not_tested_recently`` when it reaches the 90-day expiry (B400: a real
     skip is no longer overwritten there), ``not_due_within_horizon`` when it
-    runs out of weeks.
+    runs out of weeks. A320: a ``declined`` / ``postponed`` skip met before any
+    due week takes precedence over the others.
+    ``declines`` (A320): ``decline_view`` of each active stored record (reason
+    code, never the note). ``plan_edit_declines``: ``{week_start, declined_at,
+    session_id, source: plan_edit}`` for each hot week from this one on whose
+    decision is the implicit decline (the athlete removed or replaced the
+    test of a week where one was due).
+    A320: a stale week (``_stale``, regenerated on its next read) is projected
+    like a week not generated yet — the decision there is the policy's again,
+    so a decline (or its undo) shows before the week is reopened.
     """
     td = _as_date(today)
     out_axes: Dict[str, Dict[str, Any]] = {}
@@ -1340,6 +1665,11 @@ def retest_status(
             row["next_test_reason"] = "not_tested_recently"
             out_axes[axis] = row
             continue
+        # A320: what the athlete declined — the stored records still active and
+        # the weeks they took the policy's test out of.
+        row["declines"] = [decline_view(r) for r in axis_declines(state, axis, om)]
+        row["plan_edit_declines"] = _plan_edit_weeks(state, axis, td, finger_device=finger_device,
+                                                     archived_weeks=archived_weeks)
         planned = _planned_axis_tests(state, axis, since=td)
         if planned:
             p = planned[0]
@@ -1362,6 +1692,7 @@ def retest_status(
             continue
         ws = _monday(td)
         last_skip = None
+        declined_skip = None  # A320: the first decline the projection meets
         for k in range(max(1, horizon_weeks)):
             wk = ws + timedelta(days=7 * k)
             dec = _axis_week_decision(state, axis, wk, today=td, finger_device=finger_device,
@@ -1373,11 +1704,15 @@ def retest_status(
                 # card said "not due yet" about a test the plan had dropped.
                 last_skip = last_skip or "not_tested_recently"
                 break
-            if dec["status"] == "due" and _hot_plan(state, wk.isoformat()) is not None:
+            hot = _hot_plan(state, wk.isoformat())
+            if dec["status"] == "due" and hot is not None and not hot.get(_STALE_KEY):
                 # The week is already generated and holds no planned test of
                 # this axis: cached weeks are never regenerated, so projecting
                 # it there would promise a test that never comes (A289 review).
+                # A320: a stale week IS regenerated on its next read — projected.
                 last_skip = _generated_week_skip(state, axis, wk, td)
+                if last_skip in _DECLINE_SKIPS:
+                    declined_skip = declined_skip or last_skip
                 continue
             if dec["status"] == "due":
                 row["next_test"] = {
@@ -1388,8 +1723,10 @@ def retest_status(
                 break
             if dec["status"] == "skipped":
                 last_skip = dec["skip_reason"]
+                if last_skip in _DECLINE_SKIPS:
+                    declined_skip = declined_skip or last_skip
         if row["next_test"] is None:
-            row["next_test_reason"] = last_skip or "not_due_within_horizon"
+            row["next_test_reason"] = declined_skip or last_skip or "not_due_within_horizon"
         out_axes[axis] = row
     return {
         "as_of": td.isoformat(),
@@ -1399,10 +1736,52 @@ def retest_status(
     }
 
 
+def _plan_edit_weeks(
+    state: Mapping[str, Any],
+    axis: str,
+    today: date,
+    *,
+    finger_device: Optional[str],
+    archived_weeks: Any,
+) -> List[Dict[str, Any]]:
+    """A320: the hot weeks from the Monday of ``today`` on that the policy
+    reads as declined by a plan edit — the athlete removed or replaced the
+    test of a week where one was due (``plan_edit_removal``; A320 review: a
+    week where nothing was due is a plan fact, not a decline, and is not
+    listed)."""
+    since = _monday(today)
+    plans: Dict[str, Mapping[str, Any]] = {}
+    for key, plan in (state.get("week_plans") or {}).items():
+        if isinstance(plan, Mapping):
+            plans[str(key)] = plan
+    cur = state.get("current_week_plan")
+    if isinstance(cur, Mapping) and cur.get("start_date") and str(cur["start_date"]) not in plans:
+        plans[str(cur["start_date"])] = cur
+    out: List[Dict[str, Any]] = []
+    for key in sorted(plans):
+        if key < since.isoformat():
+            continue
+        removal = plan_edit_removal(plans[key], axis, today=today)
+        wk = _parse_date(key)
+        if removal is None or wk is None:
+            continue
+        dec = _axis_week_decision(state, axis, wk, today=today, finger_device=finger_device,
+                                  archived_weeks=archived_weeks, check_already_scheduled=False) or {}
+        view = dec.get("declined") or {}
+        if dec.get("skip_reason") == SKIP_DECLINED and view.get("source") == DECLINE_SOURCE_PLAN_EDIT:
+            out.append({"week_start": key, "declined_at": view.get("declined_at"),
+                        "session_id": removal["session_id"], "source": DECLINE_SOURCE_PLAN_EDIT})
+    return out
+
+
 def _generated_week_skip(state: Mapping[str, Any], axis: str, wk: date, today: date) -> str:
     """Why a generated week has no upcoming test of ``axis`` although the
     policy would call it due: what PASS 3a recorded, else ``not_in_plan``
-    (week generated before A289, or the slot was lost to a regeneration)."""
+    (week generated before A289, or the slot was lost to a regeneration).
+    A320: ``declined`` when the athlete removed or replaced the test of that
+    week (it used to read ``not_in_plan``, then ``missed``)."""
+    if plan_edit_removal(_hot_plan(state, wk.isoformat()), axis, today=today) is not None:
+        return SKIP_DECLINED
     snap = ((_hot_plan(state, wk.isoformat()) or {}).get("profile_snapshot") or {}).get("retest_decisions") or {}
     for req in snap.get("required_sessions") or []:
         if not isinstance(req, Mapping) or req.get("axis") != axis:
@@ -1447,4 +1826,8 @@ __all__ = [
     "trip_blocked", "pain_blocked", "retest_decisions", "test_day_blockers", "retest_status",
     # A319
     "COMBINED_TEST_SESSION",
+    # A320
+    "TRIGGER_POSTPONED", "DECLINES_KEY", "DECLINE_KIND_DECLINE", "DECLINE_KIND_POSTPONE", "DECLINE_KINDS",
+    "DECLINE_REASONS", "DECLINE_SOURCES", "DECLINE_SOURCE_PLAN_EDIT", "SKIP_DECLINED", "SKIP_POSTPONED",
+    "normalize_trigger", "axis_declines", "decline_view", "plan_edit_removal", "is_policy_test",
 ]

@@ -239,6 +239,23 @@ def _enrich(sessions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 SIM_SESSION_ID = "cs_simulated_a293"
 
 
+def _retest_axes(state: Dict[str, Any], session: Dict[str, Any], day: date) -> List[str]:
+    """A320: the axes the retest policy covers whose test *session* is. Removing
+    it (``--replace`` → ``remove_session``) is the athlete's decline of that
+    test for the week: it does not come back on another day."""
+    from backend.engine import retest_policy as rp
+
+    device = (state.get("preferences") or {}).get("finger_training_device")
+    out: List[str] = []
+    for axis in rp.RETEST_AXES:
+        if session.get("session_id") not in rp.AXIS_TEST_SESSIONS_ALL[axis]:
+            continue
+        om = rp.axis_official(state, axis, day, finger_device=device)
+        if om and om.get("tested"):
+            out.append(axis)
+    return out
+
+
 def simulate(state: Dict[str, Any], draft: Dict[str, Any], target_date: str, slot: str,
              *, replace: bool = False, location: Optional[str] = None,
              gym_id: Optional[str] = None, archived_weeks: Any = None,
@@ -288,7 +305,8 @@ def simulate(state: Dict[str, Any], draft: Dict[str, Any], target_date: str, slo
             return result
         events.append({"event_type": "remove_session", "date": target_date, "slot": slot})
         result["removed"].append({"date": target_date, "slot": slot, "session_id": occupied.get("session_id"),
-                                  "key": ac.key_matches(occupied, phase_id)})
+                                  "key": ac.key_matches(occupied, phase_id),
+                                  "retest_axes": _retest_axes(state, occupied, target)})
     add = {"event_type": "add_custom_session", "custom_session_id": SIM_SESSION_ID,
            "target_date": target_date, "slot": slot, "location": location or "home"}
     if gym_id:
@@ -364,6 +382,13 @@ def simulate(state: Dict[str, Any], draft: Dict[str, Any], target_date: str, slo
         )
     if any(r["key"] for r in result["removed"]):
         result["warnings"].append("--replace toglierebbe una sessione CHIAVE")
+    if any(r.get("retest_axes") for r in result["removed"]):
+        # A320: removing a policy test is a decline of it for the week.
+        result["warnings"].append(
+            "--replace toglierebbe un TEST della retest policy: vale come rifiuto del test per la settimana "
+            "(non torna in un altro giorno, A320). Un test si rifiuta o si rinvia solo con "
+            "POST /api/retest/decline (dry run, OK di Daniele, scrittura): cambia slot o giorno"
+        )
     result["warnings"].append(
         "la simulazione riproduce /api/replanner/events (con prev_days dal 2026-10, A294); "
         "quick-add e override seguono percorsi diversi"
@@ -399,7 +424,9 @@ def render_simulation(sim: Dict[str, Any]) -> str:
                  f"intensità {sim.get('custom_intensity')}")
         for r in sim.get("removed") or []:
             L.append(f"  rimossa (--replace): {r['date']} {r['slot']} {r['session_id']}"
-                     + (f" — CHIAVE {','.join(r['key'])}" if r["key"] else ""))
+                     + (f" — CHIAVE {','.join(r['key'])}" if r["key"] else "")
+                     + (f" — TEST retest {','.join(r['retest_axes'])} (rifiuto della settimana)"
+                        if r.get("retest_axes") else ""))
         if not sim.get("downgrades"):
             L.append("  nessuna altra sessione cambiata (A301: le guardie sono solo alert)")
         for dg in sim.get("downgrades") or []:

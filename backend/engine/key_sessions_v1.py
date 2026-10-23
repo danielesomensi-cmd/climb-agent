@@ -863,10 +863,19 @@ def _replaceable(s: Mapping[str, Any]) -> bool:
     """A315: a planned engine session a key re-schedule may take the slot of —
     never history (done/skipped), never the user's (custom, forced, edited,
     quick-added, moved, overridden, an earlier re-schedule). The key role is
-    checked by the caller (``key_index``)."""
+    checked by the caller (``key_index``). A320: never a test the retest
+    policy placed (``retest_policy.is_policy_test``: either axis, the combined
+    one included) — only the athlete declines a test (POST
+    /api/retest/decline, or removing / replacing it): a proposal, or A315's
+    automatic application, would silently drop it. A320 review: a test of an
+    axis the policy does not cover (historical PASS 3, ``test_queue``) is read
+    as before — an untested athlete's proposals stay byte-identical."""
     from backend.engine import user_owned as _uo
+    from backend.engine.retest_policy import is_policy_test
 
     if not isinstance(s, Mapping) or s.get("status") in ("done", "skipped"):
+        return False
+    if is_policy_test(s):
         return False
     return not _uo.is_preservable(s)
 

@@ -451,11 +451,13 @@ def test_write_endpoints_are_serialised_per_user():
     import threading
 
     from backend.api.plan_revision import serialized_by_user, user_write_lock
-    from backend.api.routers import feedback, outdoor, replanner, session
+    from backend.api.routers import feedback, outdoor, replanner, retest, session
 
     for fn in (replanner.events, replanner.override, replanner.quick_add, session.add_exercise,
                session.remove_exercise, session.surface_override, outdoor.post_outdoor_log,
-               outdoor.put_outdoor_log, outdoor.finish_outdoor_session):
+               outdoor.put_outdoor_log, outdoor.finish_outdoor_session,
+               # A320: the decline edits week plans (removal + revision + stale flag).
+               retest.decline, retest.undecline):
         assert hasattr(fn, "__wrapped__"), fn
     assert user_write_lock("u1") is user_write_lock("u1")
     assert user_write_lock("u1") is not user_write_lock("u2")

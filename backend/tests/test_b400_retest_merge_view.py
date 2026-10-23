@@ -886,7 +886,7 @@ class TestStatus:
 
     def test_athlete_context_shows_tested_until(self):
         ctx = ac.build_athlete_context(_status_state(), WS, with_proposals=False, include_next_week=False)
-        assert ctx["version"] == ac.VERSION == "a319.1"
+        assert ctx["version"] == ac.VERSION == "a320.1"
         text = ac.render_text(ctx)
         assert "finger: ufficiale 116 kg (2026-09-10), massimale valido fino al 2026-12-08," in text
         assert "nessun test in vista (no_placement_slot)" in text
