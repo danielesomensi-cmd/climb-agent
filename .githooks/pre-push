@@ -48,4 +48,11 @@ if ! git diff --quiet; then
 fi
 
 echo "All counters in sync."
+
+# D286: worktree e branch residui — solo report, non blocca mai il push.
+WT_SCRIPT="$(git rev-parse --show-toplevel)/scripts/worktrees.py"
+[ -f "$WT_SCRIPT" ] || WT_SCRIPT="$MAIN_ROOT/scripts/worktrees.py"
+if [ -f "$WT_SCRIPT" ]; then
+    "$PYTHON" "$WT_SCRIPT" --quiet || true
+fi
 exit 0

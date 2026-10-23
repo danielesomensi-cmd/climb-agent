@@ -6,10 +6,12 @@ __pycache__/
 # virtual env
 .venv/
 
-# claude code (track commands/ and agents/, ignore the rest)
+# claude code (track commands/, agents/ and the project settings.json with the
+# D286 SessionStart hook; settings.local.json and the rest stay personal)
 .claude/*
 !.claude/commands/
 !.claude/agents/
+!.claude/settings.json
 
 # environment
 .env

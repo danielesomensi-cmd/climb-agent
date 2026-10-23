@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$CLAUDE_PROJECT_DIR/scripts/worktrees.py\"; [ -f \"$f\" ] && python3 \"$f\" --quiet; exit 0",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  }
+}

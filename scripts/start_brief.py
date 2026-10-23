@@ -89,6 +89,12 @@ def main() -> int:
     args = parser.parse_args()
 
     on_clean_main = preflight()
+    leftovers = subprocess.run(
+        [sys.executable, str(REPO_ROOT / "scripts" / "worktrees.py"), "--quiet"],
+        capture_output=True, text=True, cwd=REPO_ROOT,
+    ).stdout.strip()
+    if leftovers:
+        print(f"\n{leftovers}")
 
     if args.check or not args.brief_id:
         if not args.brief_id:
@@ -113,7 +119,8 @@ def main() -> int:
         print(f"\n✗ il branch {branch} esiste già. Scegli un altro id/slug o riprendi quel branch.")
         return 1
     if worktree.exists():
-        print(f"\n✗ {worktree} esiste già. Rimuovilo con: git worktree remove {worktree}")
+        print(f"\n✗ {worktree} esiste già e può essere il lavoro di un'altra sessione.")
+        print("  Guarda il suo stato con `python scripts/worktrees.py`: riprendilo, oppure scegli un altro id.")
         return 1
 
     print(f"\nFetch di origin…")
@@ -128,8 +135,8 @@ def main() -> int:
     print(f"  cd {worktree}")
     print("  # se il brief tocca frontend/:")
     print("  cd frontend && npm ci      # symlink a node_modules NON funziona (Turbopack)")
-    print("\nA fine brief:")
-    print(f"  git worktree remove {worktree} && git branch -d {branch}")
+    print("\nA fine brief, dopo il merge su origin/main:")
+    print("  python scripts/worktrees.py --clean   # toglie worktree e branch già su main (D286)")
     if on_clean_main:
         print("\nNota: il tree condiviso era pulito su main, quindi il worktree non era")
         print("obbligatorio — ma resta la scelta giusta se un'altra sessione può aprirsi.")
