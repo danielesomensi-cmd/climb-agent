@@ -129,7 +129,7 @@ backend/
                      # (no adaptation/ submodule: B299 deleted it — the only
                      #  closed loop is progression_v1.apply_feedback, see
                      #  docs/ENGINE_ARCHITECTURE.md §8)
-  api/               # FastAPI REST API (28 routers)
+  api/               # FastAPI REST API (29 routers)
     routers/         # state, catalog, onboarding, assessment, public_assessment, macrocycle,
                      # plan, week, session, replanner, feedback, outdoor, reports, quotes, user, admin, weekly_override, free_session, subscription, custom_session, body_part_picker, mobility, weather, coach, tips, milestones, bw_progression, retest, quaderno
   catalog/           # JSON data: exercises, sessions, templates, progressions (C272 ladders) (versioned under v1/)
