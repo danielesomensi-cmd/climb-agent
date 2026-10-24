@@ -106,6 +106,10 @@ OWN_COMMIT_RE = re.compile(
 def git(*args: str, cwd: Path | None = None, check: bool = False, stdin: str | None = None) -> subprocess.CompletedProcess:
     env = {k: v for k, v in os.environ.items() if k not in REPO_ENV_VARS}
     env["GIT_OPTIONAL_LOCKS"] = "0"
+    # B402: git's messages follow the locale, and this script parses some of them
+    # (`fetch --prune --dry-run` → "[deleted]"). On an Italian Mac git writes
+    # "[eliminato]": no branch deleted on origin was ever pruned. Pin English.
+    env["LC_ALL"] = "C"
     result = subprocess.run(
         ["git", *GIT_CONFIG_PINS, *args], capture_output=True, text=True,
         cwd=cwd or REPO_ROOT, env=env, timeout=120, input=stdin,

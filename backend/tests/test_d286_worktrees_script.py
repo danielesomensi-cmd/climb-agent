@@ -1065,3 +1065,36 @@ def test_commit_git_drops_as_already_applied_is_not_replaced(repo):
     assert fixed[:7] in out and "SU MAIN" not in out
     script(repo, "--clean")
     assert wt.exists() and has_branch(repo, "brief/U2-x")
+
+
+# ── B402: messaggi di git in un'altra lingua ────────────────────────────────
+
+
+def test_git_runs_with_the_c_locale(monkeypatch):
+    """Lo script legge messaggi di git (`[deleted]`): la lingua è fissata, qualunque sia quella del Mac."""
+    seen = {}
+
+    def fake_run(argv, **kwargs):
+        seen.update(kwargs["env"])
+        return subprocess.CompletedProcess(argv, 0, "", "")
+
+    monkeypatch.setenv("LC_ALL", "it_IT.UTF-8")
+    monkeypatch.setattr(wtmod.subprocess, "run", fake_run)
+    wtmod.git("status")
+    assert seen["LC_ALL"] == "C"
+
+
+@needs_lsof
+def test_branch_deleted_on_origin_is_pruned_with_an_italian_git(repo, monkeypatch):
+    """Con git in italiano il dry run scrive «[eliminato]»: prima di B402 non toglieva mai niente."""
+    monkeypatch.setenv("LC_ALL", "it_IT.UTF-8")
+    monkeypatch.setenv("LANGUAGE", "it")
+    origin = repo.parent / "origin.git"
+    g(repo, "push", "-q", "origin", "main:brief/D1-merged")
+    g(repo, "fetch", "-q", "origin")
+    g(origin, "branch", "-D", "brief/D1-merged")
+    out = script(repo, "--clean").stdout
+    assert "tolto    origin/brief/D1-merged" in out
+    assert "refs/remotes/origin/brief/D1-merged" not in g(
+        repo, "for-each-ref", "--format=%(refname)", "refs/remotes/origin"
+    )
