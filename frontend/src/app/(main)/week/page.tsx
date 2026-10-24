@@ -37,6 +37,7 @@ import { useUserState } from "@/lib/hooks/queries/use-user-state";
 import { useWeekPlan } from "@/lib/hooks/queries/use-week-plan";
 import { useFreeSessionsForDates } from "@/lib/hooks/queries/use-free-session";
 import { useOutdoorDoneDays } from "@/lib/hooks/queries/use-outdoor-sessions";
+import { useQuaderno } from "@/lib/hooks/queries/use-outdoor";
 import { fetchOutdoorSpots } from "@/lib/hooks/queries/use-outdoor";
 import { useWeekEvents } from "@/lib/hooks/use-week-events";
 import { showAutoReschedules } from "@/lib/auto-reschedule";
@@ -204,6 +205,9 @@ export default function WeekPage() {
     loadMap: outdoorLoadMap,
     totalLoad: weekOutdoorLoad,
   } = useOutdoorDoneDays(outdoorDoneDates, !!weekPlan);
+  // A321 — days the athlete's quaderno covers (none for users without one).
+  const { data: quaderno } = useQuaderno(outdoorDoneDates.length > 0);
+  const quadernoDays = quaderno?.available ? quaderno.days : undefined;
 
   // A245 F-5 (F15): was a hand-rolled Promise.all over 7 days in an effect
   // keyed on [weekPlan]. structuralSharing is off, so every mutation produced a
@@ -1003,6 +1007,7 @@ export default function WeekPage() {
                   outdoorRoutes={outdoorRoutesMap[day.date]}
                   outdoorDurationMinutes={outdoorDurationMap[day.date]}
                   outdoorLoadScore={outdoorLoadMap[day.date]}
+                  hasQuaderno={quadernoDays?.includes(day.date)}
                   weekPlan={weekPlan}
                   onSessionUpdated={(updatedPlan) => {
                     if (updatedPlan) { updateWeekCache(updatedPlan); } else { refetchAll(); }

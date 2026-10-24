@@ -6,6 +6,7 @@ export {
   useOutdoorSessions,
   useOutdoorStats,
   useOutdoorLog,
+  useQuaderno,
 } from "./use-outdoor";
 export { useOutdoorDoneDays } from "./use-outdoor-sessions";
 export type { OutdoorDaysSummary } from "./use-outdoor-sessions";

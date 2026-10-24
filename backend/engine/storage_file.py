@@ -503,6 +503,46 @@ def append_event(user_id: Optional[str], entry: Dict[str, Any]) -> None:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
+# ---------------------------------------------------------------------------
+# Quaderno bundle (A321)
+# The athlete's route report, copied by scripts/sync_quaderno.py and served
+# read-only to the in-app viewer. Opaque bytes: this layer never parses them.
+# ---------------------------------------------------------------------------
+
+def _quaderno_path(user_id: Optional[str], path: str) -> Path:
+    from backend.engine.quaderno import is_safe_path
+
+    uid = user_id or ""
+    if not uid or "/" in uid or uid in {".", ".."} or not is_safe_path(path):
+        raise ValueError(f"unsafe quaderno path {path!r} for user {user_id!r}")
+    return USERS_DIR / uid / "quaderno" / path
+
+
+def read_quaderno_file(user_id: Optional[str], path: str) -> Optional[bytes]:
+    """One stored bundle file, or None if absent."""
+    target = _quaderno_path(user_id, path)
+    try:
+        return target.read_bytes()
+    except FileNotFoundError:
+        return None
+
+
+def write_quaderno_file(user_id: Optional[str], path: str, data: bytes, content_type: str) -> None:
+    """Store (or replace) one bundle file."""
+    target = _quaderno_path(user_id, path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=str(target.parent), prefix=".tmp-")
+    with os.fdopen(fd, "wb") as f:
+        f.write(data)
+    os.replace(tmp, target)
+
+
+def delete_quaderno_files(user_id: Optional[str], paths: List[str]) -> None:
+    """Remove bundle files; a file already gone is not an error."""
+    for path in paths:
+        _quaderno_path(user_id, path).unlink(missing_ok=True)
+
+
 # B320: the recovery-code reader/writer lived here. Both are gone with the
 # endpoints that were their only callers; `recovery_codes.json` on disk (and the
 # Supabase table) is left untouched — retiring the feature is not a reason to

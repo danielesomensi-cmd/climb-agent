@@ -18,6 +18,7 @@ import type {
   OutdoorPitchLadder,
   OutdoorSessionStartResponse,
   OutdoorSessionFinishResponse,
+  QuadernoInfo,
   WeeklyReport,
   MonthlyReport,
   Quote,
@@ -783,6 +784,13 @@ export const getOutdoorStats = (since?: string) =>
   request<OutdoorStats>(
     `/api/outdoor/stats${since ? `?since=${since}` : ""}`
   );
+
+// A321 — the athlete's quaderno (route report). Each call signs a fresh link.
+export const getQuaderno = () => request<QuadernoInfo>("/api/quaderno");
+
+/** The iframe URL of a quaderno page, opened on `date`, in the app's dark theme. */
+export const quadernoPageUrl = (pagePath: string, date: string) =>
+  `${API_BASE}${pagePath}?theme=dark#${date}`;
 
 export const convertOutdoorSlot = (data: {
   date: string;

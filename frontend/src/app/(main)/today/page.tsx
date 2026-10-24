@@ -52,7 +52,7 @@ import { useSubscription, paywallDecision } from "@/lib/hooks/use-subscription";
 import { useAuthWaitExpired, useOnline } from "@/lib/hooks/use-auth-wait";
 import { behindWeekNotice, isCachedWeekStale, updatedAtLabel } from "@/lib/week-freshness";
 import { GUIDED_PROGRESS_EVENT, discardSavedSession, isResumableOnCard } from "@/lib/guided-resume";
-import { useUserState, useWeekPlan, useDailyQuote, useOutdoorDoneDays } from "@/lib/hooks/queries";
+import { useUserState, useWeekPlan, useDailyQuote, useOutdoorDoneDays, useQuaderno } from "@/lib/hooks/queries";
 import { useFreeSessionsForDates } from "@/lib/hooks/queries/use-free-session";
 import { useWeekEvents } from "@/lib/hooks/use-week-events";
 import { showAutoReschedules } from "@/lib/auto-reschedule";
@@ -458,6 +458,9 @@ function TodayContent() {
     loadMap: outdoorLoadMap,
     totalLoad: weekOutdoorLoad,
   } = useOutdoorDoneDays(outdoorDoneDates, !!weekPlan);
+  // A321 — days the athlete's quaderno covers (none for users without one).
+  const { data: quaderno } = useQuaderno(outdoorDoneDates.length > 0);
+  const quadernoDays = quaderno?.available ? quaderno.days : undefined;
 
   // A245 F-5 (F15): free sessions now come from the React Query cache instead
   // of two hand-rolled effects keyed on [weekPlan]. With structuralSharing
@@ -1430,6 +1433,7 @@ function TodayContent() {
             outdoorRoutes={outdoorRoutesMap[dayPlan.date]}
             outdoorDurationMinutes={outdoorDurationMap[dayPlan.date]}
             outdoorLoadScore={outdoorLoadMap[dayPlan.date]}
+            hasQuaderno={quadernoDays?.includes(dayPlan.date)}
             weekPlan={weekPlan}
             onSessionUpdated={(updatedPlan) => {
               // B153d: use response data when available to avoid 422 reload race

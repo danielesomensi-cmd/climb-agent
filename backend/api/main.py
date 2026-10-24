@@ -33,6 +33,7 @@ from backend.api.routers import (
     outdoor,
     plan,
     public_assessment,
+    quaderno,
     quotes,
     replanner,
     reports,
@@ -181,6 +182,7 @@ app.include_router(weather.router)
 app.include_router(coach.router)
 app.include_router(bw_progression.router)
 app.include_router(retest.router)
+app.include_router(quaderno.router)
 
 # Stripe webhook — registered directly to preserve raw body for signature verification
 app.add_api_route(

@@ -619,6 +619,22 @@ export interface OutdoorSession {
   load_score?: number;
 }
 
+// ── Quaderno (GET /api/quaderno, A321) ──────────────────────────────────
+/** The athlete's own route report, hosted read-only (see backend quaderno.py). */
+export type QuadernoInfo =
+  | { available: false }
+  | {
+      available: true;
+      /** When the report was last built (ISO). */
+      generated: string;
+      /** Days the report has a page for, newest first (YYYY-MM-DD). */
+      days: string[];
+      /** Signed page path on the API origin; expires at `expires_at`. */
+      page_path: string;
+      /** Epoch seconds. */
+      expires_at: number;
+    };
+
 // ── Resolver (GET /api/outdoor/strategy) ────────────────────────────────
 export interface OutdoorStrategyBase {
   warmup_protocol: string;

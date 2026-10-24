@@ -6,6 +6,7 @@ import {
   getOutdoorSessions,
   getOutdoorStats,
   getOutdoorLogByDate,
+  getQuaderno,
 } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
 
@@ -57,5 +58,20 @@ export function useOutdoorLog(date: string, enabled = true) {
     staleTime: 60_000,
     enabled: enabled && !!date,
     retry: false, // 404 is a normal "no log for this date" case
+  });
+}
+
+/**
+ * A321 — does the user have a quaderno, and for which days. Only the day list
+ * is read from here: the viewer signs a fresh link with its own call on open,
+ * so a page left open for hours never hands the iframe an expired one.
+ */
+export function useQuaderno(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.quaderno,
+    queryFn: getQuaderno,
+    staleTime: 10 * 60_000,
+    enabled,
+    retry: false, // optional feature: a failure just hides the button
   });
 }

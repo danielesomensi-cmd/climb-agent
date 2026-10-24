@@ -577,6 +577,87 @@ def append_event(user_id: Optional[str], entry: Dict[str, Any]) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Quaderno bundle (A321)
+# The athlete's route report, copied by scripts/sync_quaderno.py into the
+# PRIVATE Storage bucket below (no public URL, no RLS policy: only the service
+# key reads it) and served read-only to the in-app viewer. Object key:
+# ``<user_id>/<bundle path>``. Opaque bytes: this layer never parses them.
+# ---------------------------------------------------------------------------
+
+QUADERNO_BUCKET = "quaderno"
+
+
+def _quaderno_key(user_id: Optional[str], path: str) -> str:
+    from backend.engine.quaderno import is_safe_path
+
+    uid = _require_user_id(user_id)
+    if "/" in uid or not is_safe_path(path):
+        raise ValueError(f"unsafe quaderno path {path!r} for user {user_id!r}")
+    return f"{uid}/{path}"
+
+
+def _is_not_found(exc: Exception) -> bool:
+    text = f"{getattr(exc, 'status', '')} {getattr(exc, 'code', '')} {exc}".lower()
+    return "404" in text or "not found" in text or "not_found" in text
+
+
+def read_quaderno_file(user_id: Optional[str], path: str) -> Optional[bytes]:
+    """One stored bundle file, or None if absent."""
+    key = _quaderno_key(user_id, path)
+    try:
+        return _retry(
+            lambda: _sb().storage.from_(QUADERNO_BUCKET).download(key),
+            what=f"quaderno download {path}",
+        )
+    except Exception as exc:
+        if _is_not_found(exc):
+            return None
+        raise
+
+
+def write_quaderno_file(user_id: Optional[str], path: str, data: bytes, content_type: str) -> None:
+    """Store (or replace) one bundle file."""
+    key = _quaderno_key(user_id, path)
+    _retry(
+        lambda: _sb().storage.from_(QUADERNO_BUCKET).upload(
+            key, data, {"content-type": content_type, "upsert": "true", "cache-control": "no-store"}
+        ),
+        what=f"quaderno upload {path}",
+    )
+
+
+def delete_quaderno_files(user_id: Optional[str], paths: List[str]) -> None:
+    """Remove bundle files; a file already gone is not an error."""
+    keys = [_quaderno_key(user_id, p) for p in paths]
+    if keys:
+        _retry(
+            lambda: _sb().storage.from_(QUADERNO_BUCKET).remove(keys),
+            what="quaderno remove",
+        )
+
+
+def _delete_all_quaderno_files(uid: str) -> None:
+    """Every object under ``<uid>/`` (account deletion), whatever the manifest says."""
+    bucket = _sb().storage.from_(QUADERNO_BUCKET)
+    keys: List[str] = []
+    folders = [uid]
+    while folders:
+        folder = folders.pop()
+        if folder.count("/") > 4:  # the bundle is two levels deep; never loop forever
+            continue
+        for item in bucket.list(folder, {"limit": 1000}) or []:
+            name = item.get("name")
+            if not name:
+                continue
+            if item.get("id") is None:  # a folder
+                folders.append(f"{folder}/{name}")
+            else:
+                keys.append(f"{folder}/{name}")
+    for i in range(0, len(keys), 100):
+        bucket.remove(keys[i:i + 100])
+
+
+# ---------------------------------------------------------------------------
 # Admin helpers
 # ---------------------------------------------------------------------------
 
@@ -590,6 +671,13 @@ def list_user_ids() -> List[str]:
 def delete_user_data(user_id: str) -> None:
     """Remove all data for a user across all tables."""
     uid = _require_user_id(user_id)
+    # A321: the quaderno holds health data (HRV, sleep) — it goes with the
+    # account. Best-effort so a Storage outage cannot block the deletion of
+    # the rows below, but loud: a leftover folder must be removed by hand.
+    try:
+        _delete_all_quaderno_files(uid)
+    except Exception:
+        logger.error("A321: quaderno files of %s NOT deleted — remove them by hand", uid, exc_info=True)
     _sb().table("session_logs").delete().eq("user_id", uid).execute()
     _sb().table("coach_messages").delete().eq("user_id", uid).execute()
     _sb().table("outdoor_logs").delete().eq("user_id", uid).execute()

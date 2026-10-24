@@ -87,4 +87,6 @@ export const queryKeys = {
   customSessionAll: ["custom-session"] as const, // prefix
   builderExercises: (q: string, domain: string) => ["custom-session", "exercises", q, domain] as const,
   builderBlocks: ["custom-session", "blocks"] as const,
+  // A321 — not in PERSISTED_QUERY_PREFIXES on purpose: it carries a signed link.
+  quaderno: ["quaderno"] as const,
 } as const;

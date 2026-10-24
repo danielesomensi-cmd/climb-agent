@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { FEEDBACK_CHIP } from "@/components/training/feedback-colors";
 import { PitchLadderCard } from "@/components/outdoor/pitch-ladder-card";
+import { QuadernoButton } from "@/components/outdoor/quaderno-viewer";
 import type {
   GuardWarning,
   DayPlan,
@@ -74,6 +75,8 @@ interface DayCardProps {
   outdoorRoutes?: OutdoorRoute[];
   outdoorDurationMinutes?: number;
   outdoorLoadScore?: number;
+  /** A321 — the athlete has a quaderno page for this day: offer "Topo & charts". */
+  hasQuaderno?: boolean;
   freeSessions?: Array<{
     id: string;
     surface: string;
@@ -421,6 +424,7 @@ export function DayCard({
   outdoorRoutes,
   outdoorDurationMinutes,
   outdoorLoadScore,
+  hasQuaderno,
   freeSessions,
   onDeleteFreeSession,
   // B355 — `showActions` non è più letto dal corpo da quando B166 ha tolto il
@@ -571,6 +575,7 @@ export function DayCard({
                           Load: {outdoorLoadScore}
                         </Badge>
                       )}
+                      {hasQuaderno && <QuadernoButton date={day.date} />}
                       {onEditOutdoor && (
                         <Button
                           size="sm"

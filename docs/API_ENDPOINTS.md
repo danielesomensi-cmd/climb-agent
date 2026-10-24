@@ -60,6 +60,8 @@
 | PUT | `/api/outdoor/session/{session_id}/routes` | Replace the active session's full routes list (live sync) |
 | DELETE | `/api/outdoor/session/{session_id}` | Discard an active outdoor session without logging |
 | POST | `/api/outdoor/convert-slot` | Convert outdoor slot to gym/home |
+| GET | `/api/quaderno` | **A321**: the athlete's own route report ("quaderno", built in climb-watch and copied by `scripts/sync_quaderno.py`). `{available: false}` when the user has none, the link secret is unset or the manifest is unreadable; else `{available, generated, days (newest first), page_path, expires_at}` — `page_path` is a freshly signed link (1 h, HMAC with `QUADERNO_LINK_SECRET`, token in the path) relative to the API origin. Not subscription-gated (reading your own data) |
+| GET | `/api/quaderno/v/{token}/{path}` | **A321**: one file of the user's quaderno for the in-app iframe — no bearer (an iframe cannot send it): the signed token names the user. Serves only paths the stored `manifest.json` lists (never the manifest itself); 403 bad/expired link, 404 anything else. Headers: `Cache-Control: no-store`, `Access-Control-Allow-Origin: *` (the sandboxed page is an opaque origin), `Referrer-Policy: no-referrer`, `nosniff`, CSP `sandbox allow-scripts` + inline script/style + Google Fonts + `frame-ancestors` the app's origins |
 | GET | `/api/reports/weekly` | Weekly training report |
 | GET | `/api/reports/monthly` | Monthly training report |
 | GET | `/api/reports/heatmap` | Monthly rest-positive heatmap cells (`?month=YYYY-MM`) |
