@@ -1058,6 +1058,40 @@ class TestReplanner:
 # Feedback
 # -----------------------------------------------------------------------
 
+    def test_undo_outdoor_keeps_the_logged_routes(self):
+        """B403: undo_outdoor un-ticks the day; the routes logged for it stay."""
+        from backend.engine.outdoor_log import append_outdoor_session, load_outdoor_sessions
+
+        week_plan = self._get_week_plan()
+        target_date = week_plan["weeks"][0]["days"][-1]["date"]
+        r = client.post("/api/replanner/events", json={
+            "week_plan": week_plan,
+            "events": [{"event_type": "add_outdoor", "date": target_date,
+                        "spot_name": "Berdorf", "discipline": "lead"}],
+        })
+        r2 = client.post("/api/replanner/events", json={
+            "week_plan": r.json()["week_plan"],
+            "events": [{"event_type": "complete_outdoor", "date": target_date}],
+        })
+        append_outdoor_session({
+            "log_version": "outdoor.v1", "date": target_date, "spot_name": "Berdorf",
+            "discipline": "lead", "duration_minutes": 240,
+            "routes": [{"name": "Isatis", "grade": "7c+", "style": "project",
+                        "attempts": [{"result": "fell", "notes": "T1"}, {"result": "fell", "notes": "T2"}]}],
+        })
+
+        r3 = client.post("/api/replanner/events", json={
+            "week_plan": r2.json()["week_plan"],
+            "events": [{"event_type": "undo_outdoor", "date": target_date}],
+        })
+        assert r3.status_code == 200
+        day = next(d for w in r3.json()["week_plan"]["weeks"] for d in w["days"] if d["date"] == target_date)
+        assert day["outdoor_session_status"] == "planned"
+        kept = [s for s in load_outdoor_sessions() if s["date"] == target_date]
+        assert [rt["name"] for s in kept for rt in s["routes"]] == ["Isatis"]
+        assert [a["notes"] for a in kept[0]["routes"][0]["attempts"]] == ["T1", "T2"]
+
+
 class TestFeedback:
     def test_feedback_minimal(self):
         r = client.post("/api/feedback", json={

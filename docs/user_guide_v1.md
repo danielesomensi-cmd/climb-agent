@@ -982,9 +982,13 @@ The Outdoor page shows: per-spot breakdown, grade histogram, and session history
 
 ---
 
+### Undoing a completed crag day
+
+**Undo completion** on a completed crag day asks first (*Mark as not done? Your routes stay logged.*) and then only un-ticks the day: the routes, tries and notes you logged stay. Tap **Log routes** to complete it again — the form opens with what you had logged. To delete a day's log for good, use the trash icon on the **Outdoor History** page.
+
 ### Topo & charts (your own route report)
 
-If you keep a route report of your crag days outside the app (the "quaderno": route drawings, the day's charts from your watch, beta), it can be copied into your account and opened from the app. A completed crag day it covers shows a **Topo & charts** button next to *Edit*, on the Today and Week pages: it opens the report full screen, on that day, and you scroll it inside. Close it to get back to the card. The report is the same page as outside the app — the app draws nothing itself — and it is private to your account. Days the report does not cover, and athletes without a report, see no button.
+If you keep a route report of your crag days outside the app (the "quaderno": route drawings, the day's charts from your watch, beta), it can be copied into your account and opened from the app. A completed crag day it covers shows a **Topo & charts** button next to *Edit*, on the Today and Week pages: it opens the report full screen, on that day, and you scroll it inside. Close it to get back to the card. The same button is on the **Outdoor History** page, on each crag day the report covers. The report is the same page as outside the app — the app draws nothing itself — and it is private to your account. Days the report does not cover, and athletes without a report, see no button.
 
 ## 15. Weekly Report
 

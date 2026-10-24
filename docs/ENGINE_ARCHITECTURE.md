@@ -912,7 +912,7 @@ Processes event lists. Supported event types:
 - `move_session` — relocate within the week
 - `remove_session` — delete from day
 - `complete_other_activity` / `add_other_activity` — non-climbing activities
-- `add_outdoor` / `complete_outdoor` / `undo_outdoor` / `remove_outdoor` — outdoor sessions
+- `add_outdoor` / `complete_outdoor` / `undo_outdoor` / `remove_outdoor` — outdoor sessions (`undo_outdoor` only un-ticks the day: since B403 the router no longer deletes the day's `outdoor_logs`)
 - `change_gym` — equipment-aware session replacement via `_find_gym_change_replacement()` (A319: a 2RM or combined test moved to a gym without weights is replaced too — see the A319 notes of §8.2)
 - `set_availability` — **retired in B367**: `ValueError` in the engine, 422 at `/events`. It regenerated the week with a fraction of the `GET /api/week` inputs (no tests, retest decisions, taper, finger device) and overwrote the snapshot; availability changes go through settings / `PUT /api/weekly-override/{week_start}`
 

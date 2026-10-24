@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Check, ArrowUpRight, ChevronDown, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useUserState } from "@/lib/hooks/use-state";
-import { fetchOutdoorSpots, useOutdoorSessions, useOutdoorStats } from "@/lib/hooks/queries/use-outdoor";
+import { fetchOutdoorSpots, useOutdoorSessions, useOutdoorStats, useQuaderno } from "@/lib/hooks/queries/use-outdoor";
 import { resolveOutdoorLogTarget } from "@/lib/outdoor-log-target";
 import { toISODateLocal } from "@/lib/dates";
 import { toast } from "sonner";
@@ -24,6 +24,7 @@ import { displayBoulderGrade, hardestGrade, gradeRank, type BoulderGradeSystem }
 const OutdoorLogForm = dynamic(() => import("@/components/training/OutdoorLogForm"), { ssr: false });
 import { deriveTryTimings, routeHasTimestamps } from "@/lib/try-timings";
 import { TryBreakdown } from "@/components/outdoor/try-breakdown";
+import { QuadernoButton } from "@/components/outdoor/quaderno-viewer";
 import { isSendResult } from "@/lib/outdoor-result";
 
 // ---------------------------------------------------------------------------
@@ -160,6 +161,9 @@ export default function OutdoorPage() {
   const qc = useQueryClient();
   const sessionsQuery = useOutdoorSessions(undefined, authReady);
   const statsQuery = useOutdoorStats(undefined, authReady);
+  // A322 — the athlete's quaderno: "Topo & charts" on the crag days it covers.
+  const { data: quaderno } = useQuaderno(authReady);
+  const quadernoDays = quaderno?.available ? quaderno.days : [];
   const sessions = (sessionsQuery.data?.sessions ?? []) as (OutdoorSession & { load_score?: number })[];
   const stats = statsQuery.data ?? null;
   const loading = sessionsQuery.isLoading || statsQuery.isLoading;
@@ -575,6 +579,11 @@ export default function OutdoorPage() {
                             </button>
                           </div>
                         </div>
+                        {quadernoDays.includes(s.date) && (
+                          <div className="flex">
+                            <QuadernoButton date={s.date} />
+                          </div>
+                        )}
                         {isOpen && hasRoutes && (
                           <ul className="space-y-1 border-t pt-2">
                             {(() => {

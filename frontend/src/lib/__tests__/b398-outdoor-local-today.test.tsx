@@ -33,6 +33,7 @@ vi.mock("@/lib/hooks/queries/use-outdoor", () => ({
   fetchOutdoorSpots: vi.fn(),
   useOutdoorSessions: () => ({ data: { sessions: [] }, isLoading: false, error: null }),
   useOutdoorStats: () => ({ data: null, isLoading: false, error: null }),
+  useQuaderno: () => ({ data: { available: false } }), // A322
 }));
 
 import OutdoorPage from "@/app/(main)/outdoor/page";

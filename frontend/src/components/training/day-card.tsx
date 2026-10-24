@@ -435,6 +435,7 @@ export function DayCard({
   showDailyCue = false,
 }: DayCardProps) {
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [confirmUndo, setConfirmUndo] = useState(false);
   const [outdoorExpanded, setOutdoorExpanded] = useState(false);
   const today = isToday(day.date);
   const weekdayLabel =
@@ -587,16 +588,29 @@ export function DayCard({
                           Edit
                         </Button>
                       )}
-                      {onUndoOutdoor && (
+                      {/* B403 — two taps, like Remove: one stray tap used to erase the
+                          whole day's routes. Now it only un-ticks the day; the routes stay. */}
+                      {onUndoOutdoor && !confirmUndo && (
                         <Button
                           size="sm"
                           variant="ghost"
                           className={cn("min-h-[44px] text-xs text-muted-foreground", !onEditOutdoor && "ml-auto")}
-                          onClick={() => onUndoOutdoor(day.date)}
+                          onClick={() => setConfirmUndo(true)}
                         >
                           <Undo2 className="size-3.5 mr-1" />
                           Undo completion
                         </Button>
+                      )}
+                      {onUndoOutdoor && confirmUndo && (
+                        <div className="flex basis-full flex-wrap items-center justify-end gap-1">
+                          <span className="text-xs text-muted-foreground">Mark as not done? Your routes stay logged.</span>
+                          <Button size="sm" variant="ghost" className="min-h-[44px] px-3 text-xs" onClick={() => setConfirmUndo(false)}>
+                            Cancel
+                          </Button>
+                          <Button size="sm" variant="outline" className="min-h-[44px] px-3 text-xs" onClick={() => { setConfirmUndo(false); onUndoOutdoor(day.date); }}>
+                            Mark not done
+                          </Button>
+                        </div>
                       )}
                     </>
                   ) : (

@@ -19,7 +19,7 @@ from backend.api.plan_revision import (
 from backend.api.guard_status import build_guard_warnings, messages_for
 from backend.api.key_status import build_key_conflicts, build_key_status, resolve_today
 from backend.api import auto_reschedule as _auto
-from backend.engine.outdoor_log import compute_outdoor_load_score, load_outdoor_sessions, remove_outdoor_session
+from backend.engine.outdoor_log import compute_outdoor_load_score, load_outdoor_sessions
 from backend.engine.planner_v2 import _SESSION_META
 from backend.engine.replanner_v1 import (
     RETIRED_EVENT_TYPES,
@@ -633,11 +633,13 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
         logger.error("Events application failed: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Events application failed. Please try again.")
 
-    # Remove outdoor log entries for any undo_outdoor events so re-logging
-    # doesn't produce duplicates.
-    for ev in req.events:
-        if ev.get("event_type") == "undo_outdoor" and ev.get("date"):
-            remove_outdoor_session(user_id, ev["date"])
+    # B403: undo_outdoor un-ticks the plan day and NEVER deletes the logged
+    # routes. It used to delete the day's outdoor log "so re-logging doesn't
+    # produce duplicates" — a one-tap "Undo completion" then erased a whole crag
+    # day (2026-10-24, Daniele's 17/10: three routes and their notes). Both
+    # reasons are gone: a re-log upserts on (user, date, crag) since B341, and
+    # "Log routes" opens the existing log in edit mode. Deleting a log is an
+    # explicit DELETE /api/outdoor/log/{date}, behind its own confirmation.
 
     # --- B116: Persistent outdoor log in user_state ---
     outdoor_log = state.setdefault("outdoor_log", [])
