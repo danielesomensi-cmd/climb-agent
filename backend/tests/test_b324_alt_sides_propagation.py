@@ -122,8 +122,18 @@ def test_custom_duration_counts_both_sides():
     two_sided = [{**one_sided[0], "alt_sides": True}]
 
     assert estimate_custom_session_duration(two_sided) > estimate_custom_session_duration(one_sided)
-    # 6 x 20s work + 5 x 40s rest = 320s → 5 min
-    assert estimate_custom_session_duration(two_sided) == 5
+    # B404: 6 x 20s work + 3 side switches x 15s + 2 set rests x 40s = 245s → 4 min
+    assert estimate_custom_session_duration(two_sided) == 4
+
+
+def test_custom_duration_side_switch_never_longer_than_set_rest():
+    """B404: the side switch is capped by the set rest, and a stretch written
+    with no rest still gets the switch (you have to change sides)."""
+    from backend.engine.custom_session import SIDE_SWITCH_S, side_switch_seconds
+
+    assert side_switch_seconds(60) == SIDE_SWITCH_S
+    assert side_switch_seconds(10) == 10
+    assert side_switch_seconds(0) == SIDE_SWITCH_S
 
 
 # --------------------------------------------------------------------------- #

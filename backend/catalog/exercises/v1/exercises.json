@@ -897,7 +897,7 @@
       "description": "Advanced one-arm hang protocol (Cameron Hörst) for unilateral finger strength using assistance to reduce bodyweight.",
       "cues": [
         "Use pulley system or resistance band to reduce load",
-        "5-10 second hangs per arm — complete all sets on one hand, then switch",
+        "5-10 second hangs per arm — right, then left, then the set rest",
         "Prevent body spinning — use a slight offset stance",
         "Shoulder stable and packed throughout the hang",
         "Progress by gradually reducing assistance over weeks"
@@ -2320,7 +2320,6 @@
       "age_minimum": 16,
       "difficulty_tier": 4,
       "unilateral": true,
-      "alt_sides": true,
       "phase_affinity": [
         "strength_power"
       ]
@@ -3454,7 +3453,6 @@
       ],
       "video_url": "https://www.hoopersbeta.com/library/one-arm-pull-up-progressions",
       "load_model": "bodyweight_only",
-      "alt_sides": true,
       "phase_affinity": [
         "strength_power"
       ]
@@ -3593,12 +3591,12 @@
         "shoulder_sensitive"
       ],
       "prescription_defaults": {
-        "sets": 3,
+        "sets": 4,
         "reps": null,
         "work_seconds": 15,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 120,
-        "notes": "Tuck one knee, extend the other leg fully. Alternate legs between sets. Progress to straddle when you hold 15s clean both sides."
+        "notes": "Tuck one knee, extend the other leg fully. Alternate the extended leg every set (2 sets per leg) — full rest between holds, it is a whole-body effort. Progress to straddle when you hold 15s clean both sides."
       },
       "stress_tags": {
         "fingers": "low",
@@ -3616,7 +3614,6 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
-      "alt_sides": true,
       "phase_affinity": [
         "strength_power",
         "power_endurance",
@@ -5242,7 +5239,6 @@
       "video_url": "https://www.hoopersbeta.com/library",
       "load_model": "bodyweight_only",
       "attributes": {},
-      "alt_sides": true,
       "phase_affinity": [
         "base",
         "deload"
@@ -6937,7 +6933,6 @@
       ],
       "video_url": "https://www.youtube.com/watch?v=rMRGNHbxLPc",
       "load_model": "bodyweight_only",
-      "alt_sides": true,
       "phase_affinity": [
         "base",
         "deload"
@@ -8242,7 +8237,7 @@
         "work_seconds": null,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 180,
-        "notes": "One hand on bar, other hand grips a sling looped over bar — hands offset 30-60 cm (start with 30 cm). 3 sets × 5 reps each arm, 3 min rest between sets. Increase offset as strength improves. Long-term progression toward one-arm pull-up. Hörst: begin with 12-inch offset, increase when you can do 5 solid reps."
+        "notes": "One hand on bar, other hand grips a sling looped over bar — hands offset 30-60 cm (start with 30 cm). 3 sets × 5 reps each arm: right, then left, then 3 min rest. Increase offset as strength improves. Long-term progression toward one-arm pull-up. Hörst: begin with 12-inch offset, increase when you can do 5 solid reps."
       },
       "stress_tags": {
         "fingers": "medium",
@@ -8256,7 +8251,7 @@
         "High hand on bar, low hand on sling — not the reverse",
         "Focus on pulling with the HIGH hand; low hand assists progressively less",
         "Full range of motion required — dead hang to chin over bar height",
-        "Alternate arms each set: do not favour one side",
+        "Right arm, then left, every set: do not favour one side",
         "30 cm offset for beginners → 45 cm → 60 cm as a rough progression",
         "To increase climbing specificity: high hand uses palms-away (pronated) grip"
       ],
@@ -9145,6 +9140,7 @@
       },
       "load_model": "external_load",
       "unilateral": true,
+      "alt_sides": true,
       "prescription_defaults": {
         "sets": 5,
         "reps": null,
@@ -9164,7 +9160,7 @@
         "Half crimp grip: DIP straight, PIP bent ~90°",
         "Lift with legs (slight knee bend), NOT by bending arm or shrugging",
         "Hold for exactly 5 seconds, controlled release",
-        "Complete all sets one hand, then switch — rest 3 min between sets"
+        "Right hand, then left, then rest 3 min"
       ],
       "video_url": null,
       "phase_affinity": [
@@ -9204,6 +9200,7 @@
       },
       "load_model": "external_load",
       "unilateral": true,
+      "alt_sides": true,
       "prescription_defaults": {
         "sets": 5,
         "reps": null,
@@ -9222,7 +9219,7 @@
         "Choose load you can hold for exactly 10s max",
         "Lift precisely 7 seconds — not to failure",
         "Arm straight, no shrugging or arm bending",
-        "Complete all sets one hand, then switch",
+        "Right hand, then left, then the set rest",
         "Last set should be very hard but with perfect form"
       ],
       "video_url": null,
@@ -9262,6 +9259,7 @@
       },
       "load_model": "external_load",
       "unilateral": true,
+      "alt_sides": true,
       "prescription_defaults": {
         "sets": 5,
         "reps": null,
@@ -9322,6 +9320,7 @@
       },
       "load_model": "external_load",
       "unilateral": true,
+      "alt_sides": true,
       "prescription_defaults": {
         "sets": 5,
         "reps": 5,
@@ -9340,7 +9339,7 @@
         "Load near max — you only hold 1-3 seconds",
         "Explosive lift initiation, controlled release",
         "5 reps per set, 30s rest between reps",
-        "Complete all sets one hand, then switch",
+        "Right hand, then left, then the set rest",
         "Focus on maximal force production, not duration"
       ],
       "video_url": null,
@@ -9379,6 +9378,7 @@
       },
       "load_model": "external_load",
       "unilateral": true,
+      "alt_sides": true,
       "prescription_defaults": {
         "sets": 3,
         "reps": 3,
@@ -9400,7 +9400,7 @@
         "Change grip position on every rep within the set",
         "90s rest between individual lifts",
         "3 min rest between sets of 3",
-        "Complete all sets one hand, then switch"
+        "Right hand, then left, then the set rest"
       ],
       "video_url": null,
       "phase_affinity": [
@@ -9438,6 +9438,7 @@
       },
       "load_model": "external_load",
       "unilateral": true,
+      "alt_sides": true,
       "prescription_defaults": {
         "sets": 6,
         "reps": 6,
@@ -9458,7 +9459,7 @@
         "6 reps per set without putting the weight down between reps",
         "Moderate load — should be challenging by rep 5-6",
         "2 minutes rest between sets",
-        "Complete all sets one hand, then switch"
+        "Right hand, then left, then the set rest"
       ],
       "video_url": null,
       "phase_affinity": [

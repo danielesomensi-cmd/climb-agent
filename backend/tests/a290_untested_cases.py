@@ -70,6 +70,13 @@ with ``p0_trace`` / ``filter_trace`` and the additive ``suggested.load_unit``
 stripped: zero differences — the candidate counts and ``load_unit`` moved,
 selections, prescriptions and loads did not.
 
+B404 dropped ``alt_sides`` from exercises whose prescription already holds
+both sides (``typewriter_pullup`` among them: every rep traverses to both
+hands). The 6 digests that carry ``typewriter_pullup`` were regenerated after
+diffing the raw resolver output against origin/main @ 7b77ee5: the only
+difference is that instance's ``alt_sides`` (true → false) — same ids, same
+prescriptions, same loads.
+
 Pure data + one function, importable by the generator without pytest.
 """
 

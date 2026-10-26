@@ -125,7 +125,8 @@ def test_alt_sides_still_doubles_and_pays_inter_rep_rest_per_side():
     both = [{"sets": 2, "reps": 3, "rest_between_reps_seconds": 30,
              "rest_between_sets_seconds": 0, "alt_sides": True}]
     assert estimate_custom_session_duration(one_side) == round(144 / 60)  # 2x(12+60)
-    assert estimate_custom_session_duration(both) == round(288 / 60)      # 4 bouts
+    # 4 bouts + B404's side switch after each RIGHT (2 × 15 s)
+    assert estimate_custom_session_duration(both) == round((288 + 2 * 15) / 60)
     assert estimate_custom_session_duration(both) > estimate_custom_session_duration(one_side)
 
 

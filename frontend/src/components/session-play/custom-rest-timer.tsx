@@ -46,6 +46,8 @@ interface CustomRestTimerProps {
    * false: only the athlete knows when that set is done.
    */
   autoAdvance?: boolean;
+  /** B404: "Switch side" between RIGHT and LEFT of one set. */
+  title?: string;
 }
 
 export function CustomRestTimer({
@@ -54,6 +56,7 @@ export function CustomRestTimer({
   onComplete,
   onSkip,
   autoAdvance = false,
+  title = "Rest",
 }: CustomRestTimerProps) {
   const [elapsed, setElapsed] = useState(0);
   const startRef = useRef<number>(0);
@@ -147,7 +150,7 @@ export function CustomRestTimer({
 
   return (
     <div className="flex flex-col items-center gap-6 py-8">
-      <p className="text-sm uppercase tracking-wider text-muted-foreground">Rest</p>
+      <p className="text-sm uppercase tracking-wider text-muted-foreground">{title}</p>
 
       <div
         className={cn(

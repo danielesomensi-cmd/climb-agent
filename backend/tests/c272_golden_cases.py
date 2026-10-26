@@ -66,6 +66,16 @@ chest-press pin is ``dumbbell_bench_press`` now, so the dumbbell-only profiles
 get it instead of the P0 fallback (``handstand_pushup_wall`` / ``overhead_press``).
 Every other key and ``other_engines`` unchanged (isolated ``compute()`` under
 pytest, origin/main vs the B381 tree).
+
+B404 changed 2 resolver keys and 18 composer-pool entries (raw diff against
+origin/main @ 7b77ee5). Resolver: ``lower_body_gym`` 10-07 × advanced /
+intermediate — ``front_lever_one_leg`` loses ``alt_sides`` and goes 3 → 4 sets
+(it was run as 3 × 2 sides; now 4 holds, alternating the extended leg). Pools:
+the ad-hoc builder budgets on ``estimate_custom_session_duration``, which no
+longer charges the full set rest between the two sides of an ``alt_sides`` set,
+and ``campus_bumps`` is no longer doubled (it was billed 31 min for 14) — so
+the same minutes fit more exercises (e.g. gym/general_strength gains
+``heavy_reverse_wrist_curl`` and ``scapular_pullup``). Selection rules unchanged.
 """
 
 from __future__ import annotations

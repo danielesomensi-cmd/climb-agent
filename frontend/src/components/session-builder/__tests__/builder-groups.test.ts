@@ -138,4 +138,10 @@ describe("computeDuration (moved, unchanged)", () => {
   it("never reports less than one minute", () => {
     expect(computeDuration([])).toBe(1);
   });
+
+  it("B404: an alt_sides set is RIGHT + 15 s switch + LEFT, set rest only between sets", () => {
+    // 3×(20 + 15 + 20) + 2×60 = 285s → 5 min (it was 6×20 + 5×60 = 420s → 7)
+    const plank = { exercise: { sets: 3, reps: null, work_seconds: 20, rest_between_sets_seconds: 60, alt_sides: true } };
+    expect(computeDuration([plank])).toBe(5);
+  });
 });

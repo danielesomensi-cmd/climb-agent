@@ -14,7 +14,7 @@ import { applyEvents, postFeedback } from "@/lib/api";
 import type { WeekPlan, CustomSessionExercise } from "@/lib/types";
 import { CustomExerciseStep } from "@/components/session-play/custom-exercise-step";
 import { CustomRestTimer } from "@/components/session-play/custom-rest-timer";
-import { displaySetNumber, sideForSet, totalSetsWithSides } from "@/lib/alt-sides";
+import { displaySetNumber, isSideSwitch, restAfterSet, sideForSet, totalSetsWithSides } from "@/lib/alt-sides";
 import { unlockAudio } from "@/lib/audio-unlock";
 import { FeedbackPills } from "@/components/guided/feedback-pills";
 import { measureFields, withFeedbackContract, type MeasureValues } from "@/lib/measured-feedback";
@@ -307,7 +307,8 @@ export default function SessionPlayPage() {
     const hasNextExercise = currentExerciseIndex < exercises.length - 1;
 
     if (hasMoreSetsInExercise) {
-      if (restSec > 0) {
+      // B404: after RIGHT only the side switch, the set rest after LEFT.
+      if (restAfterSet(currentSet, currentExercise.alt_sides === true, restSec) > 0) {
         setStage("resting");
       } else {
         setCurrentSet((s) => s + 1);
@@ -619,7 +620,12 @@ export default function SessionPlayPage() {
             const nextIsTimed = (nextBout?.work_seconds ?? 0) > 0;
             return (
               <CustomRestTimer
-                targetSeconds={currentExercise.rest_between_sets_seconds ?? 0}
+                targetSeconds={
+                  hasMoreSetsInExercise
+                    ? restAfterSet(currentSet, altSides, currentExercise.rest_between_sets_seconds ?? 0)
+                    : currentExercise.rest_between_sets_seconds ?? 0
+                }
+                title={hasMoreSetsInExercise && isSideSwitch(currentSet, altSides) ? "Switch side" : "Rest"}
                 nextLabel={nextLabel}
                 onComplete={handleRestDone}
                 onSkip={handleRestDone}

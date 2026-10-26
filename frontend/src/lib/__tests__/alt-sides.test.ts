@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { displaySetNumber, sideForSet, totalSetsWithSides } from "@/lib/alt-sides";
+import {
+  SIDE_SWITCH_S,
+  displaySetNumber,
+  isSideSwitch,
+  restAfterSet,
+  sideForSet,
+  sideSwitchSeconds,
+  totalSetsWithSides,
+} from "@/lib/alt-sides";
 
 /**
  * B324: the custom-session player must alternate sides exactly like the guided
@@ -46,5 +54,26 @@ describe("alt-sides", () => {
     expect(run.filter((s) => s.side === "RIGHT")).toHaveLength(3);
     expect(run.filter((s) => s.side === "LEFT")).toHaveLength(3);
     expect(run[5].label).toBe("Set 3 of 3");
+  });
+
+  it("B404: a short side switch after RIGHT, the full set rest after LEFT", () => {
+    // 3x20s side plank, 60s rest: R, switch, L, rest, R, switch, L, rest, R, switch, L.
+    expect([1, 2, 3, 4, 5].map((n) => restAfterSet(n, true, 60))).toEqual([
+      SIDE_SWITCH_S, 60, SIDE_SWITCH_S, 60, SIDE_SWITCH_S,
+    ]);
+    expect([1, 2, 3, 4, 5].map((n) => isSideSwitch(n, true))).toEqual([true, false, true, false, true]);
+  });
+
+  it("B404: bilateral exercises keep the set rest after every set", () => {
+    expect([1, 2].map((n) => restAfterSet(n, false, 90))).toEqual([90, 90]);
+    expect(isSideSwitch(1, false)).toBe(false);
+  });
+
+  it("B404: the switch is never longer than the set rest, and exists with no set rest", () => {
+    expect(sideSwitchSeconds(10)).toBe(10);
+    expect(sideSwitchSeconds(180)).toBe(SIDE_SWITCH_S);
+    // A stretch written back-to-back still needs time to change sides.
+    expect(sideSwitchSeconds(0)).toBe(SIDE_SWITCH_S);
+    expect(restAfterSet(2, true, 0)).toBe(0);
   });
 });

@@ -20,19 +20,24 @@
    "dead_bug",
    "archer_pullup",
    "dip",
+   "heavy_reverse_wrist_curl",
    "bulgarian_split_squat",
    "deadlift",
+   "scapular_pullup",
    "handstand_pushup_wall"
   ],
   "adhoc|advanced|gym|mobility": [
    "dead_bug",
    "arc_training_progressive",
-   "flexibility_active_leg_raise"
+   "flexibility_active_leg_raise",
+   "flexibility_cossack_squat"
   ],
   "adhoc|advanced|gym|pull": [
    "dead_bug",
    "archer_pullup",
-   "campus_bumps"
+   "campus_bumps",
+   "campus_double_dyno",
+   "campus_laddering_down"
   ],
   "adhoc|advanced|gym|technique": [
    "dead_bug",
@@ -45,7 +50,7 @@
   "adhoc|advanced|home|core": [
    "dead_bug",
    "l_sit_pullup",
-   "core_hollow_hold",
+   "copenhagen_plank",
    "front_lever_straddle",
    "front_lever_tuck",
    "toes_to_bar",
@@ -62,8 +67,10 @@
    "dead_bug",
    "archer_pullup",
    "dip",
+   "heavy_reverse_wrist_curl",
    "bulgarian_split_squat",
    "deadlift",
+   "scapular_pullup",
    "handstand_pushup_wall"
   ],
   "adhoc|advanced|home|mobility": [
@@ -77,8 +84,9 @@
    "dead_bug",
    "archer_pullup",
    "l_sit_pullup",
-   "weighted_chinup",
-   "frenchies"
+   "one_arm_pullup_assisted",
+   "frenchies",
+   "uneven_grip_pullup"
   ],
   "adhoc|advanced|home|technique": [
    "dead_bug",
@@ -104,19 +112,24 @@
    "dead_bug",
    "archer_pullup",
    "dip",
+   "heavy_reverse_wrist_curl",
    "bulgarian_split_squat",
    "deadlift",
+   "scapular_pullup",
    "handstand_pushup_wall"
   ],
   "adhoc|intermediate|gym|mobility": [
    "dead_bug",
    "arc_training_progressive",
-   "flexibility_active_leg_raise"
+   "flexibility_active_leg_raise",
+   "flexibility_cossack_squat"
   ],
   "adhoc|intermediate|gym|pull": [
    "dead_bug",
    "archer_pullup",
-   "campus_bumps"
+   "campus_bumps",
+   "campus_double_dyno",
+   "campus_laddering_down"
   ],
   "adhoc|intermediate|gym|technique": [
    "dead_bug",
@@ -129,7 +142,7 @@
   "adhoc|intermediate|home|core": [
    "dead_bug",
    "l_sit_pullup",
-   "core_hollow_hold",
+   "copenhagen_plank",
    "front_lever_straddle",
    "front_lever_tuck",
    "toes_to_bar",
@@ -146,8 +159,10 @@
    "dead_bug",
    "archer_pullup",
    "dip",
+   "heavy_reverse_wrist_curl",
    "bulgarian_split_squat",
    "deadlift",
+   "scapular_pullup",
    "handstand_pushup_wall"
   ],
   "adhoc|intermediate|home|mobility": [
@@ -161,8 +176,9 @@
    "dead_bug",
    "archer_pullup",
    "l_sit_pullup",
-   "weighted_chinup",
-   "frenchies"
+   "one_arm_pullup_assisted",
+   "frenchies",
+   "uneven_grip_pullup"
   ],
   "adhoc|intermediate|home|technique": [
    "dead_bug",
@@ -188,19 +204,24 @@
    "dead_bug",
    "archer_pullup",
    "dip",
+   "heavy_reverse_wrist_curl",
    "bulgarian_split_squat",
    "deadlift",
+   "scapular_pullup",
    "handstand_pushup_wall"
   ],
   "adhoc|untested|gym|mobility": [
    "dead_bug",
    "arc_training_progressive",
-   "flexibility_active_leg_raise"
+   "flexibility_active_leg_raise",
+   "flexibility_cossack_squat"
   ],
   "adhoc|untested|gym|pull": [
    "dead_bug",
    "archer_pullup",
-   "campus_bumps"
+   "campus_bumps",
+   "campus_double_dyno",
+   "campus_laddering_down"
   ],
   "adhoc|untested|gym|technique": [
    "dead_bug",
@@ -213,7 +234,7 @@
   "adhoc|untested|home|core": [
    "dead_bug",
    "l_sit_pullup",
-   "core_hollow_hold",
+   "copenhagen_plank",
    "front_lever_straddle",
    "front_lever_tuck",
    "toes_to_bar",
@@ -230,8 +251,10 @@
    "dead_bug",
    "archer_pullup",
    "dip",
+   "heavy_reverse_wrist_curl",
    "bulgarian_split_squat",
    "deadlift",
+   "scapular_pullup",
    "handstand_pushup_wall"
   ],
   "adhoc|untested|home|mobility": [
@@ -245,8 +268,9 @@
    "dead_bug",
    "archer_pullup",
    "l_sit_pullup",
-   "weighted_chinup",
-   "frenchies"
+   "one_arm_pullup_assisted",
+   "frenchies",
+   "uneven_grip_pullup"
   ],
   "adhoc|untested|home|technique": [
    "dead_bug",
@@ -582,7 +606,7 @@
    ]
   },
   "advanced|2026-10-07|lower_body_gym": {
-   "digest": "495dd49fa968582efc30a989c3c509fc1363063e7326ab0ff8132d2757db1a6a",
+   "digest": "face13718629f4486fb65a460bad334d3f9ca2bca5080a91af572a63f2a60e9a",
    "exercise_ids": [
     "dynamic_mobility_flow",
     "general_pulse_raise",
@@ -778,6 +802,7 @@
    ]
   },
   "advanced|2026-10-07|upper_push_arms_lunch": {
+   "digest": "81eb30222f9cbbb9bf3569f8f32d9c3fae7e8db97975926013298762be5fd44b",
    "exercise_ids": [
     "general_pulse_raise",
     "ab_wheel_rollout",
@@ -785,8 +810,7 @@
     "dumbbell_bench_press",
     "dumbbell_fly",
     "incline_pushup"
-   ],
-   "digest": "81eb30222f9cbbb9bf3569f8f32d9c3fae7e8db97975926013298762be5fd44b"
+   ]
   },
   "advanced|2026-10-07|yoga_recovery": {
    "digest": "dd41ad6abf93d50bc8904f6b0cd1f232aa06f7d91a777e86a62b83aaa0f2543a",
@@ -1273,6 +1297,7 @@
    ]
   },
   "advanced|2026-10-21|upper_push_arms_lunch": {
+   "digest": "8a5a595ca7f8e810f0a8651ee8141f36f87ea1e856729d2259318fb0b98e0608",
    "exercise_ids": [
     "general_pulse_raise",
     "suitcase_carry",
@@ -1280,8 +1305,7 @@
     "dumbbell_bench_press",
     "handstand_pushup_wall",
     "incline_pushup"
-   ],
-   "digest": "8a5a595ca7f8e810f0a8651ee8141f36f87ea1e856729d2259318fb0b98e0608"
+   ]
   },
   "advanced|2026-10-21|yoga_recovery": {
    "digest": "93018eb2015dc548a6aac1ad379a026105539ab1684846b17d63a007f60c8525",
@@ -1581,7 +1605,7 @@
    ]
   },
   "intermediate|2026-10-07|lower_body_gym": {
-   "digest": "1c0b72fcc35e5fce8bf2ac48b0c88a70fd3f03090d1371f9fd988fa50e11cb8b",
+   "digest": "9660d4e3a7bc7c577c468d16015847a6615a6e206240f9f3ec024128e621a1f3",
    "exercise_ids": [
     "dynamic_mobility_flow",
     "general_pulse_raise",
@@ -1777,6 +1801,7 @@
    ]
   },
   "intermediate|2026-10-07|upper_push_arms_lunch": {
+   "digest": "aa86ac706846aefdf48521424eb3cbd3b7a17f23f9664b59649079b330f17aca",
    "exercise_ids": [
     "general_pulse_raise",
     "ab_wheel_rollout",
@@ -1784,8 +1809,7 @@
     "dumbbell_bench_press",
     "dumbbell_fly",
     "incline_pushup"
-   ],
-   "digest": "aa86ac706846aefdf48521424eb3cbd3b7a17f23f9664b59649079b330f17aca"
+   ]
   },
   "intermediate|2026-10-07|yoga_recovery": {
    "digest": "dd41ad6abf93d50bc8904f6b0cd1f232aa06f7d91a777e86a62b83aaa0f2543a",
@@ -2272,6 +2296,7 @@
    ]
   },
   "intermediate|2026-10-21|upper_push_arms_lunch": {
+   "digest": "1040133a7126d10e6be9125d4ca4e9294cf996999aa784976173d0412e08add1",
    "exercise_ids": [
     "general_pulse_raise",
     "suitcase_carry",
@@ -2279,8 +2304,7 @@
     "dumbbell_bench_press",
     "handstand_pushup_wall",
     "incline_pushup"
-   ],
-   "digest": "1040133a7126d10e6be9125d4ca4e9294cf996999aa784976173d0412e08add1"
+   ]
   },
   "intermediate|2026-10-21|yoga_recovery": {
    "digest": "93018eb2015dc548a6aac1ad379a026105539ab1684846b17d63a007f60c8525",
@@ -2776,6 +2800,7 @@
    ]
   },
   "untested|2026-10-07|upper_push_arms_lunch": {
+   "digest": "926e23e66fe78c0387ecf31f49a869b09ca1cc951198a7ccf6c97f8ff1c9fc6b",
    "exercise_ids": [
     "general_pulse_raise",
     "side_plank",
@@ -2783,8 +2808,7 @@
     "dumbbell_bench_press",
     "dumbbell_fly",
     "incline_pushup"
-   ],
-   "digest": "926e23e66fe78c0387ecf31f49a869b09ca1cc951198a7ccf6c97f8ff1c9fc6b"
+   ]
   },
   "untested|2026-10-07|yoga_recovery": {
    "digest": "dd41ad6abf93d50bc8904f6b0cd1f232aa06f7d91a777e86a62b83aaa0f2543a",
@@ -3271,6 +3295,7 @@
    ]
   },
   "untested|2026-10-21|upper_push_arms_lunch": {
+   "digest": "1cb0dda6304f8eecd8a6b01819d9e5cd2e8e55dfd941b164bf4d6e32eb4616b5",
    "exercise_ids": [
     "general_pulse_raise",
     "plank",
@@ -3278,8 +3303,7 @@
     "dumbbell_bench_press",
     "handstand_pushup_wall",
     "incline_pushup"
-   ],
-   "digest": "1cb0dda6304f8eecd8a6b01819d9e5cd2e8e55dfd941b164bf4d6e32eb4616b5"
+   ]
   },
   "untested|2026-10-21|yoga_recovery": {
    "digest": "93018eb2015dc548a6aac1ad379a026105539ab1684846b17d63a007f60c8525",

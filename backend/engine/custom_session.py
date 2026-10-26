@@ -23,6 +23,17 @@ DEFAULT_SET_REST_S = 60
 # Fallback for an entry with neither work_seconds nor reps.
 DEFAULT_WORK_S = 30
 
+# B404: on an alt_sides exercise the gap after the first side is a side switch,
+# not a set rest — the other side's work is already the first side's rest. Never
+# longer than the set rest. Same value as SIDE_SWITCH_S in
+# frontend/src/lib/alt-sides.ts, which the players run.
+SIDE_SWITCH_S = 15
+
+
+def side_switch_seconds(rest_between_sets: int) -> int:
+    """B404: the pause between RIGHT and LEFT of one prescribed set."""
+    return min(SIDE_SWITCH_S, rest_between_sets) if rest_between_sets > 0 else SIDE_SWITCH_S
+
 # B338: walking to the next station, re-chalking, changing a load, reading the
 # next exercise. B337 left this out on the grounds that it is not in the data —
 # which is true, and is exactly why it is a flat constant here rather than
@@ -88,7 +99,14 @@ def estimate_custom_session_duration(exercises: List[Dict[str, Any]]) -> int:
         if rest_per_set is None:
             rest_per_set = DEFAULT_SET_REST_S
 
-        total_seconds += sets * (work_per_set + inter_rep_rest) + max(0, sets - 1) * rest_per_set
+        if ex.get("alt_sides"):
+            # B404: per prescribed set, RIGHT → side switch → LEFT; the set rest
+            # only between prescribed sets.
+            prescribed = sets // 2
+            between = prescribed * side_switch_seconds(rest_per_set) + max(0, prescribed - 1) * rest_per_set
+        else:
+            between = max(0, sets - 1) * rest_per_set
+        total_seconds += sets * (work_per_set + inter_rep_rest) + between
 
     # B338: one transition per GAP, so n exercises pay n−1.
     total_seconds += max(0, len(exercises) - 1) * TRANSITION_BETWEEN_EXERCISES_S

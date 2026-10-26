@@ -107,11 +107,14 @@ class TestComposeAdhocSession:
         home_ids = {e["exercise_id"] for e in home["exercises"]}
 
         gym_only = gym_ids - home_ids
-        assert gym_only, "la palestra deve attingere a esercizi impossibili a casa"
-        # e ognuno di quelli deve richiedere attrezzatura che a casa non c'è
-        for eid in gym_only:
-            req = set(cat[eid].get("equipment_required") or [])
-            assert req - {"pullup_bar"}, (eid, req)
+        # B404: "ognuno di quelli richiede attrezzatura che a casa non c'è" era
+        # di nuovo un'affermazione sul ranking: con il budget stimato giusto la
+        # palestra ha spazio anche per scapular_pullup (solo sbarra), che a casa
+        # perde il posto contro altro. L'invariante del nome resta: almeno un
+        # esercizio della palestra è impossibile a casa.
+        assert any(set(cat[eid].get("equipment_required") or []) - {"pullup_bar"} for eid in gym_only), (
+            "la palestra deve attingere a esercizi impossibili a casa", gym_only,
+        )
         # simmetria: nulla di scelto a casa può eccedere l'attrezzatura di casa
         for eid in home_ids:
             assert set(cat[eid].get("equipment_required") or []) <= {"pullup_bar"}, eid

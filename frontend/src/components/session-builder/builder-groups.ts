@@ -16,6 +16,8 @@
  * same exercises array as before.
  */
 
+import { sideSwitchSeconds } from "@/lib/alt-sides";
+
 export type BuilderGroup = "warmup" | "main" | "cooldown";
 
 export const GROUP_ORDER: readonly BuilderGroup[] = ["warmup", "main", "cooldown"];
@@ -85,6 +87,7 @@ interface DurationExercise {
   reps: number | null;
   work_seconds: number | null;
   rest_between_sets_seconds: number | null;
+  alt_sides?: boolean;
 }
 
 /** Estimated minutes (min 1) — mirrors the backend estimate. */
@@ -94,7 +97,10 @@ export function computeDuration(entries: Array<{ exercise: DurationExercise }>):
     const sets = ex.sets || 1;
     const workPerSet = ex.work_seconds ?? (ex.reps ? ex.reps * 4 : 30);
     const rest = ex.rest_between_sets_seconds ?? 60;
-    totalSeconds += sets * workPerSet + (sets - 1) * rest;
+    // B404: an alt_sides set is RIGHT + side switch + LEFT; the set rest only between sets.
+    totalSeconds += ex.alt_sides
+      ? sets * (2 * workPerSet + sideSwitchSeconds(rest)) + (sets - 1) * rest
+      : sets * workPerSet + (sets - 1) * rest;
   }
   return Math.max(1, Math.round(totalSeconds / 60));
 }

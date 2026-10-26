@@ -9,6 +9,7 @@ import { countdownTick, restOverCue, transitionBeep } from "@/lib/beep";
 import { speakPhaseTransition } from "@/lib/voice-cues";
 import { SoundToggle } from "@/components/guided/sound-toggle";
 import { OVERHOLD_CAP_S, OVERHOLD_TAP_LATENCY_S } from "@/lib/measured-feedback";
+import { isSideSwitch, restAfterSet } from "@/lib/alt-sides";
 import {
   PHASE_RING,
   PHASE_TEXT,
@@ -228,6 +229,10 @@ function ExerciseTimerImpl({
     ? currentSet % 2 === 1 ? "RIGHT" : "LEFT"
     : null;
   const displaySet = altSides ? Math.ceil(currentSet / 2) : currentSet;
+  // B404: rest after the set in progress (or just finished, during set_rest) —
+  // a short side switch after RIGHT, the full set rest after LEFT.
+  const setRestSeconds = restAfterSet(currentSet, altSides, restBetweenSetsSeconds);
+  const sideSwitch = isSideSwitch(currentSet, altSides);
 
   // Total duration for current phase (progress arc denominator)
   const totalForPhase = (() => {
@@ -236,7 +241,7 @@ function ExerciseTimerImpl({
       case "work": return workSeconds;
       case "overhold": return OVERHOLD_CAP_S;
       case "rep_rest": return restBetweenRepsSeconds;
-      case "set_rest": return restBetweenSetsSeconds;
+      case "set_rest": return setRestSeconds;
       default: return 0;
     }
   })();
@@ -441,11 +446,11 @@ function ExerciseTimerImpl({
             return;
           }
           // More sets — go to set rest
-          if (restBetweenSetsSeconds > 0) {
+          if (setRestSeconds > 0) {
             setPhase("set_rest");
             pendingVoiceCueRef.current = "set_rest";
             setTransitionId((id) => id + 1);
-            startCountdown(restBetweenSetsSeconds);
+            startCountdown(setRestSeconds);
             return;
           }
           // No set rest — next set directly (no get_ready between sets)
@@ -511,7 +516,7 @@ function ExerciseTimerImpl({
     }, 200);
 
     return clearTimer;
-  }, [phase, paused, currentSet, currentRep, sets, reps, totalSets, workSeconds, restBetweenRepsSeconds, restBetweenSetsSeconds, isManual, hasRepLoop, hasManualRepLoop, clearTimer, startCountdown, finishOverhold]);
+  }, [phase, paused, currentSet, currentRep, sets, reps, totalSets, workSeconds, restBetweenRepsSeconds, setRestSeconds, isManual, hasRepLoop, hasManualRepLoop, clearTimer, startCountdown, finishOverhold]);
 
   // Immediate recalc when PWA returns to foreground (iOS suspends setInterval in background).
   useEffect(() => {
@@ -563,9 +568,9 @@ function ExerciseTimerImpl({
     if (currentSet >= totalSets) {
       setPhase("complete");
       pendingVoiceCueRef.current = "complete";
-    } else if (restBetweenSetsSeconds > 0) {
+    } else if (setRestSeconds > 0) {
       setPhase("set_rest");
-      startCountdown(restBetweenSetsSeconds);
+      startCountdown(setRestSeconds);
       pendingVoiceCueRef.current = "set_rest";
     } else {
       setCurrentSet((s) => s + 1);
@@ -675,10 +680,10 @@ function ExerciseTimerImpl({
           setPhase("complete");
           pendingVoiceCueRef.current = "complete";
           setSecondsLeft(0);
-        } else if (restBetweenSetsSeconds > 0) {
+        } else if (setRestSeconds > 0) {
           setPhase("set_rest");
           pendingVoiceCueRef.current = "set_rest";
-          startCountdown(restBetweenSetsSeconds);
+          startCountdown(setRestSeconds);
         } else {
           setCurrentSet((s) => s + 1);
           setCurrentRep(1);
@@ -732,10 +737,13 @@ function ExerciseTimerImpl({
         setCurrentRep((r) => r - 1);
         setPhase("rep_rest");
         startCountdown(restBetweenRepsSeconds);
-      } else if (currentSet > 1 && restBetweenSetsSeconds > 0) {
-        // Go back to the set rest before this set
+      } else if (currentSet > 1 && restAfterSet(currentSet - 1, altSides, restBetweenSetsSeconds) > 0) {
+        // Go back to the set rest before this set. B404: during set_rest the
+        // counter holds the set just finished, so step it back — leaving it on
+        // this set made the rest's end skip straight past it.
+        setCurrentSet(currentSet - 1);
         setPhase("set_rest");
-        startCountdown(restBetweenSetsSeconds);
+        startCountdown(restAfterSet(currentSet - 1, altSides, restBetweenSetsSeconds));
       } else if (currentSet === 1 && !isManual) {
         // Go back to initial get_ready
         setPhase("get_ready");
@@ -803,7 +811,7 @@ function ExerciseTimerImpl({
   // B332 — copy for the held state: what the athlete has to tap to leave it.
   const overdueCta = (() => {
     if (phase === "rep_rest") return "Next rep";
-    if (phase === "set_rest") return currentSet >= totalSets ? "Finish" : "Next set";
+    if (phase === "set_rest") return currentSet >= totalSets ? "Finish" : sideSwitch ? "Next side" : "Next set";
     return "Done set"; // timed work that expired unwatched
   })();
   const overdueLabel = phase === "work" ? "TIME UP" : "REST OVER";
@@ -816,7 +824,7 @@ function ExerciseTimerImpl({
       case "work": return isManual ? (hasManualRepLoop ? "DO REP" : "DO SET") : "WORK";
       case "overhold": return "HOLD ON — TAP WHEN YOU LET GO";
       case "rep_rest": return "HOLD";
-      case "set_rest": return "REST";
+      case "set_rest": return sideSwitch ? "SWITCH SIDE" : "REST";
       case "complete": return "DONE";
       default: return "";
     }
@@ -1228,7 +1236,7 @@ function ExerciseTimerImpl({
                   {timeText}
                 </span>
                 <span className={cn("text-xs font-semibold uppercase tracking-wider mt-0.5", PHASE_TEXT.rest)}>
-                  Rest
+                  {sideSwitch ? "Switch side" : "Rest"}
                 </span>
                 {paused && <Pause className="size-5 text-muted-foreground mt-1" />}
               </>
