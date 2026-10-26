@@ -680,17 +680,17 @@ def step_grade_scaled(grade: str | None, letter_offset: int, scale: str) -> Opti
 
 
 # A292 (R6-PE): derived grade_ref for the lead power-endurance work.
-# The PE drills used to hang off `lead_max_os` alone, so a climber whose onsight
-# lags the redpoint by more than a letter and a half (Daniele: OS 7a+ declared,
-# RP 8a+) trained power endurance on terrain sized for a much weaker climber.
-# The anchor is max(OS, RP − 3 half grades); the catalog `grade_offset` is then
-# applied to it exactly as before. A climber whose OS is within 3 half grades
-# of the RP gets the same anchor as before (the OS), bit for bit.
+# B405 (Daniele, 2026-10-20): the anchor is the ONSIGHT, never above it. A292
+# took max(OS, RP − 3 half grades), and with OS 7b / RP 8a+ that put the PE
+# drills on 7b, his onsight limit, where the real threshold was 6b+–7a (06/10):
+# «8a+ è il mio grado super lavorato, bisogna guardare il massimo a vista».
+# RP − 3 half grades is left only as the fallback of an athlete with a redpoint
+# and no onsight. The catalog `grade_offset` is applied to the anchor as before.
 PE_ANCHOR_GRADE_REF = "lead_pe_anchor"
 # Untested athletes keep the pre-A292 anchor (and report it under this ref).
 PE_ANCHOR_UNTESTED_REF = "lead_max_os"
 # ENGINEERING CONSTANT (no published source; DECISIONS 2026-10-04, R6-PE):
-# 3 half grades below the redpoint is where the anchor stops following the OS.
+# the anchor of an athlete with a redpoint and no onsight.
 PE_ANCHOR_RP_HALF_STEPS = -3
 
 
@@ -710,19 +710,19 @@ def pe_anchor_applies(user_state: Dict[str, Any], on: Any) -> bool:
 
 
 def lead_pe_anchor(grades: Dict[str, Any]) -> Tuple[Optional[str], Optional[str]]:
-    """A292: the lead PE anchor and which grade produced it.
+    """A292 / B405: the lead PE anchor and which grade produced it.
 
     Returns ``(grade, source)`` with ``grade`` canonical uppercase French and
-    ``source`` ``"lead_max_os"`` or ``"lead_max_rp"``; ``(None, None)`` when
-    neither grade is on the ladder. A tie goes to the OS (no behaviour change).
+    ``source`` ``"lead_max_os"`` (the onsight, whenever there is one) or
+    ``"lead_max_rp"`` (RP − 3 half grades, only without an onsight);
+    ``(None, None)`` when neither grade is on the ladder.
     """
     grades = grades or {}
     os_grade = normalize_grade_on_scale(grades.get("lead_max_os"), "french")
+    if os_grade:
+        return os_grade, "lead_max_os"
     rp_grade = normalize_grade_on_scale(grades.get("lead_max_rp"), "french")
     rp_floor = step_grade_half(rp_grade, PE_ANCHOR_RP_HALF_STEPS, "french") if rp_grade else None
-    _, index = _GRADE_SCALES["french"]
-    if os_grade and (rp_floor is None or index[os_grade] >= index[rp_floor]):
-        return os_grade, "lead_max_os"
     if rp_floor:
         return rp_floor, "lead_max_rp"
     return None, None

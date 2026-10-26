@@ -256,7 +256,7 @@ The guided session is your in-gym companion. It walks you through every exercise
 **How it works:**
 
 - Each exercise is displayed one at a time with its full prescription: sets, reps, load, rest, grip type, tempo
-- **Timers** count down rest periods, hang times, and work intervals automatically
+- **Timers** count down rest periods, hang times, and work intervals automatically — also the rest between attempts of a single set (for example 7 attempts 3 minutes apart): tap **Done rep** after each attempt, the rest counts down, then **Next rep**
 - **Beeps** alert you at 3-2-1 before each work phase starts
 - **Voice cues** provide encouragement and phase transitions
 - **Mute**: the speaker button at the top of the guided session (and in the fullscreen timer) silences every beep and voice cue; the phone still vibrates. It stays muted on that device until you tap it again.
@@ -543,12 +543,11 @@ feedback agrees twice in a row (two *easy* or two *hard*), the remembered grade 
 by half a grade.
 
 **Power-endurance work on routes** (route intervals, linked laps, routes on the
-minute, threshold climbing) is anchored a little differently: to your onsight **or**
-to three half grades below your redpoint, whichever is harder. If your onsight is
-far behind your redpoint — a 7a+ onsight with an 8a+ redpoint — the intervals are
-sized from the redpoint side (7c, so one grade below is **7b**) instead of from an
-onsight that would make them too easy. If your onsight is within three half grades
-of your redpoint nothing changes. Aerobic laps and ARC still follow your onsight.
+minute, threshold climbing) is anchored to your **onsight**, never above it: with a
+7b onsight and an 8a+ redpoint, one grade below is **7a**. Your redpoint is a route
+you worked for many sessions, not a grade you can link laps on. Only if you have
+not entered an onsight do these drills start from three half grades below your
+redpoint. Aerobic laps and ARC follow your onsight too.
 
 A session you changed with the pencil keeps the exercises you chose, but its grade
 targets still follow these rules: from today on they are worked out again each time
@@ -767,7 +766,7 @@ When you change the plan yourself — quick-add, replan a day, move a session, a
 - **Finger gap** — two finger sessions closer than the recovery gap (48 hours, more with slower recovery), Sunday of the previous week included.
 - **Before a finger test** — finger-hard work in the 72 hours before a max hang test.
 - **Heavy pulling** — more than two heavy pulling days (weighted pull-ups at 85 % of your max or more) in 7 days.
-- **HIIT next to a max day** — HIIT on the day of, or the day before, a max finger or pulling session.
+- **HIIT next to a max day** — HIIT less than 24 hours before a max finger or pulling session, or on or less than 24 hours before a day at the crag. A lunch 4x4 the day before an evening max session (about 30 hours) is fine, and power endurance does not count as a max session.
 - **Hard-day cap** — more hard days in the week than your cap.
 - **Before a trip** — a hard session in the no-hard days before a trip.
 - **After an outdoor day** — a hard or finger session the day after a day at the crag.

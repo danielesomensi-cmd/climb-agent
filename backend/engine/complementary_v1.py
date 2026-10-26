@@ -21,9 +21,10 @@ location/gym and the slot's ``max_minutes`` against the catalog
 The pairing family ↔ slot is **adaptive**: it is chosen each week from the
 primaries actually placed, by minimum penalty, never by fixed weekday:
 
-- HIIT not on the same day as, nor the day before, a max day (finger-hard,
-  pulling-hard, test or ``intensity: max`` session) or an outdoor day (an
-  outdoor slot, the day-level outdoor block of the plan, a trip departure);
+- HIIT not within the 24 h before a max session (``stimulus.is_max_for_hiit``,
+  test or ``intensity: max`` session — power endurance is not one), nor on or
+  within the 24 h before an outdoor day (an outdoor slot, the day-level outdoor
+  block of the plan, a trip departure) — B405, ``hiit_too_close``;
 - at most one HIIT per week (``is_hiit_like``: the catalog ``tags.hiit``, the
   ``conditioning_hiit`` exercises, the name regex only for legacy customs). HIIT
   is ``hard: False`` in the catalog: it never consumes the hard-day cap;
@@ -101,6 +102,23 @@ SLOT_HOUR: Dict[str, int] = {"morning": 8, "lunch": 13, "evening": 19}
 OUTDOOR_START_HOUR = 8
 BICEPS_WINDOW_H = 24
 LEGS_WINDOW_H = 48
+#: B405 — HIIT before a max in hours, not calendar days. Panissa et al. 2016
+#: (Front Physiol 7:81, n = 9, half-squat after a 5-km HIIE): strength −31 % at
+#: 30 min and −19 % at 1 h, no decline reported at 4, 8 or 24 h. A lunch 4x4 the
+#: day before an evening max (~30 h) is clean; a max earlier the same day is
+#: already behind the HIIT.
+HIIT_BEFORE_MAX_H = 24
+
+
+def hiit_too_close(hiit_t: int, event_t: int, *, outdoor: bool = False) -> bool:
+    """B405: a max session (or crag day) starts less than ``HIIT_BEFORE_MAX_H`` after the HIIT.
+
+    Both times on the same clock (``day * 24 + SLOT_HOUR``). A crag day counts
+    from ``OUTDOOR_START_HOUR`` and for its whole day.
+    """
+    if outdoor and hiit_t // 24 == event_t // 24:
+        return True
+    return 0 <= event_t - hiit_t < HIIT_BEFORE_MAX_H
 
 PENALTY_RULE = 100
 PENALTY_NO_SESSION = 1000
@@ -259,7 +277,7 @@ def _is_outdoor_day(day: Mapping[str, Any]) -> bool:
 def _session_kinds(s: Mapping[str, Any]) -> set:
     from backend.engine.stimulus import (
         FAMILY_LIMIT_POWER,
-        is_finger_hard_session,
+        is_max_for_hiit,
         is_pulling_hard_session,
         is_test_session,
         session_flag,
@@ -269,7 +287,7 @@ def _session_kinds(s: Mapping[str, Any]) -> set:
     stimuli = session_stimuli(s)
     max_intensity = s.get("intensity") == "max"
     kinds = set()
-    if is_finger_hard_session(s) or is_pulling_hard_session(s) or is_test_session(s) or max_intensity:
+    if is_max_for_hiit(s) or is_test_session(s) or max_intensity:
         kinds.add("max")
     if is_pulling_hard_session(s):
         kinds.add("heavy_pull")
@@ -366,7 +384,9 @@ def _session_violations(
     if hiit:
         # An outdoor day is a max day for HIIT: Friday lunch HIIT before a
         # Saturday at the crag is exactly what the rule is for.
-        hits = [e for e in events if e["kinds"] & {"max", "outdoor"} and e["offset"] in (offset, offset + 1)]
+        hits = [e for e in events
+                if ("max" in e["kinds"] and hiit_too_close(t, e["t"]))
+                or ("outdoor" in e["kinds"] and hiit_too_close(t, e["t"], outdoor=True))]
         if hits:
             out.append({"code": "hiit_near_max",
                         "with": [f"{e['date']} {e['session_id'] or 'outdoor'}" for e in hits]})

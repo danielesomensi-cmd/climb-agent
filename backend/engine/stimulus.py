@@ -516,6 +516,16 @@ def is_pulling_hard_session(session: Mapping[str, Any]) -> bool:
     return FAMILY_PULLING_MAX in session_stimuli(session)
 
 
+def is_max_for_hiit(session: Mapping[str, Any]) -> bool:
+    """A max session a HIIT must not come right before (B405): finger-hard or pulling max.
+
+    Not ``is_pulling_hard_session``: its ``pulling + hard`` label also catches
+    ``power_endurance_gym`` (intensity high, no max stimulus), and with power
+    endurance twice a week that left the 4x4 one free lunch (Daniele, 25/10).
+    """
+    return is_finger_hard_session(session) or FAMILY_PULLING_MAX in session_stimuli(session)
+
+
 # ---------------------------------------------------------------------------
 # Week-plan iteration
 # ---------------------------------------------------------------------------

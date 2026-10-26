@@ -474,8 +474,10 @@ Canonical values:
 - `boulder_max_os` — `assessment.grades.boulder_max_os` (max boulder onsight)
 - `lead_max_os` — `assessment.grades.lead_max_os` (max lead onsight)
 - `lead_max_rp` — `assessment.grades.lead_max_rp` (max lead redpoint)
-- `lead_pe_anchor` — **derived, not stored** (A292, R6-PE): `max(lead_max_os, lead_max_rp − 3 half grades)`
+- `lead_pe_anchor` — **derived, not stored** (A292, R6-PE; B405): `lead_max_os` whenever there is one (never
+  above the onsight — Daniele, 2026-10-20); `lead_max_rp − 3 half grades` only for an athlete with no onsight
   (`progression_v1.lead_pe_anchor`, constant `PE_ANCHOR_RP_HALF_STEPS = −3`, an engineering constant).
+  A292 took `max(OS, RP − 3)`, which put Daniele's PE drills on his onsight limit.
   **Tested athletes only** (`progression_v1.pe_anchor_applies`: tested official max < 90 days on fingers
   or pulling, the A290 gate); an untested athlete gets `lead_max_os` and the output reports `grade_ref:
   "lead_max_os"`, exactly as before A292.

@@ -7,7 +7,8 @@ off, mornings off, lunches Tue–Fri at the Work gym (weights + cable + treadmil
 phase in the evenings and fill the lunches itself with a rotation of focus
 families (legs, HIIT, Z2, push + arms), paired to the days by penalties:
 
-- HIIT never the same day as, nor the day before, a max day; at most one a week;
+- HIIT never less than 24 h before a max session (B405: hours, not calendar
+  days; power endurance is not a max session); at most one a week;
   HIIT does not consume the hard-day cap;
 - biceps not within 24 h before a heavy pull;
 - legs not within 48 h before a limit session or an outdoor day;
@@ -43,6 +44,7 @@ from backend.engine.planner_v2 import (
 )
 from backend.engine.stimulus import (
     FAMILY_LIMIT_POWER,
+    FAMILY_PULLING_MAX,
     is_finger_hard_session,
     is_hiit_like,
     is_hiit_session,
@@ -143,13 +145,15 @@ def rule_violations(wp):
             t = i * 24 + SLOT_H[s["slot"]]
             sid = s["session_id"]
             if is_hiit_session(s):
-                for j, _te, e in ev:
-                    if j in (i, i + 1) and (is_finger_hard_session(e) or is_pulling_hard_session(e)
-                                            or is_test_session(e) or e.get("intensity") == "max"):
+                # B405: a max session starting less than 24 h after the HIIT.
+                for _j, te, e in ev:
+                    if 0 <= te - t < 24 and (is_finger_hard_session(e) or FAMILY_PULLING_MAX in session_stimuli(e)
+                                             or is_test_session(e) or e.get("intensity") == "max"):
                         bad.append(("hiit", d["date"], e["session_id"]))
-                # An outdoor day counts as a max day for HIIT.
+                # An outdoor day counts as a max day for HIIT: its whole day, from 08:00.
                 for j in (i, i + 1):
-                    if j < len(days_of(wp)) and days_of(wp)[j].get("outdoor_slot"):
+                    if j < len(days_of(wp)) and days_of(wp)[j].get("outdoor_slot") and \
+                            (j == i or 0 <= j * 24 + 8 - t < 24):
                         bad.append(("hiit", d["date"], "outdoor"))
             if sid in cv.BICEPS_SESSIONS:
                 for _j, te, e in ev:
@@ -256,12 +260,18 @@ class TestDanieleStructure:
 
 class TestRules:
     def test_unavoidable_violation_is_reported_not_dropped(self):
-        """Performance: limit Thu evening and Sat evening, projecting Mon — no
-        pairing satisfies all four families; the least penalised is used and
-        the violation is an alert."""
-        wp = plan("performance")
-        lunches = [s for d in days_of(wp) for s in d["sessions"] if s["slot"] == "lunch"]
-        assert len(lunches) == 4
+        """Performance: limit Thu evening, and the only lunch is Thursday's with
+        a HIIT-only rotation — a lunch HIIT ~6 h before the evening limit cannot
+        be avoided; it is placed all the same and the violation is an alert.
+        (Before B405 the full Daniele week had no clean pairing; with the 24 h
+        window it has one: HIIT Wed lunch, ~30 h before the Thursday limit.)"""
+        assert rule_violations(plan("performance")) == []
+        av = daniele_availability()
+        for wd in ("tue", "wed", "fri"):
+            av[wd]["lunch"] = {"available": False}
+        wp = plan("performance", availability=av, prefs={**PREFS, "complementary_rotation": ["hiit"]})
+        lunches = [(d["weekday"], s.get("focus")) for d in days_of(wp) for s in d["sessions"] if s["slot"] == "lunch"]
+        assert lunches == [("thu", "hiit")]
         assert len(wp["secondary_warnings"]) >= 1
         w = wp["secondary_warnings"][0]
         assert {"date", "slot", "session_id", "focus", "code", "with"} <= set(w)
@@ -718,36 +728,40 @@ class TestUserWeek:
         assert [s for d in days_of(merged) if d["weekday"] == "fri" for s in d["sessions"]
                 if s["slot"] == "lunch"] == [CUSTOM_HIIT]
         assert new["unmet_secondary"] == []
-        # Saturday is strength_long (max): the user's HIIT is alerted, not moved.
-        assert any(w["code"] == "hiit_near_max" and w["session_id"] == "custom_abc"
-                   for w in new["secondary_warnings"])
+        # Saturday evening is strength_long (max), ~30 h after the Friday lunch:
+        # clean since B405 (24 h window), and the user's HIIT is not moved.
+        assert not any(w["code"] == "hiit_near_max" and w["session_id"] == "custom_abc"
+                       for w in new["secondary_warnings"])
 
     @pytest.mark.parametrize("off", ("mon", "wed", "thu", "sat", "sun"))
     def test_removed_lunch_stays_removed_when_the_pairing_shifts(self, off):
         old = plan("strength_power")
-        assert ("tue", "treadmill_hiit_4x4", None) in _lunches(old)
-        after = apply_events(old, [{"event_type": "remove_session", "date": "2026-10-13",
+        assert ("wed", "treadmill_hiit_4x4", None) in _lunches(old)
+        after = apply_events(old, [{"event_type": "remove_session", "date": "2026-10-14",
                                     "session_ref": "treadmill_hiit_4x4", "slot": "lunch"}])
         av = daniele_availability()
         av[off]["evening"] = {"available": False}
         _new, merged = _regen("strength_power", after, "2026-10-12", availability=av)
         lun = _lunches(merged)
-        assert "tue" not in [wd for wd, *_ in lun]  # the slot stays empty
+        assert "wed" not in [wd for wd, *_ in lun]  # the slot stays empty
         assert _hiit_count(merged) == 0  # and HIIT does not come back elsewhere
         assert len(lun) == 3
 
     def test_user_custom_max_is_seen_by_the_pairing(self):
-        """A custom max hang on Thursday evening (B369 puts it back after the
-        pairing): the HIIT must not be paired with it."""
-        old = plan("power_endurance")
+        """A custom max hang on Tuesday evening (B369 puts it back after the
+        pairing): the HIIT, which would otherwise take the Tuesday lunch, must
+        not sit ~6 h before it (B405: the Wednesday lunch is fine)."""
+        prefs = {**PREFS, "complementary_rotation": ["hiit", "legs", "z2", "upper_push_arms"]}
+        old = plan("power_endurance", prefs=prefs)
+        assert ("tue", "treadmill_hiit_4x4", None) in _lunches(old)
         for d in days_of(old):
-            if d["weekday"] == "thu":
+            if d["weekday"] == "tue":
                 d["sessions"] = [s for s in d["sessions"] if s["slot"] != "evening"] + [{
                     "slot": "evening", "session_id": "custom_maxhang", "is_custom": True, "name": "Max hang",
                     "intensity": "max", "tags": {"hard": True, "finger": True}}]
-        new, merged = _regen("power_endurance", old, "2026-10-12")
+        new, merged = _regen("power_endurance", old, "2026-10-12", prefs=prefs)
         hiit_day = [wd for wd, sid, _ in _lunches(merged) if sid == "treadmill_hiit_4x4"]
-        assert hiit_day and hiit_day[0] not in ("wed", "thu")
+        assert hiit_day and hiit_day[0] != "tue"
         assert new["secondary_warnings"] == []
 
     def test_outdoor_day_from_the_plan_counts(self):
@@ -766,7 +780,7 @@ class TestUserWeek:
 
     @pytest.mark.parametrize("how", ("skipped", "removed"))
     def test_skipped_or_removed_past_lunch_is_not_replanned(self, how):
-        old = plan("strength_power")
+        old = plan("power_endurance")
         assert ("tue", "treadmill_hiit_4x4", None) in _lunches(old)
         if how == "skipped":
             ex = apply_events(old, [{"event_type": "mark_skipped", "date": "2026-10-13",
@@ -774,7 +788,7 @@ class TestUserWeek:
         else:
             ex = apply_events(old, [{"event_type": "remove_session", "date": "2026-10-13",
                                      "session_ref": "treadmill_hiit_4x4", "slot": "lunch"}])
-        new, merged = _regen("strength_power", ex, "2026-10-14")
+        new, merged = _regen("power_endurance", ex, "2026-10-14")
         fut = [sid for wd, sid, _ in _lunches(new)]
         assert "treadmill_hiit_4x4" not in fut
         assert sorted(cv.family_of({"session_id": x}) for x in fut) == ["legs", "upper_push_arms", "z2"]
@@ -846,8 +860,9 @@ class TestBeyondTheWeek:
             av[d]["lunch"] = {"available": False}
         av["sun"]["lunch"] = dict(av["fri"]["lunch"])
         prefs = {**PREFS, "complementary_rotation": ["z2", "hiit"]}
+        # B405: a morning max, ~19 h after the Sunday lunch (an evening one is ~30 h: clean).
         nxt = {"start_date": "2026-10-19", "weeks": [{"days": [{"date": "2026-10-19", "weekday": "mon", "sessions": [
-            {"slot": "evening", "session_id": "strength_long", "intensity": "max",
+            {"slot": "morning", "session_id": "strength_long", "intensity": "max",
              "tags": {"hard": True, "finger": True}}]}]}]}
         wp = plan("base", av, prefs, next_week_plan=nxt)
         by_day = {wd: sid for wd, sid, _ in _lunches(wp)}
@@ -874,16 +889,16 @@ class TestAlertsAfterEdits:
         hiit = next((d, s) for d in days_of(wp) for s in d["sessions"] if is_hiit_like(s))
         i = days_of(wp).index(hiit[0])
         src = next(d for d in days_of(wp) for s in d["sessions"] if s.get("intensity") == "max")
-        target = days_of(wp)[i + 1]
+        target = days_of(wp)[i]  # B405: the evening of the HIIT day (the next evening is ~30 h: clean)
         moved = apply_events(wp, [{"event_type": "move_session", "from_date": src["date"], "from_slot": "evening",
                                    "to_date": target["date"], "to_slot": "evening"}])
         state = {"availability": daniele_availability(), "equipment": {"gyms": GYMS}, "trips": []}
         cv.refresh_secondary_warnings(moved, state)
         assert any(w["code"] == "hiit_near_max" and w["date"] == hiit[0]["date"]
                    for w in moved["secondary_warnings"])
-        # The engine did not touch anything: an alert only.
-        assert [s["session_id"] for s in hiit[0]["sessions"]] == \
-            [s["session_id"] for s in days_of(moved)[i]["sessions"]]
+        # The engine did not touch the HIIT: an alert only.
+        assert [s["session_id"] for s in hiit[0]["sessions"] if s["slot"] == "lunch"] == \
+            [s["session_id"] for s in days_of(moved)[i]["sessions"] if s["slot"] == "lunch"]
 
     def test_refresh_is_a_noop_without_the_key(self):
         wp = plan("strength_power", daniele_availability(lunch_role=None, max_minutes=None))

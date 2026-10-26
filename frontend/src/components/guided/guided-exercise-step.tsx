@@ -43,6 +43,19 @@ function formatRest(seconds: number): string {
   return m > 0 ? (s > 0 ? `${m}:${String(s).padStart(2, "0")}` : `${m}:00`) : `${s}s`;
 }
 
+/**
+ * The exercise timer is shown for timed work, for several sets with rest
+ * between them and (B405) for reps with timed rest between them — one set of
+ * `three_attempt_comp` is 7 attempts 3 min apart and had no timer at all.
+ */
+export function hasExerciseTimer(p: GuidedExercise["prescription"]): boolean {
+  return (
+    (p.workSeconds ?? 0) > 0 ||
+    ((p.sets ?? 1) > 1 && (p.restSeconds ?? 0) > 0) ||
+    (typeof p.reps === "number" && p.reps > 1 && (p.restBetweenRepsSeconds ?? 0) > 0)
+  );
+}
+
 export function formatPrescription(ex: GuidedExercise): string[] {
   const lines: string[] = [];
   const p = ex.prescription;
@@ -347,11 +360,7 @@ export function GuidedExerciseStep({
   const detailLines = prescriptionLines
     .slice(1)
     .filter((line) => !(heroShowsPrescribedLoad && line.startsWith("Load: ")));
-  const showTimer =
-    !isTestMeasurement &&
-    !isUnilateralTestMeasurement &&
-    (((exercise.prescription.workSeconds ?? 0) > 0) ||
-      ((exercise.prescription.sets ?? 1) > 1 && (exercise.prescription.restSeconds ?? 0) > 0));
+  const showTimer = !isTestMeasurement && !isUnilateralTestMeasurement && hasExerciseTimer(exercise.prescription);
   const cueCount = exercise.cues?.length ?? 0;
   const hasHowTo = cueCount > 0 || !!exercise.prescription.notes || !!exercise.videoUrl;
   const isAlreadyDone = exercise.status === "done";
@@ -592,7 +601,7 @@ export function GuidedExerciseStep({
           <p className="text-xs text-muted-foreground">Set your max heart rate in Settings to see these in bpm.</p>
         )}
 
-        {/* Exercise timer — shown for timed exercises AND multi-set rep-based exercises */}
+        {/* Exercise timer — timed work, multi-set rest, or rest between reps (hasExerciseTimer) */}
         {showTimer && (
           <ExerciseTimer
             workSeconds={exercise.prescription.workSeconds ?? 0}

@@ -35,7 +35,7 @@ python scripts/athlete_context.py --date YYYY-MM-DD                        # se 
 - **Guardie** (sezione «Guardie», giorno per giorno). Ogni riga deve rispettare:
   - `NO dita max` → niente hang massimali, limit, campus o tasche dure quel giorno. Lavoro dita solo se il giorno è **già** dita-hard e la riga va dentro quella seduta. La riga tiene conto anche dello spacing del replanner (sessioni con tag dita entro `ceil(recovery_multiplier)` giorni, finger_maintenance compresa), del cap hard della settimana e del deload;
   - `NO tirata ≥85%` → niente trazione zavorrata pesante né front lever (finestra mobile di 7 giorni, giorni già pianificati compresi; vale anche il giorno prima di limit/strength_long);
-  - `NO HIIT` → niente HIIT lo stesso giorno o il giorno prima di una sessione max;
+  - `NO HIIT` → niente HIIT a pranzo meno di 24 h prima di una sessione max (dita-hard o trazione max; la power endurance non conta) o di un giorno in falesia (B405). Un 4x4 a pranzo il giorno prima di una max la sera (~30 h) va bene;
   - giorni hard della settimana rispetto al cap (in deload il cap può essere 0).
   - Avvisi `HIIT_ON_GUARD_DAY` / `WORK_RECURRENCE_PHASE_CHANGE`: le ricorrenze «Work —» di Daniele vanno riviste (spostate o rese Z2) e proposte a lui, non ignorate.
   - Avviso `STALE_CUSTOM_TAGS` (B395): una custom ancora da fare ha i tag salvati con regole vecchie (es. `finger` True→False), quindi guardie e spacing leggono un dato falso. Proponi a Daniele di riallinearla: `remove_session` + `add_custom_session` sulla stessa data/slot via `/api/replanner/events`, dry run prima (deve cambiare solo quel tag), poi scrittura con il suo OK.

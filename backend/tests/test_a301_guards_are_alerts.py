@@ -140,11 +140,18 @@ class TestEvaluate:
         assert [(w["date"], w["count"], w["limit"]) for w in alerts] == [(_d(5), 3, 2)]
 
     def test_hiit_near_max(self):
-        plan = _plan({2: [_sess(HIIT, slot="lunch")], 3: [_sess(FINGER)]})
+        # B405: less than 24 h before the max. Evening HIIT, next-morning max: ~13 h.
+        plan = _plan({2: [_sess(HIIT)], 3: [_sess(FINGER, slot="morning")]})
         assert _codes(guards_v1.evaluate(plan)) == [("hiit_near_max", _d(2), HIIT)]
         # same day, max in the evening
         plan = _plan({3: [_sess(HIIT, slot="lunch"), _sess(LIMIT)]})
         assert _codes(guards_v1.evaluate(plan)) == [("hiit_near_max", _d(3), HIIT)]
+        # lunch HIIT, max the next evening (~30 h): fine since B405
+        assert guards_v1.evaluate(_plan({2: [_sess(HIIT, slot="lunch")], 3: [_sess(FINGER)]})) == []
+        # the max earlier the same day is behind the HIIT: fine
+        assert guards_v1.evaluate(_plan({3: [_sess(FINGER, slot="morning"), _sess(HIIT, slot="lunch")]})) == []
+        # power endurance is not a max session for HIIT (pulling + hard, intensity high)
+        assert guards_v1.evaluate(_plan({3: [_sess(HIIT, slot="lunch"), _sess(HARD)]})) == []
         # two days before: fine
         assert guards_v1.evaluate(_plan({1: [_sess(HIIT, slot="lunch")], 3: [_sess(FINGER)]})) == []
 

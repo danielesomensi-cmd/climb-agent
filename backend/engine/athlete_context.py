@@ -74,6 +74,7 @@ from backend.engine.stimulus import (
     finger_hard_days,
     is_finger_hard_session,
     is_hiit_like,
+    is_max_for_hiit,
     is_test_session,
     iter_plan_days,
     iter_plan_sessions,
@@ -541,7 +542,9 @@ def _guards(
     tagged ``finger`` within ``ceil(recovery_multiplier)`` days — a max-hang
     custom next to a finger_maintenance would downgrade it. Heavy pulling: every
     rolling 7-day window that contains the day, past AND planned days. Both also
-    respect the week's hard cap (0 in deload) and the deload phase.
+    respect the week's hard cap (0 in deload) and the deload phase. HIIT (B405):
+    a lunch HIIT is not ok less than 24 h before a max session
+    (``stimulus.is_max_for_hiit``) or on / within 24 h before a crag day.
 
     B372: an outdoor day that counts (``stimulus.outdoor_fatigue_days`` —
     planned, logged hard, big load, or completed without a route log) is a
@@ -583,11 +586,20 @@ def _guards(
         if d.isoformat() in outdoor:
             finger_tagged.setdefault(d.isoformat(), []).append(outdoor[d.isoformat()]["reason"])
 
-    def max_day(d: date) -> bool:
-        if d.isoformat() in outdoor:
-            return True
-        return any(is_finger_hard_session(s) or (session_flag(s, "pulling") and session_flag(s, "hard"))
-                   for s in sessions_on(d))
+    def hiit_blockers(d: date) -> List[str]:
+        """B405: the max sessions / crag days a lunch HIIT on *d* would sit less than 24 h before."""
+        from backend.engine.complementary_v1 import OUTDOOR_START_HOUR, SLOT_HOUR, hiit_too_close
+
+        t = d.toordinal() * 24 + SLOT_HOUR["lunch"]
+        out: List[str] = []
+        for x in (d, d + timedelta(days=1)):
+            x_iso = x.isoformat()
+            if x_iso in outdoor and hiit_too_close(t, x.toordinal() * 24 + OUTDOOR_START_HOUR, outdoor=True):
+                out.append(f"{x_iso} {outdoor[x_iso]['reason']}")
+            out.extend(f"{x_iso} {s.get('session_id')}" for s in sessions_on(x)
+                       if is_max_for_hiit(s)
+                       and hiit_too_close(t, x.toordinal() * 24 + SLOT_HOUR.get(str(s.get("slot")), 19)))
+        return out
 
     def pre_limit(d: date) -> List[str]:
         out = []
@@ -692,9 +704,10 @@ def _guards(
         codes_pull.extend(codes_common)
         reasons_hiit: List[str] = []
         codes_hiit: List[Dict[str, str]] = []
-        if max_day(d) or max_day(d + timedelta(days=1)):
-            reasons_hiit.append("sessione max lo stesso giorno o il giorno dopo")
-            codes_hiit.append({"code": "max_session_adjacent", "detail": ""})
+        blockers = hiit_blockers(d)
+        if blockers:
+            reasons_hiit.append(f"sessione max meno di 24 h dopo un HIIT a pranzo: {', '.join(blockers)}")
+            codes_hiit.append({"code": "max_session_adjacent", "detail": ", ".join(blockers)})
         rows.append({
             "date": d_iso,
             "weekday": d.strftime("%a").lower(),
@@ -1786,7 +1799,7 @@ _GUARD_EN = {
     "pull_test_soon": "pull-up test within " + str(PULL_TEST_BLOCK_H) + " h ({detail})",
     "deload": "deload phase",
     "hard_cap": "weekly hard-day cap reached ({detail})",
-    "max_session_adjacent": "max session the same day or the next",
+    "max_session_adjacent": "max session less than 24 h after a lunch HIIT ({detail})",
 }
 
 _AXIS_EN = {AXIS_FINGER: "fingers", AXIS_PULLING: "pulling"}

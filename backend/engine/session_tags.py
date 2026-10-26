@@ -41,6 +41,13 @@ the first draft of this module got it wrong:
   the core-and-legs work the way a coach would. It remains a tunable threshold,
   not a measurement.
 
+B405: the finger-hard ids of ``stimulus`` (``FINGER_FATIGUE_EXTRA_IDS``: 10 s and
+min-edge max hangs; ``FINGER_HARD_LIBRARY_IDS``: ``three_attempt_comp``) make
+the session ``finger`` AND ``hard`` on their own, whatever their pattern or
+intensity level. ``is_finger_hard_session`` already counted them, the stored
+tags did not: a try-hard custom built on ``three_attempt_comp`` came out
+``{hard: False, finger: False}`` and was invisible to the 48 h finger gap.
+
 Deliberately EXCLUDED from the finger set: ``finger_extension``,
 ``tendon_glide``, ``grip_transition`` and the ``prehab_finger`` domain. The 48h
 gap exists to space **flexor** loading; extensor bands and tendon glides are
@@ -52,6 +59,8 @@ following day for nothing.
 from __future__ import annotations
 
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+
+from backend.engine.stimulus import FINGER_FATIGUE_EXTRA_IDS, FINGER_HARD_LIBRARY_IDS
 
 # Ordered weakest → strongest. Shared with planner_v2's intensity vocabulary.
 INTENSITY_ORDER: List[str] = ["low", "medium", "high", "max"]
@@ -70,6 +79,9 @@ _FINGER_LOAD_PATTERNS = frozenset({
     "hang",
     "climbing_limit_boulder",
 })
+
+# B405: exercises that are finger-hard by themselves (see the module docstring).
+_FINGER_HARD_IDS = frozenset(FINGER_FATIGUE_EXTRA_IDS) | frozenset(FINGER_HARD_LIBRARY_IDS)
 
 # Exercise domains that count as finger loading even if the pattern is unusual.
 # `prehab_finger` is NOT here on purpose — see the module docstring.
@@ -148,6 +160,7 @@ def derive_session_tags(
     """
     cat = catalog if catalog is not None else _catalog()
     finger = False
+    finger_hard = False
     n_max = 0
     n_high = 0
     n_medium = 0
@@ -155,9 +168,12 @@ def derive_session_tags(
     for ex in exercises or []:
         if not isinstance(ex, dict):
             continue
-        entry = cat.get(str(ex.get("exercise_id") or ""))
+        eid = str(ex.get("exercise_id") or "")
+        entry = cat.get(eid)
         if not entry:
             continue
+        if eid in _FINGER_HARD_IDS:
+            finger = finger_hard = True
         patterns = _patterns_of(entry)
         domains = [str(d) for d in (entry.get("domain") or [])]
         if not _is_light_warmup(entry) and (
@@ -173,7 +189,7 @@ def derive_session_tags(
         elif level == "medium":
             n_medium += 1
 
-    hard = n_max > 0 or n_high >= _HIGH_COUNT_FOR_HARD
+    hard = finger_hard or n_max > 0 or n_high >= _HIGH_COUNT_FOR_HARD
 
     # Keep the catalog's invariant: hard ⇔ intensity in {high, max}. Reporting a
     # "high" intensity on a session the cap treats as easy (or the reverse)

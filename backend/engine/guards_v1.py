@@ -34,9 +34,11 @@ Codes (one warning per flagged session):
 - ``heavy_pull_7d`` — more than ``athlete_context.HEAVY_PULL_MAX_PER_7D``
   heavy-pull days (≥ 85 % 1RM weighted pulls, A294 definition) in a rolling
   7-day window.
-- ``hiit_near_max`` — a HIIT session (``stimulus.is_hiit_like``) on the day of,
-  or the day before, a max day (finger-hard, or pulling + hard) — the
-  ``athlete_context`` ``hiit_ok`` rule.
+- ``hiit_near_max`` — a HIIT session (``stimulus.is_hiit_like``) less than 24 h
+  before a max session (``stimulus.is_max_for_hiit``: finger-hard or pulling
+  max — power endurance is not one) or on / within 24 h before a crag day
+  (B405, ``complementary_v1.hiit_too_close``) — the ``athlete_context``
+  ``hiit_ok`` rule.
 - ``hard_cap`` — the week holds more hard days than its cap
   (``_counts_as_hard``: done counts, skipped does not). Flagged on the days
   past the cap, the ones ``_enforce_caps`` would downshift.
@@ -70,7 +72,7 @@ is a hard, finger-loading day for every guard: ``finger_gap`` (both ways — the
 session before a crag day is flagged too, since the crag day itself carries no
 session to flag; the day right after is ``post_outdoor``'s), ``finger_test_72h``
 (a crag day within 72 h before a finger test flags the test; the test the day
-after is ``post_outdoor``'s), ``hiit_near_max`` (HIIT on, or the day before, a
+after is ``post_outdoor``'s), ``hiit_near_max`` (HIIT on, or within 24 h before, a
 crag day), ``hard_cap`` (the crag day is one of the week's hard days; when it
 is past the cap the latest hard session is flagged), ``hard_back_to_back`` (a
 hard non-finger session the day before a crag day) and ``post_outdoor``. A
@@ -90,6 +92,7 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 from backend.engine.stimulus import (
     is_finger_hard_session,
     is_hiit_like,
+    is_max_for_hiit,
     is_test_session,
     session_flag,
 )
@@ -389,26 +392,38 @@ def _heavy_pull(tl: _Timeline, em: _Emitter, state: Mapping[str, Any], max_per_7
 
 
 def _is_max(s: Mapping[str, Any]) -> bool:
-    return is_finger_hard_session(s) or (session_flag(s, "pulling") and session_flag(s, "hard"))
+    return is_max_for_hiit(s)
+
+
+def _clock(d: date, slot: Any, default_hour: int) -> int:
+    from backend.engine.complementary_v1 import SLOT_HOUR
+
+    return d.toordinal() * 24 + SLOT_HOUR.get(str(slot), default_hour)
 
 
 def _hiit_near_max(tl: _Timeline, em: _Emitter) -> None:
+    from backend.engine.complementary_v1 import OUTDOOR_START_HOUR, hiit_too_close
+
     for d_iso in tl.plan_dates:
         d = _parse(d_iso)
         for h in tl.on(d):
             if not is_hiit_like(h):
                 continue
+            # B405: a max session starting less than 24 h after the HIIT.
+            t = _clock(d, h.get("slot"), 13)
             maxes = [_ref(x.isoformat(), s) for x in (d, d + timedelta(days=1))
-                     for s in tl.on(x) if s is not h and not is_hiit_like(s) and _is_max(s)]
+                     for s in tl.on(x) if s is not h and not is_hiit_like(s) and _is_max(s)
+                     and hiit_too_close(t, _clock(x, s.get("slot"), 19))]
             # B372: a crag day is a max day for HIIT (as in complementary_v1).
-            crag = [o for o in (tl.outdoor_on(x) for x in (d, d + timedelta(days=1))) if o]
+            crag = [tl.outdoor_on(x) for x in (d, d + timedelta(days=1))
+                    if tl.outdoor_on(x) and hiit_too_close(t, x.toordinal() * 24 + OUTDOOR_START_HOUR, outdoor=True)]
             if not maxes and not crag:
                 continue
             if maxes:
-                msg = (f"{_label(h)} on {d_iso} is HIIT on the day of, or the day before, a max session "
+                msg = (f"{_label(h)} on {d_iso} is HIIT less than 24 h before a max session "
                        f"({maxes[0]['session_id']} on {maxes[0]['date']}).")
             else:
-                msg = f"{_label(h)} on {d_iso} is HIIT on the day of, or the day before, {_outdoor_label(crag[0])}."
+                msg = f"{_label(h)} on {d_iso} is HIIT on, or less than 24 h before, {_outdoor_label(crag[0])}."
             extra = {"outdoor": _outdoor_info(crag[0])} if crag else {}
             if em.flaggable(d_iso, h):
                 em.emit(CODE_HIIT_NEAR_MAX, d_iso, h, maxes + [_outdoor_ref(o["date"]) for o in crag], msg, **extra)

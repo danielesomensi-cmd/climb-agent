@@ -1,7 +1,8 @@
-"""A292 (R6-PE) — lead power-endurance drills anchored to max(OS, RP − 3 half grades).
+"""A292 (R6-PE) / B405 — lead power-endurance drills anchored to the onsight.
 
-A climber whose onsight is within 3 half grades of the redpoint gets exactly the
-targets of before (the OS stays the anchor); only a wide OS/RP gap moves them.
+A292 took max(OS, RP − 3 half grades); B405 (Daniele, 2026-10-20) puts the
+anchor back on the onsight, never above it. RP − 3 half grades is left only for
+an athlete with a redpoint and no onsight.
 """
 
 from __future__ import annotations
@@ -75,11 +76,11 @@ def test_catalog_pe_drills_use_the_derived_anchor_aerobic_stays_on_os():
 
 
 @pytest.mark.parametrize("os_,rp,expected", [
-    ("7a+", "8a+", ("7C", "lead_max_rp")),   # Daniele today: RP − 3 = 7c beats 7a+
-    ("7b", "8a+", ("7C", "lead_max_rp")),    # after the onsight confirmation
+    ("7a+", "8a+", ("7A+", "lead_max_os")),  # wide gap: the OS all the same (B405)
+    ("7b", "8a+", ("7B", "lead_max_os")),    # Daniele today
     ("7a", "7b", ("7A", "lead_max_os")),     # narrow gap: the OS, as before
-    ("7a", "7b+", ("7A", "lead_max_os")),    # exactly 3 half grades: tie → OS
-    ("7a", "7c", ("7A+", "lead_max_rp")),
+    ("7a", "7b+", ("7A", "lead_max_os")),
+    ("7a", "7c", ("7A", "lead_max_os")),     # was RP − 3 = 7a+ under A292
     (None, "8a", ("7B+", "lead_max_rp")),
     ("7a", None, ("7A", "lead_max_os")),
     ("V9", "zz", (None, None)),
@@ -89,18 +90,20 @@ def test_lead_pe_anchor(os_, rp, expected):
 
 
 def test_daniele_route_intervals_target():
-    s = _suggested("route_intervals", _state("7a+", "8a+"))
-    # Before A292: lead_max_os 7a+ − 1 letter = 6c+. Now 7c − 1 letter = 7b.
-    assert s["suggested_grade"] == "7B"
+    s = _suggested("route_intervals", _state("7b", "8a+"))
+    # A292: RP 8a+ − 3 half grades = 7c, − 1 letter = 7b (his onsight limit).
+    # B405: OS 7b − 1 letter = 7a, in his real threshold (6b+–7a on 06/10).
+    assert s["suggested_grade"] == "7A"
     assert s["grade_ref"] == PE_ANCHOR_GRADE_REF
     assert s["grade_scale"] == "french"
-    assert s["grade_anchor_from"] == "lead_max_rp"
+    assert s["grade_anchor_from"] == "lead_max_os"
 
 
 @pytest.mark.parametrize("ex_id", PE_IDS)
-@pytest.mark.parametrize("os_,rp", [("7a", "7b"), ("6b+", "7a"), ("7b", "7c"), ("8a", "8b")])
-def test_narrow_gap_users_get_exactly_the_old_target(ex_id, os_, rp):
-    """Regression: OS within 3 half grades of RP → same grade as the old lead_max_os anchor."""
+@pytest.mark.parametrize("os_,rp", [("7a", "7b"), ("6b+", "7a"), ("7b", "7c"), ("8a", "8b"),
+                                    ("7a+", "8a+"), ("6a", "7a")])
+def test_users_with_an_onsight_get_exactly_the_os_target(ex_id, os_, rp):
+    """B405: with an onsight the target is the old lead_max_os one, wide gaps included."""
     state = _state(os_, rp)
     new = _suggested(ex_id, state)
     old = _suggested(ex_id, state, {"grade_ref": "lead_max_os", "grade_offset": -1})
@@ -127,8 +130,15 @@ def test_stale_test_is_untested():
     assert _suggested("route_intervals", state)["suggested_grade"] == "5C"
 
 
-def test_tested_wide_gap_uses_the_rp_side():
+def test_tested_wide_gap_stays_on_the_onsight():
     s = _suggested("route_intervals", _state("6a", "7a"))
+    # B405: OS 6a − 1 letter = 5c (A292 gave RP 7a − 3 half grades − 1 letter = 6a+).
+    assert s["suggested_grade"] == "5C"
+    assert s["grade_anchor_from"] == "lead_max_os"
+
+
+def test_redpoint_without_onsight_uses_the_rp_side():
+    s = _suggested("route_intervals", _state(None, "7a"))
     # RP 7a − 3 half grades = 6b+; − 1 letter = 6a+.
     assert s["suggested_grade"] == "6A+"
     assert s["grade_anchor_from"] == "lead_max_rp"
@@ -152,8 +162,9 @@ def test_endurance_memory_still_overrides_the_anchor():
 
 def test_edited_future_session_follows_the_new_anchor():
     """A pencil-edited session resolved before A292 still carries lead_max_os in
-    its prescription; the refresh reads the anchor from the catalog."""
-    state = _state("7a+", "8a+")
+    its prescription; the refresh reads the anchor from the catalog (an athlete
+    with no onsight: only the derived anchor gives a target)."""
+    state = _state(None, "8a+")
     entry = {
         "session_id": "power_endurance_gym", "status": "pending", "_user_edited": True,
         "resolved": {"resolved_session": {"exercise_instances": [{

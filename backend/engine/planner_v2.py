@@ -1153,9 +1153,10 @@ def _key_stimulus_pass(
         return False
 
     # A305 review: the days a max session would sit next to a complementary
-    # lunch that may turn out HIIT (guards_v1 `hiit_near_max`: HIIT on the day
-    # of, or the day before, a max). Only a tie-break — the lunch rotation runs
-    # after this pass and has its own penalties.
+    # lunch that may turn out HIIT (guards_v1 `hiit_near_max`: HIIT less than
+    # 24 h before a max — B405: the same day only, since this pass places the
+    # max in the evening, ~30 h after the previous day's lunch). Only a
+    # tie-break — the lunch rotation runs after this pass and has its own penalties.
     from backend.engine.complementary_v1 import resolve_rotation
 
     rotation_has_hiit = "hiit" in (resolve_rotation(planning_prefs, phase_id) or [])
@@ -1169,7 +1170,7 @@ def _key_stimulus_pass(
     def _hiit_risk(o: int, sid: str) -> int:
         if not rotation_has_hiit or not guards_v1._is_max({"session_id": sid}):
             return 0
-        return 1 if (o in comp_days or (o - 1) in comp_days) else 0
+        return 1 if o in comp_days else 0
 
     def _victim_rank(e: Dict[str, Any]) -> Optional[Tuple[int, int]]:
         """Tier of a session the pass may replace, or None. Volume first,

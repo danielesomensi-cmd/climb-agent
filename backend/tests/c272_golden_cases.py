@@ -76,6 +76,12 @@ longer charges the full set rest between the two sides of an ``alt_sides`` set,
 and ``campus_bumps`` is no longer doubled (it was billed 31 min for 14) — so
 the same minutes fit more exercises (e.g. gym/general_strength gains
 ``heavy_reverse_wrist_curl`` and ``scapular_pullup``). Selection rules unchanged.
+
+B405 changed 2 resolver keys (raw diff against origin/main @ 98d0f84):
+``power_endurance_gym`` and ``route_endurance_gym`` 10-07 × advanced — the PE
+drill's ``suggested_grade`` 7B → 7A and ``grade_anchor_from`` lead_max_rp →
+lead_max_os (the PE anchor is the onsight now, never RP − 3 half grades when
+there is one). Same ids, same order, same prescriptions; pools unchanged.
 """
 
 from __future__ import annotations

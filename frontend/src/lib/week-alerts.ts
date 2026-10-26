@@ -82,7 +82,7 @@ function structureMessage(w: SecondaryWarning): string {
   const what = w.session_id ?? focusLabel(w.focus);
   switch (w.code) {
     case "hiit_near_max":
-      return `${what} on ${w.date} is HIIT on the day of, or the day before, a max session${withText(w.with)}.`;
+      return `${what} on ${w.date} is HIIT less than 24 h before a max session${withText(w.with)}.`;
     case "biceps_before_heavy_pull":
       return `${what} on ${w.date} trains biceps within 24 h before heavy pulling${withText(w.with)}.`;
     case "legs_before_limit":
