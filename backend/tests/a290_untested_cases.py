@@ -77,6 +77,13 @@ diffing the raw resolver output against origin/main @ 7b77ee5: the only
 difference is that instance's ``alt_sides`` (true → false) — same ids, same
 prescriptions, same loads.
 
+B406 rewrote the PE-anchor wording in the catalog after B405 ("your onsight,
+or 3 half grades below your redpoint if that is higher" → "…only if you have no
+onsight"; seven texts of the four ``lead_pe_anchor`` exercises). The two
+``power_endurance_gym`` digests were regenerated after diffing the raw resolver
+output (both week_plan modes) against origin/main @ a6111df with the same text
+substitutions applied: zero other differences.
+
 Pure data + one function, importable by the generator without pytest.
 """
 
