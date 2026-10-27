@@ -268,13 +268,23 @@ def _meta_for(session_id: str) -> Dict[str, Any]:
     })
 
 
-def _build_fill_session(plan: Dict[str, Any], day: Dict[str, Any], slot: str, *, kind: str) -> Dict[str, Any]:
+def _build_fill_session(
+    plan: Dict[str, Any], day: Dict[str, Any], slot: str, *, kind: str,
+    replaces: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     # deterministic conservative fill using planner_v2 sessions
     session_id = "regeneration_easy" if kind == "recovery" else "complementary_conditioning"
     meta = _meta_for(session_id)
     location = "home"
     gym_id = None
-    if any(s.get("location") == "gym" for s in day.get("sessions") or []):
+    if replaces is not None and replaces.get("location") in ("home", "gym"):
+        # B407: a skip stub stands where the skipped session stood. A home
+        # lunch skipped on a gym evening used to become a gym stub with no
+        # gym_id, which the card labels with the first gym in the list.
+        location = replaces["location"]
+        if location == "gym":
+            gym_id = replaces.get("gym_id") or _default_gym_id_from_plan(plan)
+    elif any(s.get("location") == "gym" for s in day.get("sessions") or []):
         location = "gym"
         gym_id = _default_gym_id_from_plan(plan)
     return {
@@ -1241,7 +1251,7 @@ def apply_events(
             day = _find_day(updated, event["date"])
             removed = _extract_session(day, session_ref=event.get("session_ref"), slot=event.get("slot"))
             slot = removed.get("slot") or event.get("slot") or "evening"
-            recovery = _build_fill_session(updated, day, slot, kind="recovery")
+            recovery = _build_fill_session(updated, day, slot, kind="recovery", replaces=removed)
             recovery["status"] = "skipped"
             # A294: the stub keeps the id and tags of what was skipped — the
             # key-session status needs them, and the completion log has no slot.

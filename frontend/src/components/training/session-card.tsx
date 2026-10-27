@@ -128,6 +128,23 @@ function formatSlot(slot: string): string {
   return slotMap[slot] ?? slot;
 }
 
+/**
+ * B407 — a skipped session is stored as a regeneration_easy stub that carries
+ * the session actually skipped (B367 `skipped_original`): the card shows that
+ * one — its name, place and exercises — not the stub. Status stays the stub's.
+ */
+function shownSession(session: SessionSlot): SessionSlot {
+  const original = session.status === "skipped" ? session.skipped_original : null;
+  return original ? { ...original, status: "skipped" } : session;
+}
+
+/** Session headline: the custom's own name, else the catalog session name. */
+function sessionTitle(session: SessionSlot): string {
+  if (session.is_custom) return session.name || formatSessionName(session.session_id);
+  return (session.resolved as Record<string, Record<string, string>> | undefined)?.session?.session_name
+    || formatSessionName(session.session_id);
+}
+
 /** Resolve location display name */
 function getLocationLabel(session: SessionSlot, gyms?: Gym[]): string {
   if (session.location !== "gym") return "Home";
@@ -479,13 +496,14 @@ export function SessionCard({
   // what handleStartGuided hands to the player and what the feedback is scored
   // against. Pre-B313 this line picked a React-state override the player could
   // not see, so the preview showed boulder and the session ran the rope plan.
-  const effectiveResolved = session.resolved as Record<string, unknown> | undefined;
+  const shown = shownSession(session);
+  const effectiveResolved = shown.resolved as Record<string, unknown> | undefined;
   const boulderOverrideActive = session.surface_override === "boulder";
 
   // B293 — never render a completable card with zero resolved exercises.
   const resolutionState = sessionResolutionState({
-    is_custom: session.is_custom,
-    resolve_error: session.resolve_error,
+    is_custom: shown.is_custom,
+    resolve_error: shown.resolve_error,
     resolved: effectiveResolved ?? null,
   });
   const completable = resolutionState === "ok";
@@ -557,9 +575,9 @@ export function SessionCard({
   }, [isDone]);
   const isSkipped = session.status === "skipped";
   const isFinalized = isDone || isSkipped;
-  const locationLabel = getLocationLabel(session, gyms);
+  const locationLabel = getLocationLabel(shown, gyms);
   const hasExercises = (() => {
-    if (session.is_custom) return (session.exercises ?? []).length > 0;
+    if (shown.is_custom) return (shown.exercises ?? []).length > 0;
     const rs = effectiveResolved?.resolved_session as Record<string, unknown> | undefined;
     return ((rs?.exercise_instances ?? []) as unknown[]).length > 0;
   })();
@@ -760,11 +778,9 @@ export function SessionCard({
                 size as the coach card subtitle). */}
             <CardTitle className="flex flex-wrap items-center gap-1.5 text-lg font-semibold leading-tight">
               <span>
-                {session.is_custom
-                  ? (session.name || formatSessionName(session.session_id))
-                  : ((session.resolved as Record<string, Record<string, string>> | undefined)?.session?.session_name || formatSessionName(session.session_id))}
+                {sessionTitle(shown)}
               </span>
-              {session.is_custom && (
+              {shown.is_custom && (
                 <Badge className="bg-primary/20 text-primary border-primary/40 text-[11px]">
                   Custom
                 </Badge>
@@ -1001,30 +1017,30 @@ export function SessionCard({
         {expanded && (
           <CardContent className="pt-0 pb-3 space-y-3">
             {/* A308 — details that used to crowd the header chips. */}
-            {(hasLoadingPin || session.estimated_load_score != null) && (
+            {(hasLoadingPin || shown.estimated_load_score != null) && (
               <div className="flex flex-wrap items-center gap-1.5">
                 {hasLoadingPin && (
                   <Badge variant="outline" className="text-[11px] border-axis-finger/30 bg-axis-finger/15 text-axis-finger">
                     Loading Pin
                   </Badge>
                 )}
-                {session.estimated_load_score != null && (
+                {shown.estimated_load_score != null && (
                   <Badge variant="outline" className="text-[11px] text-fg-muted">
-                    Load: {session.estimated_load_score}
+                    Load: {shown.estimated_load_score}
                   </Badge>
                 )}
               </div>
             )}
 
             {/* A207: custom sessions have exercises inline — no resolved blocks to render. */}
-            {session.is_custom ? (
-              (session.exercises ?? []).length === 0 ? (
+            {shown.is_custom ? (
+              (shown.exercises ?? []).length === 0 ? (
                 <div className="rounded-md border border-dashed p-3 text-center text-xs text-muted-foreground">
                   No exercises
                 </div>
               ) : (
                 <div className="space-y-1.5">
-                  {(session.exercises ?? []).map((ex, i) => {
+                  {(shown.exercises ?? []).map((ex, i) => {
                     const prescription: string[] = [];
                     if (ex.reps != null) prescription.push(`${ex.sets}\u00d7${ex.reps}`);
                     else if (ex.work_seconds != null) prescription.push(`${ex.sets}\u00d7${ex.work_seconds}s`);
@@ -1066,6 +1082,10 @@ export function SessionCard({
               const allInstances = exerciseInstances;
 
               if (allInstances.length === 0 && allBlocks.length === 0) {
+                // B407 — a skipped catalog session usually travels unresolved
+                // (planned sessions' resolution is never persisted): nothing to
+                // retry, and nothing to complete.
+                if (isSkipped) return null;
                 // B293 — explanatory, never a bare completable card. `error`
                 // means the backend marked a transient resolution failure
                 // (resolve_error, A245 E-3/B17); `empty` means it resolved to
@@ -1197,7 +1217,7 @@ export function SessionCard({
       <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
         <DrawerContent>
           <DrawerHeader>
-            <DrawerTitle>{session.is_custom ? (session.name || formatSessionName(session.session_id)) : ((session.resolved as Record<string, Record<string, string>> | undefined)?.session?.session_name || formatSessionName(session.session_id))}</DrawerTitle>
+            <DrawerTitle>{sessionTitle(shown)}</DrawerTitle>
             <DrawerDescription>
               {(() => {
                 // B217: drop slot-table fallback. Show duration only when measured.

@@ -127,6 +127,9 @@ export interface SessionSlot {
   forced?: boolean;
   _user_edited?: boolean;
   constraints_applied?: string[];
+  // B367 — on a skip stub (regeneration_easy, status "skipped"): the session
+  // that was skipped, which Undo restores. B407: the card shows this one.
+  skipped_original?: SessionSlot | null;
 }
 
 export interface OtherActivity {

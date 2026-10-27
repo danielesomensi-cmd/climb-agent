@@ -167,7 +167,7 @@ Your daily workflow:
 4. When done, tap **Done** and give feedback
 5. If you can't train, tap **Skip** — the system adapts
 
-**Done** and **Skip** are always reversible — tap **Undo completion** (to reverse Done) or **Undo skip** (to reverse Skip) — don't worry about misclicks. Undoing a skip brings back the exact session you skipped, your own custom sessions included, and the usual recovery rules still apply to it.
+**Done** and **Skip** are always reversible — tap **Undo completion** (to reverse Done) or **Undo skip** (to reverse Skip) — don't worry about misclicks. Undoing a skip brings back the exact session you skipped, your own custom sessions included, and the usual recovery rules still apply to it. A skipped card keeps showing the session you skipped — its name, place and exercises — marked **Skipped**.
 
 **Opening the app on a slow or missing connection.** Today shows the plan saved on your phone straight away, then refreshes it:
 
