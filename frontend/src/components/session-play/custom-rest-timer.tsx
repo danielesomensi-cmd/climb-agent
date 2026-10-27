@@ -48,6 +48,8 @@ interface CustomRestTimerProps {
   autoAdvance?: boolean;
   /** B404: "Switch side" between RIGHT and LEFT of one set. */
   title?: string;
+  /** B406: the button once the rest is over ("Next rep" between reps). */
+  ctaLabel?: string;
 }
 
 export function CustomRestTimer({
@@ -57,6 +59,7 @@ export function CustomRestTimer({
   onSkip,
   autoAdvance = false,
   title = "Rest",
+  ctaLabel = "Start next",
 }: CustomRestTimerProps) {
   const [elapsed, setElapsed] = useState(0);
   const startRef = useRef<number>(0);
@@ -173,7 +176,7 @@ export function CustomRestTimer({
             className="gap-1.5 bg-primary hover:bg-primary/90"
           >
             <ArrowRight className="size-4" />
-            Start next
+            {ctaLabel}
           </Button>
         ) : (
           <Button size="lg" variant="outline" onClick={onSkip} className="gap-1.5">

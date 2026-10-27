@@ -26,6 +26,15 @@ export function detectCategory(ex: CustomSessionExercise): ExerciseCategory {
   return "reps_based";
 }
 
+/**
+ * B406: reps done at the athlete's pace with a timed rest between them
+ * (three_attempt_comp 1×7 with 180" between attempts): one rep per tap, the
+ * rest in between, then the set — the guided player's B124 manual rep loop.
+ */
+export function hasRepRest(ex: CustomSessionExercise): boolean {
+  return detectCategory(ex) === "reps_based" && (ex.reps ?? 0) > 1 && (ex.rest_between_reps_seconds ?? 0) > 0;
+}
+
 
 
 // A286 — l'haptic passa da `navigator.vibrate` (che su iOS non fa nulla) agli
@@ -35,6 +44,9 @@ interface CustomExerciseStepProps {
   exercise: CustomSessionExercise;
   exerciseName: string;
   currentSet: number; // 1-based
+  /** B406: 1-based rep of the set, read only when hasRepRest(exercise). */
+  currentRep?: number;
+  /** Called when the set finishes — or, with a rep rest, the current rep. */
   onSetDone: () => void;
 }
 
@@ -42,9 +54,11 @@ export function CustomExerciseStep({
   exercise,
   exerciseName,
   currentSet,
+  currentRep = 1,
   onSetDone,
 }: CustomExerciseStepProps) {
   const category = detectCategory(exercise);
+  const repLoop = hasRepRest(exercise);
   // B324: alt_sides exercises are run once per side — the parent counts doubled
   // internal sets, we show the prescribed number plus the side badge.
   const altSides = exercise.alt_sides === true;
@@ -189,7 +203,9 @@ export function CustomExerciseStep({
             {currentSide && " per side"}
           </span>
           {loadKg > 0 && <span> · @ {formatLoad(loadKg, exercise.load_unit)}</span>}
-          {category === "reps_based" && reps > 0 && <span> · {reps} reps</span>}
+          {category === "reps_based" && reps > 0 && (
+            <span> · {repLoop ? `Rep ${currentRep} of ${reps}` : `${reps} reps`}</span>
+          )}
           {(category === "time_based" || category === "timed_sets") && workSec > 0 && (
             <span> · {workSec}s</span>
           )}
@@ -262,14 +278,16 @@ export function CustomExerciseStep({
 
       {category === "reps_based" && (
         <div className="flex flex-col items-center gap-5 py-4">
-          <p className="text-sm text-muted-foreground">Do the reps at your pace, then tap Done.</p>
+          <p className="text-sm text-muted-foreground">
+            {repLoop ? "Do one rep, then tap Done rep." : "Do the reps at your pace, then tap Done."}
+          </p>
           <Button
             size="lg"
             onClick={handleRepsDone}
             className="gap-2 bg-green-600 hover:bg-green-700 text-white min-w-[200px]"
           >
             <CheckCircle2 className="size-5" />
-            Done set
+            {repLoop ? "Done rep" : "Done set"}
           </Button>
         </div>
       )}

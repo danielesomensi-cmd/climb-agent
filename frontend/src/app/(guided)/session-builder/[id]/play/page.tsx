@@ -12,7 +12,7 @@ import { useSubscription } from "@/lib/hooks/use-subscription";
 import { queryKeys } from "@/lib/query-keys";
 import { applyEvents, postFeedback } from "@/lib/api";
 import type { WeekPlan, CustomSessionExercise } from "@/lib/types";
-import { CustomExerciseStep } from "@/components/session-play/custom-exercise-step";
+import { CustomExerciseStep, hasRepRest } from "@/components/session-play/custom-exercise-step";
 import { CustomRestTimer } from "@/components/session-play/custom-rest-timer";
 import { displaySetNumber, isSideSwitch, restAfterSet, sideForSet, totalSetsWithSides } from "@/lib/alt-sides";
 import { unlockAudio } from "@/lib/audio-unlock";
@@ -164,6 +164,9 @@ function exercisePrescriptionSummary(ex: CustomSessionExercise): string {
   if (ex.rest_between_sets_seconds != null && ex.rest_between_sets_seconds > 0) {
     parts.push(`rest ${ex.rest_between_sets_seconds}s`);
   }
+  if (ex.rest_between_reps_seconds != null && ex.rest_between_reps_seconds > 0 && (ex.reps ?? 0) > 1) {
+    parts.push(`${ex.rest_between_reps_seconds}s between reps`);
+  }
   return parts.join(" \u00b7 ");
 }
 
@@ -225,6 +228,10 @@ export default function SessionPlayPage() {
   const [stage, setStage] = useState<Stage>("idle");
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [currentSet, setCurrentSet] = useState(1);
+  // B406: rep of the set when the exercise rests between reps, and which rest
+  // the resting stage is running (between reps, or after a set).
+  const [currentRep, setCurrentRep] = useState(1);
+  const [restKind, setRestKind] = useState<"set" | "rep">("set");
   const startedAtRef = useRef<number>(0);
   const [durationSec, setDurationSec] = useState(0);
   const [setsCompleted, setSetsCompleted] = useState(0);
@@ -293,6 +300,8 @@ export default function SessionPlayPage() {
   /** Called when the current set finishes (timer hit zero OR user tapped Done for reps). */
   const handleSetDone = useCallback(() => {
     if (!currentExercise) return;
+    setCurrentRep(1);
+    setRestKind("set");
     setSetsCompleted((n) => n + 1);
     // A240: track sets completed per exercise for the completion-screen log.
     setSetsByIndex((prev) => ({
@@ -332,9 +341,21 @@ export default function SessionPlayPage() {
     completeSession();
   }, [currentExercise, currentSet, currentExerciseIndex, exercises.length, completeSession]);
 
+  /** B406: with a rest between reps, each tap closes one rep; the last one closes the set. */
+  const handleStepDone = useCallback(() => {
+    if (currentExercise && hasRepRest(currentExercise) && currentRep < (currentExercise.reps ?? 0)) {
+      setRestKind("rep");
+      setStage("resting");
+      return;
+    }
+    handleSetDone();
+  }, [currentExercise, currentRep, handleSetDone]);
+
   /** B281: skip the CURRENT exercise entirely (all remaining sets). Never trap
    * the user — long timed drills made sessions feel broken without this. */
   const handleSkipExercise = useCallback(() => {
+    setCurrentRep(1);
+    setRestKind("set");
     if (currentExerciseIndex < exercises.length - 1) {
       setCurrentExerciseIndex((i) => i + 1);
       setCurrentSet(1);
@@ -347,6 +368,12 @@ export default function SessionPlayPage() {
   /** Called when rest timer reaches target + user taps Start next, or skips early. */
   const handleRestDone = useCallback(() => {
     if (!currentExercise) return;
+    if (restKind === "rep") {
+      setRestKind("set");
+      setCurrentRep((r) => r + 1);
+      setStage("exercise_active");
+      return;
+    }
     const totalSets = totalSetsWithSides(currentExercise.sets, currentExercise.alt_sides === true);
     if (currentSet < totalSets) {
       setCurrentSet((s) => s + 1);
@@ -360,7 +387,7 @@ export default function SessionPlayPage() {
       return;
     }
     completeSession();
-  }, [currentExercise, currentSet, currentExerciseIndex, exercises.length, completeSession]);
+  }, [currentExercise, currentSet, currentExerciseIndex, exercises.length, completeSession, restKind]);
 
   const handleFinish = useCallback(async () => {
     if (!session) return;
@@ -536,6 +563,9 @@ export default function SessionPlayPage() {
                 {sideForSet(currentSet, currentExercise.alt_sides === true) && (
                   <> · {sideForSet(currentSet, currentExercise.alt_sides === true)}</>
                 )}
+                {hasRepRest(currentExercise) && (
+                  <> · Rep {currentRep} of {currentExercise.reps}</>
+                )}
               </>
             )}
             {stage === "resting" && <> · Resting</>}
@@ -580,11 +610,12 @@ export default function SessionPlayPage() {
         {stage === "exercise_active" && currentExercise && (
           <>
             <CustomExerciseStep
-              key={`${currentExerciseIndex}-${currentSet}`}
+              key={`${currentExerciseIndex}-${currentSet}-${currentRep}`}
               exercise={currentExercise}
               exerciseName={formatExerciseName(currentExercise.exercise_id, catalogNameMap)}
               currentSet={currentSet}
-              onSetDone={handleSetDone}
+              currentRep={currentRep}
+              onSetDone={handleStepDone}
             />
             {/* B281: always reachable exit from the current exercise. */}
             <div className="pt-2 text-center">
@@ -602,6 +633,20 @@ export default function SessionPlayPage() {
         {stage === "resting" &&
           currentExercise &&
           (() => {
+            const name = formatExerciseName(currentExercise.exercise_id, catalogNameMap);
+            // B406: between two reps of the same set — rep-based, so it holds
+            // at the end and the athlete taps "Next rep".
+            if (restKind === "rep") {
+              return (
+                <CustomRestTimer
+                  targetSeconds={currentExercise.rest_between_reps_seconds ?? 0}
+                  nextLabel={`Rep ${currentRep + 1} of ${currentExercise.reps} · ${name}`}
+                  onComplete={handleRestDone}
+                  onSkip={handleRestDone}
+                  ctaLabel="Next rep"
+                />
+              );
+            }
             const altSides = currentExercise.alt_sides === true;
             const totalSets = totalSetsWithSides(currentExercise.sets, altSides);
             const hasMoreSetsInExercise = currentSet < totalSets;
@@ -610,7 +655,7 @@ export default function SessionPlayPage() {
             const nextLabel = hasMoreSetsInExercise
               ? `Set ${displaySetNumber(currentSet + 1, altSides)} of ${currentExercise.sets ?? 1}${
                   nextSide ? ` · ${nextSide}` : ""
-                } · ${formatExerciseName(currentExercise.exercise_id, catalogNameMap)}`
+                } · ${name}`
               : nextExercise
                 ? formatExerciseName(nextExercise.exercise_id, catalogNameMap)
                 : "Finish";
