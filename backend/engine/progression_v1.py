@@ -794,6 +794,9 @@ def _load_catalog_cache() -> Dict[str, Dict[str, Any]]:
                 "contraindications": list(e.get("contraindications") or []),
                 # B380: what the kg counts (per_dumbbell / implement / total).
                 "load_unit": _load_units.load_unit_of(e),
+                # B409: a single "implement" on the dumbbell grid only when it
+                # IS a dumbbell (not a plate or a kettlebell).
+                "dumbbell_implement": "dumbbell" in (e.get("equipment_required") or []),
                 "loading_pin": "loading_pin" in (
                     (e.get("equipment_required") or []) + (e.get("equipment_required_any") or [])
                 ),
@@ -2700,6 +2703,26 @@ def _hang_margin_step(
 _DP_SNAPSHOT_FIELDS = ("dp_target_reps", "dp_range")
 
 
+def _dp_step_load(base: float, pct: float, step_kg: Optional[float]) -> float:
+    """B409: next load of a double-progression change of ``pct``.
+
+    Without a grid it is ``_next_external_load`` (0.5 kg, B344 floor). On a
+    dumbbell grid (``step_kg``) the result is the nearest dumbbell, and a change
+    always lands on a DIFFERENT one in its direction: 34 kg easy (+5 % = 35.7)
+    → 36, 16 kg easy (16.8) → 18, 34 kg hard (−2.5 % = 33.15) → 32. A base off
+    the grid (a logged 16.5) moves to the next grid point beyond it.
+    """
+    raw = _next_external_load(base, pct)
+    if not step_kg or raw == base:
+        return raw
+    q = math.floor(raw / step_kg + 0.5) * step_kg
+    if raw > base and q <= base:
+        q = (math.floor(base / step_kg + 1e-9) + 1) * step_kg
+    elif raw < base and q >= base:
+        q = (math.ceil(base / step_kg - 1e-9) - 1) * step_kg
+    return max(0.0, float(q))
+
+
 def _dp_label_pct(user_state: Dict[str, Any], label: str) -> float:
     """Label step of a double-progression accessory WITHOUT a measure.
 
@@ -2729,6 +2752,7 @@ def _apply_dp_feedback(
     session_key: str,
     planned_prescription: Dict[str, Any],
     last_set_reps: Optional[int],
+    dumbbell_step: Optional[float] = None,
 ) -> Tuple[float, Dict[str, Any]]:
     """A295 (R4 §3c) — double progression of a reps accessory.
 
@@ -2741,6 +2765,15 @@ def _apply_dp_feedback(
     range → load + 2.5 % (fingers + 1.25 %, B344 floor +0.5 kg) and target back
     to lo. Without a measure the label policy applies (easy +5 %, very_easy
     +10 %, hard / very_hard the adjustment policy); not rated → hold.
+
+    B409 (Daniele, 2026-10-30, «preferisco aumentare anche il peso»): a
+    measured success rated easy / very_easy raises the LOAD now, by the same
+    label step (+5 % / +10 %), and the target goes back to lo — before, it
+    climbed one rep per session to the top of the range (8 → 10) and only then
+    moved the load by 2.5 %, so "easy" waited three sessions for a kilo.
+    Prehab and finger-loading work keep the slow path. ``dumbbell_step`` (the
+    external-load caller, for a dumbbell exercise) puts every load change on
+    the dumbbell grid.
 
     Idempotent: the entry keeps ``applied {key, base_before}``; the same
     (date, session) recomputes from the snapshot, so a replay gives the same
@@ -2769,6 +2802,10 @@ def _apply_dp_feedback(
     pain = mf.active_pain_block(updated, mf.exercise_pain_sites(exercise_id), date_value)
     step_pct = mf.DP_FINGER_LOAD_STEP_PCT if mf.is_finger_loading(exercise_id) else mf.DP_LOAD_STEP_PCT
 
+    label_jumps = (
+        rating in mf.DP_LABEL_STEP_PCT and not mf.is_prehab(exercise_id) and not mf.is_finger_loading(exercise_id)
+    )
+
     next_target = target
     next_load = _round_half_step(base)
     outcome = "hold"
@@ -2776,12 +2813,17 @@ def _apply_dp_feedback(
         outcome = "not_completed"
     elif last_set_reps is not None:
         success = last_set_reps >= target and sets_ok and rating not in ("hard", "very_hard") and pain is None
-        if success and target < hi:
+        if success and label_jumps:
+            # B409: easy measured → load now, reps back to the bottom.
+            next_load = _dp_step_load(base, _dp_label_pct(updated, rating), dumbbell_step)
+            next_target, outcome = lo, "label_load_up"
+        elif success and target < hi:
             next_target, outcome = target + 1, "reps_up"
         elif success:
-            next_load, next_target, outcome = _next_external_load(base, step_pct), lo, "load_up"
+            next_load, next_target, outcome = _dp_step_load(base, step_pct, dumbbell_step), lo, "load_up"
         elif rating in ("hard", "very_hard"):
-            next_load, outcome = _next_external_load(base, _rule_midpoint_pct(updated, rating)), "label_down"
+            next_load = _dp_step_load(base, _rule_midpoint_pct(updated, rating), dumbbell_step)
+            outcome = "label_down"
         elif pain is not None:
             outcome = "pain_freeze"
     elif rating is not None:
@@ -2789,7 +2831,7 @@ def _apply_dp_feedback(
         if pct > 0 and pain is not None:
             outcome = "pain_freeze"
         elif pct != 0:
-            next_load = _next_external_load(base, pct)
+            next_load = _dp_step_load(base, pct, dumbbell_step)
             outcome = "label_up" if pct > 0 else "label_down"
 
     fields: Dict[str, Any] = {
@@ -3067,6 +3109,7 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
                     exercise_id=exercise_id, rating=rating, base=base, date_value=date_value,
                     session_key=session_key, planned_prescription=planned_prescription,
                     last_set_reps=min_last_set.get(exercise_id),
+                    dumbbell_step=mf.dumbbell_step_kg(exercise_id),
                 )
             else:
                 pct = _rule_midpoint_pct(updated, feedback_label)

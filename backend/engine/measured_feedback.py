@@ -173,6 +173,35 @@ DP_FINGER_LOAD_STEP_PCT = 0.0125
 #: Accessories without a measure (DECISIONS 2026-10-04): easy +5 %,
 #: very_easy +10 %. hard / very_hard keep the adjustment policy.
 DP_LABEL_STEP_PCT: Dict[str, float] = {"very_easy": 0.10, "easy": 0.05}
+#: B409 (Daniele, 2026-10-30): gym dumbbells come in 2 kg steps. A double
+#: progression load change on a dumbbell exercise lands on that grid — +5 % of
+#: 34 kg is 35.7, and a 35.5 kg dumbbell does not exist.
+DUMBBELL_STEP_KG = 2.0
+
+
+def dumbbell_step_kg(exercise_id: str) -> Optional[float]:
+    """The load grid of a dumbbell exercise (``DUMBBELL_STEP_KG``), else None.
+
+    Dumbbell = an external-load exercise whose kg are one dumbbell of a pair
+    (``per_dumbbell``) or a single ``implement`` that the catalog says is a
+    dumbbell. Plates, kettlebells, barbells and cables keep the 0.5 kg rounding.
+    """
+    info = _catalog().get(str(exercise_id or "")) or {}
+    if info.get("load_model") != "external_load":
+        return None
+    unit = info.get("load_unit")
+    if unit == "per_dumbbell" or (unit == "implement" and info.get("dumbbell_implement")):
+        return DUMBBELL_STEP_KG
+    return None
+
+
+def is_prehab(exercise_id: str) -> bool:
+    """B409: prehab work (role ``prehab`` or a ``prehab_*`` domain) — its loads
+    stay on the slow double progression, never the label jump."""
+    info = _catalog().get(str(exercise_id or "")) or {}
+    roles = info.get("role") or []
+    domains = info.get("domain") or []
+    return "prehab" in roles or any(str(d).startswith("prehab") for d in domains)
 
 
 def dp_range(lo: int) -> Tuple[int, int]:

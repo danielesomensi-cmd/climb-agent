@@ -149,9 +149,11 @@ class TestColdStart:
 # ── progression is unit-agnostic ─────────────────────────────────────────────
 
 class TestProgressionUnchanged:
-    @pytest.mark.parametrize("label,expected", [("easy", 36.5), ("hard", 33.0), ("ok", 34.0)])
-    def test_feedback_step_on_a_per_dumbbell_load(self, label, expected):
-        # Same step as before B380 (percentage, rounded to 0.5) — and the same as a total exercise.
+    @pytest.mark.parametrize("label,expected,dumbbell", [("easy", 36.5, 36.0), ("hard", 33.0, 32.0),
+                                                         ("ok", 34.0, 34.0)])
+    def test_feedback_step_on_a_per_dumbbell_load(self, label, expected, dumbbell):
+        # Same percentage as a total exercise (rounded to 0.5 there); since B409
+        # a per-dumbbell load then lands on the 2 kg dumbbell grid.
         st = _state([_entry("dumbbell_bench_press", 34.0)])
         log = {"date": DAY,
                "planned": [{"exercise_instances": [{"exercise_id": "dumbbell_bench_press", "prescription": {}}]}],
@@ -159,8 +161,8 @@ class TestProgressionUnchanged:
                                                     "feedback_label": label, "used_external_load_kg": 34.0}]}}
         out = apply_feedback(log, st)
         e = next(x for x in out["working_loads"]["entries"] if x["exercise_id"] == "dumbbell_bench_press")
-        assert e["next_external_load_kg"] == expected
-        # And the identical step on a TOTAL exercise with the same number.
+        assert e["next_external_load_kg"] == dumbbell
+        # And the same percentage on a TOTAL exercise, on the 0.5 kg rounding.
         st2 = _state([_entry("bench_press", 34.0)])
         log2 = deepcopy(log)
         log2["planned"][0]["exercise_instances"][0]["exercise_id"] = "bench_press"

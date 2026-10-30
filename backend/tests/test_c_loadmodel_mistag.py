@@ -168,12 +168,13 @@ def test_bulgarian_closed_loop_single_key():
     assert keys == {"bulgarian_split_squat"}
     entry = next(e for e in entries if e["key"] == "bulgarian_split_squat")
     assert entry["last_external_load_kg"] == 20.0
-    # ok midpoint = (0.0+0.05)/2 = 0.025 → 20 × 1.025 = 20.5
-    assert entry["next_external_load_kg"] == 20.5
+    # ok midpoint = (0.0+0.05)/2 = 0.025 → 20 × 1.025 = 20.5, and since B409
+    # a dumbbell load lands on the 2 kg grid: the next dumbbell up, 22.
+    assert entry["next_external_load_kg"] == 22.0
 
     # …and it is proposed back on the next resolve (dated after the feedback,
     # else the entry is (correctly) rejected as future-dated).
-    assert _suggested(updated, "bulgarian_split_squat", "2026-01-07")["suggested_external_load_kg"] == 20.5
+    assert _suggested(updated, "bulgarian_split_squat", "2026-01-07")["suggested_external_load_kg"] == 22.0
 
 
 # ── Immutability ─────────────────────────────────────────────────────────
