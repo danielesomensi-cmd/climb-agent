@@ -74,12 +74,14 @@ const DIFFICULTY_LEVELS = [
   { value: "very_hard", label: "Very hard" },
 ] as const;
 
-/** Slot-based duration estimates (minutes) — fallback for a session with no estimate */
+/** Slot-based duration estimates (minutes) — fallback for a session with no
+ *  estimate. Lunch 55' since C279, evening 120' (Daniele, 2026-10-30: «la sera
+ *  due ore massimo, 90 è poco»). */
 const SLOT_ESTIMATES: Record<string, number> = {
-  lunch: 35,
+  lunch: 55,
   morning: 60,
   afternoon: 60,
-  evening: 90,
+  evening: 120,
 };
 
 /**

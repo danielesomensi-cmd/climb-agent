@@ -63,8 +63,8 @@ describe("B408 — durationPrefillMinutes", () => {
   });
 
   it("falls back to the slot constant only when the estimate is unknown", () => {
-    expect(durationPrefillMinutes(undefined, "lunch")).toBe(35);
-    expect(durationPrefillMinutes(0, "evening")).toBe(90);
+    expect(durationPrefillMinutes(undefined, "lunch")).toBe(55);
+    expect(durationPrefillMinutes(0, "evening")).toBe(120);
     expect(durationPrefillMinutes(undefined, undefined)).toBe(60);
     expect(durationPrefillMinutes(undefined, "night")).toBe(60);
   });
@@ -72,13 +72,13 @@ describe("B408 — durationPrefillMinutes", () => {
 
 describe("B408 — the dialog's duration field", () => {
   it("pre-fills the session's estimate, not the lunch constant", () => {
-    render(dialog({ estimatedMinutes: 55, slot: "lunch" }));
-    expect(durationInput().value).toBe("55");
+    render(dialog({ estimatedMinutes: 47, slot: "lunch" }));
+    expect(durationInput().value).toBe("47");
   });
 
   it("without an estimate, the slot constant", () => {
     render(dialog({ slot: "lunch" }));
-    expect(durationInput().value).toBe("35");
+    expect(durationInput().value).toBe("55");
   });
 
   it("follows the session when the mounted dialog is reused for another one", () => {
