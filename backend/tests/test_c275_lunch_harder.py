@@ -57,10 +57,13 @@ ACTIVATION_ONLY = {"plank", "dead_bug", "plank_shoulder_tap", "pallof_press", "k
 
 #: (block_id, exercise_id, sets, reps, rest) of every loaded pin.
 LOADED_PINS = {
-    "legs_maintenance_lunch": [("squat_main", "goblet_squat", 4, 6, 120),
-                               ("hinge", "romanian_deadlift", 3, 6, 120)],
-    "upper_push_arms_lunch": [("chest_press", "dumbbell_bench_press", 4, 6, 120),
-                              ("biceps", "bicep_curl", 3, 8, 75)],
+    # C279 (2026-10-30): one more set on every lift to fill a 55' lunch.
+    "legs_maintenance_lunch": [("squat_main", "goblet_squat", 5, 6, 120),
+                               ("hinge", "romanian_deadlift", 4, 6, 120),
+                               ("single_leg", "bulgarian_split_squat", 3, 8, 90)],
+    "upper_push_arms_lunch": [("chest_press", "dumbbell_bench_press", 5, 6, 120),
+                              ("chest_fly", "dumbbell_fly", 4, 12, 75),
+                              ("biceps", "bicep_curl", 4, 8, 75)],
 }
 
 
@@ -161,7 +164,7 @@ class TestDose:
 
     def test_triceps_dose_on_the_cable(self):
         ov = _module("upper_push_arms_lunch", "triceps")["selection"]["primary"]["prescription_overrides"]
-        assert (ov["sets"], ov["reps"]) == (3, 10) and "RIR 1-2" in ov["notes"]
+        assert (ov["sets"], ov["reps"]) == (4, 10) and "RIR 1-2" in ov["notes"]  # C279: 4 sets
 
     def test_ring_push_block_can_reach_the_top_ladder_level(self, catalog, ladder_of):
         """The ladder swap passes every block filter: intensity_max must let the
@@ -240,7 +243,7 @@ class TestLabelsUnchanged:
         assert not meta.get("pulling") and meta["max_per_week"] == 2
         s = _session(sid)
         assert s["tags"] == {"hard": False, "finger": False}
-        assert s["time_budget"]["hard_cap_min"] == 45
+        assert s["time_budget"]["hard_cap_min"] == 55  # C279
 
 
 # ---------------------------------------------------------------------------

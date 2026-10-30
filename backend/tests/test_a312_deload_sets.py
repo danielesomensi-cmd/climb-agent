@@ -26,8 +26,9 @@ from backend.engine.resolve_session import _apply_deload_sets
 from backend.tests.test_c275_lunch_harder import EQUIPMENT_SETS, _by_block, _module, _resolve, _tested_state
 
 DELOAD_SETS = {
-    "legs_maintenance_lunch": {"squat_main": (4, 3), "hinge": (3, 2)},
-    "upper_push_arms_lunch": {"chest_press": (4, 3), "triceps": (3, 2), "biceps": (3, 2)},
+    # C279: one more set everywhere, still one less in deload.
+    "legs_maintenance_lunch": {"squat_main": (5, 4), "hinge": (4, 3), "single_leg": (3, 2)},
+    "upper_push_arms_lunch": {"chest_press": (5, 4), "chest_fly": (4, 3), "triceps": (4, 3), "biceps": (4, 3)},
 }
 
 

@@ -688,7 +688,7 @@ class TestCombinedPlacement:
                     "role": "primary"}
 
         lunch = {"available": True, "locations": ["gym"], "preferred_location": "gym", "gym_id": "work",
-                 "role": "complementary", "max_minutes": 45}
+                 "role": "complementary", "max_minutes": 55}
         avail = {"mon": {"evening": ev("bkl"), "lunch": lunch}, "tue": {"evening": ev("cocque"), "lunch": lunch},
                  "wed": {"evening": ev("cocque"), "lunch": lunch}, "thu": {"evening": ev("cocque"), "lunch": lunch},
                  "fri": {"lunch": lunch}, "sat": {"evening": ev("cocque")}, "sun": {"evening": ev("cocque")}}

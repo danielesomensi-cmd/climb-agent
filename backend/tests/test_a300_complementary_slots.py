@@ -3,7 +3,7 @@
 Daniele (2026-10-05): "non fare cose manuali, voglio che la struttura sia
 adattativa". Six primary evenings (Mon, Tue, Wed, Thu, Sat, Sun), Friday evening
 off, mornings off, lunches Tue–Fri at the Work gym (weights + cable + treadmill),
-45' gross, complementary. The planner must put the climbing sessions of the
+45' gross (55' since C279, 2026-10-30), complementary. The planner must put the climbing sessions of the
 phase in the evenings and fill the lunches itself with a rotation of focus
 families (legs, HIIT, Z2, push + arms), paired to the days by penalties:
 
@@ -74,7 +74,12 @@ PREFS = {"target_training_days_per_week": 6, "hard_day_cap_per_week": 3,
          "complementary_rotation": ROTATION}
 
 
-def daniele_availability(lunch_role="complementary", max_minutes=45, evening_role="primary"):
+#: C279 (Daniele, 2026-10-30): the lunch slot is 55' since the lunches were
+#: brought from ~35' to ~55' (it was 45' when A300 was written).
+LUNCH_MAX_MINUTES = 55
+
+
+def daniele_availability(lunch_role="complementary", max_minutes=LUNCH_MAX_MINUTES, evening_role="primary"):
     av = {}
     for d in DAYS:
         evening = {"available": d != "fri", "locations": ["gym"], "preferred_location": "gym",
@@ -187,7 +192,7 @@ class TestDanieleStructure:
                 assert s["slot_role"] == "complementary" and s["focus"] in cv.FOCUS_FAMILIES
                 assert s["session_id"] in cv.FAMILY_SESSIONS[s["focus"]]
                 assert s["gym_id"] == "work"
-                assert session_duration_min(s["session_id"]) <= 45
+                assert session_duration_min(s["session_id"]) <= LUNCH_MAX_MINUTES
                 assert not s["tags"]["hard"] and not s["tags"]["finger"]
             else:
                 assert "lunch" not in by_slot, (phase, wd)
@@ -335,16 +340,24 @@ class TestRules:
 # ---------------------------------------------------------------------------
 
 class TestMaxMinutes:
-    def test_long_legs_sessions_never_fit_a_45_minute_lunch(self):
+    def test_long_legs_sessions_need_a_long_enough_slot(self):
+        """C279: on the 55' lunch legs_strength (55) fits once the two
+        legs_maintenance_lunch are used; lower_body_gym (90) never does."""
+        assert session_duration_min("legs_maintenance_lunch") == 55
         assert session_duration_min("legs_strength") == 55
         assert session_duration_min("lower_body_gym") == 90
         for phase in PHASES:
             wp = plan(phase, prefs={**PREFS, "complementary_rotation": ["legs"] * 4})
-            sids = {s["session_id"] for d in days_of(wp) for s in d["sessions"] if s["slot"] == "lunch"}
-            assert sids <= {"legs_maintenance_lunch"}, sids
-            # max_per_week 2 for legs_maintenance_lunch: the other two are reported.
-            assert len(wp["unmet_secondary"]) == 2
-            assert all(u["reason"] == "no_session_fits" for u in wp["unmet_secondary"])
+            sids = [s["session_id"] for d in days_of(wp) for s in d["sessions"] if s["slot"] == "lunch"]
+            assert set(sids) <= {"legs_maintenance_lunch", "legs_strength"}, sids
+            assert sids.count("legs_maintenance_lunch") == 2, sids
+
+    def test_a_45_minute_lunch_fits_no_catalog_lunch_since_c279(self):
+        """C279: every lunch of the catalog lasts 55'. A 45' slot (the A300
+        default) gets none of them and says so, never a silent hole."""
+        wp = plan("base", availability=daniele_availability(max_minutes=45))
+        assert not [s for d in days_of(wp) for s in d["sessions"] if s["slot"] == "lunch"]
+        assert wp["unmet_secondary"] and all(u["reason"] == "no_session_fits" for u in wp["unmet_secondary"])
 
     def test_a_longer_slot_admits_the_longer_session(self):
         av = daniele_availability(max_minutes=60)
@@ -543,7 +556,7 @@ class TestSingleSources:
         merged = merge_override_into_availability(av, {"days": {"wednesday": {
             "available": True, "slots": {"lunch": {"available": True, "location": "gym", "gym_id": "work"}}}}})
         assert merged["wed"]["lunch"]["role"] == "complementary"
-        assert merged["wed"]["lunch"]["max_minutes"] == 45
+        assert merged["wed"]["lunch"]["max_minutes"] == LUNCH_MAX_MINUTES
         legacy = merge_override_into_availability(av, {"days": {"thursday": {"location": "gym", "gym_id": "work"}}})
         assert legacy["thu"]["lunch"]["role"] == "complementary"
         # No structure fields in → none out (identity).
@@ -907,9 +920,10 @@ class TestAlertsAfterEdits:
         assert fingerprint(wp) == before and "secondary_warnings" not in wp
 
     def test_pairing_counts_catalog_caps_along_the_permutation(self):
-        """legs ×3 on 45' lunches: legs_maintenance_lunch caps at 2 — the
-        third is reported as no_session_fits, never a phantom fit."""
+        """legs ×3: legs_maintenance_lunch caps at 2 — the third legs lunch is
+        the next session of the family (legs_strength, 55' since C279), never
+        a phantom third legs_maintenance_lunch."""
         wp = plan("base", prefs={**PREFS, "complementary_rotation": ["legs", "legs", "legs", "z2"]})
         sids = [sid for _wd, sid, _ in _lunches(wp)]
         assert sids.count("legs_maintenance_lunch") == 2 and "treadmill_zone2_cardio" in sids
-        assert [u["reason"] for u in wp["unmet_secondary"]] == ["no_session_fits"]
+        assert sids.count("legs_strength") == 1 and not wp.get("unmet_secondary")

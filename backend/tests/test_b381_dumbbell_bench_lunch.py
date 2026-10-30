@@ -28,7 +28,7 @@ class TestPin:
     def test_gym_with_barbell_prescribes_the_dumbbell_bench(self):
         chest = _chest(WORK)
         assert chest["exercise_id"] == "dumbbell_bench_press"
-        assert (chest["prescription"]["sets"], chest["prescription"]["reps"]) == (4, 6)
+        assert (chest["prescription"]["sets"], chest["prescription"]["reps"]) == (5, 6)  # C279: 5 sets
 
     def test_dumbbells_without_a_declared_bench_still_get_it(self):
         assert _chest(["dumbbell", "pullup_bar", "rings"])["exercise_id"] == "dumbbell_bench_press"

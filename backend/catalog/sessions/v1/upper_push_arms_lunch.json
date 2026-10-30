@@ -1,7 +1,7 @@
 {
   "id": "upper_push_arms_lunch",
   "name": "Upper Push + Arms (Lunch)",
-  "version": "1.3",
+  "version": "1.4",
   "supplementary": true,
   "intent": {
     "primary_goal": "strength_general",
@@ -9,7 +9,7 @@
       "joint_health",
       "core"
     ],
-    "notes": "Lunch-break antagonist strength at a weights gym: bench press 4x6, a ring push-up that follows your bodyweight ladder, triceps and a biceps curl, all at RIR 1-2 (one or two clean reps left in the tank), plus one rotating core exercise. Loads come from your working loads and move with your feedback. About 35 min. Balances the pull-dominant climbing pattern without touching the fingers. Biceps are elbow-flexor work: keep them away from the 24 h before a heavy pulling session. In a deload week the app already drops one set from every exercise (the ring push-up through its ladder; its substitute without rings, 3 to 2 sets): stop every set at RIR 3."
+    "notes": "Lunch-break antagonist strength at a weights gym, about 55 min: bench press 5x6, a dumbbell fly 4x12, a ring push-up that follows your bodyweight ladder, triceps 4x10 and a biceps curl 4x8, all at RIR 1-2 (one or two clean reps left in the tank), and two floor core exercises (one rotating, one hollow hold). Loads come from your working loads and move with your feedback. Balances the pull-dominant climbing pattern without touching the fingers. Biceps are elbow-flexor work: keep them away from the 24 h before a heavy pulling session. In a deload week the app already drops one set from every exercise (the ring push-up through its ladder; its substitute without rings, 3 to 2 sets): stop every set at RIR 3."
   },
   "compatibility": {
     "slot": [
@@ -25,8 +25,8 @@
     "cable_machine"
   ],
   "time_budget": {
-    "target_duration_min": 35,
-    "hard_cap_min": 45
+    "target_duration_min": 55,
+    "hard_cap_min": 55
   },
   "tags": {
     "hard": false,
@@ -64,11 +64,11 @@
         "primary": {
           "exercise_id": "dumbbell_bench_press",
           "prescription_overrides": {
-            "sets": 4,
-            "deload_sets": 3,
+            "sets": 5,
+            "deload_sets": 4,
             "reps": 6,
             "rest_between_sets_seconds": 120,
-            "notes": "Strength dose: 4 x 6 at RIR 1-2 with a 3 s lowering phase. If every set felt like RIR 3 or more, log the session as easy and the next load goes up."
+            "notes": "Strength dose: 5 x 6 at RIR 1-2 with a 3 s lowering phase. If every set felt like RIR 3 or more, log the session as easy and the next load goes up."
           },
           "filters": {
             "role": [
@@ -79,6 +79,40 @@
             ],
             "pattern": [
               "push"
+            ],
+            "intensity_max": "medium"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "chest_fly",
+      "required": false,
+      "priority": 97,
+      "module_role": "secondary",
+      "notes": "Chest in the stretched position: dumbbell fly, the same movement every time so the load can progress from feedback (load per dumbbell).",
+      "selection": {
+        "primary": {
+          "exercise_id": "dumbbell_fly",
+          "prescription_overrides": {
+            "sets": 4,
+            "deload_sets": 3,
+            "reps": 12,
+            "rest_between_sets_seconds": 75,
+            "notes": "4 x 12 at RIR 1-2, load per dumbbell, elbows soft and fixed, 3 s down to a deep but painless stretch. If every set felt like RIR 3 or more, log it as easy and the load goes up."
+          },
+          "filters": {
+            "role": [
+              "accessory"
+            ],
+            "domain": [
+              "strength_general"
+            ],
+            "pattern": [
+              "push"
+            ],
+            "equipment": [
+              "dumbbell"
             ],
             "intensity_max": "medium"
           }
@@ -127,11 +161,11 @@
       "selection": {
         "primary": {
           "prescription_overrides": {
-            "sets": 3,
-            "deload_sets": 2,
+            "sets": 4,
+            "deload_sets": 3,
             "reps": 10,
             "rest_between_sets_seconds": 60,
-            "notes": "3 x 10 at RIR 1-2, elbows pinned to your sides. If every set felt like RIR 3 or more, log it as easy and the load goes up."
+            "notes": "4 x 10 at RIR 1-2, elbows pinned to your sides. If every set felt like RIR 3 or more, log it as easy and the load goes up."
           },
           "filters": {
             "role": [
@@ -161,11 +195,11 @@
         "primary": {
           "exercise_id": "bicep_curl",
           "prescription_overrides": {
-            "sets": 3,
-            "deload_sets": 2,
+            "sets": 4,
+            "deload_sets": 3,
             "reps": 8,
             "rest_between_sets_seconds": 75,
-            "notes": "3 x 8 at RIR 1-2, 3 s lowering phase, no swing. If every set felt like RIR 3 or more, log it as easy and the load goes up."
+            "notes": "4 x 8 at RIR 1-2, 3 s lowering phase, no swing. If every set felt like RIR 3 or more, log it as easy and the load goes up."
           },
           "filters": {
             "role": [
@@ -179,6 +213,37 @@
               "elbow_flexion"
             ],
             "intensity_max": "medium"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "core_anti_extension",
+      "required": false,
+      "priority": 72,
+      "module_role": "accessory",
+      "notes": "Second floor core exercise: hollow hold. Never hanging: this lunch can sit on the same day as a limit evening session.",
+      "selection": {
+        "primary": {
+          "exercise_id": "core_hollow_hold",
+          "prescription_overrides": {
+            "sets": 3,
+            "deload_sets": 2,
+            "work_seconds": 30,
+            "rest_between_sets_seconds": 45,
+            "notes": "3 x 30 s hollow hold: lower back pressed to the floor, arms by the ears, heels a hand off the floor. Shorten the lever (knees bent) before the back lifts."
+          },
+          "filters": {
+            "role": [
+              "accessory"
+            ],
+            "domain": [
+              "core"
+            ],
+            "pattern": [
+              "anti_extension"
+            ],
+            "intensity_max": "high"
           }
         }
       }

@@ -1,14 +1,14 @@
 {
   "id": "treadmill_hiit_4x4",
   "name": "Treadmill HIIT 4x4 (VO2max)",
-  "version": "1.0",
+  "version": "1.1",
   "supplementary": true,
   "intent": {
     "primary_goal": "conditioning",
     "secondary_goals": [
       "aerobic_capacity"
     ],
-    "notes": "Lunch-break VO2max session on a treadmill: 8 min warm-up, then 4 x 4 min hard with 3 min easy walking between. About 35 min. Zero finger load, but systemically hard: at most one per week, never on the day of or the day before a maximal or limit climbing session."
+    "notes": "Lunch-break VO2max session on a treadmill, about 55 min: 8 min warm-up, 4 x 4 min hard with 3 min easy walking between (keep walking 3-5 min after the last one), then floor core (hollow hold, side plank) and hip mobility. Zero finger load, but systemically hard: at most one per week, never on the day of or the day before a maximal or limit climbing session."
   },
   "compatibility": {
     "slot": [
@@ -23,8 +23,8 @@
     "treadmill"
   ],
   "time_budget": {
-    "target_duration_min": 35,
-    "hard_cap_min": 45
+    "target_duration_min": 55,
+    "hard_cap_min": 55
   },
   "tags": {
     "hard": false,
@@ -80,6 +80,94 @@
             "equipment": [
               "treadmill"
             ]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "core_anti_extension",
+      "required": false,
+      "priority": 70,
+      "module_role": "accessory",
+      "notes": "Floor core after the intervals: hollow hold. The legs are tired, the trunk is not.",
+      "selection": {
+        "primary": {
+          "exercise_id": "core_hollow_hold",
+          "prescription_overrides": {
+            "sets": 3,
+            "deload_sets": 2,
+            "work_seconds": 30,
+            "rest_between_sets_seconds": 45,
+            "notes": "3 x 30 s hollow hold: lower back pressed to the floor, arms by the ears, heels a hand off the floor. Shorten the lever (knees bent) before the back lifts."
+          },
+          "filters": {
+            "role": [
+              "accessory"
+            ],
+            "domain": [
+              "core"
+            ],
+            "pattern": [
+              "anti_extension"
+            ],
+            "intensity_max": "high"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "core_lateral",
+      "required": false,
+      "priority": 68,
+      "module_role": "accessory",
+      "notes": "Floor core, lateral chain: side plank on the forearm.",
+      "selection": {
+        "primary": {
+          "exercise_id": "side_plank",
+          "prescription_overrides": {
+            "sets": 3,
+            "deload_sets": 2,
+            "work_seconds": 30,
+            "rest_between_sets_seconds": 30,
+            "notes": "3 x 30 s per side, elbow under the shoulder, hips high in one line from head to feet."
+          },
+          "filters": {
+            "role": [
+              "accessory"
+            ],
+            "domain": [
+              "core"
+            ],
+            "pattern": [
+              "anti_lateral_flexion"
+            ],
+            "intensity_max": "medium"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "hip_mobility",
+      "required": false,
+      "priority": 60,
+      "module_role": "cooldown",
+      "notes": "Hip mobility to close, while the heart rate comes down.",
+      "selection": {
+        "primary": {
+          "exercise_id": "hip_opener_flow",
+          "prescription_overrides": {
+            "work_seconds": 480,
+            "notes": "8 min: hold each hip position 45-60 s, breathe deeply. Optional."
+          },
+          "filters": {
+            "role": [
+              "cooldown"
+            ],
+            "domain": [
+              "mobility",
+              "flexibility"
+            ],
+            "intensity_max": "low"
           }
         }
       }

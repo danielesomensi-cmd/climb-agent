@@ -1,7 +1,7 @@
 {
   "id": "treadmill_zone2_cardio",
   "name": "Treadmill Zone 2 Cardio + Hip Mobility",
-  "version": "1.0",
+  "version": "1.1",
   "supplementary": true,
   "intent": {
     "primary_goal": "conditioning",
@@ -9,7 +9,7 @@
       "aerobic_capacity",
       "mobility"
     ],
-    "notes": "Lunch-break aerobic base: 25 min steady Zone 2 on an inclined treadmill, then optional hip mobility. About 35 min. No finger or elbow load and a low recovery cost, so it fits next to any climbing day."
+    "notes": "Lunch-break aerobic base: 45 min steady Zone 2 on an inclined treadmill, then optional hip mobility. About 55 min. No finger or elbow load and a low recovery cost, so it fits next to any climbing day."
   },
   "compatibility": {
     "slot": [
@@ -24,8 +24,8 @@
     "treadmill"
   ],
   "time_budget": {
-    "target_duration_min": 35,
-    "hard_cap_min": 45
+    "target_duration_min": 55,
+    "hard_cap_min": 55
   },
   "tags": {
     "hard": false,
@@ -42,7 +42,7 @@
         "primary": {
           "exercise_id": "treadmill_incline_walk",
           "prescription_overrides": {
-            "work_seconds": 1500
+            "work_seconds": 2700
           },
           "filters": {
             "role": [

@@ -54,6 +54,9 @@ EXPECTED = [
     "heel_pulls_chest_to_wall",
     "wall_handstand_hold",
     "overhead_press",
+    # C279: floor core (hollow hold, side plank) in the generic order
+    "core_hollow_hold",
+    "side_plank",
     # isolation work in the engine's generic order (ties broken by id)
     "hammer_curl",
     "lateral_raise",
@@ -61,10 +64,11 @@ EXPECTED = [
 ]
 #: block_id → (exercise_id, sets, deload_sets) of every loaded lift.
 LOADED = {
-    "shoulder_press": ("overhead_press", 3, 2),
-    "lateral_delts": ("lateral_raise", 3, 2),
-    "triceps": ("overhead_tricep_extension", 3, 2),
-    "biceps": ("hammer_curl", 3, 2),
+    # C279 (2026-10-30): 4 sets each to fill a 55' lunch, still one less in deload.
+    "shoulder_press": ("overhead_press", 4, 3),
+    "lateral_delts": ("lateral_raise", 4, 3),
+    "triceps": ("overhead_tricep_extension", 4, 3),
+    "biceps": ("hammer_curl", 4, 3),
 }
 DUMBBELL_BLOCKS = ("shoulder_press", "lateral_delts", "triceps", "biceps")
 
@@ -125,7 +129,7 @@ class TestCatalog:
         s = _session()
         assert s["id"] == SID and s["supplementary"] is True
         assert "lunch_short" in s["compatibility"]["slot"]
-        assert s["time_budget"] == {"target_duration_min": 35, "hard_cap_min": 45}
+        assert s["time_budget"] == {"target_duration_min": 55, "hard_cap_min": 55}  # C279
         assert s["tags"] == {"hard": False, "finger": False}
         assert s["intent"]["primary_goal"] == "strength_general"
 
@@ -243,7 +247,7 @@ class TestFamily:
     def test_validators_accept_the_family(self):
         rot = ["arms_shoulders", "legs", "hiit", "z2", "upper_push_arms"]
         assert cv.validate_structure(
-            {"mon": {"lunch": {"role": "complementary", "max_minutes": 45, "focus": "arms_shoulders"}}},
+            {"mon": {"lunch": {"role": "complementary", "max_minutes": 55, "focus": "arms_shoulders"}}},
             {"complementary_rotation": rot,
              "complementary_rotation_by_phase": {"deload": ["z2", "arms_shoulders"]}},
         ) == []

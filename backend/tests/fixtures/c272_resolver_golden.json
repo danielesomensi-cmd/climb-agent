@@ -315,13 +315,15 @@
  },
  "resolver": {
   "advanced|2026-10-07|arms_shoulders_handstand_lunch": {
-   "digest": "b39c13269010e0e7805ca28a0a6eecba703be90825351c75de88e71552f3b824",
+   "digest": "55be7439288c4909b07f7cb9928e5db5a36d480dacae9b01253fcce5a9b97f9c",
    "exercise_ids": [
     "general_pulse_raise",
     "mobility_thoracic_shoulders_flow",
     "heel_pulls_chest_to_wall",
     "wall_handstand_hold",
     "overhead_press",
+    "core_hollow_hold",
+    "side_plank",
     "hammer_curl",
     "lateral_raise",
     "overhead_tricep_extension"
@@ -562,10 +564,12 @@
    ]
   },
   "advanced|2026-10-07|legs_maintenance_lunch": {
-   "digest": "1405af06d002a4ea4f052cd2a89cd1821ff96cc67ccbe0def9a161525cfad342",
+   "digest": "2746f29c405bd94524c676873f561fb622e077410985bc770f91164513df5156",
    "exercise_ids": [
     "general_pulse_raise",
     "copenhagen_plank",
+    "core_hollow_hold",
+    "bulgarian_split_squat",
     "edge_calf_raise_bigtoe",
     "goblet_squat",
     "romanian_deadlift",
@@ -774,13 +778,16 @@
    ]
   },
   "advanced|2026-10-07|treadmill_hiit_4x4": {
-   "digest": "7bb37412f5f686ed7c83f058ed95a9b522385d7fafcf084af50f75eeb8aef80d",
+   "digest": "ee121aca516873c770ffb6cb91dc925714af0a6381446d9f60b79499168e2bb3",
    "exercise_ids": [
-    "general_pulse_raise"
+    "general_pulse_raise",
+    "core_hollow_hold",
+    "side_plank",
+    "hip_opener_flow"
    ]
   },
   "advanced|2026-10-07|treadmill_zone2_cardio": {
-   "digest": "c33b31fab66eca698027d12e56210cacbf67a7398f5ad9820a697189b1f0a70e",
+   "digest": "4362253f718beedfa696041183971e7243805867d56c55f779e5bf24708361e2",
    "exercise_ids": [
     "treadmill_incline_walk",
     "hip_opener_flow"
@@ -802,13 +809,15 @@
    ]
   },
   "advanced|2026-10-07|upper_push_arms_lunch": {
-   "digest": "81eb30222f9cbbb9bf3569f8f32d9c3fae7e8db97975926013298762be5fd44b",
+   "digest": "81ba6548c25706e9133e40b3059449d68e6fdbff4735672479531f94c1a8d14e",
    "exercise_ids": [
     "general_pulse_raise",
     "ab_wheel_rollout",
+    "core_hollow_hold",
     "bicep_curl",
     "dumbbell_bench_press",
     "dumbbell_fly",
+    "handstand_pushup_wall",
     "incline_pushup"
    ]
   },
@@ -819,13 +828,15 @@
    ]
   },
   "advanced|2026-10-21|arms_shoulders_handstand_lunch": {
-   "digest": "f3f19733511d219b5038a61a0bbccafc429bfb6796eeb8739b3aa85713e520f5",
+   "digest": "0fade7ad6a3be437e706ec51199a250d86c5aaa940142aed9b7974ce762abc28",
    "exercise_ids": [
     "general_pulse_raise",
     "mobility_thoracic_shoulders_flow",
     "heel_pulls_chest_to_wall",
     "wall_handstand_hold",
     "overhead_press",
+    "core_hollow_hold",
+    "side_plank",
     "hammer_curl",
     "lateral_raise",
     "overhead_tricep_extension"
@@ -1062,10 +1073,12 @@
    ]
   },
   "advanced|2026-10-21|legs_maintenance_lunch": {
-   "digest": "980ff0cab22bd167666e524dc01546bdee3e9431cbaf67801b698f7beca96c9c",
+   "digest": "7616c1edc53e78b8867e9e4eebf89d3e2e517dfb5485aa582339ee12f5dd65da",
    "exercise_ids": [
     "general_pulse_raise",
     "copenhagen_plank",
+    "core_hollow_hold",
+    "bulgarian_split_squat",
     "edge_calf_raise_bigtoe",
     "goblet_squat",
     "romanian_deadlift",
@@ -1269,13 +1282,16 @@
    ]
   },
   "advanced|2026-10-21|treadmill_hiit_4x4": {
-   "digest": "1f36f6d2751c59a72914880f1e2635e67aa0a08bfdc826dd11231a2cd3e4a48b",
+   "digest": "88d626624003d128c2258181db2ad7cd97ef8c6869431b7c7107bc035bc4713e",
    "exercise_ids": [
-    "general_pulse_raise"
+    "general_pulse_raise",
+    "core_hollow_hold",
+    "side_plank",
+    "hip_opener_flow"
    ]
   },
   "advanced|2026-10-21|treadmill_zone2_cardio": {
-   "digest": "c767208e8bef2372bbe7bf9435bd5969e9932716340844fa82924897da6a4f14",
+   "digest": "8f7507004685e9595c047615f77015010abfa7747ace5044df98a394d301f86f",
    "exercise_ids": [
     "treadmill_incline_walk",
     "hip_opener_flow"
@@ -1297,12 +1313,14 @@
    ]
   },
   "advanced|2026-10-21|upper_push_arms_lunch": {
-   "digest": "8a5a595ca7f8e810f0a8651ee8141f36f87ea1e856729d2259318fb0b98e0608",
+   "digest": "024021cd7e01f8c06b7e0ae64e9d7c629692f22d32a790597594e5929eb4c5be",
    "exercise_ids": [
     "general_pulse_raise",
+    "core_hollow_hold",
     "suitcase_carry",
     "bicep_curl",
     "dumbbell_bench_press",
+    "dumbbell_fly",
     "handstand_pushup_wall",
     "incline_pushup"
    ]
@@ -1314,13 +1332,15 @@
    ]
   },
   "intermediate|2026-10-07|arms_shoulders_handstand_lunch": {
-   "digest": "4fb329b4486bf110640c7f39d07528b5cc89d9f8dded6bb405df56634419dbf6",
+   "digest": "16716a573ddb67de51898dd6aa4617c9adc26836628588b49d6d12a9e865a271",
    "exercise_ids": [
     "general_pulse_raise",
     "mobility_thoracic_shoulders_flow",
     "heel_pulls_chest_to_wall",
     "wall_handstand_hold",
     "overhead_press",
+    "core_hollow_hold",
+    "side_plank",
     "hammer_curl",
     "lateral_raise",
     "overhead_tricep_extension"
@@ -1561,10 +1581,12 @@
    ]
   },
   "intermediate|2026-10-07|legs_maintenance_lunch": {
-   "digest": "79bc0bf821a7d194d006dbbfb9aadf6a6f014af113bfa8d108a98377b2fdcf99",
+   "digest": "9468e1409eafb2a32a059bfb8a2c743e49da34560efefa4122f769e13c4aa445",
    "exercise_ids": [
     "general_pulse_raise",
     "copenhagen_plank",
+    "core_hollow_hold",
+    "bulgarian_split_squat",
     "edge_calf_raise_bigtoe",
     "goblet_squat",
     "romanian_deadlift",
@@ -1773,13 +1795,16 @@
    ]
   },
   "intermediate|2026-10-07|treadmill_hiit_4x4": {
-   "digest": "7bb37412f5f686ed7c83f058ed95a9b522385d7fafcf084af50f75eeb8aef80d",
+   "digest": "ee121aca516873c770ffb6cb91dc925714af0a6381446d9f60b79499168e2bb3",
    "exercise_ids": [
-    "general_pulse_raise"
+    "general_pulse_raise",
+    "core_hollow_hold",
+    "side_plank",
+    "hip_opener_flow"
    ]
   },
   "intermediate|2026-10-07|treadmill_zone2_cardio": {
-   "digest": "c33b31fab66eca698027d12e56210cacbf67a7398f5ad9820a697189b1f0a70e",
+   "digest": "4362253f718beedfa696041183971e7243805867d56c55f779e5bf24708361e2",
    "exercise_ids": [
     "treadmill_incline_walk",
     "hip_opener_flow"
@@ -1801,13 +1826,15 @@
    ]
   },
   "intermediate|2026-10-07|upper_push_arms_lunch": {
-   "digest": "aa86ac706846aefdf48521424eb3cbd3b7a17f23f9664b59649079b330f17aca",
+   "digest": "17dbd3a61f27bddfbc39a29dc0a6fb5d48666a8b0eadc1fddf5a492904eb3497",
    "exercise_ids": [
     "general_pulse_raise",
     "ab_wheel_rollout",
+    "core_hollow_hold",
     "bicep_curl",
     "dumbbell_bench_press",
     "dumbbell_fly",
+    "handstand_pushup_wall",
     "incline_pushup"
    ]
   },
@@ -1818,13 +1845,15 @@
    ]
   },
   "intermediate|2026-10-21|arms_shoulders_handstand_lunch": {
-   "digest": "fe36cd812b38cbb956b1eb26acb8d6845a4b3f2601ebdf720ac519ba3392dfd5",
+   "digest": "f31bfb6f38ca0844b8abe0f5741677588004c10fc7e8d4b882246d822bd43eab",
    "exercise_ids": [
     "general_pulse_raise",
     "mobility_thoracic_shoulders_flow",
     "heel_pulls_chest_to_wall",
     "wall_handstand_hold",
     "overhead_press",
+    "core_hollow_hold",
+    "side_plank",
     "hammer_curl",
     "lateral_raise",
     "overhead_tricep_extension"
@@ -2061,10 +2090,12 @@
    ]
   },
   "intermediate|2026-10-21|legs_maintenance_lunch": {
-   "digest": "af29019f449ac69b3d9548470e4b42380c08e40d67595f016bb67dfdb856c243",
+   "digest": "89c97254c8c52e7eb0fa4763b3afe0044efbbf676fe6bec1f97e47ebfa839d7d",
    "exercise_ids": [
     "general_pulse_raise",
     "copenhagen_plank",
+    "core_hollow_hold",
+    "bulgarian_split_squat",
     "edge_calf_raise_bigtoe",
     "goblet_squat",
     "romanian_deadlift",
@@ -2268,13 +2299,16 @@
    ]
   },
   "intermediate|2026-10-21|treadmill_hiit_4x4": {
-   "digest": "1f36f6d2751c59a72914880f1e2635e67aa0a08bfdc826dd11231a2cd3e4a48b",
+   "digest": "88d626624003d128c2258181db2ad7cd97ef8c6869431b7c7107bc035bc4713e",
    "exercise_ids": [
-    "general_pulse_raise"
+    "general_pulse_raise",
+    "core_hollow_hold",
+    "side_plank",
+    "hip_opener_flow"
    ]
   },
   "intermediate|2026-10-21|treadmill_zone2_cardio": {
-   "digest": "c767208e8bef2372bbe7bf9435bd5969e9932716340844fa82924897da6a4f14",
+   "digest": "8f7507004685e9595c047615f77015010abfa7747ace5044df98a394d301f86f",
    "exercise_ids": [
     "treadmill_incline_walk",
     "hip_opener_flow"
@@ -2296,12 +2330,14 @@
    ]
   },
   "intermediate|2026-10-21|upper_push_arms_lunch": {
-   "digest": "1040133a7126d10e6be9125d4ca4e9294cf996999aa784976173d0412e08add1",
+   "digest": "3004be0c9c3388549373d4158de4230f488c96a5cd8e4a72f1cec8acb92bfcfd",
    "exercise_ids": [
     "general_pulse_raise",
+    "core_hollow_hold",
     "suitcase_carry",
     "bicep_curl",
     "dumbbell_bench_press",
+    "dumbbell_fly",
     "handstand_pushup_wall",
     "incline_pushup"
    ]
@@ -2313,13 +2349,15 @@
    ]
   },
   "untested|2026-10-07|arms_shoulders_handstand_lunch": {
-   "digest": "4fb329b4486bf110640c7f39d07528b5cc89d9f8dded6bb405df56634419dbf6",
+   "digest": "16716a573ddb67de51898dd6aa4617c9adc26836628588b49d6d12a9e865a271",
    "exercise_ids": [
     "general_pulse_raise",
     "mobility_thoracic_shoulders_flow",
     "heel_pulls_chest_to_wall",
     "wall_handstand_hold",
     "overhead_press",
+    "core_hollow_hold",
+    "side_plank",
     "hammer_curl",
     "lateral_raise",
     "overhead_tricep_extension"
@@ -2560,10 +2598,12 @@
    ]
   },
   "untested|2026-10-07|legs_maintenance_lunch": {
-   "digest": "0d78d309527a87e9571b3c03ebde2a3786017fc1a3ba7dab5929aacd6db278b2",
+   "digest": "725901c2bf99e590d674819de1c87166528230b66dc6fa0aaa6764021217b609",
    "exercise_ids": [
     "general_pulse_raise",
+    "core_hollow_hold",
     "side_plank",
+    "bulgarian_split_squat",
     "edge_calf_raise_bigtoe",
     "goblet_squat",
     "romanian_deadlift",
@@ -2772,13 +2812,16 @@
    ]
   },
   "untested|2026-10-07|treadmill_hiit_4x4": {
-   "digest": "7bb37412f5f686ed7c83f058ed95a9b522385d7fafcf084af50f75eeb8aef80d",
+   "digest": "ee121aca516873c770ffb6cb91dc925714af0a6381446d9f60b79499168e2bb3",
    "exercise_ids": [
-    "general_pulse_raise"
+    "general_pulse_raise",
+    "core_hollow_hold",
+    "side_plank",
+    "hip_opener_flow"
    ]
   },
   "untested|2026-10-07|treadmill_zone2_cardio": {
-   "digest": "c33b31fab66eca698027d12e56210cacbf67a7398f5ad9820a697189b1f0a70e",
+   "digest": "4362253f718beedfa696041183971e7243805867d56c55f779e5bf24708361e2",
    "exercise_ids": [
     "treadmill_incline_walk",
     "hip_opener_flow"
@@ -2800,13 +2843,15 @@
    ]
   },
   "untested|2026-10-07|upper_push_arms_lunch": {
-   "digest": "926e23e66fe78c0387ecf31f49a869b09ca1cc951198a7ccf6c97f8ff1c9fc6b",
+   "digest": "cc56178dc1a8cc366bb4ee11b932f5d3067da08896d4e97ea608c7672de30b18",
    "exercise_ids": [
     "general_pulse_raise",
+    "core_hollow_hold",
     "side_plank",
     "bicep_curl",
     "dumbbell_bench_press",
     "dumbbell_fly",
+    "handstand_pushup_wall",
     "incline_pushup"
    ]
   },
@@ -2817,13 +2862,15 @@
    ]
   },
   "untested|2026-10-21|arms_shoulders_handstand_lunch": {
-   "digest": "fe36cd812b38cbb956b1eb26acb8d6845a4b3f2601ebdf720ac519ba3392dfd5",
+   "digest": "f31bfb6f38ca0844b8abe0f5741677588004c10fc7e8d4b882246d822bd43eab",
    "exercise_ids": [
     "general_pulse_raise",
     "mobility_thoracic_shoulders_flow",
     "heel_pulls_chest_to_wall",
     "wall_handstand_hold",
     "overhead_press",
+    "core_hollow_hold",
+    "side_plank",
     "hammer_curl",
     "lateral_raise",
     "overhead_tricep_extension"
@@ -3060,10 +3107,12 @@
    ]
   },
   "untested|2026-10-21|legs_maintenance_lunch": {
-   "digest": "b0a35e0b2a7c13cc692518503cf95fb3b38f0b69f63e698fbbe4e00bbc487e48",
+   "digest": "6a3ded957a4886c89f63a1cacd14f8e943055a1ca0a61fc8fff44993d1fcad6e",
    "exercise_ids": [
     "general_pulse_raise",
+    "core_hollow_hold",
     "plank",
+    "bulgarian_split_squat",
     "edge_calf_raise_bigtoe",
     "goblet_squat",
     "romanian_deadlift",
@@ -3267,13 +3316,16 @@
    ]
   },
   "untested|2026-10-21|treadmill_hiit_4x4": {
-   "digest": "1f36f6d2751c59a72914880f1e2635e67aa0a08bfdc826dd11231a2cd3e4a48b",
+   "digest": "88d626624003d128c2258181db2ad7cd97ef8c6869431b7c7107bc035bc4713e",
    "exercise_ids": [
-    "general_pulse_raise"
+    "general_pulse_raise",
+    "core_hollow_hold",
+    "side_plank",
+    "hip_opener_flow"
    ]
   },
   "untested|2026-10-21|treadmill_zone2_cardio": {
-   "digest": "c767208e8bef2372bbe7bf9435bd5969e9932716340844fa82924897da6a4f14",
+   "digest": "8f7507004685e9595c047615f77015010abfa7747ace5044df98a394d301f86f",
    "exercise_ids": [
     "treadmill_incline_walk",
     "hip_opener_flow"
@@ -3295,12 +3347,14 @@
    ]
   },
   "untested|2026-10-21|upper_push_arms_lunch": {
-   "digest": "1cb0dda6304f8eecd8a6b01819d9e5cd2e8e55dfd941b164bf4d6e32eb4616b5",
+   "digest": "e539454553cd8d6a858b0d61185a1036fc4ece657c71649640499b5c3e12da5e",
    "exercise_ids": [
     "general_pulse_raise",
+    "core_hollow_hold",
     "plank",
     "bicep_curl",
     "dumbbell_bench_press",
+    "dumbbell_fly",
     "handstand_pushup_wall",
     "incline_pushup"
    ]

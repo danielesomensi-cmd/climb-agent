@@ -1,7 +1,7 @@
 {
   "id": "legs_maintenance_lunch",
   "name": "Legs Strength + Foot Strength (Lunch)",
-  "version": "1.2",
+  "version": "1.3",
   "supplementary": true,
   "intent": {
     "primary_goal": "strength_general",
@@ -9,7 +9,7 @@
       "joint_health",
       "core"
     ],
-    "notes": "Lunch-break leg strength at a weights gym: goblet squat 4x6 and Romanian deadlift 3x6, both at RIR 1-2 (one or two clean reps left in the tank), one rotating core exercise and two short foot-strength exercises (toe flexors and big-toe calf raises) for edging. The load of the two lifts comes from your working load and moves with your feedback. The engine orders the exercises with the generic phase sort, so they are not necessarily contiguous. About 35 min. Keep heavy legs out of the 48 h before a limit or outdoor day. In a deload week the app already drops one set from each lift (goblet squat 3 sets, Romanian deadlift 2): stop every set at RIR 3."
+    "notes": "Lunch-break leg strength at a weights gym, about 55 min: goblet squat 5x6 and Romanian deadlift 4x6, both at RIR 1-2 (one or two clean reps left in the tank), Bulgarian split squat 3x8 per leg, two floor core exercises (one rotating, one hollow hold) and two short foot-strength exercises (toe flexors and big-toe calf raises) for edging. The loads come from your working loads and move with your feedback. The engine orders the exercises with the generic phase sort, so they are not necessarily contiguous. Keep heavy legs out of the 48 h before a limit or outdoor day. In a deload week the app already drops one set from each lift (goblet squat 4 sets, Romanian deadlift 3, split squat 2): stop every set at RIR 3."
   },
   "compatibility": {
     "slot": [
@@ -24,8 +24,8 @@
     "dumbbell"
   ],
   "time_budget": {
-    "target_duration_min": 35,
-    "hard_cap_min": 45
+    "target_duration_min": 55,
+    "hard_cap_min": 55
   },
   "tags": {
     "hard": false,
@@ -63,11 +63,11 @@
         "primary": {
           "exercise_id": "goblet_squat",
           "prescription_overrides": {
-            "sets": 4,
-            "deload_sets": 3,
+            "sets": 5,
+            "deload_sets": 4,
             "reps": 6,
             "rest_between_sets_seconds": 120,
-            "notes": "Strength dose: 4 x 6 at RIR 1-2 - the last rep is slow but clean, with one or two more left. If every set felt like RIR 3 or more, log the session as easy and the next load goes up."
+            "notes": "Strength dose: 5 x 6 at RIR 1-2 - the last rep is slow but clean, with one or two more left. If every set felt like RIR 3 or more, log the session as easy and the next load goes up."
           },
           "filters": {
             "role": [
@@ -94,11 +94,11 @@
         "primary": {
           "exercise_id": "romanian_deadlift",
           "prescription_overrides": {
-            "sets": 3,
-            "deload_sets": 2,
+            "sets": 4,
+            "deload_sets": 3,
             "reps": 6,
             "rest_between_sets_seconds": 120,
-            "notes": "Strength dose: 3 x 6 at RIR 1-2 with a 3 s lowering phase. Stop at hamstring end-range, before the lower back rounds. All sets at RIR 3 or more: log it as easy and the load goes up."
+            "notes": "Strength dose: 4 x 6 at RIR 1-2 with a 3 s lowering phase. Stop at hamstring end-range, before the lower back rounds. All sets at RIR 3 or more: log it as easy and the load goes up."
           },
           "filters": {
             "role": [
@@ -109,6 +109,37 @@
             ],
             "pattern": [
               "hinge"
+            ],
+            "intensity_max": "medium"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "single_leg",
+      "required": false,
+      "priority": 85,
+      "module_role": "secondary",
+      "notes": "Single-leg strength: Bulgarian split squat, the same movement every time so the load can progress from feedback (load per dumbbell). Hip and knee control on one leg, the high-step position of climbing.",
+      "selection": {
+        "primary": {
+          "exercise_id": "bulgarian_split_squat",
+          "prescription_overrides": {
+            "sets": 3,
+            "deload_sets": 2,
+            "reps": 8,
+            "rest_between_sets_seconds": 90,
+            "notes": "3 x 8 per leg at RIR 1-2, rear foot on a bench, a dumbbell in each hand (load per dumbbell). Front knee tracks over the toes, 2-3 s down. If every set felt like RIR 3 or more, log it as easy and the load goes up."
+          },
+          "filters": {
+            "role": [
+              "accessory"
+            ],
+            "domain": [
+              "strength_general"
+            ],
+            "pattern": [
+              "lunge"
             ],
             "intensity_max": "medium"
           }
@@ -153,6 +184,37 @@
       }
     },
     {
+      "block_id": "core_anti_extension",
+      "required": false,
+      "priority": 72,
+      "module_role": "accessory",
+      "notes": "Second floor core exercise: hollow hold, the body tension of steep climbing. No hanging here either.",
+      "selection": {
+        "primary": {
+          "exercise_id": "core_hollow_hold",
+          "prescription_overrides": {
+            "sets": 3,
+            "deload_sets": 2,
+            "work_seconds": 30,
+            "rest_between_sets_seconds": 45,
+            "notes": "3 x 30 s hollow hold: lower back pressed to the floor, arms by the ears, heels a hand off the floor. Shorten the lever (knees bent) before the back lifts."
+          },
+          "filters": {
+            "role": [
+              "accessory"
+            ],
+            "domain": [
+              "core"
+            ],
+            "pattern": [
+              "anti_extension"
+            ],
+            "intensity_max": "high"
+          }
+        }
+      }
+    },
+    {
       "block_id": "foot_toe_flexors",
       "required": true,
       "priority": 80,
@@ -162,12 +224,12 @@
         "primary": {
           "exercise_id": "toe_flexor_isometric",
           "prescription_overrides": {
-            "sets": 2,
+            "sets": 3,
             "reps": 3,
             "work_seconds": 5,
             "rest_between_reps_seconds": 15,
             "rest_between_sets_seconds": 30,
-            "notes": "Short lunch dose: 2 sets of 3 x 5 s per foot at about 90% effort, big toe first, then the lesser toes. Fits in the rests of the squat."
+            "notes": "Lunch dose: 3 sets of 3 x 5 s per foot at about 90% effort, big toe first, then the lesser toes. Fits in the rests of the squat."
           },
           "filters": {
             "role": [
@@ -193,10 +255,10 @@
         "primary": {
           "exercise_id": "edge_calf_raise_bigtoe",
           "prescription_overrides": {
-            "sets": 2,
+            "sets": 3,
             "reps": 8,
             "rest_between_sets_seconds": 30,
-            "notes": "Short lunch dose: 2 x 8 per leg on a 2-3 cm edge, 3 s up, 2 s hold over the big toe, 3 s down."
+            "notes": "Lunch dose: 3 x 8 per leg on a 2-3 cm edge, 3 s up, 2 s hold over the big toe, 3 s down."
           },
           "filters": {
             "role": [

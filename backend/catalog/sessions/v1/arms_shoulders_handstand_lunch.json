@@ -1,14 +1,14 @@
 {
   "id": "arms_shoulders_handstand_lunch",
   "name": "Arms, Shoulders + Handstand (Lunch)",
-  "version": "1.0",
+  "version": "1.1",
   "supplementary": true,
   "intent": {
     "primary_goal": "strength_general",
     "secondary_goals": [
       "handstand_skill"
     ],
-    "notes": "Lunch-break session at a weights gym: handstand practice first, then shoulders, triceps and biceps. The handstand goes first on purpose, right after the warm-up: it is a balance skill, it needs fresh shoulders and triceps to keep the elbows locked, and an upside-down fall with pre-fatigued deltoids is the risk this order avoids. Its dose is low-fatigue practice (never to failure), so the lifts after it lose very little. Loaded lifts at RIR 1-2 (one or two clean reps left in the tank); loads come from your working loads and move with your feedback. For a dumbbell exercise the load is per dumbbell (one hand). About 35 min. No finger load, no hanging, no heavy pull. The curl is elbow-flexor work: keep it away from the 24 h before a heavy pulling session. After the overhead press, the isolation exercises appear in the engine's generic order: any order among them works. In a deload week the app already drops one set from every exercise: stop every set at RIR 3."
+    "notes": "Lunch-break session at a weights gym, about 55 min: handstand practice first, then shoulders (overhead press 4x8, lateral raise 4x12), triceps 4x10 and biceps 4x8, then floor core (side plank, hollow hold). The handstand goes first on purpose, right after the warm-up: it is a balance skill, it needs fresh shoulders and triceps to keep the elbows locked, and an upside-down fall with pre-fatigued deltoids is the risk this order avoids. Its dose is low-fatigue practice (never to failure), so the lifts after it lose very little. Loaded lifts at RIR 1-2 (one or two clean reps left in the tank); loads come from your working loads and move with your feedback. For a dumbbell exercise the load is per dumbbell (one hand). No finger load, no hanging, no heavy pull. The curl is elbow-flexor work: keep it away from the 24 h before a heavy pulling session. After the overhead press, the isolation exercises appear in the engine's generic order: any order among them works. In a deload week the app already drops one set from every exercise: stop every set at RIR 3."
   },
   "compatibility": {
     "slot": [
@@ -23,8 +23,8 @@
     "dumbbell"
   ],
   "time_budget": {
-    "target_duration_min": 35,
-    "hard_cap_min": 45
+    "target_duration_min": 55,
+    "hard_cap_min": 55
   },
   "tags": {
     "hard": false,
@@ -124,10 +124,10 @@
         "primary": {
           "exercise_id": "wall_handstand_hold",
           "prescription_overrides": {
-            "sets": 3,
+            "sets": 4,
             "work_seconds": 30,
             "rest_between_sets_seconds": 60,
-            "notes": "Target: 3 x 30 s clean, belly to the wall, hands 15-20 cm from it. Push the floor away, ribs closed, glutes tight. Come down when the shoulders sink or the back arches, and log the seconds of your weakest hold."
+            "notes": "Target: 4 x 30 s clean, belly to the wall, hands 15-20 cm from it. Push the floor away, ribs closed, glutes tight. Come down when the shoulders sink or the back arches, and log the seconds of your weakest hold."
           },
           "filters": {
             "role": [
@@ -154,11 +154,11 @@
         "primary": {
           "exercise_id": "overhead_press",
           "prescription_overrides": {
-            "sets": 3,
-            "deload_sets": 2,
+            "sets": 4,
+            "deload_sets": 3,
             "reps": 8,
             "rest_between_sets_seconds": 90,
-            "notes": "3 x 8 at RIR 1-2, seated dumbbell press or standing barbell, always the same implement. With dumbbells the load is per dumbbell. 3 s lowering phase, ribs down. If every set felt like RIR 3 or more, log the session as easy and the next load goes up."
+            "notes": "4 x 8 at RIR 1-2, seated dumbbell press or standing barbell, always the same implement. With dumbbells the load is per dumbbell. 3 s lowering phase, ribs down. If every set felt like RIR 3 or more, log the session as easy and the next load goes up."
           },
           "filters": {
             "role": [
@@ -185,11 +185,11 @@
         "primary": {
           "exercise_id": "lateral_raise",
           "prescription_overrides": {
-            "sets": 3,
-            "deload_sets": 2,
+            "sets": 4,
+            "deload_sets": 3,
             "reps": 12,
             "rest_between_sets_seconds": 45,
-            "notes": "3 x 12 at RIR 1-2, load per dumbbell. Lead with the elbows up to shoulder height, never above, 2-3 s down."
+            "notes": "4 x 12 at RIR 1-2, load per dumbbell. Lead with the elbows up to shoulder height, never above, 2-3 s down."
           },
           "filters": {
             "role": [
@@ -216,11 +216,11 @@
         "primary": {
           "exercise_id": "overhead_tricep_extension",
           "prescription_overrides": {
-            "sets": 3,
-            "deload_sets": 2,
+            "sets": 4,
+            "deload_sets": 3,
             "reps": 10,
             "rest_between_sets_seconds": 60,
-            "notes": "3 x 10 at RIR 1-2 with one dumbbell held in both hands: the load is that one dumbbell. Elbows in, ribs down, full stretch behind the head. If every set felt like RIR 3 or more, log it as easy and the load goes up."
+            "notes": "4 x 10 at RIR 1-2 with one dumbbell held in both hands: the load is that one dumbbell. Elbows in, ribs down, full stretch behind the head. If every set felt like RIR 3 or more, log it as easy and the load goes up."
           },
           "filters": {
             "role": [
@@ -250,11 +250,11 @@
         "primary": {
           "exercise_id": "hammer_curl",
           "prescription_overrides": {
-            "sets": 3,
-            "deload_sets": 2,
+            "sets": 4,
+            "deload_sets": 3,
             "reps": 8,
             "rest_between_sets_seconds": 75,
-            "notes": "3 x 8 at RIR 1-2, load per dumbbell, thumbs up, elbows pinned, 3 s lowering phase, no swing. If every set felt like RIR 3 or more, log it as easy and the load goes up."
+            "notes": "4 x 8 at RIR 1-2, load per dumbbell, thumbs up, elbows pinned, 3 s lowering phase, no swing. If every set felt like RIR 3 or more, log it as easy and the load goes up."
           },
           "filters": {
             "role": [
@@ -268,6 +268,68 @@
               "elbow_flexion"
             ],
             "intensity_max": "medium"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "core_lateral",
+      "required": false,
+      "priority": 72,
+      "module_role": "accessory",
+      "notes": "Floor core, lateral chain: side plank on the forearm. No hanging, no front lever.",
+      "selection": {
+        "primary": {
+          "exercise_id": "side_plank",
+          "prescription_overrides": {
+            "sets": 3,
+            "deload_sets": 2,
+            "work_seconds": 30,
+            "rest_between_sets_seconds": 30,
+            "notes": "3 x 30 s per side, elbow under the shoulder, hips high in one line from head to feet."
+          },
+          "filters": {
+            "role": [
+              "accessory"
+            ],
+            "domain": [
+              "core"
+            ],
+            "pattern": [
+              "anti_lateral_flexion"
+            ],
+            "intensity_max": "medium"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "core_anti_extension",
+      "required": false,
+      "priority": 70,
+      "module_role": "accessory",
+      "notes": "Floor core to close: hollow hold, the line the handstand needs. No hanging, no front lever.",
+      "selection": {
+        "primary": {
+          "exercise_id": "core_hollow_hold",
+          "prescription_overrides": {
+            "sets": 3,
+            "deload_sets": 2,
+            "work_seconds": 30,
+            "rest_between_sets_seconds": 45,
+            "notes": "3 x 30 s hollow hold: lower back pressed to the floor, arms by the ears, heels a hand off the floor. Shorten the lever (knees bent) before the back lifts."
+          },
+          "filters": {
+            "role": [
+              "accessory"
+            ],
+            "domain": [
+              "core"
+            ],
+            "pattern": [
+              "anti_extension"
+            ],
+            "intensity_max": "high"
           }
         }
       }

@@ -1,7 +1,8 @@
 """C274 — lunch complementary sessions (catalog).
 
-Four supplementary sessions sized for a 45-minute gross lunch break (about 35
-useful minutes) at a weights gym with a treadmill:
+Four supplementary sessions sized for a lunch break at a weights gym with a
+treadmill — 45' gross (about 35 useful) when written, ~55' since C279
+(Daniele, 2026-10-30: «35 inaccettabile»):
 
 - ``treadmill_hiit_4x4``     — VO2max 4x4 on the treadmill, ``tags.hiit`` true;
 - ``treadmill_zone2_cardio`` — Zone 2 incline walk + optional hip mobility;
@@ -46,7 +47,10 @@ PHASES = ("base", "strength_power", "power_endurance", "performance", "deload")
 WORK_GYM = ["barbell", "cable_machine", "dumbbell", "bench", "pullup_bar", "weight", "treadmill"]
 
 EXPECTED = {
-    "treadmill_hiit_4x4": ["general_pulse_raise", "treadmill_hiit_4x4"],
+    # C279: floor core and hip mobility after the intervals, never a second
+    # treadmill exercise (a gym without one must not get a locomotion stand-in).
+    "treadmill_hiit_4x4": ["general_pulse_raise", "treadmill_hiit_4x4", "core_hollow_hold", "side_plank",
+                           "hip_opener_flow"],
     "treadmill_zone2_cardio": ["treadmill_incline_walk", "hip_opener_flow"],
     # C275: the strength lunches got a rotating core block; this gym has no
     # rings, so the optional ring push-up block falls back to a dumbbell fly
@@ -54,15 +58,20 @@ EXPECTED = {
     # B381: the chest-press pin is dumbbell_bench_press (Daniele benches with
     # dumbbells even where a barbell exists); the generic sort puts it after
     # bicep_curl (tie broken by exercise_id).
-    "upper_push_arms_lunch": ["general_pulse_raise", "side_plank", "bicep_curl", "dumbbell_bench_press",
-                              "dumbbell_fly", "triceps_cable_pushdown"],
+    # C279: dumbbell_fly is now a block of its own, so the ring block of this
+    # ringless gym falls back to the next push accessory (wall handstand
+    # push-up); a second core block (hollow hold).
+    "upper_push_arms_lunch": ["general_pulse_raise", "core_hollow_hold", "side_plank", "bicep_curl",
+                              "dumbbell_bench_press", "dumbbell_fly", "handstand_pushup_wall",
+                              "triceps_cable_pushdown"],
     # NOTE: this order is the engine's generic phase sort
     # (exercise_ordering.sort_exercises_by_phase: strength_general ties broken
     # by exercise_id), not a design choice. The session notes say so; breaking
     # ties by module priority would be an engine-wide change with its own
     # golden diff.
-    "legs_maintenance_lunch": ["general_pulse_raise", "side_plank", "edge_calf_raise_bigtoe", "goblet_squat",
-                               "romanian_deadlift", "toe_flexor_isometric"],
+    "legs_maintenance_lunch": ["general_pulse_raise", "core_hollow_hold", "side_plank", "bulgarian_split_squat",
+                               "edge_calf_raise_bigtoe", "goblet_squat", "romanian_deadlift",
+                               "toe_flexor_isometric"],
 }
 
 # Gyms without a treadmill / cable machine, as they exist in production.
@@ -116,7 +125,8 @@ class TestCatalogContract:
         assert s["supplementary"] is True
         assert "lunch_short" in s["compatibility"]["slot"]
         tb = s["time_budget"]
-        assert tb["target_duration_min"] <= 35 and tb["hard_cap_min"] == 45
+        # C279: ~55' (the lunch slot is 55' since 2026-10-30).
+        assert tb == {"target_duration_min": 55, "hard_cap_min": 55}
 
     @pytest.mark.parametrize("sid", LUNCH)
     def test_no_climbing_or_finger_load(self, sid, catalog):
@@ -127,7 +137,9 @@ class TestCatalogContract:
         assert not meta.get("pulling")
         for eid in _ids(_resolve(sid)):
             e = catalog[eid]
-            assert (e.get("stress_tags") or {}).get("fingers") in ("none", None), eid
+            # C279: "low" = hands flat on the floor (the wall handstand push-up
+            # of a ringless gym), as A318 already allows.
+            assert (e.get("stress_tags") or {}).get("fingers") in ("none", "low", None), eid
             assert not set(e.get("equipment_required") or []) & {
                 "hangboard", "hangboard_20mm", "loading_pin", "campus_board", "gym_boulder", "gym_routes"}, eid
 
@@ -192,20 +204,23 @@ class TestResolution:
         minutes = estimate_custom_session_duration(rows)
         assert 15 <= minutes <= _session(sid)["time_budget"]["target_duration_min"], (sid, phase, minutes)
 
-    def test_foot_block_is_five_to_eight_minutes(self, catalog):
+    def test_foot_block_is_eight_to_twelve_minutes(self, catalog):
+        """C279: 3 sets each (was 2, 5-8'): feet are Daniele's first limiter."""
         r = _resolve("legs_maintenance_lunch")
         rows = []
         for inst in r["resolved_session"]["exercise_instances"]:
             if inst["exercise_id"] in ("toe_flexor_isometric", "edge_calf_raise_bigtoe"):
                 rows.append({**inst["prescription"], "alt_sides": True})
         assert len(rows) == 2
-        assert 5 <= estimate_custom_session_duration(rows) <= 8
+        assert 8 <= estimate_custom_session_duration(rows) <= 12
 
     def test_hiit_intervals_and_warmup_order(self):
         insts = _resolve("treadmill_hiit_4x4")["resolved_session"]["exercise_instances"]
-        warm, main = insts
+        warm, main = insts[:2]
         assert warm["exercise_id"] == "general_pulse_raise" and warm["prescription"]["work_seconds"] == 480
         assert main["prescription"]["sets"] == 4 and main["prescription"]["work_seconds"] == 240
+        # C279: after the intervals only floor core and mobility, no treadmill.
+        assert [x["exercise_id"] for x in insts[2:]] == ["core_hollow_hold", "side_plank", "hip_opener_flow"]
 
     def test_biceps_block_never_picks_a_weighted_pull(self):
         for phase in PHASES:

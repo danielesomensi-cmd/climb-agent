@@ -38,6 +38,13 @@ changed) on the 3 home keys; ``strength_long`` / ``technique_focus_gym`` on the
 ``fall_practice`` instance (``[]`` → ``["gym_routes"]``, the catalog moved the
 requirement from ``equipment_required_any``) — same ids, same prescriptions.
 
+C279 (2026-10-30) changed 30 keys, exactly the five lunch sessions
+(``legs_maintenance_lunch``, ``upper_push_arms_lunch``,
+``arms_shoulders_handstand_lunch``, ``treadmill_zone2_cardio``,
+``treadmill_hiit_4x4``) on the 3 profiles × 2 dates, checked against a stripped
+export of origin/main @ 31987c0: the lunches went from ~35' to ~55' (more sets,
+new blocks); no other session moved.
+
 A318 added 6 keys, one per profile × date, for the new session
 ``arms_shoulders_handstand_lunch``; no existing key changed (checked key by key
 against the fixture of origin/main).
