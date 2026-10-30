@@ -126,6 +126,12 @@ export function GuidedExerciseStep({
   const [hangMargin, setHangMargin] = useState<HangMargin | undefined>(exercise.hangMargin);
   const [hangHeldS, setHangHeldS] = useState<number | undefined>(exercise.hangHeldS);
   const [overhold, setOverhold] = useState(false);
+  // B408 — the timer's set of rep-based work still waiting for «Done set».
+  // A ref, not state: only Done reads it, and the timer re-renders every tick.
+  const openSetRef = useRef<number | null>(null);
+  const handleOpenSetChange = useCallback((openSet: number | null) => {
+    openSetRef.current = openSet;
+  }, []);
   const measure = exercise.suggested.measure;
   const measures: MeasureValues = { lastSetReps, hangMargin, hangHeldS };
   const [loadInput, setLoadInput] = useState("");
@@ -465,6 +471,15 @@ export function GuidedExerciseStep({
       onDone(feedback, usedExternal, undefined, usedTotal);
       return;
     }
+    // B408 — Done tapped on the work of a rep-based set: the athlete did the
+    // set and closed the exercise without «Done set», so the set counts. It
+    // goes before onDone, like the repeater above: the page applies both
+    // updates in order, and Undo of this Done takes the set back with it.
+    // Never lowers a count already there (a timer reset back to set 1).
+    const openSet = openSetRef.current;
+    if (openSet != null && onSetChange && openSet > (exercise.completedSets ?? 0)) {
+      onSetChange(openSet);
+    }
     // B133: LP repeater test — reps per hand + load per hand
     if (isLpRepeaterTest) {
       const right = loadInputRight ? parseFloat(loadInputRight) : undefined;
@@ -621,6 +636,7 @@ export function GuidedExerciseStep({
               return 1;
             })()}
             onSetChange={onSetChange}
+            onOpenSetChange={handleOpenSetChange}
             nextLabel={guidedNextLabel({
               completedSets: exercise.completedSets,
               sets: exercise.prescription.sets,

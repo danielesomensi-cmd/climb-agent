@@ -54,7 +54,12 @@ interface FeedbackDialogProps {
     problems: Record<string, LimitProblemDraft[]>,
   ) => void;
   exercises: FeedbackDialogExercise[];
-  /** Session slot — used to pre-fill duration estimate */
+  /**
+   * B408: the session's own estimate in minutes (`sessionEstimatedMinutes`,
+   * what its card shows as "~N min") — the duration pre-fill when known.
+   */
+  estimatedMinutes?: number;
+  /** Session slot — the duration pre-fill only when the session has no estimate */
   slot?: string;
   /** A299: boulder display preference for the problem logger (render-only). */
   gradeSystem?: BoulderGradeSystem;
@@ -69,7 +74,7 @@ const DIFFICULTY_LEVELS = [
   { value: "very_hard", label: "Very hard" },
 ] as const;
 
-/** Slot-based duration estimates (minutes) */
+/** Slot-based duration estimates (minutes) — fallback for a session with no estimate */
 const SLOT_ESTIMATES: Record<string, number> = {
   lunch: 35,
   morning: 60,
@@ -77,17 +82,35 @@ const SLOT_ESTIMATES: Record<string, number> = {
   evening: 90,
 };
 
+/**
+ * B408 — the duration pre-fill: the session's own estimate when it has one,
+ * the slot constant only when it does not. The constant used to win always,
+ * so a lunch session planned at 55' (C279) came up as 35'.
+ */
+export function durationPrefillMinutes(estimatedMinutes: number | undefined, slot: string | undefined): number {
+  if (estimatedMinutes != null && Number.isFinite(estimatedMinutes) && estimatedMinutes > 0) {
+    return Math.round(estimatedMinutes);
+  }
+  return slot ? SLOT_ESTIMATES[slot] ?? 60 : 60;
+}
+
 export function FeedbackDialog({
   open,
   onClose,
   onSubmit,
   exercises,
+  estimatedMinutes,
   slot,
   gradeSystem = "font",
 }: FeedbackDialogProps) {
   const [feedback, setFeedback] = useState<Record<string, string>>({});
-  const estimatedMin = slot ? SLOT_ESTIMATES[slot] ?? 60 : 60;
-  const [durationStr, setDurationStr] = useState(String(estimatedMin));
+  const estimatedMin = durationPrefillMinutes(estimatedMinutes, slot);
+  // B408: only what the athlete typed lives in state (null = untouched), like
+  // the loads below. The dialog stays mounted between sessions, so a pre-fill
+  // copied into state at mount showed the estimate of whatever session was
+  // around then, not the one being completed.
+  const [durationTyped, setDurationTyped] = useState<string | null>(null);
+  const durationStr = durationTyped ?? String(estimatedMin);
   // B288: kg per exercise, pre-filled with the suggested load. Same contract as
   // the guided player — submitting untouched confirms the proposed load, which
   // is what keeps the load memory alive instead of decaying to the fallback.
@@ -111,7 +134,7 @@ export function FeedbackDialog({
     setPain(null);
     setGrades({});
     setProblems({});
-    setDurationStr(String(estimatedMin));
+    setDurationTyped(null);
   }
 
   function loadValue(ex: FeedbackDialogExercise): string {
@@ -302,7 +325,7 @@ export function FeedbackDialog({
                 max={600}
                 step={5}
                 value={durationStr}
-                onChange={(e) => setDurationStr(e.target.value)}
+                onChange={(e) => setDurationTyped(e.target.value)}
                 className="w-24"
               />
               <span className="text-xs text-muted-foreground">min</span>

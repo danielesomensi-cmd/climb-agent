@@ -46,7 +46,7 @@ import { queryKeys } from "@/lib/query-keys";
 import { invalidateFreeSessionHistory, invalidateOutdoor } from "@/lib/invalidation";
 import { siblingsOf, writeWeekCache, type WeekSiblings } from "@/lib/week-cache";
 import { alertMessagesFor, describeActionAlerts } from "@/lib/week-alerts";
-import { buildDialogFeedbackItems, extractFeedbackExercises } from "@/lib/feedback-items";
+import { buildDialogFeedbackItems, extractFeedbackExercises, sessionEstimatedMinutes } from "@/lib/feedback-items";
 import { resolveOutdoorLogTarget } from "@/lib/outdoor-log-target";
 import { toast } from "sonner";
 const OutdoorLogForm = dynamic(() => import("@/components/training/OutdoorLogForm"), { ssr: false });
@@ -867,6 +867,8 @@ export default function WeekPage() {
   const feedbackDay = feedbackDate ? days.find((d) => d.date === feedbackDate) : null;
   const feedbackSessionObj = feedbackDay?.sessions.find((s) => s.session_id === feedbackSessionId);
   const feedbackSlot = feedbackSessionObj?.slot ?? "";
+  // B408: the duration pre-fill is the session's own estimate (what its card shows).
+  const feedbackEstimatedMin = sessionEstimatedMinutes(feedbackSessionObj);
 
   const feedbackExercises = extractFeedbackExercises(
     feedbackSessionObj,
@@ -1174,6 +1176,7 @@ export default function WeekPage() {
         }}
         onSubmit={handleFeedbackSubmit}
         exercises={feedbackExercises}
+        estimatedMinutes={feedbackEstimatedMin}
         slot={feedbackSlot}
         gradeSystem={boulderGradeSystemOf(stateQuery.data)}
       />

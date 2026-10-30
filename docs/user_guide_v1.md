@@ -271,6 +271,8 @@ The guided session is your in-gym companion. It walks you through every exercise
 
 One exception overrides both: a rest that ran out **while the app was in the background** always waits for your tap, whatever comes next. Nobody watched that clock, so the app will not count work you may not have done.
 
+**Done straight after your last set.** On rep-based work you don't have to tap **Done set** before the exercise's **Done**: Done while a set is on screen counts that set, so finishing the third of three sets and tapping Done records 3 of 3 — which is what the double progression needs to see before it raises your target. (With attempts and rest between them, the set counts from its last attempt.) Done during a rest, or while a timed set is still counting down, counts only the sets already finished.
+
 **iOS Safari note**: The timer uses a wall-clock engine specifically designed to survive Safari background suspension, and the screen is kept awake for the whole session. If you switch apps or the phone locks, the clock stays accurate — and anything that ran out while you were away waits for your tap rather than advancing the counter.
 
 Audio cues require one initial tap to activate (iOS requirement).
@@ -278,7 +280,7 @@ Audio cues require one initial tap to activate (iOS requirement).
 **You can always**:
 - Skip an exercise within the guided session
 - Adjust the weight/load if the prescribed load isn't available
-- Exit the guided session and mark the session manually
+- Exit the guided session and mark the session manually — the feedback form pre-fills the **Session duration** with the session's own estimate (the "~N min" on its card); a fixed value per time of day is used only when the session has no estimate
 
 **Mistakes are reversible.** After **Done** or **Skip** on an exercise, a toast with **Undo** puts that exercise back as it was. A quick double tap counts as one. **Finish session early** asks you to confirm (**Keep going** / **Finish now**). From the summary, **Back to exercises** returns to the session, and tapping an exercise in the list reopens it; after you correct it, **Done** brings you back to the summary.
 

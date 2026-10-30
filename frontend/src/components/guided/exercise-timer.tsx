@@ -30,6 +30,16 @@ interface ExerciseTimerProps {
   altSides?: boolean;               // alternate RIGHT/LEFT each set; internally doubles set count
   onSetChange?: (completedSets: number) => void;
   /**
+   * B408 — the set whose rep-based work is on screen, waiting for its «Done
+   * set» tap (internal number, like onSetChange), or null when there is none.
+   * An athlete who finishes the last set and closes the exercise with Done
+   * skips «Done set», so that set was never counted: completed_sets went out
+   * one short and the double progression held (bench and overhead press,
+   * 26 and 30/10). The step reads this on Done to count the set. Timed work is
+   * never reported — a countdown still running is a set cut short.
+   */
+  onOpenSetChange?: (openSet: number | null) => void;
+  /**
    * A295 — opt-in timed overhold. When the LAST rep of the LAST set reaches its
    * target under our eyes, the timer does not stop: it keeps counting up to
    * `workSeconds + OVERHOLD_CAP_S` and the athlete taps when they let go.
@@ -167,6 +177,7 @@ function ExerciseTimerImpl({
   initialSet = 1,
   altSides = false,
   onSetChange,
+  onOpenSetChange,
   overholdLastRep = false,
   onOverholdResult,
   nextLabel,
@@ -233,6 +244,17 @@ function ExerciseTimerImpl({
   // a short side switch after RIGHT, the full set rest after LEFT.
   const setRestSeconds = restAfterSet(currentSet, altSides, restBetweenSetsSeconds);
   const sideSwitch = isSideSwitch(currentSet, altSides);
+
+  // B408 — see onOpenSetChange. In a manual rep loop only the last rep closes
+  // the set: Done on an earlier attempt is a set cut short, like a timed one.
+  // A rest (the set before it already counted) or idle reports null.
+  const openSet =
+    phase === "work" && isManual && (!hasManualRepLoop || currentRep >= reps)
+      ? currentSet
+      : null;
+  const onOpenSetChangeRef = useRef(onOpenSetChange);
+  useEffect(() => { onOpenSetChangeRef.current = onOpenSetChange; }, [onOpenSetChange]);
+  useEffect(() => { onOpenSetChangeRef.current?.(openSet); }, [openSet]);
 
   // Total duration for current phase (progress arc denominator)
   const totalForPhase = (() => {

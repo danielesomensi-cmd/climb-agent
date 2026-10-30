@@ -91,6 +91,27 @@ export function hasLoadInput(ex: FeedbackDialogExercise): boolean {
 }
 
 /**
+ * B408 — the session's own duration estimate, in minutes: the catalog
+ * session's `target_duration_min` under `resolved.session`, or (B298) the
+ * custom/adhoc one at the top level. Undefined when the session does not say.
+ *
+ * One source for the two places that show it: the card's "~N min" and the
+ * duration the FeedbackDialog pre-fills. The dialog used to pre-fill a slot
+ * constant (lunch 35') whatever the card said.
+ */
+export function sessionEstimatedMinutes(
+  session: { resolved?: unknown; is_custom?: boolean; target_duration_min?: number } | null | undefined,
+): number | undefined {
+  if (!session) return undefined;
+  const resolved = session.resolved as Record<string, Record<string, unknown> | undefined> | null | undefined;
+  const fromCatalog = resolved?.session?.target_duration_min;
+  const min = typeof fromCatalog === "number"
+    ? fromCatalog
+    : session.is_custom ? session.target_duration_min : undefined;
+  return typeof min === "number" && Number.isFinite(min) && min > 0 ? min : undefined;
+}
+
+/**
  * Pull the dialog's exercise list out of a resolved session slot, carrying the
  * load metadata the dialog needs to render (and send) a weight.
  */

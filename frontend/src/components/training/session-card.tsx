@@ -48,6 +48,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ExerciseCard } from "@/components/training/exercise-card";
+import { sessionEstimatedMinutes } from "@/lib/feedback-items";
 import { FEEDBACK_CHIP } from "@/components/training/feedback-colors";
 import { removeExerciseFromSession, setSessionSurface, apiErrorDetail } from "@/lib/api";
 import type { SessionSlot, GuidedSessionState, GuidedExercise, WeekPlan, KeySessionRole } from "@/lib/types";
@@ -815,10 +816,9 @@ export function SessionCard({
             // B298: custom/adhoc sessions carry their estimate at the top level
             // (`target_duration_min`), not under resolved.session — read that as
             // a fallback so the custom card shows the duration too.
-            const targetMin = !isDone && !isSkipped
-              ? ((effectiveResolved as Record<string, Record<string, unknown>> | undefined)?.session?.target_duration_min as number | undefined)
-                ?? (session.is_custom ? session.target_duration_min : undefined)
-              : undefined;
+            // B408: the same helper pre-fills the FeedbackDialog's duration.
+            // Neither done nor skipped here, so `shown` is the session itself.
+            const targetMin = !isDone && !isSkipped ? sessionEstimatedMinutes(shown) : undefined;
             const parts = [
               formatSlot(session.slot),
               // A300 — a complementary (lunch) session placed by the rotation

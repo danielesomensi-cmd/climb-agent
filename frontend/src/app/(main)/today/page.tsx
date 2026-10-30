@@ -66,6 +66,7 @@ import { alertMessagesFor, describeActionAlerts } from "@/lib/week-alerts";
 import {
   buildDialogFeedbackItems,
   extractFeedbackExercises,
+  sessionEstimatedMinutes,
 } from "@/lib/feedback-items";
 import { resolveOutdoorLogTarget } from "@/lib/outdoor-log-target";
 import { toast } from "sonner";
@@ -1167,6 +1168,8 @@ function TodayContent() {
     : null;
 
   const feedbackSlot = feedbackSession?.slot ?? "";
+  // B408: the duration pre-fill is the session's own estimate (what its card shows).
+  const feedbackEstimatedMin = sessionEstimatedMinutes(feedbackSession);
 
   const feedbackExercises = extractFeedbackExercises(
     feedbackSession,
@@ -1625,6 +1628,7 @@ function TodayContent() {
         }}
         onSubmit={handleFeedbackSubmit}
         exercises={feedbackExercises}
+        estimatedMinutes={feedbackEstimatedMin}
         slot={feedbackSlot}
         gradeSystem={boulderGradeSystemOf(stateQuery.data)}
       />
