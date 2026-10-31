@@ -137,6 +137,8 @@ def _entry_steps(entry: Dict[str, Any], pace: str) -> List[Dict[str, Any]]:
                 "kind": kind,
                 "cue": entry["prescription_defaults"].get("notes") or "",
                 "description": entry.get("description") or "",
+                # C281: public path of the illustration (left side: `_l` file, mirrored).
+                "image": entry.get("image"),
             })
     return steps
 

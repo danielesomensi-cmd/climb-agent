@@ -6,6 +6,7 @@
 // own duration (holds vary per stretch) and a side (left/right sequencing).
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { unlockAudio } from "@/lib/audio-unlock";
 import { countdownTick, transitionBeep } from "@/lib/beep";
@@ -18,6 +19,7 @@ import {
   PHASE_RING,
   PHASE_TEXT,
 } from "@/components/session-play/player-phase-colors";
+import { mobilityStepImage } from "@/lib/exercise-images";
 import { RegionFigure } from "./RegionFigure";
 
 // ── Types ──────────────────────────────────────────────────────────────
@@ -55,6 +57,22 @@ interface MobilityFlowTimerProps {
   onComplete: (result: MobilityFlowResult) => void;
   onStop: (result: MobilityFlowResult) => void;
   onExit: () => void;
+}
+
+/** C281: the stretch illustration when the catalog has one, else the body-region figure. */
+function StepFigure({ step }: { step: MobilityFlowStep }) {
+  const image = mobilityStepImage(step.image, step.side);
+  if (!image) return <RegionFigure region={step.body_region} className="mx-auto" />;
+  return (
+    <Image
+      src={image}
+      alt={step.name}
+      width={440}
+      height={220}
+      sizes="220px"
+      className="mx-auto h-full w-auto rounded-xl object-contain"
+    />
+  );
 }
 
 function stepLabel(step: MobilityFlowStep): string {
@@ -520,7 +538,7 @@ export function MobilityFlowTimer({
 
             <div className="flex-1 rounded-xl border border-white/10 bg-black/20 p-3 backdrop-blur-sm">
               <div className="mx-auto mb-2 h-[110px]">
-                <RegionFigure region={displayStep.body_region} className="mx-auto" />
+                <StepFigure step={displayStep} />
               </div>
               <h3 className="mb-1 text-center text-lg font-bold">{displayStep.name}</h3>
               {stepLabel(displayStep) && (
@@ -551,7 +569,7 @@ export function MobilityFlowTimer({
           <div className="w-full max-w-sm rounded-xl border border-white/10 bg-black/20 p-3 backdrop-blur-sm">
             <p className="mb-2 text-center text-xs uppercase tracking-wider text-white/70">First up</p>
             <div className="mx-auto mb-2 h-[110px]">
-              <RegionFigure region={steps[0].body_region} className="mx-auto" />
+              <StepFigure step={steps[0]} />
             </div>
             <h3 className="mb-1 text-center text-lg font-bold">{steps[0].name}</h3>
             {stepLabel(steps[0]) && (

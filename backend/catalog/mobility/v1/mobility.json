@@ -20,7 +20,7 @@
       "fatigue_cost": 0,
       "stress_tags": {},
       "recency_group": "mobility_forearms_wrists",
-      "image": null,
+      "image": "/exercises/stretch/stretch_finger_flexor.webp",
       "prescription_defaults": {
         "sets": 2,
         "reps": null,
@@ -48,7 +48,7 @@
       "fatigue_cost": 0,
       "stress_tags": {},
       "recency_group": "mobility_forearms_wrists",
-      "image": null,
+      "image": "/exercises/stretch/stretch_finger_extensors.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -76,7 +76,7 @@
       "fatigue_cost": 0,
       "stress_tags": {},
       "recency_group": "mobility_forearms_wrists",
-      "image": null,
+      "image": "/exercises/stretch/release_pronator_pin.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -104,7 +104,7 @@
       "fatigue_cost": 0,
       "stress_tags": {},
       "recency_group": "mobility_forearms_wrists",
-      "image": null,
+      "image": "/exercises/stretch/release_wrist_extensors_pin.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -132,7 +132,7 @@
       "fatigue_cost": 0,
       "stress_tags": {},
       "recency_group": "mobility_forearms_wrists",
-      "image": null,
+      "image": "/exercises/stretch/stretch_finger_isolation.webp",
       "prescription_defaults": {
         "sets": 2,
         "reps": null,
@@ -160,7 +160,7 @@
       "fatigue_cost": 0,
       "stress_tags": {},
       "recency_group": "mobility_chest_anterior_shoulder",
-      "image": null,
+      "image": "/exercises/stretch/stretch_anterior_shoulder_chest.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -188,7 +188,7 @@
       "fatigue_cost": 0,
       "stress_tags": {},
       "recency_group": "mobility_chest_anterior_shoulder",
-      "image": null,
+      "image": "/exercises/stretch/release_pectoral_ball.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -216,7 +216,7 @@
       "fatigue_cost": 0,
       "stress_tags": {},
       "recency_group": "mobility_chest_anterior_shoulder",
-      "image": null,
+      "image": "/exercises/stretch/stretch_doorway_chest.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -244,7 +244,7 @@
       "fatigue_cost": 0,
       "stress_tags": {},
       "recency_group": "mobility_shoulders_scapula",
-      "image": null,
+      "image": "/exercises/stretch/stretch_posterior_shoulder.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -272,7 +272,7 @@
       "fatigue_cost": 0,
       "stress_tags": {},
       "recency_group": "mobility_shoulders_scapula",
-      "image": null,
+      "image": "/exercises/stretch/stretch_rotator_cuff_towel.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -328,7 +328,7 @@
       "fatigue_cost": 0,
       "stress_tags": {},
       "recency_group": "mobility_thoracic_spine",
-      "image": null,
+      "image": "/exercises/stretch/release_thoracic_foam_roll.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -356,7 +356,7 @@
       "fatigue_cost": 0,
       "stress_tags": {},
       "recency_group": "mobility_thoracic_spine",
-      "image": null,
+      "image": "/exercises/stretch/stretch_thread_the_needle.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -384,7 +384,7 @@
       "fatigue_cost": 0,
       "stress_tags": {},
       "recency_group": "mobility_thoracic_spine",
-      "image": null,
+      "image": "/exercises/stretch/stretch_cat_cow_flow.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -412,7 +412,7 @@
       "fatigue_cost": 0,
       "stress_tags": {},
       "recency_group": "mobility_lats",
-      "image": null,
+      "image": "/exercises/stretch/stretch_lat_triceps.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -440,7 +440,7 @@
       "fatigue_cost": 0,
       "stress_tags": {},
       "recency_group": "mobility_lats",
-      "image": null,
+      "image": "/exercises/stretch/stretch_childs_pose_lat.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -468,7 +468,7 @@
       "fatigue_cost": 0,
       "stress_tags": {},
       "recency_group": "mobility_lats",
-      "image": null,
+      "image": "/exercises/stretch/stretch_bar_lat_hang.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -496,7 +496,7 @@
       "fatigue_cost": 0,
       "stress_tags": {"knee": "low"},
       "recency_group": "mobility_hips_glutes",
-      "image": null,
+      "image": "/exercises/stretch/stretch_piriformis.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -524,7 +524,7 @@
       "fatigue_cost": 1,
       "stress_tags": {"knee": "low"},
       "recency_group": "mobility_hips_glutes",
-      "image": null,
+      "image": "/exercises/stretch/stretch_pigeon.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -552,7 +552,7 @@
       "fatigue_cost": 0,
       "stress_tags": {},
       "recency_group": "mobility_hips_glutes",
-      "image": null,
+      "image": "/exercises/stretch/release_glutes_foam_roll.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -580,7 +580,7 @@
       "fatigue_cost": 0,
       "stress_tags": {},
       "recency_group": "mobility_hips_glutes",
-      "image": null,
+      "image": "/exercises/stretch/stretch_knee_to_chest.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -608,7 +608,7 @@
       "fatigue_cost": 1,
       "stress_tags": {},
       "recency_group": "mobility_adductors_groin",
-      "image": null,
+      "image": "/exercises/stretch/stretch_adductor_wall.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -636,7 +636,7 @@
       "fatigue_cost": 0,
       "stress_tags": {},
       "recency_group": "mobility_adductors_groin",
-      "image": null,
+      "image": "/exercises/stretch/stretch_butterfly.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -664,7 +664,7 @@
       "fatigue_cost": 0,
       "stress_tags": {},
       "recency_group": "mobility_adductors_groin",
-      "image": null,
+      "image": "/exercises/stretch/stretch_seated_straddle.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -692,7 +692,7 @@
       "fatigue_cost": 0,
       "stress_tags": {},
       "recency_group": "mobility_hip_flexors_quads",
-      "image": null,
+      "image": "/exercises/stretch/stretch_hip_flexor_lunge.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -720,7 +720,7 @@
       "fatigue_cost": 0,
       "stress_tags": {},
       "recency_group": "mobility_hip_flexors_quads",
-      "image": null,
+      "image": "/exercises/stretch/release_hip_flexor_itband.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -748,7 +748,7 @@
       "fatigue_cost": 0,
       "stress_tags": {},
       "recency_group": "mobility_hamstrings",
-      "image": null,
+      "image": "/exercises/stretch/stretch_hamstring_supine.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -776,7 +776,7 @@
       "fatigue_cost": 0,
       "stress_tags": {},
       "recency_group": "mobility_hamstrings",
-      "image": null,
+      "image": "/exercises/stretch/stretch_deep_squat.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -804,7 +804,7 @@
       "fatigue_cost": 0,
       "stress_tags": {"lower_back": "low"},
       "recency_group": "mobility_hamstrings",
-      "image": null,
+      "image": "/exercises/stretch/stretch_standing_forward_fold.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -832,7 +832,7 @@
       "fatigue_cost": 0,
       "stress_tags": {},
       "recency_group": "mobility_calves_ankles",
-      "image": null,
+      "image": "/exercises/stretch/stretch_calf_step.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -860,7 +860,7 @@
       "fatigue_cost": 0,
       "stress_tags": {},
       "recency_group": "mobility_calves_ankles",
-      "image": null,
+      "image": "/exercises/stretch/stretch_wall_soleus.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -888,7 +888,7 @@
       "fatigue_cost": 0,
       "stress_tags": {},
       "recency_group": "mobility_calves_ankles",
-      "image": null,
+      "image": "/exercises/stretch/release_ankle_dorsiflexion_mob.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -916,7 +916,7 @@
       "fatigue_cost": 0,
       "stress_tags": {"lower_back": "low"},
       "recency_group": "mobility_spine_rotation_obliques",
-      "image": null,
+      "image": "/exercises/stretch/stretch_seated_twist.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -944,7 +944,7 @@
       "fatigue_cost": 0,
       "stress_tags": {"lower_back": "low"},
       "recency_group": "mobility_spine_rotation_obliques",
-      "image": null,
+      "image": "/exercises/stretch/stretch_supine_twist.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -972,7 +972,7 @@
       "fatigue_cost": 0,
       "stress_tags": {"lower_back": "low"},
       "recency_group": "mobility_spine_rotation_obliques",
-      "image": null,
+      "image": "/exercises/stretch/stretch_cobra.webp",
       "prescription_defaults": {
         "sets": 1,
         "reps": null,

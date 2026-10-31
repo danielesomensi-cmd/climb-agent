@@ -39,8 +39,10 @@ describe("exerciseImage (guided and custom players)", () => {
     expect(unknown).toEqual([]);
   });
 
-  it("points every mapped exercise to a shipped circuit image", () => {
-    const missing = Object.values(CATALOG_EXERCISE_IMAGES).filter((f) => !existsSync(join(CORE, f)));
+  it("points every mapped exercise to a shipped image", () => {
+    const missing = Object.values(CATALOG_EXERCISE_IMAGES).filter(
+      (f) => !existsSync(join(process.cwd(), "public", "exercises", f)),
+    );
     expect(missing).toEqual([]);
   });
 

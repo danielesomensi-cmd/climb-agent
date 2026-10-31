@@ -1094,6 +1094,8 @@ export type MobilityFlowStep = {
   kind: "hold" | "release" | "flow";
   cue: string;
   description: string;
+  /** C281: illustration path from the mobility catalog (absent on an older backend). */
+  image?: string | null;
 };
 
 export type MobilityFlowPlan = {
