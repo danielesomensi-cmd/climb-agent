@@ -15,10 +15,8 @@ const PUBLIC = join(process.cwd(), "public");
  */
 describe("exercise images", () => {
   /**
-   * Three exercises (36_straddle_l_sit, 37_v_up_hold, 40_arch_body_hold) have
-   * their `image:` line commented out with a "TODO: add image" — deliberate
-   * placeholders, not broken references. Reading the array rather than grepping
-   * the file is what tells the difference: a grep matches the comments too.
+   * Read the array rather than grep the file: a grep also matches commented-out
+   * `image:` lines. (Since C280 every exercise has one — c280-exercise-images.)
    */
   const referenced = CORE_EXERCISES
     .map((e) => e.image)

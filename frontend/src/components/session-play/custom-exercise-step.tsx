@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { CheckCircle2, Pause, Play } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import { LadderBadge } from "@/components/training/ladder-badge";
 import type { CustomSessionExercise } from "@/lib/types";
 import { formatLoad } from "@/lib/load-units";
 import { PHASE_TEXT } from "./player-phase-colors";
+import { exerciseImage } from "@/lib/exercise-images";
 
 export type ExerciseCategory = "time_based" | "reps_based" | "timed_sets";
 
@@ -64,6 +66,7 @@ export function CustomExerciseStep({
   const altSides = exercise.alt_sides === true;
   const totalSets = exercise.sets ?? 1;
   const currentSide = sideForSet(currentSet, altSides);
+  const image = exerciseImage(exercise.exercise_id, currentSide);
   const displaySet = displaySetNumber(currentSet, altSides);
   const workSec = exercise.work_seconds ?? 0;
   const loadKg = exercise.load_kg;
@@ -183,6 +186,16 @@ export function CustomExerciseStep({
           Custom
         </Badge>
         <h2 className="text-2xl font-semibold">{exerciseName}</h2>
+        {image && (
+          <Image
+            src={image}
+            alt={exerciseName}
+            width={560}
+            height={280}
+            sizes="(max-width: 640px) 100vw, 560px"
+            className="mx-auto max-h-[140px] w-full object-contain rounded-xl"
+          />
+        )}
         {currentSide && (
           <div className="flex justify-center pt-1">
             <div

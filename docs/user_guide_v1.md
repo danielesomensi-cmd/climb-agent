@@ -256,6 +256,7 @@ The guided session is your in-gym companion. It walks you through every exercise
 **How it works:**
 
 - Each exercise is displayed one at a time with its full prescription: sets, reps, load, rest, grip type, tempo
+- **How to** opens on each new exercise with the cues, the notes and, when there is one, a video link. Core exercises that also appear in the Core Circuit (hollow body, dead bug, side plank, Copenhagen, L-sit, dragon flag, front lever tuck, Nordic curl…) show the same illustration as the circuit. Your saved custom sessions show it too, with the left-side picture on the left side's turn.
 - **Timers** count down rest periods, hang times, and work intervals automatically — also the rest between attempts of a single set (for example 7 attempts 3 minutes apart): tap **Done rep** after each attempt, the rest counts down, then **Next rep**
 - **Beeps** alert you at 3-2-1 before each work phase starts
 - **Voice cues** provide encouragement and phase transitions

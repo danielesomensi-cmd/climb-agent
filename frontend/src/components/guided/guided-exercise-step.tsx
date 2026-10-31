@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import { displayPrescribedGrade } from "@/lib/gradeUtils";
 import { formatLoad, loadInputLabel } from "@/lib/load-units";
 import { LimitProblemLogger } from "@/components/training/limit-problem-logger";
 import { limitFeedbackFields, limitTargetFor } from "@/lib/limit-problems";
+import { exerciseImage } from "@/lib/exercise-images";
 
 interface GuidedExerciseStepProps {
   exercise: GuidedExercise;
@@ -368,7 +370,8 @@ export function GuidedExerciseStep({
     .filter((line) => !(heroShowsPrescribedLoad && line.startsWith("Load: ")));
   const showTimer = !isTestMeasurement && !isUnilateralTestMeasurement && hasExerciseTimer(exercise.prescription);
   const cueCount = exercise.cues?.length ?? 0;
-  const hasHowTo = cueCount > 0 || !!exercise.prescription.notes || !!exercise.videoUrl;
+  const image = exerciseImage(exercise.exerciseId);
+  const hasHowTo = cueCount > 0 || !!exercise.prescription.notes || !!exercise.videoUrl || !!image;
   const isAlreadyDone = exercise.status === "done";
   const isAlreadySkipped = exercise.status === "skipped";
 
@@ -663,6 +666,17 @@ export function GuidedExerciseStep({
               <ChevronDown className="size-4 shrink-0 transition-transform group-open:rotate-180 motion-reduce:transition-none" />
             </summary>
             <div className="space-y-2 px-3 pb-3">
+              {/* C280: same illustration as the core circuit, where one exists */}
+              {image && (
+                <Image
+                  src={image}
+                  alt={exercise.name}
+                  width={560}
+                  height={280}
+                  sizes="(max-width: 640px) 100vw, 560px"
+                  className="mx-auto max-h-[140px] w-full object-contain rounded-xl"
+                />
+              )}
               {exercise.prescription.notes && (
                 <p className="text-sm text-muted-foreground italic">
                   {exercise.prescription.notes}

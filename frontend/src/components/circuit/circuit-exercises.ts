@@ -34,7 +34,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "isometric",
     difficulty: "hard",
     requires_bar: false,
-    image: "01_hollow_body.jpg",
+    image: "01_hollow_body.webp",
   },
   {
     id: "ce_dead_bug",
@@ -44,7 +44,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "easy",
     requires_bar: false,
-    image: "02_dead_bug.jpg",
+    image: "02_dead_bug.webp",
   },
   {
     id: "ce_plank_shoulder_taps",
@@ -54,7 +54,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "easy",
     requires_bar: false,
-    image: "03_plank_shoulder_taps.jpg",
+    image: "03_plank_shoulder_taps.webp",
   },
   {
     id: "ce_bear_crawl_hold",
@@ -64,7 +64,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "isometric",
     difficulty: "easy",
     requires_bar: false,
-    image: "04_bear_crawl_hold.jpg",
+    image: "04_bear_crawl_hold.webp",
   },
   {
     id: "ce_body_saw",
@@ -74,7 +74,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "easy",
     requires_bar: false,
-    image: "05_body_saw.png",
+    image: "05_body_saw.webp",
   },
   {
     id: "ce_hollow_flutter",
@@ -84,7 +84,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "easy",
     requires_bar: false,
-    image: "21_hollow_flutter.png",
+    image: "21_hollow_flutter.webp",
   },
   {
     id: "ce_inchworm",
@@ -94,7 +94,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "easy",
     requires_bar: false,
-    image: "22_inchworm.jpeg",
+    image: "22_inchworm.webp",
   },
   {
     id: "ce_plank_army_crawl",
@@ -104,7 +104,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "easy",
     requires_bar: false,
-    image: "23_plank_army_crawl.jpeg",
+    image: "23_plank_army_crawl.webp",
   },
   {
     id: "ce_dragon_flag_tuck",
@@ -114,7 +114,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "hard",
     requires_bar: false,
-    image: "31_dragon_flag_tuck.jpeg",
+    image: "31_dragon_flag_tuck.webp",
   },
   {
     id: "ce_front_lever_tuck",
@@ -124,7 +124,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "isometric",
     difficulty: "hard",
     requires_bar: true,
-    image: "32_front_lever_tuck.jpeg",
+    image: "32_front_lever_tuck.webp",
   },
 
   // ── Anti-Rotation (resist twisting — key for barn-door prevention) ──
@@ -137,7 +137,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "easy",
     requires_bar: false,
-    image: "06_bird_dog.jpg",
+    image: "06_bird_dog.webp",
   },
   {
     id: "ce_plank_hip_dips",
@@ -147,7 +147,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "easy",
     requires_bar: false,
-    image: "07_plank_hip_dips.jpg",
+    image: "07_plank_hip_dips.webp",
   },
   {
     id: "ce_thread_the_needle",
@@ -157,7 +157,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "easy",
     requires_bar: false,
-    image: "08_thread_the_needle.png",
+    image: "08_thread_the_needle.webp",
   },
   {
     id: "ce_dead_bug_cross",
@@ -167,7 +167,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "easy",
     requires_bar: false,
-    image: "09_dead_bug_cross.png",
+    image: "09_dead_bug_cross.webp",
   },
   {
     id: "ce_renegade_row_bw",
@@ -177,7 +177,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "easy",
     requires_bar: false,
-    image: "24_renegade_row_bw.jpeg",
+    image: "24_renegade_row_bw.webp",
   },
   {
     id: "ce_windshield_wipers",
@@ -187,7 +187,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "easy",
     requires_bar: false,
-    image: "25_windshield_wipers.png",
+    image: "25_windshield_wipers.webp",
   },
   {
     id: "ce_hanging_wipers",
@@ -197,7 +197,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "hard",
     requires_bar: true,
-    image: "33_hanging_wipers.jpeg",
+    image: "33_hanging_wipers.webp",
   },
 
   // ── Anti-Lateral Flexion (sides — resist sideways bending) ──────────
@@ -210,7 +210,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "isometric",
     difficulty: "easy",
     requires_bar: false,
-    image: "10_side_plank_r.jpg",
+    image: "10_side_plank_r.webp",
   },
   {
     id: "ce_side_plank_l",
@@ -220,7 +220,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "isometric",
     difficulty: "easy",
     requires_bar: false,
-    image: "11_side_plank_l.jpg",
+    image: "11_side_plank_l.webp",
   },
   {
     id: "ce_copenhagen_r",
@@ -230,7 +230,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "isometric",
     difficulty: "hard",
     requires_bar: false,
-    image: "12_copenhagen_r.jpg",
+    image: "12_copenhagen_r.webp",
   },
   {
     id: "ce_copenhagen_l",
@@ -240,7 +240,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "isometric",
     difficulty: "hard",
     requires_bar: false,
-    image: "13_copenhagen_l.jpg",
+    image: "13_copenhagen_l.webp",
   },
   {
     id: "ce_star_side_plank_r",
@@ -250,7 +250,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "isometric",
     difficulty: "hard",
     requires_bar: false,
-    image: "34_star_side_plank_r.jpeg",
+    image: "34_star_side_plank_r.webp",
   },
   {
     id: "ce_star_side_plank_l",
@@ -260,7 +260,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "isometric",
     difficulty: "hard",
     requires_bar: false,
-    image: "35_star_side_plank_l.jpeg",
+    image: "35_star_side_plank_l.webp",
   },
 
   // ── Compression / Hip Flexion (critical for toe-hooks, overhanging body tension) ──
@@ -273,7 +273,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "hard",
     requires_bar: false,
-    image: "14_v_up.jpg",
+    image: "14_v_up.webp",
   },
   {
     id: "ce_alt_leg_raise",
@@ -283,7 +283,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "easy",
     requires_bar: false,
-    image: "15_alt_leg_raise.jpg",
+    image: "15_alt_leg_raise.webp",
   },
   {
     id: "ce_bicycle_crunch",
@@ -303,7 +303,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "easy",
     requires_bar: false,
-    image: "17_tuck_up.jpg",
+    image: "17_tuck_up.webp",
   },
   {
     id: "ce_l_sit_floor",
@@ -313,7 +313,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "isometric",
     difficulty: "hard",
     requires_bar: false,
-    image: "26_l_sit_floor.jpeg",
+    image: "26_l_sit_floor.webp",
   },
   {
     id: "ce_pike_pulse",
@@ -323,7 +323,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "easy",
     requires_bar: false,
-    image: "28_pike_pulse.jpeg",
+    image: "28_pike_pulse.webp",
   },
   {
     id: "ce_straddle_l_sit",
@@ -333,7 +333,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "isometric",
     difficulty: "hard",
     requires_bar: false,
-    // image: "36_straddle_l_sit.jpeg", // TODO: add image
+    image: "36_straddle_l_sit.webp",
   },
   {
     id: "ce_v_up_hold",
@@ -343,7 +343,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "isometric",
     difficulty: "hard",
     requires_bar: false,
-    // image: "37_v_up_hold.jpeg", // TODO: add image
+    image: "37_v_up_hold.webp",
   },
   {
     id: "ce_hanging_leg_raise",
@@ -353,7 +353,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "hard",
     requires_bar: true,
-    image: "38_hanging_leg_raise.jpeg",
+    image: "38_hanging_leg_raise.webp",
   },
 
   // ── Extension / Posterior Chain (anti-climber's-back — often neglected!) ──
@@ -366,7 +366,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "isometric",
     difficulty: "easy",
     requires_bar: false,
-    image: "18_superman_hold.jpg",
+    image: "18_superman_hold.webp",
   },
   {
     id: "ce_superman_swimmers",
@@ -376,7 +376,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "easy",
     requires_bar: false,
-    image: "19_superman_swimmers.jpg",
+    image: "19_superman_swimmers.webp",
   },
   {
     id: "ce_glute_bridge",
@@ -386,7 +386,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "isometric",
     difficulty: "easy",
     requires_bar: false,
-    image: "20_glute_bridge.jpeg",
+    image: "20_glute_bridge.webp",
   },
   {
     id: "ce_reverse_plank",
@@ -396,7 +396,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "isometric",
     difficulty: "easy",
     requires_bar: false,
-    image: "29_reverse_plank.jpeg",
+    image: "29_reverse_plank.webp",
   },
   {
     id: "ce_sl_glute_bridge",
@@ -406,7 +406,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "easy",
     requires_bar: false,
-    image: "30_sl_glute_bridge.png",
+    image: "30_sl_glute_bridge.webp",
   },
   {
     id: "ce_nordic_curl",
@@ -416,7 +416,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "hard",
     requires_bar: false,
-    image: "39_nordic_curl.jpeg",
+    image: "39_nordic_curl.webp",
   },
   {
     id: "ce_arch_body_hold",
@@ -426,7 +426,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "isometric",
     difficulty: "hard",
     requires_bar: false,
-    // image: "40_arch_body_hold.jpeg", // TODO: add image
+    image: "40_arch_body_hold.webp",
   },
 ];
 
