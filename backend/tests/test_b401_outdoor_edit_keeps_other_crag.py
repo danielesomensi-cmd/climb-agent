@@ -808,3 +808,18 @@ class TestApi:
         rows = [e for e in self._state()["outdoor_log"] if e["date"] == DAY]
         assert len(rows) == 1
         assert rows[0]["load_score"] == ol.compute_outdoor_load_score(remaining["Symplegades"])
+
+
+def test_delete_without_spot_removes_the_crag_it_read_not_the_date(monkeypatch):
+    """B401 review: DELETE without spot_name on a single-crag day deletes that
+    crag by (date, crag). A crag finished between the read and the delete
+    (another device) is not wiped with it."""
+    from backend.engine import outdoor_log as ol
+
+    calls = []
+    monkeypatch.setattr(ol, "outdoor_sessions_on", lambda uid, d: [{"date": d, "spot_name": "Berdorf"}])
+    monkeypatch.setattr(ol.storage, "remove_outdoor_log_by_date_spot", lambda uid, d, s: calls.append(("spot", d, s)) or 1)
+    monkeypatch.setattr(ol.storage, "remove_outdoor_log_by_date", lambda uid, d: calls.append(("date", d)) or 2)
+
+    assert ol.remove_outdoor_session("u1", "2026-08-24") == 1
+    assert calls == [("spot", "2026-08-24", "Berdorf")]

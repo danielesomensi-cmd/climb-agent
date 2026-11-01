@@ -530,6 +530,10 @@ def remove_outdoor_session(
             f"{len(rows)} crags are logged on {date} ({_spot_names(rows)}): "
             "send spot_name to say which one to delete"
         )
+    if rows:
+        # The crag just read, not the whole date: a crag finished between this
+        # read and the delete (another device) must survive (B401 review).
+        return storage.remove_outdoor_log_by_date_spot(user_id, date, rows[0].get("spot_name", ""))
     return storage.remove_outdoor_log_by_date(user_id, date)
 
 
