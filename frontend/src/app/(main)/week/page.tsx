@@ -49,6 +49,7 @@ import { alertMessagesFor, describeActionAlerts } from "@/lib/week-alerts";
 import { buildDialogFeedbackItems, extractFeedbackExercises, sessionEstimatedMinutes } from "@/lib/feedback-items";
 import { resolveOutdoorLogTarget } from "@/lib/outdoor-log-target";
 import { toast } from "sonner";
+import { scrollBehavior, useTabReselect, weekReselectAction } from "@/lib/tab-reselect";
 const OutdoorLogForm = dynamic(() => import("@/components/training/OutdoorLogForm"), { ssr: false });
 import {
   Dialog,
@@ -847,6 +848,21 @@ export default function WeekPage() {
     if (typeof window !== "undefined" && window.scrollY > 8) return;
     dayRefs.current[today]?.scrollIntoView({ block: "start" });
   }, [loading, weekPlan, isCurrentWeekView, todayInWeek, today]);
+
+  // A323 — a tap on the Week tab while on /week: to the top, then to today,
+  // and so on (see weekReselectAction). From another week, back to the
+  // current one: the A308 effect above lands on today once it is shown.
+  useTabReselect("/week", () => {
+    const action = weekReselectAction({ scrollY: window.scrollY, isCurrentWeekView, todayInWeek });
+    if (action === "top") {
+      window.scrollTo({ top: 0, behavior: scrollBehavior() });
+    } else if (action === "today") {
+      dayRefs.current[today]?.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
+    } else if (action === "current_week") {
+      autoScrolledRef.current = false;
+      setWeekNum(0);
+    }
+  });
 
   // A308 — the secondary cards, gathered after the day list.
   const weekKey = weekPlan?.weeks[0]?.days[0]?.date ?? String(weekNum);

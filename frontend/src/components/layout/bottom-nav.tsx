@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ChunkErrorBoundary } from "@/components/chunk-error-boundary";
 import type { MoreNavItem } from "./more-drawer";
+import { TAB_RESELECT_HREFS, emitTabReselect } from "@/lib/tab-reselect";
 
 // B398 (O10): the drawer (and vaul with it) is not part of the first load of
 // /plan, /coach, /outdoor and /settings any more. Closed it renders nothing,
@@ -168,6 +169,14 @@ export function BottomNav() {
                 /* A286 — senza aria-current uno screen reader legge cinque
                    link identici e non dice quale schermata è aperta. */
                 aria-current={active ? "page" : undefined}
+                onClick={(e) => {
+                  // A323 — a re-tap on the open tab: the page handles it
+                  // (/week: top ↔ today). Cmd/ctrl-click keeps the Link.
+                  if (pathname !== tab.href || !TAB_RESELECT_HREFS.has(tab.href)) return;
+                  if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                  e.preventDefault();
+                  emitTabReselect(tab.href);
+                }}
                 className={`flex min-h-[44px] min-w-[44px] flex-col items-center gap-1 px-3 py-2 text-xs transition-colors ${
                   active
                     ? "text-primary"

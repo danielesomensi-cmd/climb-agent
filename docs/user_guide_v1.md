@@ -153,6 +153,8 @@ Every week runs **Monday to Sunday**. The planner assigns sessions to the days y
 
 **The Today page** shows what's planned for today. **The Week page** shows the full 7-day grid with all sessions. You can navigate to other weeks with the **Previous / Next** buttons.
 
+Tapping **Week** in the bottom bar while you are already on the Week page jumps without scrolling: the first tap takes you back to the top, the next one to today's card, and so on. If you are looking at another week, the tap from the top brings you back to the current week, on today.
+
 Past weeks are **locked**: they stay exactly as you trained them and are never regenerated. If you navigate back to a week you never opened (so it has no saved plan), the app shows "This week is in the past" rather than inventing a plan after the fact. When your macrocycle has ended, Today shows "Your training plan has ended" with a prompt to **Plan your next cycle**.
 
 At the top of **Today** you'll see a **Today's focus** banner — a short coaching cue for one of the day's sessions (e.g., "Squeeze every rep with maximal intent"). It's there to read before you start training; once all of the day's sessions are done or skipped, the banner disappears.
