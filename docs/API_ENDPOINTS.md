@@ -45,9 +45,9 @@
 | POST | `/api/outdoor/spots` | Add outdoor spot |
 | DELETE | `/api/outdoor/spots/{spot_id}` | Remove outdoor spot |
 | POST | `/api/outdoor/log` | Log outdoor session |
-| GET | `/api/outdoor/log/{date}` | Get outdoor session by date |
-| PUT | `/api/outdoor/log` | Update outdoor session |
-| DELETE | `/api/outdoor/log/{date}` | Delete outdoor session by date |
+| GET | `/api/outdoor/log/{date}` | Get outdoor session by date. **B401**: adds `sessions` (every crag logged that date, each with `load_score`); `session` stays the last-logged crag |
+| PUT | `/api/outdoor/log` | Update one crag's outdoor session. **B401**: replaces only the edited crag's row, never the day's other crags. Optional `original_spot_name` (request-only, never stored) names the crag when the edit renames it; without it a single-crag day is replaced as before, a multi-crag day replaces the crag named `spot_name`. 409 when no crag matches on a multi-crag day or the rename lands on another crag of the day (nothing written); 404 when `original_spot_name` is not logged that date |
+| DELETE | `/api/outdoor/log/{date}` | Delete outdoor session by date. **B401**: `?spot_name=` deletes only that crag (404 if not logged that date); without it a single-crag day is deleted as before and a multi-crag day is a 409, nothing deleted |
 | GET | `/api/outdoor/sessions` | List outdoor sessions |
 | GET | `/api/outdoor/stats` | Outdoor statistics |
 | GET | `/api/outdoor/strategy` | Resolve deterministic strategy + nutrition for an outdoor day (layered patches) |

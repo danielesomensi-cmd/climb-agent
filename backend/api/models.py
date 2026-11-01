@@ -362,6 +362,17 @@ class OutdoorSessionLog(BaseModel):
     route_profile: Optional[OutdoorRouteProfile] = None
 
 
+class OutdoorSessionUpdate(OutdoorSessionLog):
+    """Body for PUT /api/outdoor/log — the log entry plus which crag it edits.
+
+    B401: a day can hold several crags (B341). ``original_spot_name`` names the
+    crag being edited when the edit renames it; it is request-only, never
+    stored. Absent: a single-crag day is replaced as before, a multi-crag day
+    replaces the crag named ``spot_name`` (409 if there is none).
+    """
+    original_spot_name: Optional[str] = None
+
+
 class OutdoorSessionStartRequest(BaseModel):
     """Body for POST /api/outdoor/session/start (A225 active-session lifecycle)."""
     date: str

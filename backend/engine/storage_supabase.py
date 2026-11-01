@@ -492,6 +492,27 @@ def remove_outdoor_log_by_date(user_id: Optional[str], date: str) -> int:
 
 
 @memo_write
+def remove_outdoor_log_by_date_spot(user_id: Optional[str], date: str, spot_name: str) -> int:
+    """Delete one crag's row for a date (B401). Returns count removed.
+
+    Filters on the generated ``spot_name`` column (``entry->>'spot_name'``,
+    B341) — the same key as the unique constraint — so the other crags of a
+    multi-crag day are never touched.
+    """
+    uid = _require_user_id(user_id)
+    r = (
+        _sb()
+        .table("outdoor_logs")
+        .delete()
+        .eq("user_id", uid)
+        .eq("session_date", date)
+        .eq("spot_name", spot_name)
+        .execute()
+    )
+    return len(r.data)
+
+
+@memo_write
 def delete_all_outdoor_logs(user_id: Optional[str]) -> int:
     """Delete all outdoor logs for a user. Returns count removed."""
     uid = _require_user_id(user_id)

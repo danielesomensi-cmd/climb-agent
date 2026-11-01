@@ -13,7 +13,7 @@ import shutil
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 from uuid import uuid4
 
 from backend.engine import state_codec  # B387
@@ -366,9 +366,13 @@ def outdoor_log_date_exists(user_id: Optional[str], date: str) -> bool:
     return False
 
 
-@memo_write
-def remove_outdoor_log_by_date(user_id: Optional[str], date: str) -> int:
-    """Remove all outdoor entries for a given date.  Returns count removed."""
+def _remove_outdoor_lines(
+    user_id: Optional[str], date: str, drop: Callable[[Dict[str, Any]], bool]
+) -> int:
+    """Rewrite the yearly file of ``date`` without the entries ``drop`` selects.
+
+    Returns the number of raw lines removed. Unparseable lines are kept.
+    """
     log_path = _outdoor_log_path_for_date(user_id, date)
     if not os.path.isfile(log_path):
         return 0
@@ -385,7 +389,7 @@ def remove_outdoor_log_by_date(user_id: Optional[str], date: str) -> int:
             except json.JSONDecodeError:
                 kept.append(stripped)
                 continue
-            if entry.get("date") == date:
+            if drop(entry):
                 removed += 1
             else:
                 kept.append(stripped)
@@ -396,6 +400,26 @@ def remove_outdoor_log_by_date(user_id: Optional[str], date: str) -> int:
                 f.write(line + "\n")
 
     return removed
+
+
+@memo_write
+def remove_outdoor_log_by_date(user_id: Optional[str], date: str) -> int:
+    """Remove all outdoor entries for a given date.  Returns count removed."""
+    return _remove_outdoor_lines(user_id, date, lambda e: e.get("date") == date)
+
+
+@memo_write
+def remove_outdoor_log_by_date_spot(user_id: Optional[str], date: str, spot_name: str) -> int:
+    """Remove one crag's entries for a date (B401).  Returns count removed.
+
+    Same key as the read dedup, ``(date, spot_name)`` — so the other crags of a
+    multi-crag day (B341) are never touched. Counts raw lines: a pre-B341 file
+    can hold several lines for one crag, the read shows only the last.
+    """
+    return _remove_outdoor_lines(
+        user_id, date,
+        lambda e: e.get("date") == date and e.get("spot_name", "") == spot_name,
+    )
 
 
 @memo_write

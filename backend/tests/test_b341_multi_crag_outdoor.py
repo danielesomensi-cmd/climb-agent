@@ -14,11 +14,10 @@ the first one. Two failure points, both fixed here:
    (DB migration, not exercised here) and widening the file-storage read
    dedup key to match.
 
-Scope, deliberately not covered here (documented limitation, not a bug this
-brief fixes): PUT/DELETE `/api/outdoor/log/{date}` still target "the"
-session for a date — on a multi-crag day they only reach the last-logged
-crag. Multi-crag days are rare enough that editing/deleting an individual
-crag from such a day is left as a known gap.
+Scope, deliberately not covered here: PUT/DELETE `/api/outdoor/log` on a
+multi-crag day. They used to act on the whole date — editing one crag deleted
+the others — and since B401 act on (date, crag) only: see
+`test_b401_outdoor_edit_keeps_other_crag.py`.
 """
 
 from __future__ import annotations

@@ -14,6 +14,7 @@ from backend.api.deps import get_user_id, load_state, require_active_subscriptio
 from backend.api.models import (
     OutdoorSpotCreate,
     OutdoorSessionLog,
+    OutdoorSessionUpdate,
     OutdoorSessionStartRequest,
     OutdoorSessionFinishRequest,
     OutdoorClimbLogRequest,
@@ -22,8 +23,11 @@ from backend.api.models import (
 )
 from backend.engine.outdoor_log import (
     CURRENT_LOG_VERSION,
+    OutdoorLogConflict,
     append_outdoor_session,
     compute_outdoor_load_score,
+    find_outdoor_session_to_replace,
+    outdoor_sessions_on,
     stamp_load_ref_grade,
     compute_outdoor_stats,
     derive_outdoor_duration,
@@ -322,33 +326,45 @@ def post_outdoor_log(req: OutdoorSessionLog, user_id: Optional[str] = Depends(ge
 
 @router.get("/log/{date}")
 def get_outdoor_log_by_date(date: str, user_id: Optional[str] = Depends(get_user_id)):
-    """Return the outdoor session entry for a specific date."""
-    sessions = load_outdoor_sessions(user_id, since_date=date)
-    matching = [s for s in sessions if s.get("date") == date]
+    """Return the outdoor session entry for a specific date.
+
+    B401: ``sessions`` lists every crag logged that date (B341), each with its
+    load score; ``session`` stays the last-logged one, as before.
+    """
+    matching = outdoor_sessions_on(user_id, date)
     if not matching:
         raise HTTPException(status_code=404, detail=f"No outdoor session found for date {date}")
-    entry = matching[-1]
-    entry["load_score"] = compute_outdoor_load_score(entry)
-    return {"session": entry}
+    for entry in matching:
+        entry["load_score"] = compute_outdoor_load_score(entry)
+    return {"session": matching[-1], "sessions": matching}
 
 
 @router.put("/log")
 @serialized_by_user
-def put_outdoor_log(req: OutdoorSessionLog, user_id: Optional[str] = Depends(get_user_id)):
-    """Update an existing outdoor session (replace entry for the same date)."""
-    entry = req.model_dump(exclude_none=True)
+def put_outdoor_log(req: OutdoorSessionUpdate, user_id: Optional[str] = Depends(get_user_id)):
+    """Update one crag's outdoor session of a date.
+
+    B401: only the edited crag's entry is replaced — the day's other crags
+    (B341) are never touched. ``original_spot_name`` names the crag when the
+    edit renames it; see ``find_outdoor_session_to_replace`` for the rules.
+    409 when the crag is ambiguous or the rename lands on another crag.
+    """
+    entry = req.model_dump(exclude_none=True, exclude={"original_spot_name"})
     entry["log_version"] = CURRENT_LOG_VERSION
-    # B394: an edit keeps the load reference the log was first stamped with —
-    # the request model does not carry it, so read it off the stored entry.
-    previous = next(
-        (s for s in reversed(load_outdoor_sessions(user_id, since_date=req.date))
-         if s.get("date") == req.date),
-        None,
-    )
-    stamp_load_ref_grade(entry, load_state(user_id), previous)
 
     try:
-        update_outdoor_session(user_id, req.date, entry)
+        # B394: an edit keeps the load reference the log was first stamped
+        # with — the request model does not carry it, so read it off the
+        # stored entry. B401: the edited crag's entry, not the day's last one.
+        previous = find_outdoor_session_to_replace(
+            user_id, req.date, entry["spot_name"], req.original_spot_name
+        )
+        stamp_load_ref_grade(entry, load_state(user_id), previous)
+        update_outdoor_session(
+            user_id, req.date, entry, original_spot_name=req.original_spot_name
+        )
+    except OutdoorLogConflict as e:
+        raise HTTPException(status_code=409, detail=str(e))
     except ValueError as e:
         detail = str(e)
         if "authenticated user_id" in detail:
@@ -359,14 +375,23 @@ def put_outdoor_log(req: OutdoorSessionLog, user_id: Optional[str] = Depends(get
         logger.error("Failed to update outdoor log: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to update outdoor log. Please try again.")
 
-    # Update state.outdoor_log[] (B116) with recalculated load_score
+    # Update state.outdoor_log[] (B116) with recalculated load_score.
+    # B401: that row is the DAY's (one per date, B277), so its load is the
+    # total of every crag logged that date — the figure the plan sync writes
+    # (B341) — and a multi-crag day keeps its joined spot label.
+    day_sessions = outdoor_sessions_on(user_id, req.date)
+    day_load = (
+        sum(compute_outdoor_load_score(s) for s in day_sessions)
+        if day_sessions else compute_outdoor_load_score(entry)
+    )
     state = load_state(user_id)
     outdoor_log = state.get("outdoor_log", [])
     for ol_entry in outdoor_log:
         if ol_entry.get("date") == req.date:
-            ol_entry["spot_name"] = entry.get("spot_name", ol_entry.get("spot_name", ""))
-            ol_entry["discipline"] = entry.get("discipline", ol_entry.get("discipline", "both"))
-            ol_entry["load_score"] = compute_outdoor_load_score(entry)
+            if len(day_sessions) <= 1:
+                ol_entry["spot_name"] = entry.get("spot_name", ol_entry.get("spot_name", ""))
+                ol_entry["discipline"] = entry.get("discipline", ol_entry.get("discipline", "both"))
+            ol_entry["load_score"] = day_load
             break
     save_state(state, user_id)
 
@@ -386,26 +411,47 @@ def put_outdoor_log(req: OutdoorSessionLog, user_id: Optional[str] = Depends(get
 
 
 @router.delete("/log/{date}")
-def delete_outdoor_log(date: str, user_id: Optional[str] = Depends(get_user_id)):
-    """Delete the outdoor session for a given date."""
+def delete_outdoor_log(
+    date: str,
+    spot_name: Optional[str] = Query(None, description="B401: delete only this crag of the day"),
+    user_id: Optional[str] = Depends(get_user_id),
+):
+    """Delete the outdoor session for a given date.
+
+    B401: with ``?spot_name=`` only that crag of the day is deleted. Without
+    it, a single-crag day is deleted as before and a multi-crag day is a 409 —
+    the Outdoor History trash icon is per crag, it must never wipe the others.
+    """
+    not_found = f"No outdoor session found for date {date}" + (
+        f" at {spot_name!r}" if spot_name else ""
+    )
     try:
-        removed = remove_outdoor_session(user_id, date)
+        removed = remove_outdoor_session(user_id, date, spot_name)
+    except OutdoorLogConflict as e:
+        raise HTTPException(status_code=409, detail=str(e))
     except ValueError as e:
         detail = str(e)
         if "authenticated user_id" in detail:
             raise HTTPException(status_code=401, detail="Authentication required to delete outdoor session")
-        raise HTTPException(status_code=404, detail=f"No outdoor session found for date {date}")
+        raise HTTPException(status_code=404, detail=not_found)
     except OSError as e:
         logger.error("Failed to delete outdoor log: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to delete outdoor log. Please try again.")
 
     if removed == 0:
-        raise HTTPException(status_code=404, detail=f"No outdoor session found for date {date}")
+        raise HTTPException(status_code=404, detail=not_found)
 
-    # Remove from state.outdoor_log[]
+    # Remove from state.outdoor_log[] — B401: unless other crags of the day
+    # remain, in which case the day's row keeps their total load.
+    remaining = outdoor_sessions_on(user_id, date) if spot_name else []
     state = load_state(user_id)
     outdoor_log = state.get("outdoor_log", [])
-    state["outdoor_log"] = [ol for ol in outdoor_log if ol.get("date") != date]
+    if remaining:
+        for ol_entry in outdoor_log:
+            if ol_entry.get("date") == date:
+                ol_entry["load_score"] = sum(compute_outdoor_load_score(s) for s in remaining)
+    else:
+        state["outdoor_log"] = [ol for ol in outdoor_log if ol.get("date") != date]
     save_state(state, user_id)
 
     return {"status": "ok", "date": date}
