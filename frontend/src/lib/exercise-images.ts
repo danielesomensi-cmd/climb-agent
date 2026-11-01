@@ -5,6 +5,11 @@
 // C281: cooldown and flexibility exercises reuse the Mobility stretch
 // illustrations the same way (the Mobility flow itself reads `image` from the
 // mobility catalog).
+// C282: the strength and prehab moves Daniele's plans use most whose name does
+// not show the position (front lever one leg, wall slide, face pull, wrist
+// curls…) get their own illustration in `strength/`; hanging_leg_raise reuses
+// the circuit's Hanging Leg Raise (same exercise). Knees to elbows and the
+// thigh-supported elbow eccentric curl stay without one (no exact picture).
 //
 // Only exact matches: same position, not just same muscles. Near variants
 // (weighted hollow, bent-knee raises, v_sit with hands behind) stay without
@@ -32,6 +37,7 @@ export const CATALOG_EXERCISE_IMAGES: Readonly<Record<string, string>> = {
   windshield_wipers: "core/33_hanging_wipers.webp",
   side_plank_star: "core/34_star_side_plank_r.webp",
   straddle_l_sit: "core/36_straddle_l_sit.webp",
+  hanging_leg_raise: "core/38_hanging_leg_raise.webp",
   hanging_leg_raise_horizontal: "core/38_hanging_leg_raise.webp",
   nordic_curl: "core/39_nordic_curl.webp",
   arch_hold: "core/40_arch_body_hold.webp",
@@ -46,12 +52,32 @@ export const CATALOG_EXERCISE_IMAGES: Readonly<Record<string, string>> = {
   lat_overhead_stretch: "stretch/stretch_lat_triceps.webp",
   hip_flexor_couch_stretch: "stretch/hip_flexor_couch_stretch.webp",
   cooldown_hip_frog: "stretch/cooldown_hip_frog.webp",
+  // C282 — strength and prehab moves whose name does not show the position
+  front_lever_one_leg: "strength/front_lever_one_leg.webp",
+  wall_slide: "strength/wall_slide.webp",
+  face_pull: "strength/face_pull.webp",
+  wall_handstand_hold: "strength/wall_handstand_hold.webp",
+  wall_handstand_shrugs: "strength/wall_handstand_hold.webp",
+  heel_pulls_chest_to_wall: "strength/heel_pulls_chest_to_wall.webp",
+  archer_pullup: "strength/archer_pullup.webp",
+  lock_off_isometric: "strength/lock_off_isometric.webp",
+  toes_to_bar: "strength/toes_to_bar.webp",
+  reverse_wrist_curl: "strength/reverse_wrist_curl.webp",
+  wrist_curl: "strength/wrist_curl.webp",
+  forearm_pronation_supination: "strength/forearm_pronation_supination.webp",
+  bear_crawl: "strength/bear_crawl.webp",
+  turkish_getup: "strength/turkish_getup.webp",
 };
 
 const LEFT_SIDE: Readonly<Record<string, string>> = {
   "core/10_side_plank_r.webp": "core/11_side_plank_l.webp",
   "core/12_copenhagen_r.webp": "core/13_copenhagen_l.webp",
   "core/34_star_side_plank_r.webp": "core/35_star_side_plank_l.webp",
+  "strength/archer_pullup.webp": "strength/archer_pullup_l.webp",
+  "strength/reverse_wrist_curl.webp": "strength/reverse_wrist_curl_l.webp",
+  "strength/wrist_curl.webp": "strength/wrist_curl_l.webp",
+  "strength/forearm_pronation_supination.webp": "strength/forearm_pronation_supination_l.webp",
+  "strength/turkish_getup.webp": "strength/turkish_getup_l.webp",
 };
 
 /** C281: a one-sided stretch ships its mirrored picture as `<name>_l.webp`. */
