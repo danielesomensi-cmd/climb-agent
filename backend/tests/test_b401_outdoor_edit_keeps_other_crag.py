@@ -8,13 +8,28 @@ Snake Valley → Symplegades was gone, routes and all. Same on Supabase
 (``delete … eq session_date``). ``DELETE /api/outdoor/log/{date}`` did the same
 from the per-crag trash icon of Outdoor History («Delete this session?»).
 
-Fix: an edit removes only the row it replaces — (date, crag) — on both storage
-backends. ``PUT`` accepts an optional ``original_spot_name`` for a rename;
-without it, a single-crag day behaves as before (rename included) and a
-multi-crag day replaces the crag with the same name, never another one: no
-match, or a rename onto another crag of the day → 409, nothing written.
+Fix: an edit rewrites only the row it replaces — (date, crag) — on both
+storage backends. ``PUT`` accepts an optional ``original_spot_name`` for a
+rename; without it the edit replaces the crag with the same name, never
+another one: no match, or a rename onto another crag of the day → 409,
+nothing written (single-crag days included since the review, see 2).
 ``DELETE`` accepts ``?spot_name=``; without it a multi-crag day → 409 instead
 of deleting every crag.
+
+Review fixes:
+
+1. The edit was a delete followed by an upsert — on Supabase two requests with
+   nothing between them. A failed upsert left the day without the edited crag;
+   the retry of the same form then found a single-crag day and «renamed» the
+   other crag, deleting it too. The edit is now ONE write: an UPDATE of the
+   crag's row on Supabase (keeps its id and ``created_at``), one atomic
+   rewrite of the yearly file on disk.
+2. Without ``original_spot_name`` a single-crag day replaced its only crag
+   whatever name was sent: a second crag typed into the edit form that Today /
+   Week «Log outdoor» open on the day's crag, or a date moved onto a day with
+   another crag, deleted that crag. The edited crag is now always the one the
+   request names — a rename needs ``original_spot_name``, on every day — and a
+   name not logged that day is a 409, nothing written.
 """
 
 from __future__ import annotations
@@ -26,7 +41,10 @@ from pathlib import Path
 
 import pytest
 
+import httpx
+
 from backend.engine import outdoor_log as ol
+from backend.engine import storage_file
 from backend.engine import storage_supabase
 
 DAY = "2026-08-25"
@@ -151,13 +169,65 @@ class TestFileBackend:
 
         assert self.log_path.read_bytes() == before
 
-    def test_single_crag_day_rename_without_original_still_replaces(self):
-        """Old behaviour, kept: the only crag of the day is the one edited."""
+    def test_second_crag_typed_into_the_edit_form_writes_nothing(self):
+        """Review #2: Today/Week «Log outdoor» on a day that already has a crag
+        opens the edit form on it. Typing the day's SECOND crag there used to
+        «rename» the only crag — Symplegades gone, routes and all."""
+        ol.append_outdoor_session(_entry("Symplegades", n_routes=3), USER)
+        before = self.log_path.read_bytes()
+
+        with pytest.raises(ol.OutdoorLogConflict, match="Nothing saved"):
+            ol.update_outdoor_session(USER, DAY, _entry("Ourania", n_routes=2))
+
+        assert self.log_path.read_bytes() == before
+
+    def test_single_crag_day_rename_needs_original_spot_name(self):
         ol.append_outdoor_session(_entry("Berdorf"), USER)
 
-        ol.update_outdoor_session(USER, DAY, _entry("Freyr"))
+        ol.update_outdoor_session(USER, DAY, _entry("Freyr"), original_spot_name="Berdorf")
 
         assert _day_spots(USER) == ["Freyr"]
+        assert len(self._lines()) == 1
+
+    def test_date_moved_onto_a_day_with_another_crag_writes_nothing(self):
+        """Review #2: the edit form lets the date change. Berdorf opened on
+        24/08 and saved on 25/08, where Freyr is logged, used to replace Freyr."""
+        ol.append_outdoor_session(_entry("Berdorf", day="2026-08-24"), USER)
+        ol.append_outdoor_session(_entry("Freyr", grade="7b"), USER)
+        before = self.log_path.read_bytes()
+
+        with pytest.raises(ol.OutdoorLogConflict):  # today's frontend
+            ol.update_outdoor_session(USER, DAY, _entry("Berdorf"))
+        with pytest.raises(ol.OutdoorLogNotFound):  # once it sends the crag it opened
+            ol.update_outdoor_session(USER, DAY, _entry("Berdorf"), original_spot_name="Berdorf")
+
+        assert self.log_path.read_bytes() == before
+
+    def test_entry_dated_another_day_writes_nothing(self):
+        self._two_crags()
+        before = self.log_path.read_bytes()
+
+        with pytest.raises(ValueError, match="cannot move a session to another date"):
+            ol.update_outdoor_session(USER, DAY, _entry("Snake Valley", day="2026-08-26"))
+
+        assert self.log_path.read_bytes() == before
+
+    def test_failed_write_leaves_the_file_as_it_was(self, monkeypatch):
+        """Review #1: the edit is one atomic rewrite — before, the crag's lines
+        were removed in one write and the replacement appended in another."""
+        self._two_crags()
+        before = self.log_path.read_bytes()
+
+        def _disk_full(*a, **k):
+            raise OSError("No space left on device")
+
+        with monkeypatch.context() as m:
+            m.setattr(storage_file.os, "replace", _disk_full)
+            with pytest.raises(OSError):
+                ol.update_outdoor_session(USER, DAY, _entry("Snake Valley", grade="7a"))
+
+        assert self.log_path.read_bytes() == before
+        assert [p.name for p in self.log_path.parent.iterdir()] == [self.log_path.name]
 
     def test_legacy_duplicate_lines_of_one_crag_are_all_replaced(self):
         """Pre-B341 files can carry several raw lines for one (date, crag) —
@@ -242,6 +312,10 @@ class _FakeQuery:
         self.op, self.payload, self.on_conflict = "upsert", payload, on_conflict
         return self
 
+    def update(self, payload):
+        self.op, self.payload = "update", payload
+        return self
+
     def eq(self, col, val):
         self.filters.append((col, "eq", val))
         return self
@@ -268,6 +342,22 @@ class _FakeQuery:
 
     def execute(self):
         db = self.db
+        if self.op != "select":
+            db.writes.append((self.op, list(self.filters)))
+            if self.op in ("upsert", "update") and db.fail_entry_writes:
+                db.fail_entry_writes -= 1
+                raise httpx.ReadTimeout("simulated: the request writing the entry timed out")
+        if self.op == "update":
+            matched = [r for r in db.rows if self._match(r)]
+            for row in matched:
+                new = {**row, **copy.deepcopy(self.payload)}
+                for other in db.rows:  # UNIQUE (user_id, session_date, spot_name)
+                    if other is not row and all(
+                        _col(other, k) == _col(new, k) for k in ("user_id", "session_date", "spot_name")
+                    ):
+                        raise RuntimeError("23505 duplicate key value violates unique constraint")
+                row.update(copy.deepcopy(self.payload))
+            return _R([copy.deepcopy(r) for r in matched])
         if self.op == "upsert":
             keys = self.on_conflict.split(",")
             new = {"user_id": self.payload["user_id"],
@@ -278,6 +368,7 @@ class _FakeQuery:
                     row["entry"] = new["entry"]
                     return _R([copy.deepcopy(row)])
             new["id"] = db.next_id
+            new["created_at"] = f"2026-08-25T18:00:{db.next_id:02d}+00:00"  # DEFAULT now()
             db.next_id += 1
             db.rows.append(new)
             return _R([copy.deepcopy(new)])
@@ -297,6 +388,10 @@ class _FakeSupabase:
     def __init__(self):
         self.rows = []
         self.deletes = []
+        self.writes = []  # (op, filters) of every write request, failed ones included
+        # The next N requests that write an entry (upsert / update) raise a
+        # transient error; deletes go through — the review's failure point.
+        self.fail_entry_writes = 0
         self.next_id = 1
 
     def table(self, name):
@@ -310,6 +405,9 @@ class TestSupabaseBackend:
         self.db = _FakeSupabase()
         monkeypatch.setattr(storage_supabase, "_sb", lambda: self.db)
         monkeypatch.setattr(ol, "storage", storage_supabase)
+        # B353 retry: no real client to rebuild, no back-off wait.
+        monkeypatch.setattr(storage_supabase, "_url", "")
+        monkeypatch.setattr(storage_supabase.time, "sleep", lambda s: None)
 
     def _two_crags(self):
         ol.append_outdoor_session(_entry("Symplegades"), USER)
@@ -330,12 +428,73 @@ class TestSupabaseBackend:
         assert json.dumps(after["entry"], sort_keys=True) == json.dumps(before["entry"], sort_keys=True)
         assert self._row("Snake Valley")["entry"]["routes"][0]["grade"] == "7a"
 
-    def test_edit_deletes_by_date_and_crag(self):
+    def test_edit_is_one_update_of_the_crags_row(self):
+        """Review #1: one statement keyed (date, crag) — never a delete."""
         self._two_crags()
+        self.db.writes.clear()
+
         ol.update_outdoor_session(USER, DAY, _entry("Snake Valley", grade="7a"))
-        assert self.db.deletes == [[
+
+        assert self.db.writes == [("update", [
             ("user_id", "eq", USER), ("session_date", "eq", DAY), ("spot_name", "eq", "Snake Valley"),
-        ]]
+        ])]
+        assert self.db.deletes == []
+
+    def test_edit_keeps_the_rows_id_and_created_at(self):
+        """created_at is the save-time anchor of export_training_log: an edit,
+        a rename included, is the same session and keeps it."""
+        self._two_crags()
+        before = copy.deepcopy(self._row("Snake Valley"))
+
+        ol.update_outdoor_session(USER, DAY, _entry("Snake Valley", grade="7a"))
+        ol.update_outdoor_session(USER, DAY, _entry("Snake Valley B"), original_spot_name="Snake Valley")
+
+        after = self._row("Snake Valley B")
+        assert (after["id"], after["created_at"]) == (before["id"], before["created_at"])
+
+    def test_failed_write_keeps_the_crag_and_the_retry_keeps_both(self):
+        """Review #1, the reported sequence: the write fails (every attempt),
+        the form stays open, the athlete taps Save again with the same payload.
+        Before: the first try deleted Snake Valley, the second found a
+        single-crag day and replaced Symplegades with it."""
+        self._two_crags()
+        before = copy.deepcopy(self.db.rows)
+
+        self.db.fail_entry_writes = 99
+        with pytest.raises(httpx.ReadTimeout):
+            ol.update_outdoor_session(USER, DAY, _entry("Snake Valley", grade="7a"))
+        assert self.db.rows == before
+
+        self.db.fail_entry_writes = 0
+        ol.update_outdoor_session(USER, DAY, _entry("Snake Valley", grade="7a"))
+
+        assert sorted(r["entry"]["spot_name"] for r in self.db.rows) == ["Snake Valley", "Symplegades"]
+        assert self._row("Symplegades") == before[0]
+        assert self._row("Snake Valley")["entry"]["routes"][0]["grade"] == "7a"
+
+    def test_transient_error_on_an_edit_is_retried(self):
+        self._two_crags()
+        self.db.writes.clear()
+        self.db.fail_entry_writes = 1
+
+        ol.update_outdoor_session(USER, DAY, _entry("Snake Valley", grade="7a"))
+
+        assert [op for op, _ in self.db.writes] == ["update", "update"]
+        assert self._row("Snake Valley")["entry"]["routes"][0]["grade"] == "7a"
+
+    def test_rename_is_not_retried_and_a_failure_keeps_the_old_row(self):
+        """A retried rename that did commit would find no row under the old
+        name: one attempt, and a failure leaves the crag as it was."""
+        self._two_crags()
+        before = copy.deepcopy(self.db.rows)
+        self.db.writes.clear()
+        self.db.fail_entry_writes = 1
+
+        with pytest.raises(httpx.ReadTimeout):
+            ol.update_outdoor_session(USER, DAY, _entry("Snake Valley B"), original_spot_name="Snake Valley")
+
+        assert [op for op, _ in self.db.writes] == ["update"]
+        assert self.db.rows == before
 
     def test_rename_with_original_spot_name(self):
         self._two_crags()
@@ -354,10 +513,23 @@ class TestSupabaseBackend:
         assert self.db.rows == before
         assert self.db.deletes == []
 
-    def test_single_crag_day_rename_without_original_still_replaces(self):
+    def test_single_crag_day_other_name_without_original_writes_nothing(self):
+        """Review #2: the second crag typed into the edit form of the first."""
+        ol.append_outdoor_session(_entry("Symplegades", n_routes=3), USER)
+        before = copy.deepcopy(self.db.rows)
+        self.db.writes.clear()
+
+        with pytest.raises(ol.OutdoorLogConflict):
+            ol.update_outdoor_session(USER, DAY, _entry("Ourania"))
+
+        assert self.db.rows == before
+        assert self.db.writes == []
+
+    def test_single_crag_day_rename_with_original(self):
         ol.append_outdoor_session(_entry("Berdorf"), USER)
-        ol.update_outdoor_session(USER, DAY, _entry("Freyr"))
-        assert [r["entry"]["spot_name"] for r in self.db.rows] == ["Freyr"]
+        row_id = self.db.rows[0]["id"]
+        ol.update_outdoor_session(USER, DAY, _entry("Freyr"), original_spot_name="Berdorf")
+        assert [(r["id"], r["entry"]["spot_name"]) for r in self.db.rows] == [(row_id, "Freyr")]
 
     def test_delete_one_crag_keeps_the_other(self):
         self._two_crags()
@@ -485,9 +657,35 @@ class TestApi:
         r = self.client.put("/api/outdoor/log", json=body)
         assert r.status_code == 404, r.text
 
-    def test_put_single_crag_rename_without_original_still_works(self):
+    def test_put_second_crag_into_the_edit_form_is_409(self):
+        """Review #2: «Log outdoor» on Symplegades' day opens its edit form;
+        saving Ourania there must not delete Symplegades."""
+        self._post("Symplegades", n_routes=3)
+        before = self._sessions()
+        raw = self._raw()
+
+        r = self.client.put("/api/outdoor/log", json=self._body("Ourania", n_routes=2))
+
+        assert r.status_code == 409, r.text
+        assert "Nothing saved" in r.json()["detail"]
+        assert self._raw() == raw
+        assert self._sessions() == before
+
+    def test_put_date_moved_onto_another_crags_day_is_409(self):
+        self._post("Berdorf", day="2026-08-24")
+        self._post("Freyr", grade="7b")
+        raw = self._raw()
+
+        r = self.client.put("/api/outdoor/log", json=self._body("Berdorf"))
+
+        assert r.status_code == 409, r.text
+        assert self._raw() == raw
+
+    def test_put_single_crag_rename_with_original_spot_name(self):
         self._post("Berdorf")
-        r = self.client.put("/api/outdoor/log", json=self._body("Freyr"))
+        body = self._body("Freyr")
+        body["original_spot_name"] = "Berdorf"
+        r = self.client.put("/api/outdoor/log", json=body)
         assert r.status_code == 200, r.text
         assert set(self._sessions()) == {"Freyr"}
 

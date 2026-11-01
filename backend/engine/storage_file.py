@@ -366,19 +366,15 @@ def outdoor_log_date_exists(user_id: Optional[str], date: str) -> bool:
     return False
 
 
-def _remove_outdoor_lines(
-    user_id: Optional[str], date: str, drop: Callable[[Dict[str, Any]], bool]
-) -> int:
-    """Rewrite the yearly file of ``date`` without the entries ``drop`` selects.
-
-    Returns the number of raw lines removed. Unparseable lines are kept.
-    """
-    log_path = _outdoor_log_path_for_date(user_id, date)
-    if not os.path.isfile(log_path):
-        return 0
-
+def _split_outdoor_lines(
+    log_path: str, drop: Callable[[Dict[str, Any]], bool]
+) -> Tuple[List[str], int]:
+    """The raw lines of ``log_path`` that ``drop`` does not select, and how many
+    it selected. Unparseable lines are kept."""
     kept: List[str] = []
     removed = 0
+    if not os.path.isfile(log_path):
+        return kept, removed
     with open(log_path, "r", encoding="utf-8") as f:
         for line in f:
             stripped = line.strip()
@@ -393,6 +389,18 @@ def _remove_outdoor_lines(
                 removed += 1
             else:
                 kept.append(stripped)
+    return kept, removed
+
+
+def _remove_outdoor_lines(
+    user_id: Optional[str], date: str, drop: Callable[[Dict[str, Any]], bool]
+) -> int:
+    """Rewrite the yearly file of ``date`` without the entries ``drop`` selects.
+
+    Returns the number of raw lines removed. Unparseable lines are kept.
+    """
+    log_path = _outdoor_log_path_for_date(user_id, date)
+    kept, removed = _split_outdoor_lines(log_path, drop)
 
     if removed > 0:
         with open(log_path, "w", encoding="utf-8") as f:
@@ -420,6 +428,30 @@ def remove_outdoor_log_by_date_spot(user_id: Optional[str], date: str, spot_name
         user_id, date,
         lambda e: e.get("date") == date and e.get("spot_name", "") == spot_name,
     )
+
+
+@memo_write
+def replace_outdoor_log_line(
+    user_id: Optional[str], date: str, spot_name: str, entry: Dict[str, Any]
+) -> str:
+    """Replace one crag's entry of a date with ``entry`` (B401).
+
+    One atomic rewrite of the yearly file (temp file + rename): every raw line
+    of ``(date, spot_name)`` — a pre-B341 file can hold several — is dropped and
+    ``entry`` is written at the end. A failure leaves the file as it was, never
+    the crag removed with its replacement unwritten. ``entry["date"]`` must be
+    ``date`` (the engine checks it). Raises ValueError when no line matches —
+    nothing is written. Returns the log path, like ``append_outdoor_log_line``.
+    """
+    log_path = _outdoor_log_path_for_date(user_id, date)
+    kept, removed = _split_outdoor_lines(
+        log_path, lambda e: e.get("date") == date and e.get("spot_name", "") == spot_name,
+    )
+    if removed == 0:
+        raise ValueError(f"No outdoor session found for date {date} at {spot_name!r}")
+    kept.append(json.dumps(entry, ensure_ascii=False))
+    _atomic_write_text(Path(log_path), "".join(line + "\n" for line in kept))
+    return log_path
 
 
 @memo_write

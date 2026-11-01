@@ -444,14 +444,15 @@ def append_outdoor_session(entry: Dict[str, Any], user_id: Optional[str] = None)
 #
 # Since B341 a day holds one row per crag (key: date, spot_name). Edit and
 # delete used to work on the whole date — editing Snake Valley on a Symplegades
-# + Snake Valley day deleted Symplegades. Both now act on (date, crag) only.
+# + Snake Valley day deleted Symplegades. Both now act on (date, crag) only,
+# and the crag is always named by the request, never guessed (B401 review).
 
 class OutdoorLogNotFound(ValueError):
     """No logged crag matches the (date[, crag]) asked for → HTTP 404."""
 
 
 class OutdoorLogConflict(ValueError):
-    """The request names no crag on a multi-crag day, or would land on another
+    """The request names no crag logged that day, or would land on another
     crag of the same day → HTTP 409. Nothing is written."""
 
 
@@ -472,39 +473,39 @@ def find_outdoor_session_to_replace(
 ) -> Dict[str, Any]:
     """The logged entry an edit of ``date`` replaces (B401).
 
-    * ``original_spot_name`` given → the crag with that exact name, else
-      :class:`OutdoorLogNotFound`.
-    * otherwise, a single-crag day → its only crag (pre-B401 behaviour, a
-      rename included);
-    * otherwise → the crag named ``new_spot_name``. None → :class:`OutdoorLogConflict`:
-      an edit never guesses which crag of the day to drop.
+    The edited crag is the one the request names: ``original_spot_name`` when
+    the edit renames it, otherwise ``new_spot_name`` — on a single-crag day too.
 
-    A rename onto another crag already logged that day is a conflict too: its
-    key would overwrite that crag's row.
+    * nothing logged that date, or ``original_spot_name`` not logged that date
+      → :class:`OutdoorLogNotFound`;
+    * no ``original_spot_name`` and ``new_spot_name`` not logged that date →
+      :class:`OutdoorLogConflict`. A different name without
+      ``original_spot_name`` is never read as a rename of the day's only crag:
+      it is just as likely a second crag typed into the edit form (Today/Week
+      «Log outdoor» and /outdoor «Quick log» open the day's crag in edit mode)
+      or a date moved onto a day that holds another crag — replacing the only
+      crag there would delete it, routes and all (B401 review);
+    * a rename onto another crag already logged that day →
+      :class:`OutdoorLogConflict`: its key would overwrite that crag's row.
     """
     rows = outdoor_sessions_on(user_id, date)
     if not rows:
         raise OutdoorLogNotFound(f"No outdoor session found for date {date}")
 
-    if original_spot_name:
-        target = next((r for r in rows if r.get("spot_name", "") == original_spot_name), None)
-        if target is None:
+    edited = original_spot_name or new_spot_name
+    target = next((r for r in rows if r.get("spot_name", "") == edited), None)
+    if target is None:
+        if original_spot_name:
             raise OutdoorLogNotFound(
                 f"No outdoor session found for date {date} at {original_spot_name!r}"
             )
-    elif len(rows) == 1:
-        target = rows[0]
-    else:
-        target = next((r for r in rows if r.get("spot_name", "") == new_spot_name), None)
-        if target is None:
-            raise OutdoorLogConflict(
-                f"{len(rows)} crags are logged on {date} ({_spot_names(rows)}) and none is "
-                f"{new_spot_name!r}: send original_spot_name to say which one you are editing"
-            )
+        raise OutdoorLogConflict(
+            f"Nothing saved: {new_spot_name!r} is not logged on {date} "
+            f"(logged: {_spot_names(rows)}). An edit replaces only the crag it names: "
+            "to rename a crag send original_spot_name, to add another crag log a new session"
+        )
 
-    if new_spot_name != target.get("spot_name", "") and any(
-        r is not target and r.get("spot_name", "") == new_spot_name for r in rows
-    ):
+    if new_spot_name != edited and any(r.get("spot_name", "") == new_spot_name for r in rows):
         raise OutdoorLogConflict(
             f"{new_spot_name!r} is already logged on {date} as another session: "
             "renaming onto it would overwrite it"
@@ -541,11 +542,19 @@ def update_outdoor_session(
     """Replace one crag's outdoor session entry for a given date.
 
     The entry replaced is :func:`find_outdoor_session_to_replace`'s; only that
-    row is removed (B401), the day's other crags stay byte-identical.
+    row is rewritten (B401), the day's other crags stay byte-identical.
+    The replacement is ONE storage write (``replace_outdoor_log_line``): a
+    failure leaves the old entry in place, never the crag deleted with its
+    replacement unwritten (B401 review — the delete-then-upsert pair could).
     Returns the JSONL log path.
     Raises ValueError (OutdoorLogNotFound / OutdoorLogConflict included) before
     writing anything if validation fails or no entry can be replaced.
     """
+    if new_entry.get("date") != date:
+        raise ValueError(
+            f"Invalid outdoor session entry: date {new_entry.get('date')!r} is not {date}: "
+            "an edit cannot move a session to another date"
+        )
     target = find_outdoor_session_to_replace(
         user_id, date, str(new_entry.get("spot_name") or ""), original_spot_name
     )
@@ -557,9 +566,8 @@ def update_outdoor_session(
 
     canonicalize_route_names(new_entry, _history_for_names(user_id))
 
-    # Remove the edited crag only, append the replacement
-    storage.remove_outdoor_log_by_date_spot(user_id, date, target.get("spot_name", ""))
-    return storage.append_outdoor_log_line(user_id, new_entry)
+    # Rewrite the edited crag only, in a single write
+    return storage.replace_outdoor_log_line(user_id, date, target.get("spot_name", ""), new_entry)
 
 
 def load_outdoor_sessions(

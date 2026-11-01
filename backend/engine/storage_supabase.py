@@ -513,6 +513,48 @@ def remove_outdoor_log_by_date_spot(user_id: Optional[str], date: str, spot_name
 
 
 @memo_write
+def replace_outdoor_log_line(
+    user_id: Optional[str], date: str, spot_name: str, entry: Dict[str, Any]
+) -> str:
+    """Replace one crag's row of a date with ``entry`` in ONE statement (B401).
+
+    An UPDATE of the row keyed ``(user_id, session_date, spot_name)`` — not a
+    delete followed by an upsert: two requests with nothing between them, so a
+    failed upsert left the day without the edited crag, and the retry of the
+    same form then read as a rename of the day's other crag (B401 review). A
+    single statement either lands or leaves the old row as it was. The row
+    keeps its id and ``created_at`` (the save-time anchor of
+    ``scripts/export_training_log.py``); on a rename the generated
+    ``spot_name`` column follows the entry, and the unique constraint still
+    refuses a rename onto another crag of the day (the engine checks it first).
+
+    An in-place edit is idempotent, so a transient error is retried on a fresh
+    client (B353). A rename is not retried: a first attempt that did commit
+    leaves no row under the old name, and the retry would report it missing.
+    ``entry["date"]`` must be ``date`` (the engine checks it). Raises
+    ValueError when no row matches — nothing is written.
+    """
+    uid = _require_user_id(user_id)
+
+    def _update():
+        return (
+            _sb()
+            .table("outdoor_logs")
+            .update({"entry": entry})
+            .eq("user_id", uid)
+            .eq("session_date", date)
+            .eq("spot_name", spot_name)
+            .execute()
+        )
+
+    renamed = entry.get("spot_name", "") != spot_name
+    r = _update() if renamed else _retry(_update, what="outdoor_log edit")
+    if not r.data:
+        raise ValueError(f"No outdoor session found for date {date} at {spot_name!r}")
+    return f"supabase://outdoor_logs/{uid}/{date}"
+
+
+@memo_write
 def delete_all_outdoor_logs(user_id: Optional[str]) -> int:
     """Delete all outdoor logs for a user. Returns count removed."""
     uid = _require_user_id(user_id)

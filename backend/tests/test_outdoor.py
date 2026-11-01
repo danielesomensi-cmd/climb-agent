@@ -633,9 +633,10 @@ class TestOutdoorAPI:
         })
         deps.STATE_PATH.write_text(json.dumps(state, indent=2))
 
-        # Update with harder route
+        # Update with harder route (B401 review: a rename names the crag it renames)
         r = self.client.put("/api/outdoor/log", json={
             "date": "2026-03-15",
+            "original_spot_name": "Berdorf",
             "spot_name": "Freyr",
             "discipline": "lead",
             "duration_minutes": 120,
@@ -973,7 +974,8 @@ class TestUpdateOutdoorSession:
         append_outdoor_session(_make_entry(date="2026-03-16"), log_dir)
 
         new_entry = _make_entry(date="2026-03-15", spot_name="Freyr")
-        update_outdoor_session(log_dir, "2026-03-15", new_entry)
+        # B401 review: a rename names the crag it renames.
+        update_outdoor_session(log_dir, "2026-03-15", new_entry, original_spot_name="Berdorf")
 
         sessions = load_outdoor_sessions(log_dir)
         assert len(sessions) == 3

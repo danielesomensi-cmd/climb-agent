@@ -130,8 +130,10 @@ class TestPlanSyncRespectsSubscription(_Base):
         self.client.post("/api/outdoor/log", json=self._body(target))
 
         self._deny_subscription()
+        # B401 review: a rename names the crag it renames.
         res = self.client.put(
-            "/api/outdoor/log", json=self._body(target, spot="Paderno")
+            "/api/outdoor/log",
+            json={**self._body(target, spot="Paderno"), "original_spot_name": "Berdorf"},
         )
         assert res.status_code == 200, res.text
 

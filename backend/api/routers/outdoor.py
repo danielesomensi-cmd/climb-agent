@@ -344,10 +344,11 @@ def get_outdoor_log_by_date(date: str, user_id: Optional[str] = Depends(get_user
 def put_outdoor_log(req: OutdoorSessionUpdate, user_id: Optional[str] = Depends(get_user_id)):
     """Update one crag's outdoor session of a date.
 
-    B401: only the edited crag's entry is replaced — the day's other crags
-    (B341) are never touched. ``original_spot_name`` names the crag when the
-    edit renames it; see ``find_outdoor_session_to_replace`` for the rules.
-    409 when the crag is ambiguous or the rename lands on another crag.
+    B401: only the edited crag's entry is replaced, in one storage write — the
+    day's other crags (B341) are never touched. ``original_spot_name`` names
+    the crag when the edit renames it; see ``find_outdoor_session_to_replace``
+    for the rules. 409 when ``spot_name`` is not logged that date and no
+    ``original_spot_name`` is sent, or when the rename lands on another crag.
     """
     entry = req.model_dump(exclude_none=True, exclude={"original_spot_name"})
     entry["log_version"] = CURRENT_LOG_VERSION

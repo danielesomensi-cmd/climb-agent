@@ -367,8 +367,9 @@ class OutdoorSessionUpdate(OutdoorSessionLog):
 
     B401: a day can hold several crags (B341). ``original_spot_name`` names the
     crag being edited when the edit renames it; it is request-only, never
-    stored. Absent: a single-crag day is replaced as before, a multi-crag day
-    replaces the crag named ``spot_name`` (409 if there is none).
+    stored. Absent: the edit replaces the crag named ``spot_name`` — on a
+    single-crag day too — and a name not logged that date is a 409, nothing
+    written (a rename needs ``original_spot_name``).
     """
     original_spot_name: Optional[str] = None
 

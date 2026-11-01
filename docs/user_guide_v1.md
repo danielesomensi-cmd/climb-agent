@@ -953,7 +953,7 @@ A live **weather widget** shows conditions for the day, rated by a **friction sc
 
 Outdoor sessions appear in your weekly timeline. The planner knows about your outdoor days (if you've set them in availability) and plans around them — no indoor sessions are scheduled on outdoor days.
 
-**Multiple crags in one day:** if you climb at more than one crag on the same date (a multi-sector day), Today/Week shows both names joined ("Symplegades - Ourania") — each crag's routes are still logged and kept separate underneath, only the day's label is combined. Editing one crag of such a day never changes the others. For now *Edit* opens the crag logged last; renaming a crag on a multi-crag day, or deleting one of its crags from **Outdoor History**, is refused with an error rather than risk touching the other crags.
+**Multiple crags in one day:** if you climb at more than one crag on the same date (a multi-sector day), Today/Week shows both names joined ("Symplegades - Ourania") — each crag's routes are still logged and kept separate underneath, only the day's label is combined. Editing one crag of such a day never changes the others. For now *Edit* opens the crag logged last, and saving that form under a crag name not logged on that date is refused with an error rather than risk replacing another crag: this covers renaming a crag (on any day, for now), typing a day's second crag into the form that **Log outdoor** / **Quick log** open on the first one, and moving a session to a date that holds another crag. To add a second crag to today, use **Start Outdoor Session**. Deleting one crag of a multi-crag day from **Outdoor History** is refused as well, for now.
 
 ### Plan for the day (grades and rests)
 
