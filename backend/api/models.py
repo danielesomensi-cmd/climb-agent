@@ -382,7 +382,8 @@ class OutdoorSessionUpdate(OutdoorSessionLog):
 
     A324 (B401 residual): a top-level key the request does not send keeps the
     replaced entry's value (``day_type``, ``conditions``, ``spot_id``…); a key
-    sent as ``null`` clears it. See ``outdoor_log.carry_over_unsent_keys``.
+    sent as ``null`` clears it. ``routes`` and ``notes`` are the request's,
+    always: absent means empty. See ``outdoor_log.carry_over_unsent_keys``.
     """
     original_spot_name: Optional[str] = None
 

@@ -1576,8 +1576,14 @@ A0 and Top w/ rests amber, Fell red. The app never writes `rope_role: "lead"` (`
   on a route sent on lead. Fixed rule: a second / top-rope clean ascent is not a send, A0 is not free.
 - **PUT `/api/outdoor/log`** (B401 residual): every top-level key of the replaced entry the request does
   not send is kept (`outdoor_log.carry_over_unsent_keys`: `day_type`, `conditions`, `route_profile`,
-  `spot_id`, `energy_level`, `overall_feeling`, `notes`, `routes`…); a key sent as `null` is cleared;
-  `spot_id` is not carried on a rename; `log_version` / `load_ref_grade` / `load_score` never.
+  `spot_id`, `energy_level`, `overall_feeling`…); a key sent as `null` is cleared; `spot_id` is not
+  carried on a rename; `log_version` / `load_ref_grade` / `load_score` never, and neither are `routes`
+  and `notes` (the edit form owns them: absent = empty, as a pre-A324 form clears its notes).
+- **Plan day after a rename or a per-crag delete** (A324 review): a `PUT` that renames a crag
+  (`original_spot_name` ≠ `spot_name`) and a `DELETE ?spot_name=` that leaves other crags that date
+  re-sync the plan day through `_sync_plan_after_outdoor_log(…, dropped_spot=…)`: the gone crag leaves
+  `outdoor_spot_name` (`_drop_crag_from_label`, never emptied) and `outdoor_load_score` is the total of
+  the crags still logged; `state.outdoor_log` follows. Deleting a day's last crag leaves the plan as before.
 
 ### 5.7 Weekly overrides
 

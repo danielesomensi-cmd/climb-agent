@@ -21,7 +21,10 @@ second / top-rope 0.85) × result factor, ``aid`` = 1.0 in both formulas.
 31/10 Cancer 39 → 37, 01/11 La Crique 47 → 44.
 
 Also here (B401 residual): PUT /api/outdoor/log keeps every top-level key of
-the replaced entry that the request does not send.
+the replaced entry that the request does not send — except ``routes`` and
+``notes``, which the edit form owns (review: a pre-A324 form clears the notes
+by leaving the key out). And (review) a rename or a per-crag delete re-syncs
+the plan day: the gone crag leaves the label, the load is the remaining total.
 """
 
 from __future__ import annotations
@@ -641,18 +644,26 @@ class TestCarryOver:
         sent = {"date", "spot_name", "discipline", "duration_minutes", "routes"}
         carried = carry_over_unsent_keys(new, self.PREV, sent)
         assert set(carried) == {"spot_id", "day_type", "conditions", "route_profile", "energy_level",
-                                "overall_feeling", "notes"}
+                                "overall_feeling"}
         assert new["day_type"] == "volume" and new["spot_id"] == "spot_p"
         assert "load_score" not in new and "load_ref_grade" not in new   # never carried
+        assert "notes" not in new                                       # the form's: absent = cleared
         assert new["routes"] == []                                     # sent → the request wins
 
-    def test_null_clears_and_unsent_default_is_replaced(self):
+    def test_null_clears_a_carried_key(self):
         new = {"date": "2026-10-31", "spot_name": "Presles", "discipline": "lead", "duration_minutes": 480,
                "routes": []}
         carry_over_unsent_keys(new, self.PREV, {"date", "spot_name", "discipline", "duration_minutes",
                                                 "notes", "day_type"})
         assert "notes" not in new and "day_type" not in new            # sent as null → cleared
-        assert new["routes"] == self.PREV["routes"]                    # not sent → kept
+
+    def test_routes_and_notes_are_never_carried(self):
+        """Review: the form owns them. Not sent = empty, never the old value."""
+        new = {"date": "2026-10-31", "spot_name": "Presles", "discipline": "lead", "duration_minutes": 480,
+               "routes": []}
+        carried = carry_over_unsent_keys(new, self.PREV, {"date", "spot_name", "discipline", "duration_minutes"})
+        assert "routes" not in carried and "notes" not in carried
+        assert new["routes"] == [] and "notes" not in new
 
     def test_rename_does_not_carry_the_spot_id(self):
         new = {"date": "2026-10-31", "spot_name": "Other crag", "discipline": "lead"}
@@ -756,6 +767,19 @@ class TestApi:
         stored = self._stored("2026-10-31")
         assert "notes" not in stored and "day_type" not in stored
 
+    def test_put_from_a_pre_a324_form_clears_emptied_notes(self):
+        """Review: the old form sends ``notes: notes || undefined`` — emptied
+        notes leave the key out. The edit must not bring «old» back."""
+        post = self._body(cancer_today(), "day_type")
+        post["notes"] = "old"
+        self.client.post("/api/outdoor/log", json=post)
+        put = self._body(cancer_today())            # no notes key at all
+        assert "notes" not in put
+        assert self.client.put("/api/outdoor/log", json=put).status_code == 200
+        stored = self._stored("2026-10-31")
+        assert "notes" not in stored
+        assert stored["day_type"] == "volume"      # the keys the form never sends are still kept
+
     def test_put_rename_does_not_carry_the_spot_id(self):
         post = {**self._body(cancer_today(), "day_type"), "spot_id": "spot_presles"}
         self.client.post("/api/outdoor/log", json=post)
@@ -814,7 +838,7 @@ def _monday(d: date) -> date:
     return d - timedelta(days=d.weekday())
 
 
-class TestPlanSyncAfterPut:
+class _PlanSyncBase:
     @pytest.fixture(autouse=True)
     def setup_api(self, tmp_path, monkeypatch):
         from backend.api import deps
@@ -847,6 +871,19 @@ class TestPlanSyncAfterPut:
     def _plan(self) -> dict:
         return json.loads(self.state_path.read_text())["week_plans"][self.monday.isoformat()]
 
+    def _sat(self) -> dict:
+        return next(d for w in self._plan()["weeks"] for d in w["days"] if d["date"] == self.day)
+
+    def _book(self) -> list:
+        return [e for e in json.loads(self.state_path.read_text()).get("outdoor_log", [])
+                if e["date"] == self.day]
+
+    def _crag(self, spot: str, *routes: dict) -> dict:
+        return {"date": self.day, "spot_name": spot, "discipline": "lead", "duration_minutes": 120,
+                "routes": list(routes) or [_one("6b", {"result": "sent"}, name=f"{spot} R")]}
+
+
+class TestPlanSyncAfterPut(_PlanSyncBase):
     def test_only_the_day_load_changes(self):
         today_body = {k: v for k, v in cancer_today().items()
                       if k in ("spot_name", "discipline", "duration_minutes", "routes")}
@@ -869,3 +906,99 @@ class TestPlanSyncAfterPut:
         assert strip(after) == strip(before)
         book = [e for e in json.loads(self.state_path.read_text())["outdoor_log"] if e["date"] == self.day]
         assert len(book) == 1 and book[0]["load_score"] == 37
+
+
+# --------------------------------------------------------------------------- #
+# 14. review: a rename and a per-crag delete re-sync the plan day
+# --------------------------------------------------------------------------- #
+
+class TestPlanSyncAfterRenameAndDelete(_PlanSyncBase):
+    """A324 exposes both from the UI (rename dialog, per-crag trash). Before
+    the review the plan day kept «Presles - Freyr» after a plain rename, and
+    kept the deleted crag's load in its total (stimulus reads max(plan, log),
+    so the ≥65 outdoor-load guard could still fire)."""
+
+    def test_rename_leaves_no_ghost_crag_in_the_label(self):
+        assert self.client.post("/api/outdoor/log", json=self._crag("Presles")).status_code == 200
+        assert self._sat()["outdoor_spot_name"] == "Presles"
+
+        put = {**self._crag("Freyr"), "original_spot_name": "Presles"}
+        res = self.client.put("/api/outdoor/log", json=put)
+        assert res.status_code == 200, res.text
+        assert res.json()["plan_synced"] is True
+
+        sat = self._sat()
+        assert sat["outdoor_spot_name"] == "Freyr"
+        assert sat["outdoor_session_status"] == "done"
+        assert sat["outdoor_load_score"] == res.json()["load_score"]
+        book = self._book()
+        assert len(book) == 1 and book[0]["spot_name"] == "Freyr"
+
+    def test_edit_without_rename_keeps_a_two_crag_label(self):
+        self.client.post("/api/outdoor/log", json=self._crag("Presles"))
+        self.client.post("/api/outdoor/log", json=self._crag("Freyr"))
+        put = {**self._crag("Freyr", _one("7a", {"result": "fell"}, name="X")), "original_spot_name": "Freyr"}
+        assert self.client.put("/api/outdoor/log", json=put).status_code == 200
+        assert self._sat()["outdoor_spot_name"] == "Presles - Freyr"
+
+    def test_rename_of_one_crag_of_two_keeps_the_other(self):
+        self.client.post("/api/outdoor/log", json=self._crag("Presles"))
+        self.client.post("/api/outdoor/log", json=self._crag("Freyr"))
+        put = {**self._crag("Freyr Sector B"), "original_spot_name": "Freyr"}
+        assert self.client.put("/api/outdoor/log", json=put).status_code == 200
+        assert self._sat()["outdoor_spot_name"] == "Presles - Freyr Sector B"
+
+    def test_per_crag_delete_resyncs_the_day_load_and_label(self):
+        heavy = _one("7a", {"result": "fell"}, {"result": "fell"}, {"result": "sent"}, name="Big")
+        self.client.post("/api/outdoor/log", json=self._crag("Presles"))
+        self.client.post("/api/outdoor/log", json=self._crag("Freyr", heavy))
+        sessions = {s["spot_name"]: s["load_score"]
+                    for s in self.client.get("/api/outdoor/sessions").json()["sessions"]
+                    if s["date"] == self.day}
+        assert self._sat()["outdoor_load_score"] == sessions["Presles"] + sessions["Freyr"]
+        assert self._sat()["outdoor_spot_name"] == "Presles - Freyr"
+
+        res = self.client.delete(f"/api/outdoor/log/{self.day}", params={"spot_name": "Freyr"})
+        assert res.status_code == 200, res.text
+
+        sat = self._sat()
+        assert sat["outdoor_load_score"] == sessions["Presles"]
+        assert sat["outdoor_spot_name"] == "Presles"
+        assert sat["outdoor_session_status"] == "done"
+        book = self._book()
+        assert len(book) == 1
+        assert book[0]["load_score"] == sessions["Presles"] and book[0]["spot_name"] == "Presles"
+
+    def test_deleting_the_last_crag_leaves_the_plan_as_before(self):
+        self.client.post("/api/outdoor/log", json=self._crag("Presles"))
+        before = self._plan()
+        res = self.client.delete(f"/api/outdoor/log/{self.day}", params={"spot_name": "Presles"})
+        assert res.status_code == 200, res.text
+        assert self._plan() == before
+        assert self._book() == []
+
+    def test_per_crag_delete_without_plan_fixes_the_bookkeeping_label(self, monkeypatch):
+        import backend.api.routers.outdoor as outdoor_router
+
+        self.client.post("/api/outdoor/log", json=self._crag("Presles"))
+        self.client.post("/api/outdoor/log", json=self._crag("Freyr"))
+        monkeypatch.setattr(outdoor_router, "_sync_plan_after_outdoor_log", lambda *a, **k: False)
+        res = self.client.delete(f"/api/outdoor/log/{self.day}", params={"spot_name": "Freyr"})
+        assert res.status_code == 200, res.text
+        book = self._book()
+        assert len(book) == 1 and book[0]["spot_name"] == "Presles"
+
+
+@pytest.mark.parametrize("label, dropped, logged, expected", [
+    ("Berdorf - Freyr", "Berdorf", ["Freyr"], "Freyr"),
+    ("Berdorf - Freyr", "Freyr", ["Berdorf"], "Berdorf"),
+    ("berdorf - Berdorf", "berdorf", ["Berdorf"], "Berdorf"),   # case-only rename
+    ("Berdorf", "Berdorf", [], "Berdorf"),                       # never empties the label
+    ("Berdorf - Freyr", "Freyr", ["Berdorf", "Freyr"], "Berdorf - Freyr"),  # still logged
+    ("Berdorf - Freyr", "Ourania", ["Berdorf"], "Berdorf - Freyr"),
+    ("Berdorf - Freyr", None, ["Berdorf"], "Berdorf - Freyr"),
+])
+def test_drop_crag_from_label(label, dropped, logged, expected):
+    from backend.api.routers.outdoor import _drop_crag_from_label
+
+    assert _drop_crag_from_label(label, dropped, logged) == expected

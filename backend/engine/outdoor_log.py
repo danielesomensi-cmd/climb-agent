@@ -445,9 +445,14 @@ def normalize_outdoor_entry(entry: Dict[str, Any]) -> Dict[str, Any]:
 
 
 # Keys a PUT never carries over from the replaced entry: the server sets them
-# (``log_version``, ``load_ref_grade`` via stamp_load_ref_grade) or they are
-# read-time enrichments that must never be stored (``load_score``).
-_NEVER_CARRIED = {"log_version", "load_ref_grade", "load_score", "original_spot_name"}
+# (``log_version``, ``load_ref_grade`` via stamp_load_ref_grade), they are
+# read-time enrichments that must never be stored (``load_score``), or the edit
+# form owns them (``routes``, ``notes``). Every form version shows and saves the
+# routes and the notes, and a form older than A324 clears the notes by leaving
+# the key out (``notes || undefined``): carrying them would undo that edit.
+_NEVER_CARRIED = {
+    "log_version", "load_ref_grade", "load_score", "original_spot_name", "routes", "notes",
+}
 
 
 def carry_over_unsent_keys(
@@ -464,6 +469,9 @@ def carry_over_unsent_keys(
     (``sent_keys``: the request's fields set, explicit ``null`` included) is
     copied over, like B394 keeps ``load_ref_grade``. A key sent as ``null``
     stays cleared: that is the explicit way to remove a value.
+
+    ``routes`` and ``notes`` are never carried (A324 review): the form owns
+    them, and an absent ``notes`` is how a pre-A324 form clears the notes.
 
     ``spot_id`` belongs to the crag: it is not carried when the edit renames
     the crag (another ``spot_name``). Returns the keys carried over.

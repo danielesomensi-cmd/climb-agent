@@ -973,7 +973,7 @@ Each try can say **who was on the sharp end**: **Lead** (you led it — the defa
 
 **Multiple crags in one day:** if you climb at more than one crag on the same date (a multi-sector day), Today/Week shows both names joined ("Symplegades - Ourania") — each crag's routes are still logged and kept separate underneath, only the day's label is combined. Editing one crag of such a day never changes the others. For now *Edit* opens the crag logged last.
 - **Renaming or adding a crag.** If you change the crag's name while editing a session, the app asks before saving: **Rename** *old* **to** *new* (the same session, under the new name) or **Add** *new* **as another crag** (the form is saved as a second crag of that day and the first one stays exactly as it was). This is also how you add a second crag to a day: **Log outdoor** (Today / Week) and **Quick log** (Outdoor History) open the day's crag that is already logged — type the other crag's name, check the routes in the form are the new crag's, and choose **Add**. *Add* refuses a crag that is already logged that day rather than replace it. **Start Outdoor Session** still works for a second crag today.
-- **Deleting one crag.** The trash icon in **Outdoor History** deletes only the crag of that row; on a multi-crag day the others stay.
+- **Deleting one crag.** The trash icon in **Outdoor History** deletes only the crag of that row; on a multi-crag day the others stay, and the day on Today / Week drops that crag's name and its load (the day's load is what is left). Renaming a crag replaces its name in the day's label too.
 - Changing a session's **date** from the edit form isn't supported yet: delete it and log it again on the right day.
 
 ### Plan for the day (grades and rests)
