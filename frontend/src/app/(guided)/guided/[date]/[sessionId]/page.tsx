@@ -9,9 +9,11 @@ import { ArrowLeft, CloudOff } from "lucide-react";
 import { SoundToggle } from "@/components/guided/sound-toggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { SessionTimer } from "@/components/guided/session-timer";
 import { GuidedProgressBar } from "@/components/guided/guided-progress-bar";
 import { GuidedExerciseStep } from "@/components/guided/guided-exercise-step";
+import { GUIDED_ACTION_BAR_SPACE } from "@/components/guided/guided-action-bar";
 import { GuidedSummary } from "@/components/guided/guided-summary";
 import { postFeedback, getState } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
@@ -23,7 +25,7 @@ import {
   syncPendingGuidedFeedback,
   type PendingGuidedState,
 } from "@/lib/guided-pending-feedback";
-import { applyStepUndo, closeStep, isWithinAdvanceGuard, type StepUndo } from "@/lib/guided-step-undo";
+import { applyStepUndo, closeStep, isWithinAdvanceGuard, nextPendingIndex, type StepUndo } from "@/lib/guided-step-undo";
 import { unlockAudio, getAudioContext } from "@/lib/audio-unlock";
 import { readServerRuling, useServerRuling, useSubscription } from "@/lib/hooks/use-subscription";
 import { useSubmitLock } from "@/lib/hooks/use-submit-lock";
@@ -906,8 +908,8 @@ export default function GuidedSessionPage() {
         )}
       </div>
 
-      {/* Main content */}
-      <main className="p-4 space-y-4">
+      {/* Main content — B411: room at the end for the pinned Skip / Done */}
+      <main className={cn("p-4 space-y-4", !showSummary && currentExercise && GUIDED_ACTION_BAR_SPACE)}>
         {resumed && (
           <div className="rounded-lg border border-primary/30 bg-primary/10 p-3 flex items-center justify-between text-sm">
             <span className="text-primary font-medium">Session resumed — continuing from where you left off</span>
@@ -977,6 +979,11 @@ export default function GuidedSessionPage() {
                 nextExerciseName={(() => {
                   const next = state.exercises[state.currentIndex + 1];
                   return next ? next.name || next.exerciseId.replace(/_/g, " ") : undefined;
+                })()}
+                upNext={(() => {
+                  // B411: where Done / Skip really go — closeStep's target.
+                  const next = nextPendingIndex(state.exercises, state.currentIndex);
+                  return next < 0 ? null : exerciseLabel(state.exercises[next]);
                 })()}
               />
             </div>
