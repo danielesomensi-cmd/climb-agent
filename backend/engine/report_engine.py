@@ -10,6 +10,7 @@ from backend.engine.closed_loop_v1 import STIMULUS_CATEGORIES, _session_categori
 from backend.engine.other_activity_v1 import normalize_other_activities
 from backend.engine.limit_log import sends_by_surface
 from backend.engine.load_score import effective_session_load
+from backend.engine.outdoor_attempt import route_clean_non_lead, route_lead_sent
 from backend.engine.outdoor_log import compute_outdoor_load_score, load_outdoor_sessions
 
 # Difficulty label→score mapping (mirrors adaptive_replan.py)
@@ -820,12 +821,20 @@ def _build_progression(
 
 
 def _build_outdoor(outdoor_sessions: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Build outdoor section from outdoor session log entries."""
+    """Build outdoor section from outdoor session log entries.
+
+    A324: ``routes_sent`` / ``top_grade_sent`` / onsights count sends on lead
+    only (``outdoor_attempt.route_lead_sent``). ``routes_clean_non_lead`` (new,
+    additive) counts the routes with no send but a clean ascent on second or
+    top-rope — so a multi-pitch climbed on alternate leads does not read as
+    «2/8 sent» and six failures.
+    """
     if not outdoor_sessions:
         return {
             "sessions": 0,
             "routes_attempted": 0,
             "routes_sent": 0,
+            "routes_clean_non_lead": 0,
             "send_pct": 0.0,
             "top_grade_sent": None,
             "top_grade_attempted": None,
@@ -838,6 +847,7 @@ def _build_outdoor(outdoor_sessions: List[Dict[str, Any]]) -> Dict[str, Any]:
 
     routes_attempted = 0
     routes_sent = 0
+    routes_clean_non_lead = 0
     onsights = 0
     spots_set: set = set()
     top_grade_sent: Optional[str] = None
@@ -856,7 +866,9 @@ def _build_outdoor(outdoor_sessions: List[Dict[str, Any]]) -> Dict[str, Any]:
             if grade and attempts:
                 top_grade_attempted = _higher_grade(top_grade_attempted, grade)
 
-            sent = any(a.get("result") == "sent" for a in attempts)
+            if route_clean_non_lead(route):
+                routes_clean_non_lead += 1
+            sent = route_lead_sent(route)
             if sent:
                 routes_sent += 1
                 if grade:
@@ -871,6 +883,7 @@ def _build_outdoor(outdoor_sessions: List[Dict[str, Any]]) -> Dict[str, Any]:
         "sessions": len(outdoor_sessions),
         "routes_attempted": routes_attempted,
         "routes_sent": routes_sent,
+        "routes_clean_non_lead": routes_clean_non_lead,
         "send_pct": send_pct,
         "top_grade_sent": top_grade_sent,
         "top_grade_attempted": top_grade_attempted,
@@ -1117,6 +1130,9 @@ def _build_highlights(
         parts = [f"{outdoor['sessions']} outdoor session(s)"]
         if attempted:
             parts.append(f"{sent}/{attempted} sends")
+        clean = outdoor.get("routes_clean_non_lead", 0)
+        if clean:  # A324: clean on second / top-rope — not sends
+            parts.append(f"{clean} clean on second/top-rope")
         if top_attempted and top_attempted != top_sent:
             parts.append(f"top attempt {top_attempted}")
         if top_sent:

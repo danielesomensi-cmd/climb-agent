@@ -67,6 +67,13 @@ from backend.engine.anchored_load import (
     pain_for,
 )
 from backend.engine.macro_position import position_on
+from backend.engine.outdoor_attempt import (
+    is_lead,
+    result_of,
+    route_aid,
+    route_clean_non_lead,
+    route_lead_sent,
+)
 from backend.engine.session_tags import derive_session_tags
 from backend.engine.stimulus import (
     FAMILY_LIMIT_POWER,
@@ -87,7 +94,7 @@ from backend.engine.stimulus import (
 DateLike = Union[date, str]
 ArchivedWeeks = Optional[Union[Mapping[str, Any], Sequence[Mapping[str, Any]]]]
 
-VERSION = "a320.1"
+VERSION = "a324.1"
 
 # ---------------------------------------------------------------------------
 # Constants. Shared with the engine, never copied: the command and the docs
@@ -468,7 +475,11 @@ def _recent(state: Mapping[str, Any], today: date, archived_weeks: ArchivedWeeks
         outdoor.append({
             "date": d, "spot": e.get("spot_name"), "discipline": e.get("discipline"),
             "routes": len(routes),
-            "sent": sum(1 for r in routes if any((a or {}).get("result") == "sent" for a in r.get("attempts") or [])),
+            # A324: `sent` = routes sent on lead; a clean second / top-rope and
+            # an A0 are counted apart (exclusive: lead send > clean > A0).
+            "sent": sum(1 for r in routes if route_lead_sent(r)),
+            "clean_non_lead": sum(1 for r in routes if route_clean_non_lead(r)),
+            "aid": sum(1 for r in routes if route_aid(r)),
             "hard_day": d in hard,
             "hardest_hard_route": (hard.get(d) or {}).get("route"),
             "hardest_hard_grade": (hard.get(d) or {}).get("grade"),
@@ -1395,7 +1406,7 @@ _CUSTOM_ID_RE = re.compile(r"\bcustom_(cs_[0-9A-Za-z]+)\b")
 _PITCH_ROLE_IT = {"warmup": "riscaldamento", "build": "avvicinamento", "main": "main",
                   "cooldown": "defaticamento", "project": "progetto"}
 
-_RESULT_TOKEN = {"sent": "SEND", "fell": "FALL", "topped_out": "TOPPED_OUT"}
+_RESULT_TOKEN = {"sent": "SEND", "fell": "FALL", "topped_out": "TOPPED_OUT", "aid": "AID"}
 
 
 def _custom_names(ctx: Mapping[str, Any], state: Optional[Mapping[str, Any]]) -> Dict[str, str]:
@@ -1480,11 +1491,17 @@ def _outdoor_line(o: Mapping[str, Any]) -> str:
 def tryhard_from_results(state: Optional[Mapping[str, Any]], today: DateLike,
                          outdoor_rows: Optional[Sequence[Mapping[str, Any]]]) -> Optional[Dict[str, Any]]:
     """Try-hard outcomes DERIVED from the outdoor attempt results (``sent`` /
-    ``fell`` / ``topped_out``) over the ``TRYHARD_WINDOW_D`` window, on the
-    routes at or above the OUTDOOR-HARD threshold (redpoint − 2, A288). Not the
-    agreed note format: a ``topped_out`` is a top with rests, it does not say
-    whether the rest was a TAKE or a LET_GO. ``None`` without state or without
-    a usable redpoint (never guess the threshold)."""
+    ``fell`` / ``topped_out`` / ``aid``) over the ``TRYHARD_WINDOW_D`` window,
+    on the routes at or above the OUTDOOR-HARD threshold (redpoint − 2, A288).
+    Not the agreed note format: a ``topped_out`` is a top with rests, it does
+    not say whether the rest was a TAKE or a LET_GO. ``None`` without state or
+    without a usable redpoint (never guess the threshold).
+
+    A324: only attempts ON LEAD count — a burn on second or top-rope is not a
+    try-hard attempt. They are left out and listed apart
+    (``non_lead_excluded`` / ``non_lead_routes``). ``AID`` (A0 on lead: pulling
+    on the gear instead of trying the move and falling) is a non-send, so it
+    lowers ``fall_pct_of_non_send``."""
     if not state:
         return None
     from backend.engine.stimulus import _route_discipline, hard_climb_threshold, is_hard_climb
@@ -1494,8 +1511,10 @@ def tryhard_from_results(state: Optional[Mapping[str, Any]], today: DateLike,
     thresholds = {disc: hard_climb_threshold(state, disc) for disc in ("lead", "boulder")}
     if not any(thresholds.values()):
         return None
-    counts = {"SEND": 0, "FALL": 0, "TOPPED_OUT": 0}
+    counts = {"SEND": 0, "FALL": 0, "TOPPED_OUT": 0, "AID": 0}
     routes: List[str] = []
+    non_lead_routes: List[str] = []
+    non_lead = 0
     for e in _outdoor_entries(state, outdoor_rows):
         d = str(e["date"])[:10]
         if not (since <= d <= td.isoformat()):
@@ -1507,14 +1526,22 @@ def tryhard_from_results(state: Optional[Mapping[str, Any]], today: DateLike,
             if not is_hard_climb(state, disc, r.get("grade")):
                 continue
             n = 0
+            excluded = 0
             for a in r.get("attempts") or []:
-                tok = _RESULT_TOKEN.get(str((a or {}).get("result") or "")) if isinstance(a, Mapping) else None
-                if tok:
-                    counts[tok] += 1
-                    n += 1
+                tok = _RESULT_TOKEN.get(result_of(a) or "")
+                if not tok:
+                    continue
+                if not is_lead(a):  # A324: second / top-rope is not a try-hard burn
+                    excluded += 1
+                    continue
+                counts[tok] += 1
+                n += 1
             if n:
                 routes.append(f"{d[5:]} {r.get('name') or '?'} {r.get('grade')} ×{n}")
-    non_send = counts["FALL"] + counts["TOPPED_OUT"]
+            if excluded:
+                non_lead += excluded
+                non_lead_routes.append(f"{d[5:]} {r.get('name') or '?'} {r.get('grade')} ×{excluded}")
+    non_send = counts["FALL"] + counts["TOPPED_OUT"] + counts["AID"]
     return {
         "window_start": since,
         "thresholds": {k: v for k, v in thresholds.items() if v},
@@ -1522,6 +1549,8 @@ def tryhard_from_results(state: Optional[Mapping[str, Any]], today: DateLike,
         "attempts": sum(counts.values()),
         "fall_pct_of_non_send": round(100.0 * counts["FALL"] / non_send, 1) if non_send else None,
         "routes": routes,
+        "non_lead_excluded": non_lead,
+        "non_lead_routes": non_lead_routes,
     }
 
 
@@ -1671,7 +1700,15 @@ def render_text(ctx: Mapping[str, Any], *, plan_notes: Optional[str] = None,
         L.append(f"  {s['date']} {s.get('slot') or '-':8} {_session_label(s, names)} [{s['status']}] "
                  f"{('stimoli: ' + ','.join(s['stimuli'])) if s['stimuli'] else ''}".rstrip())
     for o in rc.get("outdoor") or []:
-        L.append(f"  {o['date']} outdoor {o.get('spot')}: {o['routes']} vie, {o['sent']} chiuse"
+        # A324: «chiuse» = da primo. With clean seconds / top-ropes or A0 the
+        # line says so; a lead-only day reads exactly as before.
+        clean, aid = o.get("clean_non_lead") or 0, o.get("aid") or 0
+        esiti = f"{o['sent']} chiuse" + (" da primo" if clean or aid else "")
+        if clean:
+            esiti += f", {clean} pulite da secondo/TR"
+        if aid:
+            esiti += f", {aid} in A0"
+        L.append(f"  {o['date']} outdoor {o.get('spot')}: {o['routes']} vie, {esiti}"
                  + (f" — giorno dita HARD ({o.get('hardest_hard_route')} {o.get('hardest_hard_grade')})" if o["hard_day"] else ""))
 
     rx = ctx.get("recent_exercises") or {}
@@ -1733,12 +1770,15 @@ def render_text(ctx: Mapping[str, Any], *, plan_notes: Optional[str] = None,
         c = derived["counts"]
         soglie = ", ".join(f"{k} ≥ {v}" for k, v in derived["thresholds"].items())
         L.append(f"  Derivato dagli esiti (non nel formato), vie ≥ RP−2 ({soglie}): SEND {c['SEND']} · "
-                 f"FALL {c['FALL']} · TOPPED_OUT {c['TOPPED_OUT']} → FALL sui non-send: "
+                 f"FALL {c['FALL']} · TOPPED_OUT {c['TOPPED_OUT']} · AID {c['AID']} → FALL sui non-send: "
                  f"{derived['fall_pct_of_non_send']}% — {'; '.join(derived['routes'])}")
         L.append("    (TOPPED_OUT = in catena con riposi: l'esito non dice se fu TAKE o LET_GO; "
-                 "il conteggio formale resta quello sopra)")
+                 "AID = A0 da primo, tirato sui rinvii; il conteggio formale resta quello sopra)")
     elif derived is not None:
-        L.append("  Derivato dagli esiti (non nel formato): nessun tentativo su vie ≥ RP−2 nella finestra")
+        L.append("  Derivato dagli esiti (non nel formato): nessun tentativo da primo su vie ≥ RP−2 nella finestra")
+    if derived and derived.get("non_lead_excluded"):
+        L.append(f"  Esclusi dal conteggio (da secondo / top-rope, non sono try-hard): "
+                 f"{derived['non_lead_excluded']} tentativi — {'; '.join(derived['non_lead_routes'])}")
 
     _render_limit_log(L, ctx.get("limit_log") or [])
 

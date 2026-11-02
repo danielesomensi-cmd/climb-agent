@@ -783,7 +783,9 @@ Written **only** by `POST /api/assessment/confirm-grade` (and, for `manual`, by 
 | `assessment.grade_evidence_worked_routes` | route keys (`"<spot name>\|<route name>"`, casefolded, B362 normalisation; a later explicit onsight/flash of an already-seen name gets `"…@<date>"`, `"…@<date>#n"` on the same day) the athlete marked **worked**: never evidence again. Capped at 500. |
 
 Evidence route (`engine/grade_evidence.is_onsight_evidence`): lead (route `discipline`, else the
-session's), exactly one attempt with `result: "sent"`, `style` ∈ {absent, `onsight`, `flash`}, grade on
+session's), exactly one attempt with `result: "sent"` **on lead** (A324: `rope_role` absent or `lead`; a
+clean second / top-rope is never evidence, even logged `onsight`/`flash`, but its route still counts as
+seen — a later lead of it is not a first go), `style` ∈ {absent, `onsight`, `flash`}, grade on
 `GRADE_ORDER`, and — only when `style` is absent (inferred) — first appearance of its key in the
 date-sorted log; an explicit `onsight`/`flash` is trusted over a name collision. The shared lower-level
 predicate `is_first_go_send` also drives `compute_outdoor_stats`' onsight auto-detect.
@@ -1210,7 +1212,7 @@ The athlete (or the coach, with the athlete's OK) declines the **pending** test 
 - **Implicit decline (plan edit).** A policy test (`AXIS_TEST_SESSIONS_ALL[axis]`; the combined `test_max_hang_pullup` counts for both axes) the **athlete** removed or replaced in week K — the plan's removal records: `remove_session`, a day override (partial, or whole-day by its `replaced_slots` matched against the snapshot's `placed_date` / `placed_slot`), an `add_planned_session` key re-schedule in its place, a move that overwrote it — declines that axis for **week K only**: `skipped` / `declined` with `declined: {source: plan_edit, kind: decline, trigger, reason: null, declined_at: <the removed session's date>}`. Not a move of the test itself (it still exists: B400 counts it where it landed), not an automatic A315 re-schedule (`auto`), not the athlete taking back an extra test of their own (`removed_owned`) while the policy's test is still to do in the week — the policy's test the athlete moved and then removed still is one. Derived from the plan every time (`retest_policy.plan_edit_removal`), never stored. It is read before a stored decline or postpone of the same week, so the regenerated snapshot always carries the `plan_edit` row: a slot-only record keeps matching through it, and a `DELETE` of the stored record never reopens the week. The regeneration does not put the test back on another day of K (B382's D1 does not apply to it). `DELETE` does not undo it: the athlete puts the test back with an explicit add — a test of the axis the athlete owns in week K, still to do from today on (added, forced or moved; not done, not skipped — a past one never done is no way back), lifts the implicit decline, and B400 counts that test where it is (`already_scheduled`). The app itself offers no such add (quick-add holds no test session): today the way back goes through the coach (`/api/replanner/events`).
 - **Never replaced by a key re-schedule.** `key_sessions_v1._replaceable` (A294 proposals, A315 automatic application) never takes the slot of a test the policy placed (`retest_policy.is_policy_test`: PASS 3a's `retest:<trigger>` / `retest:<axis>:<trigger>` explain stamp, the only writer): only the athlete declines a test. A test of an axis the policy does not cover (historical PASS 3, `test_queue`) is read as before — an untested athlete's proposals stay byte-identical.
 - **`retest_status.axes.<axis>`** (covered axes): `declines` = the `decline_view` of each active stored record (every field from a closed set or an ISO date: a record carried in by an import passes no free text); `plan_edit_declines` = `[{week_start, declined_at, session_id, source: plan_edit}]` for each hot week from this Monday on whose decision is the implicit decline (a removal in a week where nothing is due is a fact of the plan, not a decline: not listed). `next_test_reason` `declined` | `postponed`; a `postponed` test projected from `until` shows `trigger: postponed`.
-- **Athlete context** (`VERSION` a320.1): CLI lines `RIFIUTATO il <declined_at> (<reason>)` / `RINVIATO al <until> (<reason>)` / `rifiutato in settimana <K> (modifica del piano)`; coach block `retest declined by the athlete on <date> (reason: <code>); it comes back with …` / `retest postponed to <date> (reason: <code>)` / `retest declined for the week of <K> …` — codes and ISO dates only, never the note. With a decline the coach block puts the retest section before the recovery guards, so a cut to `COACH_BLOCK_MAX_CHARS` drops the farthest guard days first (without one the layout is unchanged). `scripts/athlete_context.py --simulate --replace` flags a removed policy test (`removed[].retest_axes`, warning): the removal would be a decline for the week.
+- **Athlete context** (A320 lines, since `VERSION` a320.1 — now a324.1, see §5.6.1): CLI lines `RIFIUTATO il <declined_at> (<reason>)` / `RINVIATO al <until> (<reason>)` / `rifiutato in settimana <K> (modifica del piano)`; coach block `retest declined by the athlete on <date> (reason: <code>); it comes back with …` / `retest postponed to <date> (reason: <code>)` / `retest declined for the week of <K> …` — codes and ISO dates only, never the note. With a decline the coach block puts the retest section before the recovery guards, so a cut to `COACH_BLOCK_MAX_CHARS` drops the farthest guard days first (without one the layout is unchanged). `scripts/athlete_context.py --simulate --replace` flags a removed policy test (`removed[].retest_axes`, warning): the removal would be a decline for the week.
 - **`inject_tests`** (an explicit "I want tests": onboarding, start-new-cycle, the test-reminder confirm) bypasses the policy by design: declines are not consulted there.
 - **The endpoint's flow** (POST): status → record → upsert → the engine's planned tests of the axis dated from `max(server today, athlete's today ±1)` removed from `week_plans[K]` **and** the `current_week_plan` copy, with no adaptation event (a `remove_session` record would empty the slot, B382, and read as a plan-edit decline) → `stamp_revision` + `mark_weeks_stale(only=K)`, plus the cached week the test now belongs to (`retest_declines.week_to_reopen`: the first week from this Monday where the axis is due — the week of a postpone's `until`, the next trigger of another kind — when it is cached, not stale, and no test of the axis is planned; a cached week is never regenerated on its own, so the test would otherwise wait for the first week generated later) → one save. The athlete's own planned tests (moved, forced, quick-added) are never removed: `kept_user_owned_tests`. The freed slot gets a normal engine session at the regeneration (not a rest day), unless the day is copied wholesale (today with a done session). A test already declined is no longer pending: a second POST gets 409 `no_pending_retest` (to turn a decline into a postpone: DELETE, then POST). `DELETE` (`?dry_run=&today=`) removes every record of the axis, takes out the engine's tests placed under a postpone (`retest_declines.tests_placed_under_postpone`: the week's snapshot `placed` row of the axis with trigger `postponed`, dated from the later of the server's and the athlete's today; the athlete's own are kept and listed in `kept_user_owned_tests`) — once the postpone is undone nothing backs them: kept, the original week saw them planned (`already_scheduled`) and the next regeneration of their own week dropped them — and marks stale those weeks (after `stamp_revision`) and the weeks from this Monday generated under a stored record (`retest_declines.weeks_generated_under_decline`: snapshot `skipped` row `declined` / `postponed` of the axis, not a `plan_edit` one). Response `{dry_run, removed, tests_removed, kept_user_owned_tests, weeks_marked_stale, retest_status}`.
 - **Not the legacy reminder.** `test_reminder_postponed_to` / `test_reminder_skipped_until` (`POST /api/week/test-reminder-response`) postpone the manual 6-week reminder of the **uncovered** axes; a retest decline acts on the policy of a **covered** axis.
@@ -1509,6 +1511,68 @@ Outdoor session logging conditions:
 - `conditions.humidity`: `low | medium | high`
 - `conditions.rock_condition`: `dry | damp | wet`
 - `conditions.wind`: `none | light | strong`
+
+(Manual outdoor.v1 fields. The A225 weather auto-fill stores its own payload — numeric `humidity` /
+`wind`, `temperature`, `condition_band`, … — so `conditions` is free-form; only `temperature` (number)
+and `condition_band` (`prime | ok | poor_hot_humid | poor_cold_dry`) are validated. Contract:
+`backend/data/schemas/outdoor_session_entry.v1.json`, also read by climb-watch.)
+
+### 5.6.1 Outdoor attempt: result and rope role (A324)
+
+One outdoor attempt = `routes[].attempts[]` of an outdoor log. Single reading for every backend
+reader: `backend/engine/outdoor_attempt.py` (frontend twin `src/lib/outdoor-result.ts`); a static scan
+in `test_a324_rope_role_aid.py` forbids `result == "sent"` comparisons anywhere else in the backend.
+
+| field | values | meaning |
+|-------|--------|---------|
+| `result` | `sent` | clean to the top |
+| | `fell` | did not reach the top |
+| | `topped_out` | to the top with rests on the rope (hangdog, B393) |
+| | `aid` | to the top pulling on the gear — **A0** (A324). Rope only |
+| `rope_role` | absent \| `lead` | on the sharp end. **Absent = lead**: every pre-A324 log is a lead log, no migration. The backend stores `lead` as absent, so a lead log written by any client stays byte-identical |
+| | `second` | seconded (follower on a multi-pitch) |
+| | `toprope` | top-rope. Exact spelling: never `top_rope` / `tr` (422) |
+
+- **Send** = `sent` on lead (`is_lead_send`, `route_lead_sent`). It is the only result that counts in
+  `compute_outdoor_stats` (sent %, top grade, onsight auto-detect), the weekly report (`routes_sent`,
+  `top_grade_sent`, onsight %), milestones (new hardest grade, first onsight), A292 evidence (§2.10.2b)
+  and the derived try-hard count.
+- **Clean, not on lead** = `sent` on `second` / `toprope` (`is_clean_non_lead`): shown «Second clean» /
+  «TR clean» (blue, never green), never a send. Route classes are exclusive, in this order: sent on
+  lead > clean not on lead (`route_clean_non_lead`) > A0 (`route_aid`). Report: `routes_clean_non_lead`
+  (additive); athlete context `recent.outdoor[]`: `sent`, `clean_non_lead`, `aid`.
+- **Boulder**: no rope role, no `aid`. A boulder route (its own `discipline`, else the session's when the
+  route has none; a `both` session is not guessed) is **normalised** server-side — `rope_role` dropped,
+  `aid` → `fell`, logged — never rejected: a 422 makes the offline outbox drop the whole day and fails
+  the live session's finish. Unknown spellings are rejected (request models: 422; `validate_outdoor_entry`
+  for script imports).
+- **Long routes**: one route per pitch (`«Route (Crag) – L1…Ln»`), one attempt each — no `pitches[]`.
+- **Load** (`outdoor_log`), per attempt in both formulas: `rope_role` factor × result factor.
+  - `ROPE_ROLE_LOAD_FACTOR` = lead 1.0, second 0.85, toprope 0.85 — **ENGINEERING CONSTANT** (the
+    direction is documented: higher lactate / heart rate / anxiety on lead than on top-rope for
+    intermediate climbers, Draper et al. 2010, Hodgson et al. 2009; the size is ours). Applied after
+    `_V2_FLOOR`, so a 6a+ on second weighs 5.1 (< the 6.0 floor) and enters the top-2 choice
+    discounted; the volume factor still counts every attempt.
+  - Result factor — v2 (B394, logs with `load_ref_grade`): 1.0 for every result, `aid` included (A0
+    weighs like a fall). B327 (older logs): `fell` 0.8, `sent` / `topped_out` / `aid` 1.0.
+  - Daniele's real days: 31/10 Cancer (8 pitches, alternate leads) 39 → 37; 01/11 La Crique (second
+    burn on Cernes on top-rope) 47 → 44. Logs without `rope_role` keep their exact numbers.
+- **Unchanged on purpose**: `stimulus.outdoor_hard_days` (and so finger-hard days, the 48 h gap, the
+  pre-test block, the guards) and `key_sessions_v1` read the grade attempted, not the result nor the
+  role — a 7c+ on top-rope loads the fingers like on lead. Pinned by a test.
+- **Athlete context** (`VERSION` a324.1): CLI recent line «N vie, S chiuse» — with clean seconds or A0
+  «S chiuse da primo, C pulite da secondo/TR, A in A0»; derived try-hard (`tryhard_from_results`) counts
+  only lead attempts, token `AID` (A0 on lead) is a non-send (`fall_pct_of_non_send = FALL / (FALL +
+  TOPPED_OUT + AID)`), second / top-rope attempts are left out and listed (`non_lead_excluded`,
+  `non_lead_routes`, CLI line «Esclusi dal conteggio …»). The formal note count is unchanged.
+- **Coach prompt** (`prompt_builder._outdoor_log_line`): per route, lead groups in the B328 words and
+  order (`sent xN + fell xN`), then `top w/ rests`, `A0`, then `second clean`, `fell (second)`, … ,
+  `top-rope clean`, `fell (top-rope)`, …; a send style (`onsight` / `flash` / `redpoint`) is shown only
+  on a route sent on lead. Fixed rule: a second / top-rope clean ascent is not a send, A0 is not free.
+- **PUT `/api/outdoor/log`** (B401 residual): every top-level key of the replaced entry the request does
+  not send is kept (`outdoor_log.carry_over_unsent_keys`: `day_type`, `conditions`, `route_profile`,
+  `spot_id`, `energy_level`, `overall_feeling`, `notes`, `routes`…); a key sent as `null` is cleared;
+  `spot_id` is not carried on a rename; `log_version` / `load_ref_grade` / `load_score` never.
 
 ### 5.7 Weekly overrides
 

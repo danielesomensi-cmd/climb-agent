@@ -25,6 +25,7 @@ from backend.engine.outdoor_log import (
     CURRENT_LOG_VERSION,
     OutdoorLogConflict,
     append_outdoor_session,
+    carry_over_unsent_keys,
     compute_outdoor_load_score,
     find_outdoor_session_to_replace,
     outdoor_sessions_on,
@@ -35,6 +36,7 @@ from backend.engine.outdoor_log import (
     remove_outdoor_session,
     update_outdoor_session,
 )
+from backend.engine.outdoor_attempt import normalize_route_attempts
 from backend.engine.outdoor_pitch_ladder import build_pitch_ladder, grades_from_state
 from backend.engine.outdoor_resolver import OutdoorResolveError, resolve_outdoor_day
 
@@ -349,6 +351,9 @@ def put_outdoor_log(req: OutdoorSessionUpdate, user_id: Optional[str] = Depends(
     the crag when the edit renames it; see ``find_outdoor_session_to_replace``
     for the rules. 409 when ``spot_name`` is not logged that date and no
     ``original_spot_name`` is sent, or when the rename lands on another crag.
+
+    A324 (B401 residual): a top-level key the request does not send keeps the
+    replaced entry's value (``carry_over_unsent_keys``); ``null`` clears it.
     """
     entry = req.model_dump(exclude_none=True, exclude={"original_spot_name"})
     entry["log_version"] = CURRENT_LOG_VERSION
@@ -360,6 +365,9 @@ def put_outdoor_log(req: OutdoorSessionUpdate, user_id: Optional[str] = Depends(
         previous = find_outdoor_session_to_replace(
             user_id, req.date, entry["spot_name"], req.original_spot_name
         )
+        # A324: the pencil edit no longer strips what the form does not send
+        # (day_type, conditions, spot_id, route_profile, energy_level…).
+        carry_over_unsent_keys(entry, previous, req.model_fields_set)
         stamp_load_ref_grade(entry, load_state(user_id), previous)
         update_outdoor_session(
             user_id, req.date, entry, original_spot_name=req.original_spot_name
@@ -665,6 +673,9 @@ def log_outdoor_climb(
     state = load_state(user_id)
     session = _find_active_session(state, session_id)
     route = req.model_dump(exclude_none=True)
+    # A324: canonical attempts in the working state too (lead stored as absent;
+    # a boulder loses rope_role / aid) — the finish normalises again anyway.
+    normalize_route_attempts(route, session.get("discipline"))
     session.setdefault("routes", []).append(route)
     save_state(state, user_id)
     return {"routes": session["routes"], "count": len(session["routes"])}
@@ -701,7 +712,10 @@ def replace_outdoor_routes(
     """
     state = load_state(user_id)
     session = _find_active_session(state, session_id)
-    session["routes"] = [r.model_dump(exclude_none=True) for r in req.routes]
+    routes = [r.model_dump(exclude_none=True) for r in req.routes]
+    for route in routes:
+        normalize_route_attempts(route, session.get("discipline"))  # A324
+    session["routes"] = routes
     save_state(state, user_id)
     return {"routes": session["routes"], "count": len(session["routes"])}
 

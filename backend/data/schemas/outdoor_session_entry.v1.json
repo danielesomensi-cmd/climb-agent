@@ -1,13 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "OutdoorSessionEntry",
-  "description": "Schema for a single outdoor climbing session log entry",
+  "description": "One outdoor climbing session (one crag of one day) as stored in outdoor_logs. Contract with climb-watch (tools/pull.py). The runtime checks live in backend/api/models.py (request models) and backend/engine/outdoor_log.validate_outdoor_entry; test_a324_rope_role_aid.py keeps this schema aligned with them. A324: attempts carry rope_role (absent = lead) and result 'aid' (A0).",
   "type": "object",
   "required": ["log_version", "date", "spot_name", "discipline", "duration_minutes", "routes"],
   "properties": {
     "log_version": {
       "type": "string",
-      "const": "outdoor.v1"
+      "enum": ["outdoor.v1", "outdoor.v2"],
+      "description": "outdoor.v1 logs predate the A225 optional fields and stay valid; new logs are outdoor.v2."
     },
     "date": {
       "type": "string",
@@ -21,7 +22,7 @@
     "spot_name": {
       "type": "string",
       "minLength": 1,
-      "description": "Name of the crag / bouldering area"
+      "description": "Name of the crag / bouldering area. A day can hold one entry per crag (B341); (date, spot_name) is the key (B401)."
     },
     "discipline": {
       "type": "string",
@@ -31,15 +32,32 @@
       "type": "integer",
       "minimum": 1
     },
-    "conditions": {
+    "day_type": {
+      "type": "string",
+      "enum": ["project", "onsight_flash", "volume", "scout_easy"],
+      "description": "A225 (outdoor.v2): the kind of day, keys the C241 strategy catalog."
+    },
+    "route_profile": {
       "type": "object",
+      "description": "A225 (outdoor.v2): optional route characteristics.",
       "properties": {
-        "temperature_c": { "type": "number" },
-        "humidity": { "type": "string", "enum": ["low", "medium", "high"] },
-        "rock_condition": { "type": "string", "enum": ["dry", "damp", "wet"] },
-        "wind": { "type": "string", "enum": ["none", "light", "strong"] }
+        "wall_angle": { "type": ["string", "null"], "enum": ["slab", "vertical", "overhang", "roof", null] },
+        "route_length": { "type": ["string", "null"], "enum": ["short_power", "medium", "long_endurance", null] },
+        "hold_style": { "type": ["string", "null"], "enum": ["crimp", "sloper_pinch", "mixed", null] },
+        "target_grade_relative": { "type": ["string", "null"], "enum": ["within_limit", "at_or_above_limit", null] }
       },
       "additionalProperties": false
+    },
+    "conditions": {
+      "type": "object",
+      "description": "Free-form conditions: the weather auto-fill (A225) stores its whole payload (wind, humidity, dew_point, feels_like, …). Only temperature and condition_band are checked.",
+      "properties": {
+        "temperature": { "type": "number", "description": "A225 (outdoor.v2), °C" },
+        "condition_band": { "type": "string", "enum": ["prime", "ok", "poor_hot_humid", "poor_cold_dry"] },
+        "temperature_c": { "type": "number", "description": "outdoor.v1 manual field" },
+        "rock_condition": { "type": "string" }
+      },
+      "additionalProperties": true
     },
     "routes": {
       "type": "array",
@@ -48,10 +66,12 @@
         "type": "object",
         "required": ["name", "grade", "attempts"],
         "properties": {
-          "name": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1, "description": "One route per pitch on a multi-pitch: «Route (Crag) – L1…Ln»." },
           "grade": { "type": "string", "minLength": 1, "description": "Grade in Font or French scale" },
-          "discipline": { "type": "string", "enum": ["lead", "boulder"] },
+          "discipline": { "type": "string", "enum": ["lead", "boulder", "both"] },
           "style": { "type": "string", "enum": ["onsight", "flash", "redpoint", "project", "repeat"] },
+          "rest_seconds": { "type": "integer", "description": "A227: rest before the first burn" },
+          "climb_seconds": { "type": "integer", "description": "A227: on-the-wall time of the first burn" },
           "attempts": {
             "type": "array",
             "minItems": 1,
@@ -59,8 +79,20 @@
               "type": "object",
               "required": ["result"],
               "properties": {
-                "result": { "type": "string", "enum": ["sent", "fell", "topped_out"] },
-                "notes": { "type": "string" }
+                "result": {
+                  "type": "string",
+                  "enum": ["sent", "fell", "topped_out", "aid"],
+                  "description": "sent = clean to the top; fell = did not reach the top; topped_out = top with rests on the rope (B393); aid = top pulling on the gear, A0 (A324, rope only: on a boulder the backend stores it as fell). Only 'sent' with rope_role lead (or absent) is a send."
+                },
+                "rope_role": {
+                  "type": "string",
+                  "enum": ["lead", "second", "toprope"],
+                  "description": "A324: who was on the sharp end. Absent = lead (every pre-A324 log); the backend stores lead as absent and drops the field on a boulder. Spelling is exact: 'toprope', never 'top_rope' / 'tr'."
+                },
+                "notes": { "type": "string" },
+                "rest_seconds": { "type": "integer", "description": "B279: per-attempt rest (legacy)" },
+                "climb_seconds": { "type": "integer", "description": "B279: per-attempt climb time" },
+                "logged_at": { "type": "string", "description": "A241: client-stamped end of the burn, ISO 8601 UTC" }
               },
               "additionalProperties": false
             }
@@ -75,15 +107,15 @@
     },
     "energy_level": {
       "type": "string",
-      "enum": ["very_low", "low", "ok", "high", "very_high"]
+      "description": "Free text (no enum enforced by the API)"
     },
     "overall_feeling": {
       "type": "string",
-      "enum": ["very_easy", "easy", "ok", "hard", "very_hard"]
+      "description": "Free text (no enum enforced by the API)"
     },
     "load_ref_grade": {
       "type": "string",
-      "description": "B394: athlete's lead max redpoint when the log was written (logs from 2026-10-17). Selects the relative load formula; absent on older logs."
+      "description": "B394: athlete's lead max redpoint when the log was written (logs from 2026-10-17). Selects the relative load formula; absent on older logs. An edit keeps it."
     }
   },
   "additionalProperties": false

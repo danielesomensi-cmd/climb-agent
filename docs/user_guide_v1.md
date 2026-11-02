@@ -953,6 +953,19 @@ A live **weather widget** shows conditions for the day, rated by a **friction sc
 
 Outdoor sessions appear in your weekly timeline. The planner knows about your outdoor days (if you've set them in availability) and plans around them — no indoor sessions are scheduled on outdoor days.
 
+### Who led, and A0
+
+Each try can say **who was on the sharp end**: **Lead** (you led it — the default), **2nd** (you seconded it, e.g. the pitches your partner led on a multi-pitch) or **TR** (top-rope). Each try also has a result: **Sent**, **Fell**, **Top w/ rests** (to the top resting on the rope) or **A0** (to the top pulling on the quickdraws — not free). A0 exists only on a rope, never on a boulder: if a boulder problem arrives with a role or an A0, it is saved as a plain try and an A0 as a fall.
+
+- **Only a lead send is a send.** Your sent %, hardest send, grade progression, the weekly report's sends, the milestones (new hardest grade, first onsight) and the onsight card count only routes you **sent on lead**.
+- A clean ascent on second or top-rope shows as **Second clean** / **TR clean**, in blue — never green, never a send, never a milestone, never onsight evidence. The weekly report counts these routes separately ("3 clean on second/top-rope"), so a multi-pitch climbed on alternate leads doesn't read as six failures. A route you seconded first and led later is a redpoint, not an onsight.
+- **A0** is shown in amber, next to *Top w/ rests*: you reached the top, but not free.
+- **Load:** a try on second or top-rope weighs a bit less than the same pitch on lead (×0.85: no clipping, no run-out, no fall exposure); it still counts fully as volume. An A0 try weighs like any other try. Days logged before this change keep exactly the same load.
+- Your **hard days** don't change: a route at your hard grade loads the fingers on top-rope as much as on lead, so it still counts as a hard, finger-loading day for the plan.
+- Long routes: log **one route per pitch** ("Cancer – L1", "Cancer – L2", …), each with its own grade and role.
+
+**Editing a session keeps what the form doesn't show.** The day type, the conditions, the saved spot and the other details the edit form doesn't display stay as they were when you save an edit (before, an edit could silently drop them).
+
 **Multiple crags in one day:** if you climb at more than one crag on the same date (a multi-sector day), Today/Week shows both names joined ("Symplegades - Ourania") — each crag's routes are still logged and kept separate underneath, only the day's label is combined. Editing one crag of such a day never changes the others. For now *Edit* opens the crag logged last, and saving that form under a crag name not logged on that date is refused with an error rather than risk replacing another crag: this covers renaming a crag (on any day, for now), typing a day's second crag into the form that **Log outdoor** / **Quick log** open on the first one, and moving a session to a date that holds another crag. To add a second crag to today, use **Start Outdoor Session**. Deleting one crag of a multi-crag day from **Outdoor History** is refused as well, for now.
 
 ### Plan for the day (grades and rests)

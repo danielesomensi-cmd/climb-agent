@@ -298,8 +298,17 @@ class OutdoorSpotCreate(BaseModel):
 
 
 class OutdoorAttempt(BaseModel):
-    """Single attempt on a route."""
-    result: Literal["sent", "fell", "topped_out"]
+    """Single attempt on a route.
+
+    A324: ``result`` gains ``aid`` (A0: to the top pulling on the gear) and the
+    attempt gains ``rope_role`` (``lead`` | ``second`` | ``toprope``; absent =
+    lead, the backend stores lead as absent). Only ``sent`` on lead is a send —
+    see ``backend/engine/outdoor_attempt.py``. A boulder with a rope role or
+    ``aid`` is normalised server-side (role dropped, aid → fell), never a 422:
+    the offline outbox drops 4xx and would lose the whole day.
+    """
+    result: Literal["sent", "fell", "topped_out", "aid"]
+    rope_role: Optional[Literal["lead", "second", "toprope"]] = None
     notes: Optional[str] = None
     # B279 — per-attempt timing (optional, backward-compatible). On multi-attempt
     # (project) routes each burn carries its own rest/climb; route-level fields
@@ -370,6 +379,10 @@ class OutdoorSessionUpdate(OutdoorSessionLog):
     stored. Absent: the edit replaces the crag named ``spot_name`` — on a
     single-crag day too — and a name not logged that date is a 409, nothing
     written (a rename needs ``original_spot_name``).
+
+    A324 (B401 residual): a top-level key the request does not send keeps the
+    replaced entry's value (``day_type``, ``conditions``, ``spot_id``…); a key
+    sent as ``null`` clears it. See ``outdoor_log.carry_over_unsent_keys``.
     """
     original_spot_name: Optional[str] = None
 
