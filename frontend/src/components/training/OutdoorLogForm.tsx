@@ -145,6 +145,10 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
   const [askCrag, setAskCrag] = useState(false);
   const originalSpot = initialData?.spot_name ?? "";
   const cragChanged = isEdit && !sameCrag(spotName, originalSpot);
+  // A324 review: the first `editedCragRoutes` routes of the list are the
+  // edited crag's own (routes are only appended, never reordered). «Add as
+  // another crag» saves only the ones after them — never the edited crag's.
+  const [editedCragRoutes, setEditedCragRoutes] = useState(initialData?.routes?.length ?? 0);
 
   const gradeList = discipline === "lead" || discipline === "both"
     ? FRENCH_SPORT_GRADES
@@ -256,26 +260,49 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
 
   const removeRoute = (idx: number) => {
     setRoutes(routes.filter((_, i) => i !== idx));
+    if (idx < editedCragRoutes) setEditedCragRoutes((n) => n - 1);
   };
 
-  /** The log body. `forEdit`: an edit keeps every key it does not send
-   *  (A324, B401 residual), so emptied notes go as `null` to clear them. */
+  /** Routes as saved: complete ones only, `style` only when set. */
+  const savedRoutes = (list: OutdoorRoute[]) =>
+    list.filter(r => r.name && r.grade).map(r => {
+      const { style, ...rest } = r;
+      return style ? { ...rest, style } : rest;
+    });
+
+  /** The log body. `forEdit`: emptied notes go as `null`, an explicit clear
+   *  (an edit keeps the keys it does not send, routes and notes excepted). */
   const buildPayload = (forEdit: boolean): Record<string, unknown> => {
     const payload: Record<string, unknown> = {
       date,
       spot_name: spotName.trim(),
       discipline,
       duration_minutes: duration,
-      routes: routes.filter(r => r.name && r.grade).map(r => {
-        const { style, ...rest } = r;
-        return style ? { ...rest, style } : rest;
-      }),
+      routes: savedRoutes(routes),
       notes: notes || (forEdit ? null : undefined),
     };
     // A226 — carry outdoor.v2 fields when provided (guided flow).
     if (dayType) payload.day_type = dayType;
     if (routeProfile && Object.keys(routeProfile).length > 0) payload.route_profile = routeProfile;
     if (conditions) payload.conditions = conditions;
+    return payload;
+  };
+
+  /**
+   * A324 review — «Add <new> as another crag»: the form still holds the edited
+   * crag's routes, notes and duration. The new crag gets only what was added
+   * here: the routes after the edited crag's, the notes and the duration only
+   * if changed (else no notes and the new-log default). Saving the edited
+   * crag's routes again would count them twice — load, stats, A292 evidence.
+   */
+  const addedRoutes = savedRoutes(routes.slice(editedCragRoutes));
+  const notesChanged = notes !== (initialData?.notes || "");
+  const addDuration = duration !== initialData?.duration_minutes ? duration : defaultDuration || 120;
+  const buildAddPayload = (): Record<string, unknown> => {
+    const payload = buildPayload(false);
+    payload.routes = addedRoutes;
+    payload.duration_minutes = addDuration;
+    if (!notesChanged) delete payload.notes;
     return payload;
   };
 
@@ -335,7 +362,7 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
             return;
           }
         }
-        planSynced = await postNewLog(buildPayload(false));
+        planSynced = await postNewLog(mode === "add" ? buildAddPayload() : buildPayload(false));
       }
       onSuccess?.({ planSynced });
     } catch (e) {
@@ -587,8 +614,16 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
             <AlertDialogTitle>Rename the crag or add another?</AlertDialogTitle>
             <AlertDialogDescription>
               This session is logged at <span className="text-foreground">{originalSpot}</span>. Rename it to{" "}
-              <span className="text-foreground">{spotName.trim()}</span>, or keep {originalSpot} as it is and save
-              this form as another crag of the day.
+              <span className="text-foreground">{spotName.trim()}</span>, routes and all, or keep {originalSpot} as
+              it is and add <span className="text-foreground">{spotName.trim()}</span> as another crag of the day
+              with only what you added in this form:{" "}
+              <span className="text-foreground">
+                {addedRoutes.length === 0
+                  ? "no routes"
+                  : `${addedRoutes.length} ${addedRoutes.length === 1 ? "route" : "routes"}`}
+                , {addDuration} min{notesChanged && notes ? ", your notes" : ""}
+              </span>
+              . {originalSpot}&apos;s routes, notes and duration stay with {originalSpot}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
