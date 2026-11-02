@@ -7,10 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle, Check, ChevronDown, Heart, SkipForward, Lightbulb, Film, Info, Timer, Play, Square, MessageSquare } from "lucide-react";
+import { AlertTriangle, ChevronDown, Heart, SkipForward, Lightbulb, Film, Info, Timer, Play, Square, MessageSquare } from "lucide-react";
 import type { GuidedExercise, HangMargin, LimitProblem, LimitProblemDraft } from "@/lib/types";
 import { ExerciseTimer } from "@/components/guided/exercise-timer";
 import { FeedbackPills } from "@/components/guided/feedback-pills";
+import { GuidedActionBar } from "@/components/guided/guided-action-bar";
 import { guidedNextLabel } from "@/lib/guided-next-label";
 import { MeasureInput } from "@/components/training/measured-feedback-inputs";
 import { LadderBadge } from "@/components/training/ladder-badge";
@@ -36,6 +37,11 @@ interface GuidedExerciseStepProps {
   onNotesChange?: (notes: string) => void;
   /** A307: name of the exercise after this one, for "Next · …" during rest. */
   nextExerciseName?: string;
+  /**
+   * B411: where Done / Skip lead — the next exercise still pending, null when
+   * the summary comes next. Shown above the pinned buttons.
+   */
+  upNext?: string | null;
 }
 
 
@@ -121,6 +127,7 @@ export function GuidedExerciseStep({
   onSetChange,
   onNotesChange,
   nextExerciseName,
+  upNext,
 }: GuidedExerciseStepProps) {
   // A295: nothing pre-selected — an untouched exercise is "not rated".
   const [feedback, setFeedback] = useState<string | null>(exercise.feedbackLabel ?? null);
@@ -433,17 +440,9 @@ export function GuidedExerciseStep({
               </div>
             </div>
           )}
-          <div className="flex items-center gap-2 pt-2">
-            <Button
-              size="sm"
-              className="min-h-[44px] bg-success hover:bg-success/90 text-black flex-1"
-              onClick={() => onDone(null)}
-            >
-              <Check className="size-4 mr-1" />
-              {isAlreadyDone ? "Done" : "Done"}
-            </Button>
-          </div>
         </CardContent>
+        {/* B411: pinned to the bottom of the screen, like every other step */}
+        <GuidedActionBar onDone={() => onDone(null)} doneLabel="Done" upNext={upNext} />
       </Card>
     );
   }
@@ -1306,26 +1305,15 @@ export function GuidedExerciseStep({
             </div>
           )}
         </div>
-
-        {/* Action buttons */}
-        <div className="flex items-center gap-2 pt-2">
-          <Button
-            variant="outline"
-            className="min-h-[44px] text-muted-foreground"
-            onClick={onSkip}
-          >
-            <SkipForward className="size-4 mr-1" />
-            Skip
-          </Button>
-          <Button
-            className="min-h-[44px] bg-success hover:bg-success/90 text-black flex-1"
-            onClick={handleDone}
-          >
-            <Check className="size-4 mr-1" />
-            {isAlreadyDone ? "Update" : "Done"}
-          </Button>
-        </div>
       </CardContent>
+      {/* B411: Skip / Done pinned to the bottom (fixed) — reachable without
+          scrolling, so a tap never lands on a page that is still gliding. */}
+      <GuidedActionBar
+        onDone={handleDone}
+        onSkip={onSkip}
+        doneLabel={isAlreadyDone ? "Update" : "Done"}
+        upNext={upNext}
+      />
     </Card>
   );
 }
