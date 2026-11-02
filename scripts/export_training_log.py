@@ -576,6 +576,10 @@ def index_outdoor_details(detail_rows: Any) -> Dict[str, Dict[str, Any]]:
         index[date] = {
             "created_at": created,
             "duration_minutes": entry.get("duration_minutes"),
+            # B412: a log holding two sessions at the crag (morning +
+            # afternoon) sums their durations and keeps the first save's
+            # created_at — the save time anchors neither of them.
+            "merged": len(entry.get("session_keys") or []) > 1,
         }
     return index
 
@@ -589,7 +593,7 @@ def _outdoor_times_from_save(date: str, detail: Optional[Dict[str, Any]]) -> Tup
     and a reconstructed window would quietly poison the night-validity criteria
     it feeds in health-vault. Those rows stay blank on purpose.
     """
-    if not detail:
+    if not detail or detail.get("merged"):
         return "", "", "manuale"
     duration = detail.get("duration_minutes")
     created = _parse_iso(detail.get("created_at"))

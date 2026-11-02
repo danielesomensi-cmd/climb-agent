@@ -6,7 +6,9 @@
  *   - `needsCragPicker`: the pencil goes straight to a single crag, «Log
  *     routes» / «Quick log» on a day with a log always ask;
  *   - the log form: the date is locked in edit mode, and a NEW log never
- *     lands on a crag already logged that day (a POST would replace it).
+ *     lands on a crag already logged that day (since B412 the POST would be
+ *     added to that crag's log: the same outing counted twice) — except a
+ *     live session finishing through the form (B412: it joins the crag).
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, cleanup, fireEvent, act } from "@testing-library/react";
@@ -119,11 +121,22 @@ describe("OutdoorLogForm — B410 guards", () => {
     });
   }
 
-  it("a new log on a crag already logged that day saves nothing (it would replace it)", async () => {
+  it("a new log on a crag already logged that day saves nothing (it would count twice)", async () => {
     getOutdoorLogByDate.mockResolvedValue({ session: SNAKE, sessions: [SYMP, SNAKE] });
     await logNew("  symplegades ");
     expect(postOutdoorLog).not.toHaveBeenCalled();
     expect(screen.getByText(/symplegades is already logged on 2026-08-25 — nothing saved/)).toBeTruthy();
+  });
+
+  it("B412: a live session finishing at a crag already logged that day is saved (it joins that crag)", async () => {
+    getOutdoorLogByDate.mockResolvedValue({ session: SYMP, sessions: [SYMP] });
+    render(<OutdoorLogForm spots={[]} defaultDate="2026-08-25" liveSession submitLabel="Finish & save" />);
+    fireEvent.change(screen.getByPlaceholderText("Spot name"), { target: { value: "Symplegades" } });
+    await act(async () => {
+      screen.getByRole("button", { name: "Finish & save" }).click();
+    });
+    expect(postOutdoorLog).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/already logged/)).toBeNull();
   });
 
   it("another crag of the same day is a new log", async () => {

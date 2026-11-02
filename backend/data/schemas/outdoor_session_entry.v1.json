@@ -116,6 +116,11 @@
     "load_ref_grade": {
       "type": "string",
       "description": "B394: athlete's lead max redpoint when the log was written (logs from 2026-10-17). Selects the relative load formula; absent on older logs. An edit keeps it."
+    },
+    "session_keys": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "B412: set by the server — the fingerprint of each session this crag's log holds (one per session; several when a second session at the same crag on the same day was folded in), so a replayed write (offline outbox) adds nothing. Absent on logs written before B412. An edit keeps it."
     }
   },
   "additionalProperties": false

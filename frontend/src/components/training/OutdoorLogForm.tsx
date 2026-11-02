@@ -91,8 +91,10 @@ const sameCrag = (a: string, b: string) =>
 
 /**
  * A324 (B401 residual, point 4) — before «Add as another crag»: is that crag
- * already logged on `date`? A POST on a (date, crag) that exists replaces it,
- * routes and all, so «add» must never land on one. `null` = could not check.
+ * already logged on `date`? Since B412 a POST on a (date, crag) that exists is
+ * added to that crag's log (it used to replace it): a new log typed under a
+ * logged crag is most likely the same outing logged twice, so «add» and the
+ * new-log form refuse it. `null` = could not check.
  */
 async function cragLoggedOn(date: string, spotName: string): Promise<boolean | null> {
   try {
@@ -129,9 +131,13 @@ interface Props {
   submitLabel?: string;
   // A226 — routes captured live during the active session (prefill, not edit mode).
   initialRoutes?: OutdoorRoute[];
+  /** B412: the form finishes a live session (one started offline posts a new
+   *  log here). At a crag already logged that day it joins that crag's log on
+   *  the server, so the B410 «already logged» refusal does not apply. */
+  liveSession?: boolean;
 }
 
-export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, defaultDiscipline, defaultGrade, defaultDuration, initialData, onSuccess, dayType, routeProfile, conditions, durationCappedNote, onSubmit, submitLabel, initialRoutes }: Props) {
+export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, defaultDiscipline, defaultGrade, defaultDuration, initialData, onSuccess, dayType, routeProfile, conditions, durationCappedNote, onSubmit, submitLabel, initialRoutes, liveSession = false }: Props) {
   const isEdit = !!initialData;
   const [date, setDate] = useState(initialData?.date || defaultDate || new Date().toISOString().slice(0, 10));
   const [spotName, setSpotName] = useState(initialData?.spot_name || defaultSpotName || "");
@@ -362,12 +368,16 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
             return;
           }
         }
-        if (mode !== "add") {
-          // B410: a new log on a day that already has this crag would replace
-          // it (POST upserts on date + crag), routes and all — e.g. «Add
+        if (mode !== "add" && !liveSession) {
+          // B410: a new log under a crag already logged that day — «Add
           // another crag» typed with the logged crag's name, or a date changed
-          // in the new-log form. When the check cannot run (offline), the log
-          // goes as before: the outbox keeps offline logging possible.
+          // in the new-log form — is most likely the same outing logged twice.
+          // Since B412 the server adds it to that crag's log (it used to
+          // replace it), so it would count twice: refused here. A live session
+          // is the exception: it is a new session by definition, and the
+          // server folds it into the crag's log (B412). When the check cannot
+          // run (offline), the log goes as before: the outbox keeps offline
+          // logging possible.
           if ((await cragLoggedOn(date, spotName)) === true) {
             setError(`${spotName.trim()} is already logged on ${date} — nothing saved. Open that crag to edit it.`);
             return;

@@ -609,6 +609,9 @@ export default function OutdoorDayPage() {
             // outbox-backed (A245 F5) and is exactly the right shape for it:
             // append-only and self-contained.
             onSubmit={sessionId && !isLocal ? handleFinish : undefined}
+            // B412: a live session (local ones post through the form) at a
+            // crag already logged today joins that crag's log.
+            liveSession={!!sessionId}
             submitLabel={sessionId ? "Finish & save" : undefined}
             onSuccess={() => {
               clearLiveSession();

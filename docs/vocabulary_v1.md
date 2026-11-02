@@ -1585,6 +1585,41 @@ A0 and Top w/ rests amber, Fell red. The app never writes `rope_role: "lead"` (`
   `outdoor_spot_name` (`_drop_crag_from_label`, never emptied) and `outdoor_load_score` is the total of
   the crags still logged; `state.outdoor_log` follows. Deleting a day's last crag leaves the plan as before.
 
+### 5.6.2 Second session at a crag already logged that day (B412)
+
+A day holds one `outdoor_logs` row per crag (B341). `append_outdoor_session` (behind `POST /api/outdoor/log`
+and the live session's `finish`) no longer overwrites that row: the new session is **folded** into it
+(`outdoor_log.merge_outdoor_sessions`) — what one session lasting both would have saved.
+
+- **Routes**: the stored ones, then the new ones. A new route with the same name (B362 identity: case and
+  spaces ignored) **and** grade as a stored one adds its attempts to it — sorted by `logged_at` when every
+  attempt has one, else in arrival order. Style, as `live-route-logger.tsx` addAttempt: more than one
+  attempt rules out `onsight` / `flash`, the stored style wins over the new one, a route sent on lead with
+  no style left is `redpoint`. The new session's own routes are never folded into each other.
+  - **Placeholder names never fold**: `route N` / `problem N` (the live logger's name for an unnamed route,
+    counted from 1 in every session) say nothing about which route it was.
+  - **A closed first go stays**: a stored route with one attempt sent on lead and a first-go style (none,
+    `onsight`, `flash`) is the day's first go and it went — A292 evidence, which needs a single attempt. A new
+    climb of it is listed apart with `style: "repeat"`. Unless the new attempts are earlier (`logged_at`): then
+    the stored go was no first go and the attempts fold.
+- **Entry**: `duration_minutes` add up; `notes` joined with a blank line (identical notes once); two
+  disciplines → `both`; `load_ref_grade` stays the stored one (B394); every other key keeps the stored
+  value and is filled from the new session only when missing (`day_type`, `conditions`, `spot_id`…).
+- **Replay** (`session_keys`): every log written since B412 records the fingerprint of each session it
+  holds (`outdoor_session_fingerprint`: sha256 of the entry without `log_version` / `load_ref_grade` /
+  `load_score` / `session_keys`, taken **before** `canonicalize_route_names`, whose result depends on the
+  other days). A write whose fingerprint is in the list — or that equals a log written before B412, which
+  has none — changes nothing: the offline outbox can replay a POST whose response was lost, even after a
+  pencil edit (a `PUT` carries the keys). More than one key = a log holding several sessions
+  (`is_merged_outdoor_log`): `scripts/export_training_log.py` gives it no clock window (the save time
+  anchors neither session).
+- **Read first**: the crag's row is read before the write, matched on the exact `spot_name` (the Supabase
+  key); a failed read is an `OSError` → HTTP 500, which the outbox retries — never a blind overwrite.
+- The caller's `entry` becomes the crag's whole log: the plan sync and the finish's `load_score` use it.
+- **Frontend**: the new-log form still refuses a crag already logged that day (B410: most likely the same
+  outing logged twice), except when it finishes a live session (`OutdoorLogForm` `liveSession`; a session
+  started offline posts through the form).
+
 ### 5.7 Weekly overrides
 
 ```
