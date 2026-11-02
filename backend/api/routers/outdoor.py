@@ -25,6 +25,7 @@ from backend.engine.outdoor_log import (
     CURRENT_LOG_VERSION,
     OutdoorLogConflict,
     append_outdoor_session,
+    carry_over_unsent_keys,
     compute_outdoor_load_score,
     find_outdoor_session_to_replace,
     outdoor_sessions_on,
@@ -35,6 +36,7 @@ from backend.engine.outdoor_log import (
     remove_outdoor_session,
     update_outdoor_session,
 )
+from backend.engine.outdoor_attempt import normalize_route_attempts
 from backend.engine.outdoor_pitch_ladder import build_pitch_ladder, grades_from_state
 from backend.engine.outdoor_resolver import OutdoorResolveError, resolve_outdoor_day
 
@@ -45,9 +47,25 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/outdoor", tags=["outdoor"])
 
 
+def _drop_crag_from_label(label: str, dropped: Optional[str], logged: List[str]) -> str:
+    """The day's crag label (``"A - B"``, B341) without a crag that is no
+    longer logged that date — renamed away from or deleted (A324 review).
+
+    Untouched when ``dropped`` is still logged that date, is not in the label,
+    or is the label's only crag (a done outdoor day always keeps a name).
+    """
+    if not label or not dropped or dropped in logged:
+        return label
+    parts = [p.strip() for p in label.split(" - ")]
+    kept = [p for p in parts if p != dropped]
+    if not kept or len(kept) == len(parts):
+        return label
+    return " - ".join(kept)
+
+
 def _sync_plan_after_outdoor_log(
     state: Dict[str, Any], user_id: Optional[str], entry: Dict[str, Any],
-    load_score: int,
+    load_score: int, *, dropped_spot: Optional[str] = None,
 ) -> bool:
     """Close the closed-loop on the week plan after an outdoor log (B273).
 
@@ -77,6 +95,11 @@ def _sync_plan_after_outdoor_log(
     `state["week_plans"]` — the hot/cold boundary and every other
     is_past_week() call site (replanner override/events, `/week` reads) stay
     exactly as they are today.
+
+    A324 review: ``dropped_spot`` names a crag of the date that is no longer
+    logged — renamed away from by a PUT, or deleted from a multi-crag day. It
+    leaves the day's label (a rename used to leave «Berdorf - Freyr»), and the
+    day's load is recomputed over the crags still logged, as on every sync.
     """
     from backend.api.deps import ensure_monday, is_past_week, is_plan_paused, read_archived_week
     from backend.api.routers.replanner import _auto_resolve, _event_floor, _prev_week_days, persist_week_plan
@@ -193,6 +216,12 @@ def _sync_plan_after_outdoor_log(
          if d.get("date") == date),
         None,
     )
+    if u_day is not None and dropped_spot and u_day.get("outdoor_spot_name"):
+        # A324 review: a renamed or deleted crag leaves the day's label.
+        u_day["outdoor_spot_name"] = _drop_crag_from_label(
+            u_day["outdoor_spot_name"], dropped_spot,
+            [s.get("spot_name") or "" for s in day_sessions],
+        )
     # B277: one bookkeeping entry per date — idempotent across re-logs and
     # manual edits (also cleans up any historical duplicates for this date).
     bookkeeping = state.setdefault("outdoor_log", [])
@@ -349,6 +378,9 @@ def put_outdoor_log(req: OutdoorSessionUpdate, user_id: Optional[str] = Depends(
     the crag when the edit renames it; see ``find_outdoor_session_to_replace``
     for the rules. 409 when ``spot_name`` is not logged that date and no
     ``original_spot_name`` is sent, or when the rename lands on another crag.
+
+    A324 (B401 residual): a top-level key the request does not send keeps the
+    replaced entry's value (``carry_over_unsent_keys``); ``null`` clears it.
     """
     entry = req.model_dump(exclude_none=True, exclude={"original_spot_name"})
     entry["log_version"] = CURRENT_LOG_VERSION
@@ -360,6 +392,9 @@ def put_outdoor_log(req: OutdoorSessionUpdate, user_id: Optional[str] = Depends(
         previous = find_outdoor_session_to_replace(
             user_id, req.date, entry["spot_name"], req.original_spot_name
         )
+        # A324: the pencil edit no longer strips what the form does not send
+        # (day_type, conditions, spot_id, route_profile, energy_level…).
+        carry_over_unsent_keys(entry, previous, req.model_fields_set)
         stamp_load_ref_grade(entry, load_state(user_id), previous)
         update_outdoor_session(
             user_id, req.date, entry, original_spot_name=req.original_spot_name
@@ -399,9 +434,15 @@ def put_outdoor_log(req: OutdoorSessionUpdate, user_id: Optional[str] = Depends(
     # B277: close the loop if an edit finalizes a session whose plan day was
     # never marked done (dedupe in the sync keeps bookkeeping to one entry).
     plan_synced = False
+    renamed_from = (
+        req.original_spot_name
+        if req.original_spot_name and req.original_spot_name != entry.get("spot_name")
+        else None
+    )
     try:
         plan_synced = _sync_plan_after_outdoor_log(
-            state, user_id, entry, compute_outdoor_load_score(entry)
+            state, user_id, entry, compute_outdoor_load_score(entry),
+            dropped_spot=renamed_from,
         )
     except Exception:
         logger.exception(
@@ -412,6 +453,7 @@ def put_outdoor_log(req: OutdoorSessionUpdate, user_id: Optional[str] = Depends(
 
 
 @router.delete("/log/{date}")
+@serialized_by_user
 def delete_outdoor_log(
     date: str,
     spot_name: Optional[str] = Query(None, description="B401: delete only this crag of the day"),
@@ -422,6 +464,11 @@ def delete_outdoor_log(
     B401: with ``?spot_name=`` only that crag of the day is deleted. Without
     it, a single-crag day is deleted as before and a multi-crag day is a 409 —
     the Outdoor History trash icon is per crag, it must never wipe the others.
+
+    A324 review: when other crags of the day remain, the plan day is synced to
+    them (load = their total, the deleted crag out of the label) — the plan
+    kept the old total, and ``stimulus`` reads max(plan, log). Deleting the
+    day's last crag leaves the plan as before.
     """
     not_found = f"No outdoor session found for date {date}" + (
         f" at {spot_name!r}" if spot_name else ""
@@ -445,15 +492,32 @@ def delete_outdoor_log(
     # Remove from state.outdoor_log[] — B401: unless other crags of the day
     # remain, in which case the day's row keeps their total load.
     remaining = outdoor_sessions_on(user_id, date) if spot_name else []
+    remaining_names = [s.get("spot_name") or "" for s in remaining]
     state = load_state(user_id)
     outdoor_log = state.get("outdoor_log", [])
     if remaining:
         for ol_entry in outdoor_log:
             if ol_entry.get("date") == date:
                 ol_entry["load_score"] = sum(compute_outdoor_load_score(s) for s in remaining)
+                ol_entry["spot_name"] = _drop_crag_from_label(
+                    ol_entry.get("spot_name") or "", spot_name, remaining_names
+                )
     else:
         state["outdoor_log"] = [ol for ol in outdoor_log if ol.get("date") != date]
     save_state(state, user_id)
+
+    if remaining:
+        # A324 review: the plan day follows the crags still logged.
+        try:
+            _sync_plan_after_outdoor_log(
+                state, user_id, remaining[-1], compute_outdoor_load_score(remaining[-1]),
+                dropped_spot=spot_name,
+            )
+        except Exception:
+            logger.exception(
+                "A324: plan sync after deleting crag %r of %s failed — log deleted, plan untouched",
+                spot_name, date,
+            )
 
     return {"status": "ok", "date": date}
 
@@ -665,6 +729,9 @@ def log_outdoor_climb(
     state = load_state(user_id)
     session = _find_active_session(state, session_id)
     route = req.model_dump(exclude_none=True)
+    # A324: canonical attempts in the working state too (lead stored as absent;
+    # a boulder loses rope_role / aid) — the finish normalises again anyway.
+    normalize_route_attempts(route, session.get("discipline"))
     session.setdefault("routes", []).append(route)
     save_state(state, user_id)
     return {"routes": session["routes"], "count": len(session["routes"])}
@@ -701,7 +768,10 @@ def replace_outdoor_routes(
     """
     state = load_state(user_id)
     session = _find_active_session(state, session_id)
-    session["routes"] = [r.model_dump(exclude_none=True) for r in req.routes]
+    routes = [r.model_dump(exclude_none=True) for r in req.routes]
+    for route in routes:
+        normalize_route_attempts(route, session.get("discipline"))  # A324
+    session["routes"] = routes
     save_state(state, user_id)
     return {"routes": session["routes"], "count": len(session["routes"])}
 

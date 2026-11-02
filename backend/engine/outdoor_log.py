@@ -5,9 +5,11 @@ I/O is delegated to backend.engine.storage.
 
 from __future__ import annotations
 
+import copy
+import logging
 import math
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 from backend.engine import storage
 from backend.engine.grade_evidence import (
@@ -16,6 +18,16 @@ from backend.engine.grade_evidence import (
     is_first_go_send,
     route_key,
 )
+from backend.engine.outdoor_attempt import (
+    RESULTS,
+    ROPE_ROLES,
+    normalize_entry_attempts,
+    result_of,
+    route_lead_sent,
+)
+from backend.engine.outdoor_attempt import rope_role as attempt_rope_role
+
+logger = logging.getLogger(__name__)
 
 
 REQUIRED_FIELDS = {"log_version", "date", "spot_name", "discipline", "duration_minutes", "routes"}
@@ -75,10 +87,35 @@ _LOAD_CAP = 85
 # B327: an attempt that ended in a fall is real work — often the most intense
 # burn of the day — but it stops short of the top, so it carries slightly less
 # than a completed ascent. Any other/absent result counts as a full ascent.
+# A324: ``aid`` (A0) weighs like ``topped_out`` — 1.0, not discounted
+# (Daniele, 2026-11-02): the athlete still climbs the whole pitch.
 _RESULT_MODIFIER: Dict[str, float] = {
     "sent": 1.0,
     "fell": 0.8,
+    "topped_out": 1.0,
+    "aid": 1.0,
 }
+
+# A324 — ENGINEERING CONSTANT (Daniele, 2026-11-02): a pitch climbed on second
+# or top-rope carries less load than the same pitch on lead (no clipping, no
+# run-out, no fall exposure). The direction is documented for intermediate
+# climbers — higher blood lactate and heart rate on lead than on top-rope on the
+# same route (Draper et al. 2010, Eur J Sport Sci 10:13-20), anxiety and plasma
+# cortisol that change with the rope protocol (Hodgson et al. 2009, Br J Sports
+# Med 43:531-535) — while in advanced climbers the gap shrinks (Fryer et al.
+# 2012). The size is not documented: 0.85 is our number. Second and top-rope
+# weigh the same. Applied per attempt in BOTH formulas (B327 and v2), times the
+# result factor; an attempt without ``rope_role`` is lead (1.0), so every log
+# written before A324 keeps its load.
+ROPE_ROLE_LOAD_FACTOR: Dict[str, float] = {
+    "lead": 1.0,
+    "second": 0.85,
+    "toprope": 0.85,
+}
+
+
+def _rope_role_factor(attempt: Any) -> float:
+    return ROPE_ROLE_LOAD_FACTOR[attempt_rope_role(attempt)]
 
 
 def _volume_factor(num_attempts: int) -> float:
@@ -173,9 +210,13 @@ def _compute_outdoor_load_v2(entry: Dict[str, Any], ref: str) -> int:
         style = route.get("style")
         modifier = _V2_STYLE_MODIFIER.get(style, 1.0) if style else 1.0
         # Every attempt counts the same whatever its result: a fall at the
-        # crux of the project is the hardest burn of the day.
-        for _ in route.get("attempts") or [{}]:
-            scores.append(_V2_ANCHOR * rel * modifier)
+        # crux of the project is the hardest burn of the day, and A0 (aid)
+        # weighs like a fall (A324). Only the rope role discounts it: second /
+        # top-rope × ROPE_ROLE_LOAD_FACTOR (A324), so it also weighs less in
+        # the choice of the two hardest attempts. The volume factor still
+        # counts every attempt — a pitch on second is real volume.
+        for attempt in route.get("attempts") or [{}]:
+            scores.append(_V2_ANCHOR * rel * modifier * _rope_role_factor(attempt))
     if not scores:
         return 0
     top = sorted(scores, reverse=True)[:_V2_TOP_K]
@@ -192,6 +233,7 @@ def compute_outdoor_load_score(entry: Dict[str, Any]) -> int:
     computed over **attempts**, not routes:
 
         attempt_score  = grade_weight × style_modifier × result_modifier
+                         × rope_role_factor (A324: lead 1.0, second/top-rope 0.85)
         avg_intensity  = mean(attempt_score)      → how hard the day was
         volume_factor  = 1 + log₃(n_attempts)     → how much of it there was
 
@@ -220,9 +262,10 @@ def compute_outdoor_load_score(entry: Dict[str, Any]) -> int:
         # outdoor.v1 logs and hand-written entries omit it.
         attempts = route.get("attempts") or [{}]
         for attempt in attempts:
-            result = attempt.get("result") if isinstance(attempt, dict) else None
+            result = result_of(attempt)
             attempt_scores.append(
                 weight * modifier * _RESULT_MODIFIER.get(result, 1.0)
+                * _rope_role_factor(attempt)  # A324
             )
 
     if not attempt_scores:
@@ -362,8 +405,92 @@ def validate_outdoor_entry(entry: Dict[str, Any]) -> List[str]:
             attempts = route.get("attempts")
             if not isinstance(attempts, list) or len(attempts) < 1:
                 errors.append(f"routes[{i}].attempts must be a non-empty list")
+                continue
+            # A324: the outcome vocabulary, checked here too — a script import
+            # bypasses the request models and could write any string.
+            for j, attempt in enumerate(attempts):
+                if not isinstance(attempt, dict):
+                    errors.append(f"routes[{i}].attempts[{j}] must be a dict")
+                    continue
+                if attempt.get("result") not in RESULTS:
+                    errors.append(
+                        f"Invalid routes[{i}].attempts[{j}].result: {attempt.get('result')!r} "
+                        f"(expected one of {list(RESULTS)})"
+                    )
+                role = attempt.get("rope_role")
+                if role is not None and role not in ROPE_ROLES:
+                    errors.append(
+                        f"Invalid routes[{i}].attempts[{j}].rope_role: {role!r} "
+                        f"(expected one of {list(ROPE_ROLES)})"
+                    )
 
     return errors
+
+
+def normalize_outdoor_entry(entry: Dict[str, Any]) -> Dict[str, Any]:
+    """A324: canonical attempts before an outdoor entry is written, in place.
+
+    Explicit ``rope_role: "lead"`` is dropped (absent = lead); a boulder
+    problem loses its rope role and ``aid`` becomes ``fell``. Normalised
+    rather than rejected — a 422 makes the offline outbox discard the day.
+    Every change is logged. Returns ``entry``.
+    """
+    changes = normalize_entry_attempts(entry)
+    if changes:
+        logger.info(
+            "A324: outdoor %s %r normalised: %s",
+            entry.get("date"), entry.get("spot_name"), "; ".join(changes),
+        )
+    return entry
+
+
+# Keys a PUT never carries over from the replaced entry: the server sets them
+# (``log_version``, ``load_ref_grade`` via stamp_load_ref_grade), they are
+# read-time enrichments that must never be stored (``load_score``), or the edit
+# form owns them (``routes``, ``notes``). Every form version shows and saves the
+# routes and the notes, and a form older than A324 clears the notes by leaving
+# the key out (``notes || undefined``): carrying them would undo that edit.
+_NEVER_CARRIED = {
+    "log_version", "load_ref_grade", "load_score", "original_spot_name", "routes", "notes",
+}
+
+
+def carry_over_unsent_keys(
+    entry: Dict[str, Any],
+    previous: Optional[Dict[str, Any]],
+    sent_keys: Iterable[str],
+) -> List[str]:
+    """A324 (B401 residual): a PUT keeps what it does not send, in place.
+
+    PUT /api/outdoor/log replaces the whole entry, and the edit form never
+    sends ``day_type``, ``route_profile``, ``conditions``, ``spot_id``,
+    ``energy_level`` or ``overall_feeling`` — so a pencil edit stripped them.
+    Every top-level key of the replaced entry that the request did not send
+    (``sent_keys``: the request's fields set, explicit ``null`` included) is
+    copied over, like B394 keeps ``load_ref_grade``. A key sent as ``null``
+    stays cleared: that is the explicit way to remove a value.
+
+    ``routes`` and ``notes`` are never carried (A324 review): the form owns
+    them, and an absent ``notes`` is how a pre-A324 form clears the notes.
+
+    ``spot_id`` belongs to the crag: it is not carried when the edit renames
+    the crag (another ``spot_name``). Returns the keys carried over.
+    """
+    if not previous:
+        return []
+    sent = set(sent_keys or ())
+    renamed = str(previous.get("spot_name") or "") != str(entry.get("spot_name") or "")
+    carried: List[str] = []
+    for key, value in previous.items():
+        # Not sent = not chosen by the client, even when the request model
+        # filled a default (``routes: []``): the stored value wins.
+        if key in sent or key in _NEVER_CARRIED:
+            continue
+        if key == "spot_id" and renamed:
+            continue
+        entry[key] = copy.deepcopy(value)
+        carried.append(key)
+    return carried
 
 
 # ---------------------------------------------------------------------------
@@ -430,6 +557,7 @@ def append_outdoor_session(entry: Dict[str, Any], user_id: Optional[str] = None)
     Returns the path of the log file written to.
     Raises ValueError if validation fails.
     """
+    normalize_outdoor_entry(entry)  # A324
     errors = validate_outdoor_entry(entry)
     if errors:
         raise ValueError(f"Invalid outdoor session entry: {'; '.join(errors)}")
@@ -564,6 +692,7 @@ def update_outdoor_session(
     )
 
     # Validate new entry before touching the file
+    normalize_outdoor_entry(new_entry)  # A324
     errors = validate_outdoor_entry(new_entry)
     if errors:
         raise ValueError(f"Invalid outdoor session entry: {'; '.join(errors)}")
@@ -619,8 +748,9 @@ def compute_outdoor_stats(sessions: List[Dict[str, Any]]) -> Dict[str, Any]:
             grade = route.get("grade", "unknown")
             grade_counts[grade] = grade_counts.get(grade, 0) + 1
 
-            attempts = route.get("attempts", [])
-            any_sent = any(a.get("result") == "sent" for a in attempts)
+            # A324: a send is `sent` on lead — a clean second / top-rope is
+            # not a send, nor an onsight (see outdoor_attempt).
+            any_sent = route_lead_sent(route)
 
             if any_sent:
                 sent_count += 1

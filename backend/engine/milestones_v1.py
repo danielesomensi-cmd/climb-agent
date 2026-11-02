@@ -33,6 +33,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 from backend.engine.assessment_v1 import GRADE_ORDER
 from backend.engine.free_session import FONT_GRADES
+from backend.engine.outdoor_attempt import route_lead_sent
 from backend.engine.outdoor_log import load_outdoor_sessions
 
 _MILESTONES_CATALOG_PATH = os.path.join(
@@ -170,8 +171,10 @@ def _grade_rank(grade: str, discipline: str) -> Optional[int]:
 
 def _route_sent(route: Dict[str, Any]) -> bool:
     # B393: `topped_out` is a top with rests (hangdog / top-rope), not a send —
-    # same reading as athlete_context and grade_evidence.
-    return any(a.get("result") == "sent" for a in route.get("attempts") or [])
+    # same reading as athlete_context and grade_evidence. A324: nor is a clean
+    # second / top-rope ascent or an A0 (`aid`): only `sent` on lead unlocks
+    # "new hardest grade" or "first onsight" (outdoor_attempt.route_lead_sent).
+    return route_lead_sent(route)
 
 
 def _scan_outdoor(user_id: Optional[str]) -> Dict[str, Any]:

@@ -26,6 +26,16 @@ from typing import Any, Dict, List, Optional
 from backend.coach.routing import KNOWLEDGE_DIR, route_query
 from backend.engine.assessment_v1 import _redpoint_onsight_gap
 from backend.engine.load_score import effective_session_load
+from backend.engine.outdoor_attempt import (
+    RESULT_AID,
+    RESULT_SENT,
+    RESULT_TOPPED_OUT,
+    ROPE_LEAD,
+    ROPE_ROLES,
+    result_of,
+    rope_role,
+    route_lead_sent,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +79,9 @@ INSTRUCTION_BLOCK = """\
   list). This is a chat on a phone, not an essay.
 - NEVER state a training fact the context does not contain. In particular,
   about logged sessions: report the outcome as logged (sent / fell, and how
-  many attempts) and never upgrade a fall into a send. If a log line says
+  many attempts) and never upgrade a fall into a send. Only "sent" (on lead)
+  is a send: a "second clean" or "top-rope clean" ascent is not a send, and
+  "A0" (pulled on the gear) is not a free ascent. If a log line says
   "(+N more routes not shown)", say the record is partial rather than drawing
   conclusions from what you can see. If the user asks about something absent
   from the logs, say it is not in the log and ask — do not reconstruct it.
@@ -537,6 +549,35 @@ def _today_section(
 
 MAX_OUTDOOR_ROUTES_IN_LOG = 12
 
+# A324: outcome groups of one route, in render order. Lead attempts keep the
+# B328 words ("sent", "fell") in the B328 order; then top w/ rests and A0 on
+# lead; then second and top-rope. A result off the vocabulary reads "fell"
+# (never upgrade an unknown outcome into a send), as before.
+_ROLE_TAG = {"second": "second", "toprope": "top-rope"}
+
+
+def _outcome_word(result: str, role: str) -> str:
+    if result == RESULT_SENT:
+        return "sent" if role == ROPE_LEAD else f"{_ROLE_TAG[role]} clean"
+    if result == RESULT_TOPPED_OUT:
+        word = "top w/ rests"
+    elif result == RESULT_AID:
+        word = "A0"
+    else:
+        word = "fell"
+    return word if role == ROPE_LEAD else f"{word} ({_ROLE_TAG[role]})"
+
+
+_OUTCOME_ORDER = [
+    _outcome_word(res, role)
+    for role in ROPE_ROLES
+    for res in (RESULT_SENT, "fell", RESULT_TOPPED_OUT, RESULT_AID)
+]
+
+# Styles that claim a send: shown only on a route sent on lead (A324), so a
+# hand-written "(onsight)" never sits next to a top-rope or A0 ascent.
+_SEND_STYLES = {"onsight", "flash", "redpoint"}
+
 
 def _outdoor_log_line(entry: Dict[str, Any]) -> str:
     """One prompt line for an outdoor session — the full climbing record.
@@ -576,20 +617,21 @@ def _outdoor_log_line(entry: Dict[str, Any]) -> str:
         attempts = route.get("attempts") or []
         attempt_total += max(1, len(attempts))
 
-        results = [a.get("result") for a in attempts
-                   if isinstance(a, dict) and a.get("result")]
+        # A324: one word per attempt, with its rope role (the coach never
+        # sees per-attempt notes, so the role has to live in this segment).
+        words = [_outcome_word(result_of(a) or "", rope_role(a)) for a in attempts
+                 if isinstance(a, dict) and a.get("result")]
         label = f"{name} {grade}" if name and name != grade else str(grade)
-        if route.get("style"):
-            label += f" ({route['style']})"
+        style = route.get("style")
+        if style and (style not in _SEND_STYLES or route_lead_sent(route)):
+            label += f" ({style})"
 
-        if results:
-            sends = results.count("sent")
-            falls = len(results) - sends
+        if words:
             outcome_bits = []
-            if sends:
-                outcome_bits.append("sent" + (f" x{sends}" if sends > 1 else ""))
-            if falls:
-                outcome_bits.append("fell" + (f" x{falls}" if falls > 1 else ""))
+            for word in _OUTCOME_ORDER:
+                n = words.count(word)
+                if n:
+                    outcome_bits.append(word + (f" x{n}" if n > 1 else ""))
             label += " " + " + ".join(outcome_bits)
         rendered.append(label)
 

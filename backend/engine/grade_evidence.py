@@ -17,7 +17,9 @@ What counts as one piece of evidence (``is_onsight_evidence``):
   was already seen at that spot, because generic names repeat ("Tiro 3" on two
   different multi-pitches). Such a repeat gets its own evidence key
   (``spot|route@date``) so the card can ask about it separately;
-- exactly one attempt, and that attempt is ``sent``;
+- exactly one attempt, and that attempt is ``sent`` ON LEAD (A324: a clean
+  second or top-rope ascent is never evidence, even logged ``onsight``; the
+  route still counts as seen, so a later lead of it is not a first go);
 - a style that does not exclude a first go: absent, ``onsight`` or ``flash``.
   ``redpoint``, ``repeat``, ``project`` and a ``topped_out`` result are out;
 - a grade on the French ladder (``assessment_v1.GRADE_ORDER``).
@@ -48,6 +50,7 @@ from __future__ import annotations
 from typing import Any, Dict, Iterable, List, Optional, Set
 
 from backend.engine.assessment_v1 import GRADE_ORDER
+from backend.engine.outdoor_attempt import is_lead_send
 
 _GRADE_INDEX = {g: i for i, g in enumerate(GRADE_ORDER)}
 
@@ -90,14 +93,15 @@ def route_key(entry: Dict[str, Any], route: Dict[str, Any]) -> str:
 
 
 def _single_sent_attempt(route: Dict[str, Any]) -> bool:
+    """Exactly one attempt, a send on lead (A324: second / top-rope is not)."""
     attempts = route.get("attempts") or []
     if len(attempts) != 1 or not isinstance(attempts[0], dict):
         return False
-    return attempts[0].get("result") == "sent"
+    return is_lead_send(attempts[0])
 
 
 def is_first_go_send(route: Dict[str, Any], key: str, seen: Set[str]) -> bool:
-    """Shared predicate (outdoor stats + evidence): a single sent attempt on a
+    """Shared predicate (outdoor stats + evidence): a single lead send on a
     route never logged before, with a style that allows a first go."""
     if key in seen:
         return False
