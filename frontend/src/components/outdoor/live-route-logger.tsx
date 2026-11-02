@@ -2,10 +2,24 @@
 
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import type { OutdoorRoute } from "@/lib/types";
+import type { OutdoorAttempt, OutdoorRoute } from "@/lib/types";
 import { deriveTryTimings, lastTryMs, routeHasTimestamps } from "@/lib/try-timings";
 import { TryBreakdown } from "./try-breakdown";
-import { attemptBgClass, attemptLabel, isSendResult } from "@/lib/outdoor-result";
+import {
+  attemptBgClass,
+  attemptLabel,
+  isLeadSend,
+  lastAttemptRopeRole,
+  ROPE_ROLES,
+  ropeRoleName,
+  ropeRoleShort,
+  routeAid,
+  routeCleanNonLead,
+  routeCleanRole,
+  routeLeadSent,
+  withRopeRole,
+  type RopeRole,
+} from "@/lib/outdoor-result";
 
 /**
  * A226 / A227 — log routes LIVE during an active outdoor session.
@@ -31,6 +45,17 @@ import { attemptBgClass, attemptLabel, isSendResult } from "@/lib/outdoor-result
  *   creating a new one. "New route" exits project mode; a Sent closes it.
  * - Each attempt stores its own rest_seconds/climb_seconds so timing stays
  *   coherent across burns; route-level fields keep the first burn (A227 legacy).
+ *
+ * A324 — who led, and A0 (rope only, never on a boulder):
+ * - A Lead | 2nd | TR selector above the main buttons sets the rope role of
+ *   every try logged from now on (main panel and the rows' +✓ / +✗). It stays
+ *   set; until the athlete picks one it follows the LAST try logged, so a PWA
+ *   reloaded in the middle of a day on second does not silently go back to
+ *   Lead (the role that makes a try a send). Lead is written as absent.
+ * - «✓ Sent» on lead (green) becomes «✓ Clean (2nd)» / «✓ Clean (TR)» (blue):
+ *   clean, not a send. A third button logs an A0 try (amber).
+ * - OS / FL and the automatic redpoint only follow a send on lead. A clean
+ *   try on any role or an A0 closes project mode; a fall keeps it open.
  */
 
 const FRENCH_SPORT_GRADES = [
@@ -89,11 +114,23 @@ function climbForRow(r: LiveRoute): number | null {
   return typeof r.climb_seconds === "number" ? r.climb_seconds : null;
 }
 
+/** What one tap logs: a send / clean ascent, a fall, or an A0 (rope only). */
+type LiveResult = "sent" | "fell" | "aid";
+
 export function LiveRouteLogger({ discipline, startedAt, routes, onChange, suggestedRest, busy }: Props) {
-  const grades = discipline === "boulder" ? FONT_BOULDER_GRADES : FRENCH_SPORT_GRADES;
+  const isBoulder = discipline === "boulder";
+  const grades = isBoulder ? FONT_BOULDER_GRADES : FRENCH_SPORT_GRADES;
   const [grade, setGrade] = useState(grades.includes("6a") ? "6a" : grades[0]);
   const [name, setName] = useState("");
-  const routeLabel = discipline === "boulder" ? "problem" : "route";
+  const routeLabel = isBoulder ? "problem" : "route";
+
+  // A324 — rope role of the next try. While the athlete has not picked one in
+  // this mount (`null`), it follows the role of the last try logged — so a
+  // reload restores it instead of falling back to Lead — and Lead only when
+  // nothing is logged yet. A boulder has no rope role.
+  const [roleChoice, setRoleChoice] = useState<RopeRole | null>(null);
+  const ropeRole: RopeRole = isBoulder ? "lead" : roleChoice ?? lastAttemptRopeRole(routes) ?? "lead";
+  const onLead = ropeRole === "lead";
 
   // B279 — project mode: index of the route the main panel targets. Set on a
   // Fell (quick-add or row +✗), cleared on a Sent / "New route". Guarded against
@@ -176,7 +213,14 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
     return { climb, rest, atMin, loggedAt: new Date(pressMs).toISOString() };
   };
 
-  const addRoute = (result: "sent" | "fell") => {
+  /** One try with the selected rope role (lead written as absent, A324). */
+  const makeAttempt = (result: LiveResult, loggedAt: string, climb: number | undefined): OutdoorAttempt =>
+    withRopeRole(
+      { result: isBoulder && result === "aid" ? "fell" : result, logged_at: loggedAt, ...(climb ? { climb_seconds: climb } : {}) },
+      ropeRole,
+    );
+
+  const addRoute = (result: LiveResult) => {
     const { climb, rest, atMin, loggedAt } = takeBurnTiming();
     const idx = routes.length;
     onChange([
@@ -184,7 +228,7 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
       {
         name: name.trim() || `${routeLabel} ${idx + 1}`,
         grade,
-        attempts: [{ result, logged_at: loggedAt, ...(climb ? { climb_seconds: climb } : {}) }],
+        attempts: [makeAttempt(result, loggedAt, climb)],
         atMin,
         rest_seconds: rest,
         ...(climb ? { climb_seconds: climb } : {}),
@@ -192,23 +236,22 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
     ]);
     setName("");
     // B279 — a fall opens project mode on the new route; a send closes it.
+    // A324: so do a clean try on second / top-rope and an A0 (to the top).
     setActiveIdx(result === "fell" ? idx : null);
   };
 
-  const addAttempt = (idx: number, result: "sent" | "fell") => {
+  const addAttempt = (idx: number, result: LiveResult) => {
     const { climb, atMin, loggedAt } = takeBurnTiming();
     onChange(
       routes.map((r, i) => {
         if (i !== idx) return r;
-        const attempts = [
-          ...r.attempts,
-          { result, logged_at: loggedAt, ...(climb ? { climb_seconds: climb } : {}) },
-        ];
+        const attempts = [...r.attempts, makeAttempt(result, loggedAt, climb)];
         // Validity rule: >1 attempt invalidates onsight/flash. A send on a
-        // multi-attempt route is a redpoint going forward.
+        // multi-attempt route is a redpoint going forward — a send on lead
+        // only (A324): a clean second is no redpoint.
         let style = r.style;
         if (style === "onsight" || style === "flash") style = undefined;
-        if (attempts.some((a) => a.result === "sent") && !style) style = "redpoint";
+        if (attempts.some(isLeadSend) && !style) style = "redpoint";
         return { ...r, attempts, atMin, style };
       }),
     );
@@ -318,17 +361,55 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
         >
           {climbing ? `▶ Climbing… ${fmt(climbSec)}` : "▶ Start climb timer (optional)"}
         </button>
+        {/* A324 — who is on the sharp end for the next try (rope only). */}
+        {!isBoulder && (
+          <div role="radiogroup" aria-label="Who led" className="mt-2 grid grid-cols-3 gap-1 rounded-md border border-border p-0.5">
+            {ROPE_ROLES.map((role) => {
+              const active = ropeRole === role;
+              return (
+                <button
+                  key={role}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  aria-label={ropeRoleName(role)}
+                  onClick={() => setRoleChoice(role)}
+                  className={`min-h-[44px] rounded text-sm font-medium ${
+                    !active
+                      ? "text-muted-foreground"
+                      : role === "lead"
+                        ? "bg-primary/15 text-foreground"
+                        : "bg-info/15 text-info"
+                  }`}
+                >
+                  {role === "lead" ? "Lead" : ropeRoleShort(role)}
+                </button>
+              );
+            })}
+          </div>
+        )}
         <div className="mt-2 flex gap-2">
           <button
             onClick={() => (projectIdx == null ? addRoute("sent") : addAttempt(projectIdx, "sent"))}
             disabled={busy}
-            className="flex-1 min-h-[44px] rounded-md border border-success/40 bg-success/15 py-2 text-sm font-medium text-success disabled:opacity-50"
-          >✓ Sent</button>
+            className={`flex-1 min-h-[44px] rounded-md border py-2 text-sm font-medium disabled:opacity-50 ${
+              onLead ? "border-success/40 bg-success/15 text-success" : "border-info/40 bg-info/15 text-info"
+            }`}
+          >{onLead ? "✓ Sent" : `✓ Clean (${ropeRoleShort(ropeRole)})`}</button>
           <button
             onClick={() => (projectIdx == null ? addRoute("fell") : addAttempt(projectIdx, "fell"))}
             disabled={busy}
             className="flex-1 min-h-[44px] rounded-md border border-danger/40 bg-danger/15 py-2 text-sm font-medium text-danger disabled:opacity-50"
           >✗ Fell / try</button>
+          {/* A324 — A0: to the top pulling on the quickdraws. Rope only. */}
+          {!isBoulder && (
+            <button
+              onClick={() => (projectIdx == null ? addRoute("aid") : addAttempt(projectIdx, "aid"))}
+              disabled={busy}
+              title="A0 — to the top pulling on the quickdraws, not free"
+              className="shrink-0 min-h-[44px] min-w-[52px] rounded-md border border-warning/40 bg-warning/15 px-3 py-2 text-sm font-medium text-warning disabled:opacity-50"
+            >A0</button>
+          )}
         </div>
       </div>
 
@@ -338,8 +419,18 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
       {routes.length > 0 && (
         <ul className="space-y-1.5">
           {routes.map((r, i) => ({ r, i })).reverse().map(({ r, i }) => {
-            const sent = r.attempts.some((a) => isSendResult(a.result));
-            const firstTrySend = sent && r.attempts.length === 1;
+            // A324: a send is a send on lead; clean on 2nd / TR and A0 have their own words.
+            const sent = routeLeadSent(r);
+            const firstTrySend = r.attempts.length === 1 && isLeadSend(r.attempts[0]);
+            const status = sent
+              ? { text: "Sent", cls: "text-success" }
+              : routeCleanNonLead(r)
+                ? { text: routeCleanRole(r) === "toprope" ? "TR clean" : "Second clean", cls: "text-info" }
+                : routeAid(r)
+                  ? { text: "A0", cls: "text-warning" }
+                  : i === projectIdx
+                    ? { text: "Projecting", cls: "text-brand-secondary" }
+                    : { text: "Open", cls: "text-muted-foreground" };
             // A241 — timestamped routes: ticking "since last try" + expandable
             // per-try breakdown. Legacy routes (no logged_at): old totals.
             const hasTs = routeHasTimestamps(r);
@@ -364,11 +455,11 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
                     {r.attempts.map((a, ai) => (
                       <span key={ai}
                         title={[
-                          attemptLabel(a.result),
+                          attemptLabel(a),
                           typeof a.climb_seconds === "number" ? `climb ${fmt(a.climb_seconds)}` : null,
                           typeof a.rest_seconds === "number" ? `rest ${fmt(a.rest_seconds)}` : null,
                         ].filter(Boolean).join(" · ")}
-                        className={`inline-block size-2 rounded-full ${attemptBgClass(a.result)}`} />
+                        className={`inline-block size-2 rounded-full ${attemptBgClass(a)}`} />
                     ))}
                   </span>
                   <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground">
@@ -405,8 +496,8 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
                   </div>
                 )}
                 <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                  <span className={`text-[11px] ${i === projectIdx ? "text-brand-secondary" : "text-muted-foreground"}`}>{sent ? "Sent" : i === projectIdx ? "Projecting" : "Open"} · {r.attempts.length} {r.attempts.length === 1 ? "try" : "tries"}</span>
-                  {/* A2 — onsight/flash only on a first-attempt send */}
+                  <span className={`text-[11px] ${status.cls}`}>{status.text} · {r.attempts.length} {r.attempts.length === 1 ? "try" : "tries"}</span>
+                  {/* A2 — onsight/flash only on a first-attempt send (A324: on lead) */}
                   {firstTrySend && (
                     <span className="flex items-center gap-1">
                       <button
@@ -421,8 +512,21 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
                       >FL</button>
                     </span>
                   )}
-                  <button onClick={() => addAttempt(i, "sent")} disabled={busy} className="ml-auto min-h-[44px] rounded border border-success/40 bg-success/15 px-3 text-sm text-success disabled:opacity-50">+✓</button>
-                  <button onClick={() => addAttempt(i, "fell")} disabled={busy} className="min-h-[44px] rounded border border-danger/40 bg-danger/15 px-3 text-sm text-danger disabled:opacity-50">+✗</button>
+                  {/* A324: the row's tries take the selected rope role too. */}
+                  <button
+                    onClick={() => addAttempt(i, "sent")}
+                    disabled={busy}
+                    aria-label={onLead ? "Add a sent try" : `Add a clean try on ${ropeRoleName(ropeRole).toLowerCase()}`}
+                    className={`ml-auto min-h-[44px] rounded border px-3 text-sm disabled:opacity-50 ${
+                      onLead ? "border-success/40 bg-success/15 text-success" : "border-info/40 bg-info/15 text-info"
+                    }`}
+                  >+✓</button>
+                  <button
+                    onClick={() => addAttempt(i, "fell")}
+                    disabled={busy}
+                    aria-label={onLead ? "Add a fall" : `Add a fall on ${ropeRoleName(ropeRole).toLowerCase()}`}
+                    className="min-h-[44px] rounded border border-danger/40 bg-danger/15 px-3 text-sm text-danger disabled:opacity-50"
+                  >+✗</button>
                   {/* F3 — delete staccato dagli action button (ml-3) + undo toast */}
                   <button onClick={() => remove(i)} aria-label="Remove route" className="ml-3 min-h-[44px] rounded border border-border px-3 text-sm text-muted-foreground">✕</button>
                 </div>
@@ -431,11 +535,17 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
           })}
         </ul>
       )}
-      {routes.length > 0 && (
-        <p className="text-[11px] text-muted-foreground">
-          {routes.length} {routes.length === 1 ? routeLabel : `${routeLabel}s`} · {routes.filter((r) => r.attempts.some((a) => a.result === "sent")).length} sent
-        </p>
-      )}
+      {routes.length > 0 && (() => {
+        // A324: «sent» counts sends on lead; clean on 2nd / TR is counted apart.
+        const sentCount = routes.filter(routeLeadSent).length;
+        const cleanCount = routes.filter(routeCleanNonLead).length;
+        return (
+          <p className="text-[11px] text-muted-foreground">
+            {routes.length} {routes.length === 1 ? routeLabel : `${routeLabel}s`} · {sentCount} sent
+            {cleanCount > 0 && <> · <span className="text-info">{cleanCount} clean (2nd/TR)</span></>}
+          </p>
+        );
+      })()}
     </div>
   );
 }

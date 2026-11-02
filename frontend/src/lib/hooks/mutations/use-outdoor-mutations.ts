@@ -35,7 +35,9 @@ export function useUpdateOutdoorLog() {
 export function useDeleteOutdoorLog() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: deleteOutdoorLog,
+    // B401: the crag of the day goes with the date (multi-crag days, B341).
+    mutationFn: ({ date, spotName }: { date: string; spotName?: string }) =>
+      deleteOutdoorLog(date, spotName),
     onSuccess: () => invalidateOutdoor(qc),
   });
 }

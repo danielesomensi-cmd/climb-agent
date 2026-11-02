@@ -547,7 +547,12 @@ export interface OutdoorSpot {
 }
 
 export interface OutdoorAttempt {
-  result: "sent" | "fell" | "topped_out";
+  /** A324: `aid` = A0 (to the top pulling on the gear), rope only. Read it
+   *  through `outdoor-result.ts`: only `sent` on lead is a send. */
+  result: "sent" | "fell" | "topped_out" | "aid";
+  /** A324: who was on the sharp end. Absent = lead (every older log); the app
+   *  never writes `lead` (`withRopeRole`). Not on a boulder. */
+  rope_role?: "lead" | "second" | "toprope";
   notes?: string;
   // B279 — per-attempt timing (optional). On multi-attempt (project) routes each
   // burn carries its own rest/climb; route-level fields stay = first burn (A227).
@@ -778,7 +783,11 @@ export interface WeeklyReportProgression {
 export interface WeeklyReportOutdoor {
   sessions: number;
   routes_attempted: number;
+  /** A324: routes sent on lead only. */
   routes_sent: number;
+  /** A324: routes with no lead send but a clean ascent on second / top-rope
+   *  (absent from a backend older than A324). */
+  routes_clean_non_lead?: number;
   send_pct: number;
   top_grade_sent: string | null;
   top_grade_attempted: string | null;

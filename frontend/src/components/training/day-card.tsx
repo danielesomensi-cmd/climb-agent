@@ -675,10 +675,10 @@ export function DayCard({
                               return (
                                 <span
                                   key={ai}
-                                  title={attemptLabel(a.result)}
+                                  title={attemptLabel(a)}
                                   className={cn(
                                     "inline-block size-2 rounded-full",
-                                    attemptBgClass(a.result)
+                                    attemptBgClass(a)
                                   )}
                                 />
                               );

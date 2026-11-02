@@ -10,6 +10,7 @@ import type {
   AssessmentProfile,
   Exercise,
   SessionMeta,
+  OutdoorAttempt,
   OutdoorSpot,
   OutdoorSession,
   OutdoorStats,
@@ -761,19 +762,31 @@ export const postOutdoorLog = (session: Omit<OutdoorSession, "log_version">) =>
     body: JSON.stringify(session),
   });
 
+/** `session` is the crag logged last that date; B401: `sessions` lists every
+ *  crag of the day (B341), each with its load. */
 export const getOutdoorLogByDate = (date: string) =>
-  request<{ session: OutdoorSession & { load_score: number } }>(`/api/outdoor/log/${date}`);
+  request<{
+    session: OutdoorSession & { load_score: number };
+    sessions?: Array<OutdoorSession & { load_score: number }>;
+  }>(`/api/outdoor/log/${date}`);
 
-export const putOutdoorLog = (session: Omit<OutdoorSession, "log_version">) =>
+/** B401: `original_spot_name` names the crag the edit replaces (needed to
+ *  rename it); a key left out keeps the stored value, `null` clears it (A324). */
+export const putOutdoorLog = (
+  session: Omit<OutdoorSession, "log_version"> & { original_spot_name?: string },
+) =>
   request<{ status: string; load_score: number; plan_synced?: boolean }>("/api/outdoor/log", {
     method: "PUT",
     body: JSON.stringify(session),
   });
 
-export const deleteOutdoorLog = (date: string) =>
-  request<{ status: string; date: string }>(`/api/outdoor/log/${date}`, {
-    method: "DELETE",
-  });
+/** B401: with `spotName` only that crag of the day is deleted. Without it a
+ *  multi-crag day is a 409 (the server never wipes the other crags). */
+export const deleteOutdoorLog = (date: string, spotName?: string) =>
+  request<{ status: string; date: string }>(
+    `/api/outdoor/log/${date}${spotName ? `?spot_name=${encodeURIComponent(spotName)}` : ""}`,
+    { method: "DELETE" },
+  );
 
 export const getOutdoorSessions = (since?: string) =>
   request<{ sessions: OutdoorSession[]; count: number }>(
@@ -857,7 +870,7 @@ export const getActiveOutdoorSession = (date?: string) =>
 
 export const logOutdoorClimb = (
   sessionId: string,
-  climb: { name: string; grade: string; attempts: { result: string; notes?: string }[]; style?: string; discipline?: string; at_min?: number },
+  climb: { name: string; grade: string; attempts: OutdoorAttempt[]; style?: string; discipline?: string; at_min?: number },
 ) =>
   request<{ routes: Array<Record<string, unknown>>; count: number }>(
     `/api/outdoor/session/${sessionId}/log-climb`,

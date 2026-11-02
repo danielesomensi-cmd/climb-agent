@@ -1522,6 +1522,11 @@ and `condition_band` (`prime | ok | poor_hot_humid | poor_cold_dry`) are validat
 One outdoor attempt = `routes[].attempts[]` of an outdoor log. Single reading for every backend
 reader: `backend/engine/outdoor_attempt.py` (frontend twin `src/lib/outdoor-result.ts`); a static scan
 in `test_a324_rope_role_aid.py` forbids `result == "sent"` comparisons anywhere else in the backend.
+Frontend: every view reads an attempt through the attempt-level helpers of `src/lib/outdoor-result.ts`
+(`isLeadSend`, `attemptLabel(a)`, …; a bare result string reads as lead) and the route styles through
+`src/lib/outdoor-routes.ts`; `b393-topped-out.test.ts` forbids `.result === "sent"` and helpers called on
+the bare `.result` in the views. Colours: Sent green (lead only), Second clean / TR clean blue (`info`),
+A0 and Top w/ rests amber, Fell red. The app never writes `rope_role: "lead"` (`withRopeRole`).
 
 | field | values | meaning |
 |-------|--------|---------|

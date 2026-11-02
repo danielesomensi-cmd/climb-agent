@@ -25,7 +25,7 @@ Answers typed before signing up live in `localStorage` under `climb_onboarding_d
 - `/plan` — Assessment radar chart + macrocycle timeline + phase details
 - `/session/[id]` — Resolved exercises with prescription details, load score
 - `/reports/weekly` — Adherence, load, difficulty distribution, progression table
-- `/outdoor` — Outdoor history, stats, per-spot breakdown, grade histogram
+- `/outdoor` — Outdoor history, stats, per-spot breakdown, grade histogram. A324: an attempt's outcome is read only through `src/lib/outdoor-result.ts` (a send = `sent` on lead; clean on second / top-rope is blue, A0 amber), the route styles through `src/lib/outdoor-routes.ts`; the trash deletes one crag of the day (`?spot_name=`)
 - `/whats-next` — Votable roadmap + feedback form
 - `/settings` — Profile, goals, equipment, spots, regenerate assessment/macrocycle
 - `/guided/[date]/[sessionId]` — Step-by-step guided session with timer

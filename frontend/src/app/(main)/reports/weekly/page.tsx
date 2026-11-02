@@ -411,6 +411,13 @@ function WeeklyReportContent() {
                       <p className="font-medium">
                         {report.outdoor.routes_sent}/{report.outdoor.routes_attempted} sent
                       </p>
+                      {/* A324: sends are on lead only; a route climbed clean on
+                          second / top-rope is not a failed one. */}
+                      {(report.outdoor.routes_clean_non_lead ?? 0) > 0 && (
+                        <p className="text-xs text-info">
+                          {report.outdoor.routes_clean_non_lead} clean on 2nd/TR
+                        </p>
+                      )}
                     </div>
                     <div>
                       <p className="text-muted-foreground text-xs">Send Rate</p>

@@ -25,127 +25,13 @@ const OutdoorLogForm = dynamic(() => import("@/components/training/OutdoorLogFor
 import { deriveTryTimings, routeHasTimestamps } from "@/lib/try-timings";
 import { TryBreakdown } from "@/components/outdoor/try-breakdown";
 import { QuadernoButton } from "@/components/outdoor/quaderno-viewer";
-import { isSendResult } from "@/lib/outdoor-result";
-
-// ---------------------------------------------------------------------------
-// Route aggregation (A180)
-// ---------------------------------------------------------------------------
-
-interface RouteAggregate {
-  name: string;
-  spot: string;
-  grade: string;
-  discipline?: "lead" | "boulder";
-  totalAttempts: number; // lifetime attempts across all sessions
-  attemptsToSend: number | null; // attempts up to & incl. the first send (null = unsent)
-  totalSessions: number;
-  bestStyle: string;
-  isSent: boolean;
-  lastDate: string;
-}
-
-const STYLE_LABEL: Record<string, string> = {
-  onsight: "onsight",
-  flash: "flash",
-  redpoint: "sent",
-  repeat: "repeat",
-  project: "projecting",
-};
-
-/**
- * B181/A227 — effective style of a single route WITHIN one session.
- *
- * Canonical validity rule: onsight/flash are valid only on a true first-try
- * send (exactly one attempt, sent). An explicit onsight/flash that doesn't hold
- * (e.g. tagged flash but multiple attempts) is downgraded to redpoint on display
- * — never rewritten in the log.
- */
-function sessionRouteStyle(route: { style?: string; attempts?: { result: string }[] }): string {
-  const attempts = route.attempts || [];
-  const sendIdx = attempts.findIndex((a) => isSendResult(a.result));
-  if (sendIdx === -1) return "project";
-  const firstTry = sendIdx === 0 && attempts.length === 1;
-  if (route.style === "onsight") return firstTry ? "onsight" : "redpoint";
-  if (route.style === "flash") return firstTry ? "flash" : "redpoint";
-  if (route.style === "redpoint" || route.style === "repeat") return route.style;
-  return firstTry ? "flash" : "redpoint";
-}
-
-/**
- * Aggregate a route across sessions, chronologically, so the displayed style is
- * coherent with the attempt count (A227 / B3). `bestStyle` reflects the FIRST
- * ascent style; `attemptsToSend` counts attempts up to & including that first
- * send (so a flash/onsight always shows "1 try to send" — no more
- * "flash · 4 attempts" anomaly). `totalAttempts` stays the lifetime count.
- */
-function aggregateRoutes(sessions: OutdoorSession[]): RouteAggregate[] {
-  // Group occurrences by route key, preserving chronological order.
-  const groups = new Map<string, { name: string; spot: string; grade: string; discipline?: "lead" | "boulder"; occ: { date: string; route: OutdoorSession["routes"][number] }[] }>();
-  const ordered = sessions.slice().sort((a, b) => a.date.localeCompare(b.date));
-  for (const s of ordered) {
-    for (const r of s.routes || []) {
-      if (!r.name?.trim()) continue;
-      if (!(r.attempts?.length)) continue;
-      // B362: one route, one row — "Cima nikita" and "Cima Nikita " are the
-      // same line. Group case/whitespace-insensitively, show the latest spelling.
-      const name = r.name.trim().replace(/\s+/g, " ");
-      const key = `${name.toLowerCase()}||${(s.spot_name || "").trim().toLowerCase()}`;
-      const g = groups.get(key);
-      if (g) {
-        g.occ.push({ date: s.date, route: r });
-        g.name = name;
-        if (!g.grade && r.grade) g.grade = r.grade;
-      } else {
-        groups.set(key, { name, spot: s.spot_name || "", grade: r.grade || "", discipline: r.discipline, occ: [{ date: s.date, route: r }] });
-      }
-    }
-  }
-
-  const out: RouteAggregate[] = [];
-  for (const g of groups.values()) {
-    const name = g.name;
-    let totalAttempts = 0;
-    let attemptsToSend: number | null = null;
-    let firstSendOnsight = false;
-    let firstSendRepeat = false;
-    let lastDate = g.occ[0].date;
-    let running = 0;
-    for (const { date, route } of g.occ) {
-      const atts = route.attempts || [];
-      for (let i = 0; i < atts.length; i++) {
-        running += 1;
-        totalAttempts += 1;
-        if (attemptsToSend === null && isSendResult(atts[i].result)) {
-          attemptsToSend = running;
-          firstSendOnsight = running === 1 && route.style === "onsight";
-          // B362: sent before the app existed — a repeat, never a flash.
-          firstSendRepeat = route.style === "repeat";
-        }
-      }
-      if (date > lastDate) lastDate = date;
-    }
-
-    let bestStyle: string;
-    if (attemptsToSend === null) bestStyle = "project";
-    else if (firstSendRepeat) bestStyle = "repeat";
-    else if (attemptsToSend === 1) bestStyle = firstSendOnsight ? "onsight" : "flash";
-    else bestStyle = "redpoint";
-
-    out.push({
-      name,
-      spot: g.spot,
-      grade: g.grade,
-      discipline: g.discipline,
-      totalAttempts,
-      attemptsToSend,
-      totalSessions: g.occ.length,
-      bestStyle,
-      isSent: attemptsToSend !== null,
-      lastDate,
-    });
-  }
-  return out;
-}
+import { routeLeadSent } from "@/lib/outdoor-result";
+import {
+  aggregateRoutes,
+  routeStyleBadgeClass,
+  sessionRouteStyle,
+  STYLE_LABEL,
+} from "@/lib/outdoor-routes";
 
 export default function OutdoorPage() {
   const router = useRouter();
@@ -175,8 +61,10 @@ export default function OutdoorPage() {
   const [logSpots, setLogSpots] = useState<OutdoorSpot[]>([]);
   const [editData, setEditData] = useState<OutdoorSession | null>(null);
   const [ctaLoading, setCtaLoading] = useState(false);
-  const [confirmDeleteDate, setConfirmDeleteDate] = useState<string | null>(null);
-  const [deletingDate, setDeletingDate] = useState<string | null>(null);
+  // B401 / A324: a day can hold one session per crag (B341), so the trash,
+  // its confirmation and the expanded rows are per (date, crag), not per date.
+  const [confirmDeleteKey, setConfirmDeleteKey] = useState<string | null>(null);
+  const [deletingKey, setDeletingKey] = useState<string | null>(null);
 
   const reloadData = useCallback(() => {
     invalidateOutdoor(qc);
@@ -218,17 +106,19 @@ export default function OutdoorPage() {
     reloadData();
   }, [reloadData]);
 
-  // Issue 4: delete session
-  const handleDeleteSession = useCallback(async (date: string) => {
-    setDeletingDate(date);
-    setConfirmDeleteDate(null);
+  // Issue 4: delete session. B401 / A324: only this crag of the day — the
+  // server refuses a date-only delete on a multi-crag day (409).
+  const handleDeleteSession = useCallback(async (date: string, spotName: string) => {
+    const key = sessionKey(date, spotName);
+    setDeletingKey(key);
+    setConfirmDeleteKey(null);
     try {
-      await deleteOutdoorLog(date);
+      await deleteOutdoorLog(date, spotName || undefined);
       invalidateOutdoor(qc);
     } catch {
       setError("Could not delete session. Please try again.");
     } finally {
-      setDeletingDate(null);
+      setDeletingKey(null);
     }
   }, [qc]);
 
@@ -238,11 +128,11 @@ export default function OutdoorPage() {
   const [showAllRoutes, setShowAllRoutes] = useState(false);
   // B1 — expandable session rows
   const [openSessions, setOpenSessions] = useState<Set<string>>(new Set());
-  const toggleSession = (date: string) =>
+  const toggleSession = (key: string) =>
     setOpenSessions((prev) => {
       const next = new Set(prev);
-      if (next.has(date)) next.delete(date);
-      else next.add(date);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
 
@@ -257,6 +147,10 @@ export default function OutdoorPage() {
       : b.lastDate.localeCompare(a.lastDate),
   );
   const visibleRoutes = showAllRoutes ? sortedRoutes : sortedRoutes.slice(0, ROUTE_COLLAPSE);
+
+  // B401 / A324: how many crags each date holds (the delete says the others stay).
+  const cragsPerDate = new Map<string, number>();
+  for (const s of sessions) cragsPerDate.set(s.date, (cragsPerDate.get(s.date) ?? 0) + 1);
 
   // Group sessions by spot
   const bySpot: Record<string, (OutdoorSession & { load_score?: number })[]> = {};
@@ -274,7 +168,7 @@ export default function OutdoorPage() {
     m.sessions += 1;
     for (const r of s.routes || []) {
       m.routes += 1;
-      if (r.attempts?.some((a) => isSendResult(a.result))) m.sentGrades.push(r.grade);
+      if (routeLeadSent(r)) m.sentGrades.push(r.grade);
     }
     monthsMap.set(mk, m);
   }
@@ -387,7 +281,7 @@ export default function OutdoorPage() {
                     const topGrade = hardestGrade(
                       spotSessions
                         .flatMap((s) => s.routes || [])
-                        .filter((r) => r.attempts?.some((a) => isSendResult(a.result)))
+                        .filter(routeLeadSent)
                         .map((r) => r.grade),
                     );
 
@@ -466,9 +360,9 @@ export default function OutdoorPage() {
                               <span className="text-sm font-medium">{r.name}</span>
                               <Badge
                                 variant="outline"
-                                className={`text-[10px] ${r.isSent ? "border-success/40 bg-success/15 text-success" : "text-muted-foreground"}`}
+                                className={`text-[10px] ${routeStyleBadgeClass(r.bestStyle)}`}
                               >
-                                {STYLE_LABEL[r.bestStyle] || r.bestStyle}
+                                {STYLE_LABEL[r.bestStyle]}
                               </Badge>
                             </div>
                             <p className="text-xs text-muted-foreground">
@@ -484,6 +378,9 @@ export default function OutdoorPage() {
                             )}
                             {r.isSent ? (
                               <Check className="h-4 w-4 text-success" />
+                            ) : r.bestStyle === "second_clean" || r.bestStyle === "tr_clean" ? (
+                              // A324: clean on second / top-rope — a blue check, never the green one.
+                              <Check className="h-4 w-4 text-info" />
                             ) : (
                               <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
                             )}
@@ -516,25 +413,26 @@ export default function OutdoorPage() {
                   .map((s, idx) => {
                     const topGrade = hardestGrade(
                       (s.routes || [])
-                        .filter((r) => r.attempts?.some((a) => isSendResult(a.result)))
+                        .filter(routeLeadSent)
                         .map((r) => r.grade),
                     );
 
-                    const isConfirming = confirmDeleteDate === s.date;
-                    const isDeleting = deletingDate === s.date;
-                    const isOpen = openSessions.has(s.date);
+                    const key = sessionKey(s.date, s.spot_name);
+                    const isConfirming = confirmDeleteKey === key;
+                    const isDeleting = deletingKey === key;
+                    const isOpen = openSessions.has(key);
                     const hasRoutes = (s.routes?.length || 0) > 0;
 
                     return (
                       <div
-                        key={`${s.date}-${idx}`}
+                        key={`${key}-${idx}`}
                         className="rounded-md border px-3 py-2 space-y-2"
                       >
                         <div className="flex items-center justify-between gap-2">
                           {/* B1 — tap to expand the session's route list (read-only) */}
                           <button
                             type="button"
-                            onClick={() => hasRoutes && toggleSession(s.date)}
+                            onClick={() => hasRoutes && toggleSession(key)}
                             aria-expanded={isOpen}
                             className="min-w-0 flex-1 space-y-0.5 text-left"
                           >
@@ -570,10 +468,10 @@ export default function OutdoorPage() {
                               </div>
                             )}
                             <button
-                              onClick={() => setConfirmDeleteDate(isConfirming ? null : s.date)}
+                              onClick={() => setConfirmDeleteKey(isConfirming ? null : key)}
                               disabled={isDeleting}
-                              className="text-muted-foreground/50 hover:text-destructive disabled:opacity-30"
-                              aria-label="Delete session"
+                              className="-mr-2 flex size-11 items-center justify-center text-muted-foreground/50 hover:text-destructive disabled:opacity-30"
+                              aria-label={`Delete the ${s.spot_name || "outdoor"} session`}
                             >
                               <Trash2 className="size-4" />
                             </button>
@@ -592,7 +490,6 @@ export default function OutdoorPage() {
                               const timings = deriveTryTimings(sessionRoutes);
                               return (s.routes || []).map((r, ri) => {
                                 const style = sessionRouteStyle(r);
-                                const sent = isSendResult(r.attempts?.[0]?.result ?? "") || (r.attempts || []).some((a) => isSendResult(a.result));
                                 const dg = r.discipline === "boulder" ? displayBoulderGrade(r.grade, gradeSystem) : r.grade;
                                 return (
                                   <li key={ri} className="text-xs">
@@ -601,9 +498,9 @@ export default function OutdoorPage() {
                                       <span className="min-w-0 flex-1 truncate">{r.name || "—"}</span>
                                       <Badge
                                         variant="outline"
-                                        className={`text-[10px] ${sent ? "border-success/40 bg-success/15 text-success" : "text-muted-foreground"}`}
+                                        className={`text-[10px] ${routeStyleBadgeClass(style)}`}
                                       >
-                                        {STYLE_LABEL[style] || style}
+                                        {STYLE_LABEL[style]}
                                       </Badge>
                                       <span className="shrink-0 text-muted-foreground">
                                         {(r.attempts?.length || 0)} {(r.attempts?.length || 0) === 1 ? "try" : "tries"}
@@ -623,16 +520,19 @@ export default function OutdoorPage() {
                         )}
                         {isConfirming && (
                           <div className="flex items-center gap-2 pt-1 border-t">
-                            <span className="flex-1 text-xs text-muted-foreground">Delete this session?</span>
+                            <span className="flex-1 text-xs text-muted-foreground">
+                              Delete {s.spot_name ? <span className="text-foreground">{s.spot_name}</span> : "this session"}?
+                              {(cragsPerDate.get(s.date) ?? 0) > 1 && " The day's other crags stay."}
+                            </span>
                             <button
-                              onClick={() => setConfirmDeleteDate(null)}
-                              className="rounded border px-2 py-1 text-xs"
+                              onClick={() => setConfirmDeleteKey(null)}
+                              className="min-h-[44px] rounded border px-3 text-xs"
                             >
                               Cancel
                             </button>
                             <button
-                              onClick={() => handleDeleteSession(s.date)}
-                              className="rounded bg-destructive px-2 py-1 text-xs text-destructive-foreground"
+                              onClick={() => handleDeleteSession(s.date, s.spot_name)}
+                              className="min-h-[44px] rounded bg-destructive px-3 text-xs text-destructive-foreground"
                             >
                               Delete
                             </button>
@@ -758,7 +658,7 @@ export default function OutdoorPage() {
             <DialogTitle>{editData ? "Edit Today's Session" : "Log Outdoor Session"}</DialogTitle>
             {editData && (
               <p className="text-xs text-warning mt-1">
-                You already have a session logged today — editing it.
+                You already have a session logged today — editing it. Type another crag&apos;s name to add it as a second crag.
               </p>
             )}
           </DialogHeader>
@@ -774,6 +674,11 @@ export default function OutdoorPage() {
       </Dialog>
     </>
   );
+}
+
+/** One crag of one day (B341): the key of the session rows. */
+function sessionKey(date: string, spotName: string | undefined): string {
+  return `${date}||${spotName ?? ""}`;
 }
 
 function StatCard({

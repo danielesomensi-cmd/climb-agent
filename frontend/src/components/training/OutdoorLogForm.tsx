@@ -10,12 +10,35 @@ import type {
   OutdoorRouteProfile,
   OutdoorConditions,
 } from "@/lib/types";
-import { postOutdoorLog, putOutdoorLog } from "@/lib/api";
+import { ApiError, getOutdoorLogByDate, postOutdoorLog, putOutdoorLog } from "@/lib/api";
 import { useSubmitLock } from "@/lib/hooks/use-submit-lock";
 import { enqueue } from "@/lib/outbox";
 import { deriveTryTimings, routeHasTimestamps } from "@/lib/try-timings";
 import { TryBreakdown } from "@/components/outdoor/try-breakdown";
-import { attemptLabel } from "@/lib/outdoor-result";
+import {
+  attemptChipClass,
+  attemptLabel,
+  attemptResultLabel,
+  isBoulderRoute,
+  nextAttemptResult,
+  nextRopeRole,
+  ropeRoleName,
+  ropeRoleOf,
+  ropeRoleShort,
+  routeLeadSent,
+  stripRopeOnly,
+  withRopeRole,
+} from "@/lib/outdoor-result";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const FRENCH_SPORT_GRADES = [
   "4a","4b","4c","5a","5a+","5b","5b+","5c","5c+",
@@ -54,6 +77,37 @@ function fmtSec(sec: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+/** A324: a style says how a send went — a route that loses its last send on
+ *  lead (a tap on the result or on the role) loses its style too. */
+function keepStyleOnlyWithLeadSend(before: OutdoorRoute, after: OutdoorRoute): OutdoorRoute {
+  if (!after.style || !routeLeadSent(before) || routeLeadSent(after)) return after;
+  const next = { ...after };
+  delete next.style;
+  return next;
+}
+
+const sameCrag = (a: string, b: string) =>
+  a.trim().replace(/\s+/g, " ").toLowerCase() === b.trim().replace(/\s+/g, " ").toLowerCase();
+
+/**
+ * A324 (B401 residual, point 4) — before «Add as another crag»: is that crag
+ * already logged on `date`? A POST on a (date, crag) that exists replaces it,
+ * routes and all, so «add» must never land on one. `null` = could not check.
+ */
+async function cragLoggedOn(date: string, spotName: string): Promise<boolean | null> {
+  try {
+    const res = await getOutdoorLogByDate(date);
+    const rows = res.sessions ?? (res.session ? [res.session] : []);
+    return rows.some((r) => sameCrag(r.spot_name ?? "", spotName));
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) return false;
+    return null;
+  }
+}
+
+/** Save paths: the plain button, or the two answers of the rename dialog. */
+type SaveMode = "save" | "rename" | "add";
+
 interface Props {
   spots: OutdoorSpot[];
   defaultDate?: string;
@@ -86,6 +140,11 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
   const [routes, setRoutes] = useState<OutdoorRoute[]>(initialData?.routes || initialRoutes || []);
   const [notes, setNotes] = useState(initialData?.notes || "");
   const [error, setError] = useState<string | null>(null);
+  // A324 (B-OUTDOOR-CRAG-PICKER point 4): an edit whose crag name changed asks
+  // «rename it, or add another crag?» instead of guessing.
+  const [askCrag, setAskCrag] = useState(false);
+  const originalSpot = initialData?.spot_name ?? "";
+  const cragChanged = isEdit && !sameCrag(spotName, originalSpot);
 
   const gradeList = discipline === "lead" || discipline === "both"
     ? FRENCH_SPORT_GRADES
@@ -103,28 +162,50 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
     setRoutes(updated);
   };
 
+  /** A324: a route on a rope can carry a rope role and A0; a boulder cannot. */
+  const onRope = (route: OutdoorRoute) => !isBoulderRoute(route, discipline);
+
+  /** Apply `change` to one attempt, then drop the style if the route lost its
+   *  last send on lead (it used to drop it on any un-send). */
+  const changeAttempt = (rIdx: number, aIdx: number, change: (r: OutdoorRoute, a: OutdoorRoute["attempts"][number]) => OutdoorRoute["attempts"][number]) =>
+    setRoutes((cur) =>
+      cur.map((r, i) => {
+        if (i !== rIdx) return r;
+        const attempts = r.attempts.map((a, j) => (j === aIdx ? change(r, a) : a));
+        return keepStyleOnlyWithLeadSend(r, { ...r, attempts });
+      }),
+    );
+
   /**
    * F39 (A245) — era un ciclo sent → fell → RIMOZIONE: un doppio tap
-   * accidentale sul badge cancellava il tentativo. Ora è un toggle puro; la
-   * rimozione ha il suo ✕ dedicato con undo.
+   * accidentale sul badge cancellava il tentativo. Ora è un giro puro senza
+   * rimozione; la rimozione ha il suo ✕ dedicato con undo.
+   * A324: on a rope sent → fell → A0 → sent, on a boulder sent ⇄ fell.
+   * B393: a top with rests is never promoted to a send by a tap (→ fell).
    */
-  const toggleAttempt = (rIdx: number, aIdx: number) => {
-    const updated = [...routes];
-    const attempt = updated[rIdx].attempts[aIdx];
-    if (attempt.result === "sent") {
-      updated[rIdx].attempts[aIdx] = { ...attempt, result: "fell" };
-      // Clear auto-filled style when un-sending
-      const anySent = updated[rIdx].attempts.some((a, i) => i !== aIdx && a.result === "sent");
-      if (!anySent) {
-        delete (updated[rIdx] as unknown as Record<string, unknown>).style;
-      }
-    } else if (attempt.result === "topped_out") {
-      // B393: a top with rests is never promoted to a send by a tap.
-      updated[rIdx].attempts[aIdx] = { ...attempt, result: "fell" };
-    } else {
-      updated[rIdx].attempts[aIdx] = { ...attempt, result: "sent" };
+  const toggleAttempt = (rIdx: number, aIdx: number) =>
+    changeAttempt(rIdx, aIdx, (r, a) => ({ ...a, result: nextAttemptResult(a.result, onRope(r)) }));
+
+  /** A324: who led this try — Lead → 2nd → TR → Lead (lead written as absent). */
+  const toggleRole = (rIdx: number, aIdx: number) =>
+    changeAttempt(rIdx, aIdx, (_r, a) => withRopeRole(a, nextRopeRole(ropeRoleOf(a))));
+
+  /** A324: a boulder has no rope. Switching the session to boulder drops the
+   *  rope roles and turns A0 into a fall, as the server would on save. */
+  const changeDiscipline = (d: "lead" | "boulder" | "both") => {
+    setDiscipline(d);
+    if (d !== "boulder") return;
+    let changed = false;
+    const next = routes.map((r) => {
+      if (!isBoulderRoute(r, d)) return r;
+      const stripped = stripRopeOnly(r);
+      if (stripped !== r) changed = true;
+      return stripped;
+    });
+    if (changed) {
+      setRoutes(next);
+      toast("Boulder: no rope roles, and A0 became Fell.", { duration: 6000 });
     }
-    setRoutes(updated);
   };
 
   /** F39 — rimozione esplicita di un tentativo, con undo di 10s. */
@@ -152,11 +233,16 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
     });
   };
 
-  const addAttempt = (rIdx: number) => {
-    const updated = [...routes];
-    updated[rIdx].attempts.push({ result: "sent" });
-    setRoutes(updated);
-  };
+  /** A new try on the route, with the rope role of its last try (A324). */
+  const addAttempt = (rIdx: number) =>
+    setRoutes((cur) =>
+      cur.map((r, i) => {
+        if (i !== rIdx) return r;
+        const last = r.attempts[r.attempts.length - 1];
+        const role = onRope(r) ? ropeRoleOf(last) : "lead";
+        return { ...r, attempts: [...r.attempts, withRopeRole({ result: "sent" as const }, role)] };
+      }),
+    );
 
   const updateStyle = (rIdx: number, value: string) => {
     const updated = [...routes];
@@ -172,52 +258,84 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
     setRoutes(routes.filter((_, i) => i !== idx));
   };
 
+  /** The log body. `forEdit`: an edit keeps every key it does not send
+   *  (A324, B401 residual), so emptied notes go as `null` to clear them. */
+  const buildPayload = (forEdit: boolean): Record<string, unknown> => {
+    const payload: Record<string, unknown> = {
+      date,
+      spot_name: spotName.trim(),
+      discipline,
+      duration_minutes: duration,
+      routes: routes.filter(r => r.name && r.grade).map(r => {
+        const { style, ...rest } = r;
+        return style ? { ...rest, style } : rest;
+      }),
+      notes: notes || (forEdit ? null : undefined),
+    };
+    // A226 — carry outdoor.v2 fields when provided (guided flow).
+    if (dayType) payload.day_type = dayType;
+    if (routeProfile && Object.keys(routeProfile).length > 0) payload.route_profile = routeProfile;
+    if (conditions) payload.conditions = conditions;
+    return payload;
+  };
+
+  /** A new crag log. A245 B-4 (F5) — append-only and self-contained, so it
+   *  can safely wait in the outbox. An EDIT (putOutdoorLog) cannot: replaying
+   *  it hours later would clobber whatever changed in between. */
+  const postNewLog = async (payload: Record<string, unknown>): Promise<boolean | undefined> => {
+    try {
+      return (await postOutdoorLog(payload as unknown as Omit<OutdoorSession, "log_version">))?.plan_synced;
+    } catch (err) {
+      const queued = enqueue("outdoor_log", payload);
+      if (!queued) throw err;
+      toast("Session saved on this device — it will sync when you're back online.", {
+        duration: 6000,
+      });
+      return undefined;
+    }
+  };
+
   // B330: the lock is a ref, so a double tap cannot slip a second POST through
   // the window between `setBusy(true)` and the re-render that disables the
   // button. Logging the same day twice is otherwise a real path — the plan-sync
   // side effect runs again and the day's ripple is recomputed.
-  const { run: handleSubmit, busy: submitting } = useSubmitLock(async () => {
+  const { run: submit, busy: submitting } = useSubmitLock(async (mode: SaveMode) => {
     if (!spotName.trim()) {
       setError("Spot name is required");
       return;
     }
+    // A324 (B-OUTDOOR-CRAG-PICKER point 4): «Log outdoor» / «Quick log» open
+    // the day's crag in edit mode, so a new name typed here is either a rename
+    // or the day's second crag. Ask — never guess.
+    if (mode === "save" && cragChanged && !onSubmit) {
+      setAskCrag(true);
+      return;
+    }
     setError(null);
     try {
-      const payload: Record<string, unknown> = {
-        date,
-        spot_name: spotName,
-        discipline,
-        duration_minutes: duration,
-        routes: routes.filter(r => r.name && r.grade).map(r => {
-          const { style, ...rest } = r;
-          return style ? { ...rest, style } : rest;
-        }),
-        notes: notes || undefined,
-      };
-      // A226 — carry outdoor.v2 fields when provided (guided flow).
-      if (dayType) payload.day_type = dayType;
-      if (routeProfile && Object.keys(routeProfile).length > 0) payload.route_profile = routeProfile;
-      if (conditions) payload.conditions = conditions;
-
       let planSynced: boolean | undefined;
       if (onSubmit) {
-        await onSubmit(payload);
-      } else if (isEdit) {
-        planSynced = (await putOutdoorLog(payload as unknown as Omit<OutdoorSession, "log_version">))?.plan_synced;
+        await onSubmit(buildPayload(false));
+      } else if (isEdit && mode !== "add") {
+        // B401 (point 2): name the crag being edited, so a rename is a rename.
+        planSynced = (await putOutdoorLog({
+          ...(buildPayload(true) as unknown as Omit<OutdoorSession, "log_version">),
+          original_spot_name: originalSpot,
+        }))?.plan_synced;
       } else {
-        // A245 B-4 (F5) — a new outdoor log is append-only and self-contained,
-        // so it can safely wait in the outbox. An EDIT (putOutdoorLog) cannot:
-        // replaying it hours later would clobber whatever changed in between.
-        // The active-session finish path (onSubmit) needs a live server id.
-        try {
-          planSynced = (await postOutdoorLog(payload as unknown as Omit<OutdoorSession, "log_version">))?.plan_synced;
-        } catch (err) {
-          const queued = enqueue("outdoor_log", payload);
-          if (!queued) throw err;
-          toast("Session saved on this device — it will sync when you're back online.", {
-            duration: 6000,
-          });
+        if (mode === "add") {
+          // The crag being edited stays as it is: this is a NEW crag of the day.
+          const taken = await cragLoggedOn(date, spotName);
+          if (taken !== false) {
+            setError(
+              taken
+                ? `${spotName.trim()} is already logged on ${date} — nothing saved. Open that crag to edit it.`
+                : "Couldn't check the crags logged on that date — nothing saved. Please try again.",
+            );
+            return;
+          }
         }
+        planSynced = await postNewLog(buildPayload(false));
       }
       onSuccess?.({ planSynced });
     } catch (e) {
@@ -274,7 +392,7 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
           {(["boulder", "lead", "both"] as const).map(d => (
             <button
               key={d}
-              onClick={() => setDiscipline(d)}
+              onClick={() => changeDiscipline(d)}
               className={`rounded-md px-3 py-1.5 text-sm border ${
                 discipline === d ? "bg-primary text-primary-foreground" : "bg-background"
               }`}
@@ -307,7 +425,7 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
       <div>
         <label className="text-sm font-medium">Routes / Problems</label>
         <p className="mt-0.5 text-sm text-muted-foreground">
-          Log your routes and attempts — tap + to add tries, tap a badge to cycle: Sent → Fell → remove. Climb Agent tracks your history and adapts your training based on what you climb outdoors.
+          Log your routes and tries. Tap + to add a try, ✕ to remove one. Tap a result to change it: Sent → Fell → A0 on a rope, Sent ⇄ Fell on a boulder. Tap L / 2nd / TR to say who led: only a send on lead counts as a send — clean on second or top-rope shows in blue. Climb Agent tracks your history and adapts your training based on what you climb outdoors.
         </p>
 
         <div className="mt-2 space-y-2">
@@ -353,31 +471,48 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
                   <option value="project">⚪ PRJ</option>
                 </select>
 
-                {/* F39: il badge fa solo toggle Sent⇄Fell; il ✕ rimuove (con undo) */}
-                {route.attempts.map((a, aIdx) => (
-                  <span key={aIdx} className="inline-flex overflow-hidden rounded">
-                    <button
-                      onClick={() => toggleAttempt(rIdx, aIdx)}
-                      className={`min-h-[44px] px-3 text-sm font-medium ${
-                        a.result === "sent"
-                          ? "bg-green-600 text-white"
-                          : a.result === "topped_out"
-                            ? "bg-amber-600 text-white"
-                            : "bg-red-600 text-white"
-                      }`}
-                      title="Tap to switch Sent ⇄ Fell"
-                    >
-                      {attemptLabel(a.result)}
-                    </button>
-                    <button
-                      onClick={() => removeAttempt(rIdx, aIdx)}
-                      aria-label={`Remove attempt ${aIdx + 1}`}
-                      className="min-h-[44px] border-l border-black/20 bg-muted px-2.5 text-sm text-muted-foreground hover:text-foreground"
-                    >
-                      ✕
-                    </button>
-                  </span>
-                ))}
+                {/* F39: il badge fa solo il giro dell'esito; il ✕ rimuove (con undo).
+                    A324: [ruolo L/2nd/TR] [esito] [✕] — il ruolo solo in corda. */}
+                {route.attempts.map((a, aIdx) => {
+                  const rope = onRope(route);
+                  const role = ropeRoleOf(a);
+                  const cycleHint = rope ? "Tap to cycle Sent → Fell → A0" : "Tap to switch Sent ⇄ Fell";
+                  const tryName = `${route.name.trim() || `Route ${rIdx + 1}`} try ${aIdx + 1}`;
+                  return (
+                    <span key={aIdx} className="inline-flex overflow-hidden rounded border border-border">
+                      {rope && (
+                        <button
+                          type="button"
+                          onClick={() => toggleRole(rIdx, aIdx)}
+                          aria-label={`${tryName}, who led: ${ropeRoleName(role)} — tap to change`}
+                          title="Who led: Lead → 2nd → TR"
+                          className={`min-h-[44px] min-w-[40px] border-r border-border px-2 text-xs font-medium ${
+                            role === "lead" ? "bg-muted text-muted-foreground" : "bg-info/15 text-info"
+                          }`}
+                        >
+                          {ropeRoleShort(role)}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => toggleAttempt(rIdx, aIdx)}
+                        aria-label={`${tryName}, result: ${attemptLabel(a)} — ${cycleHint.toLowerCase()}`}
+                        className={`min-h-[44px] px-3 text-sm font-medium ${attemptChipClass(a)}`}
+                        title={cycleHint}
+                      >
+                        {attemptResultLabel(a)}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeAttempt(rIdx, aIdx)}
+                        aria-label={`Remove attempt ${aIdx + 1}`}
+                        className="min-h-[44px] border-l border-border bg-muted px-2.5 text-sm text-muted-foreground hover:text-foreground"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  );
+                })}
 
                 <button
                   onClick={() => addAttempt(rIdx)}
@@ -437,12 +572,43 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       <button
-        onClick={handleSubmit}
+        onClick={() => void submit("save")}
         disabled={submitting}
-        className="w-full rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+        className="w-full min-h-[44px] rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
       >
         {submitting ? "Saving..." : submitLabel || (isEdit ? "Save Changes" : "Log Session")}
       </button>
+
+      {/* A324 (B-OUTDOOR-CRAG-PICKER point 4) — the crag name changed in edit
+          mode: rename this crag, or add the new one as another crag of the day. */}
+      <AlertDialog open={askCrag} onOpenChange={setAskCrag}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rename the crag or add another?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This session is logged at <span className="text-foreground">{originalSpot}</span>. Rename it to{" "}
+              <span className="text-foreground">{spotName.trim()}</span>, or keep {originalSpot} as it is and save
+              this form as another crag of the day.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="h-auto min-h-[44px]">Keep editing</AlertDialogCancel>
+            <AlertDialogAction
+              variant="outline"
+              className="h-auto min-h-[44px] whitespace-normal"
+              onClick={() => void submit("add")}
+            >
+              Add {spotName.trim()} as another crag
+            </AlertDialogAction>
+            <AlertDialogAction
+              className="h-auto min-h-[44px] whitespace-normal"
+              onClick={() => void submit("rename")}
+            >
+              Rename {originalSpot} to {spotName.trim()}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

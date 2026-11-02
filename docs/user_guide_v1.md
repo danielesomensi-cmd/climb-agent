@@ -940,8 +940,8 @@ In **Settings → Outdoor Spots**, add your regular crags with:
 ### Logging
 
 Start an **Outdoor Session** for a live, timed day (or use **Quick log** for a no-timer entry). As you climb, log each route with one tap:
-- **Sent** / **Fell / try** are the two primary buttons. On a clean **first-try send** you can tag it **Onsight** (no beta) or **Flash** (with beta). A send after more than one attempt is a **Redpoint** automatically.
-- **Projecting**: after a **Fell**, the panel stays on the **same route** — the next Sent/Fell logs another attempt on it (no need to re-enter grade or name). Tap **New route** to switch to a different climb; a **Sent** closes the project automatically.
+- **Sent** / **Fell / try** are the two primary buttons; on a rope a third one, **A0**, logs a try where you reached the top pulling on the quickdraws. Above them, on a rope, **Lead | 2nd | TR** says who was on the sharp end for the next try (see *Who led, and A0* below): on 2nd or TR the green **Sent** becomes a blue **Clean (2nd)** / **Clean (TR)**. On a clean **first-try send on lead** you can tag it **Onsight** (no beta) or **Flash** (with beta). A send on lead after more than one attempt is a **Redpoint** automatically.
+- **Projecting**: after a **Fell**, the panel stays on the **same route** — the next Sent/Fell logs another attempt on it (no need to re-enter grade or name). Tap **New route** to switch to a different climb; a **Sent** (on any role) or an **A0** closes the project automatically.
 - A **rest timer** runs between burns (with the suggested rest beside it). Each logged route shows how long ago your **last try** on it was — tap the card to expand a **per-try breakdown**: `✗ try 1 · rest — · climb 2:41`, `✓ try 2 · rest 14:20`, so you can read the rest and climb progression try after try. Rest is measured across the whole session — if you climb another route in between, that time isn't counted as rest for the next try.
 - Optionally tap **Start climb timer** before a burn to time the climb itself — that try then also shows its **climb time**. This is optional; skip it and the climb segment is simply omitted.
 
@@ -964,9 +964,17 @@ Each try can say **who was on the sharp end**: **Lead** (you led it — the defa
 - Your **hard days** don't change: a route at your hard grade loads the fingers on top-rope as much as on lead, so it still counts as a hard, finger-loading day for the plan.
 - Long routes: log **one route per pitch** ("Cancer – L1", "Cancer – L2", …), each with its own grade and role.
 
-**Editing a session keeps what the form doesn't show.** The day type, the conditions, the saved spot and the other details the edit form doesn't display stay as they were when you save an edit (before, an edit could silently drop them).
+**Where you set it.**
+- **During the session**, tap **Lead**, **2nd** or **TR** above the big buttons. The choice stays set for every try you log next, including the **+✓ / +✗** on a route's row, until you change it — on a multi-pitch climbed on alternate leads, switch it at each pitch. If the app reloads (on iPhone it can, in the background), it picks up from the role of the last try you logged, never silently back to Lead. The **A0** button and the selector don't appear on a boulder.
+- **In the log form** (and when you edit a session with the pencil), each try shows a small **L / 2nd / TR** tag before its result: tap the tag to change who led, tap the result to change it — **Sent → Fell → A0** on a rope, **Sent ⇄ Fell** on a boulder (a *Top w/ rests* becomes *Fell*, never *Sent*). On a rope a try on second or top-rope shows **Clean** in blue instead of the green **Sent**. A new try (**+**) takes the role of the route's last try. If you switch the session to **boulder**, the roles go and any A0 becomes a Fell.
+- Wherever your tries are shown (the day's card on Today and Week, Outdoor History), a clean try on second / top-rope is a **blue** dot or ✓ tagged *2nd* / *TR*, an A0 an **amber** one. In **Outdoor History** a route climbed only on second or top-rope reads **second clean** / **TR clean** (blue) and one climbed only in A0 reads **A0** (amber) — never *onsight*, *flash* or *sent*.
 
-**Multiple crags in one day:** if you climb at more than one crag on the same date (a multi-sector day), Today/Week shows both names joined ("Symplegades - Ourania") — each crag's routes are still logged and kept separate underneath, only the day's label is combined. Editing one crag of such a day never changes the others. For now *Edit* opens the crag logged last, and saving that form under a crag name not logged on that date is refused with an error rather than risk replacing another crag: this covers renaming a crag (on any day, for now), typing a day's second crag into the form that **Log outdoor** / **Quick log** open on the first one, and moving a session to a date that holds another crag. To add a second crag to today, use **Start Outdoor Session**. Deleting one crag of a multi-crag day from **Outdoor History** is refused as well, for now.
+**Editing a session keeps what the form doesn't show.** The day type, the conditions, the saved spot and the other details the edit form doesn't display stay as they were when you save an edit (before, an edit could silently drop them). Emptying the notes box does clear the notes.
+
+**Multiple crags in one day:** if you climb at more than one crag on the same date (a multi-sector day), Today/Week shows both names joined ("Symplegades - Ourania") — each crag's routes are still logged and kept separate underneath, only the day's label is combined. Editing one crag of such a day never changes the others. For now *Edit* opens the crag logged last.
+- **Renaming or adding a crag.** If you change the crag's name while editing a session, the app asks before saving: **Rename** *old* **to** *new* (the same session, under the new name) or **Add** *new* **as another crag** (the form is saved as a second crag of that day and the first one stays exactly as it was). This is also how you add a second crag to a day: **Log outdoor** (Today / Week) and **Quick log** (Outdoor History) open the day's crag that is already logged — type the other crag's name, check the routes in the form are the new crag's, and choose **Add**. *Add* refuses a crag that is already logged that day rather than replace it. **Start Outdoor Session** still works for a second crag today.
+- **Deleting one crag.** The trash icon in **Outdoor History** deletes only the crag of that row; on a multi-crag day the others stay.
+- Changing a session's **date** from the edit form isn't supported yet: delete it and log it again on the right day.
 
 ### Plan for the day (grades and rests)
 
@@ -995,13 +1003,13 @@ there, edit the session.
 
 ### Stats
 
-The Outdoor page shows: per-spot breakdown, grade histogram, and session history. Tap any session to expand the routes you climbed that day. The **Routes** list can be sorted by hardest grade or most recent, and collapses to the top 10 with a "Show all" toggle. Two charts track your **grade progression** (hardest send per month) and **monthly volume**.
+The Outdoor page shows: per-spot breakdown, grade histogram, and session history. Tap any session to expand the routes you climbed that day. Send %, top grade, the per-spot and per-session top grades and the grade progression count only sends on lead; a route climbed on top-rope first and led later counts as a redpoint. The **Routes** list can be sorted by hardest grade or most recent, and collapses to the top 10 with a "Show all" toggle. Two charts track your **grade progression** (hardest send per month) and **monthly volume**.
 
 ---
 
 ### Undoing a completed crag day
 
-**Undo completion** on a completed crag day asks first (*Mark as not done? Your routes stay logged.*) and then only un-ticks the day: the routes, tries and notes you logged stay. Tap **Log routes** to complete it again — the form opens with what you had logged. To delete a day's log for good, use the trash icon on the **Outdoor History** page.
+**Undo completion** on a completed crag day asks first (*Mark as not done? Your routes stay logged.*) and then only un-ticks the day: the routes, tries and notes you logged stay. Tap **Log routes** to complete it again — the form opens with what you had logged. To delete a day's log for good, use the trash icon on the **Outdoor History** page (one crag at a time).
 
 ### Topo & charts (your own route report)
 
