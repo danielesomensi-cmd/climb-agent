@@ -6,8 +6,11 @@ I/O is delegated to backend.engine.storage.
 from __future__ import annotations
 
 import copy
+import hashlib
+import json
 import logging
 import math
+import re
 from datetime import datetime
 from typing import Any, Dict, Iterable, List, Optional
 
@@ -21,6 +24,7 @@ from backend.engine.grade_evidence import (
 from backend.engine.outdoor_attempt import (
     RESULTS,
     ROPE_ROLES,
+    is_lead_send,
     normalize_entry_attempts,
     result_of,
     route_lead_sent,
@@ -551,8 +555,240 @@ def _history_for_names(user_id: Optional[str]) -> List[Dict[str, Any]]:
         return []
 
 
+# ---------------------------------------------------------------------------
+# B412: a second session at a crag already logged that day joins its log
+# ---------------------------------------------------------------------------
+#
+# A day holds one row per crag (B341: key date + spot_name), and writing a new
+# session used to upsert that row — so a morning and an afternoon at the same
+# crag, or a session reopened after closing it too early, kept only the last
+# session's routes. The new session is now folded into the crag's log: what a
+# single session lasting both would have saved. Keeping one row per crag keeps
+# every B401/B410 rule (pencil, bin, crag picker) as it is.
+#
+# The upsert was also what made a retried write harmless: the offline outbox
+# replays a POST whose response was lost, and replaying a merge would add the
+# routes twice. Every log written here records the fingerprint of each session
+# it holds in ``session_keys``; a write whose fingerprint is already there (or
+# that equals a stored log written before B412) is a replay and changes
+# nothing. The key is stored from the first write on, so a pencil edit between
+# the write and its replay cannot hide it (B412 review).
+
+SESSION_KEYS = "session_keys"
+
+# Not part of what the athlete logged: set by the server, or the replay record.
+_FINGERPRINT_IGNORED = {"log_version", "load_ref_grade", "load_score", SESSION_KEYS}
+
+# Entry keys the merge decides itself; any other key keeps the stored value
+# and is filled from the new session only when the log has none.
+_MERGE_OWNED = {
+    "date", "spot_name", "log_version", "load_ref_grade", "duration_minutes",
+    "discipline", "routes", "notes", "load_score", SESSION_KEYS,
+}
+
+_FIRST_GO_STYLES = {"onsight", "flash"}
+
+# The live logger names an unnamed route «route N» / «problem N», counting from
+# 1 in every session (live-route-logger.tsx): such a name says nothing about
+# which route it was, so it never folds two routes together (B412 review).
+_PLACEHOLDER_ROUTE_NAME = re.compile(r"^(route|problem) \d+$")
+
+
+def outdoor_session_fingerprint(entry: Dict[str, Any]) -> str:
+    """Stable short hash of what the athlete logged (server-set keys left out).
+
+    ``append_outdoor_session`` takes it before ``canonicalize_route_names``,
+    whose result depends on the other days' history (and on that read
+    succeeding): a replay must hash the same as the original write.
+    """
+    content = {k: v for k, v in entry.items() if k not in _FINGERPRINT_IGNORED}
+    raw = json.dumps(content, sort_keys=True, ensure_ascii=False, separators=(",", ":"), default=str)
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
+
+
+def _empty(value: Any) -> bool:
+    return value is None or value == "" or value == {} or value == []
+
+
+def _route_merge_key(route: Any) -> Optional[tuple]:
+    """Same route = same name (B362 identity) and same grade. Never for a
+    placeholder name, nor for a route without attempts (pre-validation logs:
+    it counts as one ascent only while its attempts list is empty)."""
+    if not isinstance(route, dict) or not route.get("attempts"):
+        return None
+    name = _route_key(route.get("name"))
+    grade = str(route.get("grade") or "").strip().casefold()
+    if not name or not grade or _PLACEHOLDER_ROUTE_NAME.match(name):
+        return None
+    return (name, grade)
+
+
+def _logged_at_bounds(route: Dict[str, Any]) -> Optional[tuple]:
+    stamps = [a.get("logged_at") for a in route.get("attempts") or [] if isinstance(a, dict)]
+    if not stamps or not all(stamps):
+        return None
+    return (min(str(t) for t in stamps), max(str(t) for t in stamps))
+
+
+def _closed_first_go(stored: Dict[str, Any], new: Dict[str, Any]) -> bool:
+    """The stored route was the day's first go and it went: one attempt, sent on
+    lead, with a style that allows a first go (none, onsight, flash). The new
+    session climbed it again — unless its own attempts are earlier (a session
+    synced late from the outbox), in which case the stored go was no first go.
+    """
+    attempts = stored.get("attempts") or []
+    if len(attempts) != 1 or not is_lead_send(attempts[0]):
+        return False
+    if stored.get("style") not in (None, *_FIRST_GO_STYLES):
+        return False
+    stored_at, new_at = _logged_at_bounds(stored), _logged_at_bounds(new)
+    return not (stored_at and new_at and new_at[0] < stored_at[0])
+
+
+def _fold_route(target: Dict[str, Any], route: Dict[str, Any]) -> None:
+    """Add ``route``'s attempts to ``target``, as one session would have.
+
+    Attempts keep arrival order, sorted by ``logged_at`` when every attempt has
+    one (a session synced late from the outbox can arrive second). The style
+    follows the live logger's rule (``live-route-logger.tsx`` addAttempt): more
+    than one attempt rules out onsight / flash, and a route sent on lead with
+    no style left is a redpoint. Route-level timing and discipline describe the
+    first burn (A227): the stored ones stay, filled only when missing.
+    """
+    attempts = list(target.get("attempts") or []) + copy.deepcopy(list(route.get("attempts") or []))
+    if attempts and all(isinstance(a, dict) and a.get("logged_at") for a in attempts):
+        attempts.sort(key=lambda a: str(a["logged_at"]))
+    target["attempts"] = attempts
+
+    styles = [
+        s for s in (target.get("style"), route.get("style"))
+        if s and not (len(attempts) > 1 and s in _FIRST_GO_STYLES)
+    ]
+    style = styles[0] if styles else None
+    if style is None and route_lead_sent({"attempts": attempts}):
+        style = "redpoint"
+    if style:
+        target["style"] = style
+    else:
+        target.pop("style", None)
+
+    for key in ("discipline", "rest_seconds", "climb_seconds"):
+        if _empty(target.get(key)) and not _empty(route.get(key)):
+            target[key] = route[key]
+
+
+def _merge_routes(stored: List[Any], new: List[Any]) -> List[Any]:
+    """The stored routes, then the new ones.
+
+    A new route already in the stored log (same name and grade, see
+    :func:`_route_merge_key`) adds its attempts to it — the morning's fall and
+    the afternoon's send are one redpoint, not a fall and a flash. Except when
+    the stored route was a first go that went (:func:`_closed_first_go`): that
+    onsight / flash stays as it is — it is A292 grade evidence, which needs a
+    single attempt — and the new climb of it is listed apart as a ``repeat``.
+    New routes are never folded into each other: a session's own list stays.
+    """
+    merged = copy.deepcopy(list(stored or []))
+    index: Dict[tuple, int] = {}
+    for i, route in enumerate(merged):
+        key = _route_merge_key(route)
+        if key is not None and key not in index:
+            index[key] = i
+    for route in new or []:
+        key = _route_merge_key(route)
+        target = merged[index[key]] if key is not None and key in index else None
+        if target is None:
+            merged.append(copy.deepcopy(route))
+        elif _closed_first_go(target, route):
+            repeat = copy.deepcopy(route)
+            repeat["style"] = "repeat"
+            merged.append(repeat)
+        else:
+            _fold_route(target, route)
+    return merged
+
+
+def merge_outdoor_sessions(
+    stored: Dict[str, Any], new: Dict[str, Any], new_key: Optional[str] = None
+) -> Optional[Dict[str, Any]]:
+    """The crag's log with ``new`` folded in, or None when ``new`` is a replay.
+
+    ``new_key`` is ``new``'s fingerprint as :func:`append_outdoor_session`
+    takes it (before the route names are canonicalised); default: computed
+    here. ``new`` is a replay when ``new_key`` is in the stored
+    ``session_keys``, or when ``new`` equals the stored log (a log written
+    before B412 has no keys).
+
+    Folding: routes as in :func:`_merge_routes`; durations add up; notes are
+    joined (a blank line between them); two disciplines make ``both``; the
+    stored ``load_ref_grade`` stays (B394: a log keeps the max it was first
+    stamped with); every other key keeps the stored value and is filled from
+    ``new`` only when the log has none (``day_type``, ``conditions``…).
+    """
+    if new_key is None:
+        new_key = outdoor_session_fingerprint(new)
+    stored_key = outdoor_session_fingerprint(stored)
+    keys = list(stored.get(SESSION_KEYS) or [])
+    if new_key in keys or stored_key == outdoor_session_fingerprint(new):
+        return None
+
+    merged = copy.deepcopy(stored)
+    for key, value in new.items():
+        if key in _MERGE_OWNED or _empty(value):
+            continue
+        if _empty(merged.get(key)):
+            merged[key] = copy.deepcopy(value)
+
+    if new.get("log_version"):
+        merged["log_version"] = new["log_version"]
+    if _empty(merged.get("load_ref_grade")) and new.get("load_ref_grade"):
+        merged["load_ref_grade"] = new["load_ref_grade"]
+
+    merged["duration_minutes"] = int(stored.get("duration_minutes") or 0) + int(new.get("duration_minutes") or 0)
+
+    if new.get("discipline") and new.get("discipline") != stored.get("discipline"):
+        merged["discipline"] = "both" if stored.get("discipline") else new["discipline"]
+
+    old_notes = str(stored.get("notes") or "").strip()
+    new_notes = str(new.get("notes") or "").strip()
+    if new_notes and new_notes != old_notes:
+        merged["notes"] = f"{old_notes}\n\n{new_notes}" if old_notes else new_notes
+
+    merged["routes"] = _merge_routes(stored.get("routes") or [], new.get("routes") or [])
+    merged.pop("load_score", None)
+    merged[SESSION_KEYS] = (keys or [stored_key]) + [new_key]
+    return merged
+
+
+def is_merged_outdoor_log(entry: Dict[str, Any]) -> bool:
+    """True when the log holds more than one session (B412)."""
+    return len((entry or {}).get(SESSION_KEYS) or []) > 1
+
+
+def _logged_crag(user_id: Optional[str], date: str, spot_name: str) -> Optional[Dict[str, Any]]:
+    """The row a write of (date, spot_name) would overwrite, or None.
+
+    Matched on the exact ``spot_name``, like the Supabase unique key and the
+    file-storage dedup. A failed read raises OSError — the write then fails
+    (HTTP 500, which the outbox retries) instead of maybe overwriting the
+    crag's routes.
+    """
+    try:
+        rows = outdoor_sessions_on(user_id, date)
+    except Exception as exc:  # storage errors are not all OSError
+        raise OSError(f"Could not read the outdoor sessions of {date}: {exc}") from exc
+    return next((r for r in rows if r.get("spot_name", "") == spot_name), None)
+
+
 def append_outdoor_session(entry: Dict[str, Any], user_id: Optional[str] = None) -> str:
-    """Validate and append an outdoor session entry to the yearly JSONL log.
+    """Validate and save an outdoor session entry.
+
+    B412: when the crag is already logged that date, the session is folded into
+    that log (:func:`merge_outdoor_sessions`) instead of replacing it, and a
+    replayed write changes nothing. Every log written here carries the
+    fingerprints of its sessions (``session_keys``). ``entry`` is updated in
+    place to what was saved — the crag's whole log — so the caller's plan sync
+    and load use it.
 
     Returns the path of the log file written to.
     Raises ValueError if validation fails.
@@ -562,7 +798,27 @@ def append_outdoor_session(entry: Dict[str, Any], user_id: Optional[str] = None)
     if errors:
         raise ValueError(f"Invalid outdoor session entry: {'; '.join(errors)}")
 
+    session_key = outdoor_session_fingerprint(entry)  # B412: before the names move
     canonicalize_route_names(entry, _history_for_names(user_id))
+
+    stored = _logged_crag(user_id, str(entry.get("date") or ""), str(entry.get("spot_name") or ""))
+    if stored is None:
+        entry[SESSION_KEYS] = [session_key]
+    else:
+        merged = merge_outdoor_sessions(stored, entry, session_key)
+        if merged is None:
+            logger.info(
+                "B412: outdoor %s %r already holds this session — replay, nothing added",
+                entry.get("date"), entry.get("spot_name"),
+            )
+            merged = copy.deepcopy(stored)
+        else:
+            logger.info(
+                "B412: outdoor %s %r — session folded into the crag's log (%d routes)",
+                entry.get("date"), entry.get("spot_name"), len(merged.get("routes") or []),
+            )
+        entry.clear()
+        entry.update(merged)
     return storage.append_outdoor_log_line(user_id, entry)
 
 

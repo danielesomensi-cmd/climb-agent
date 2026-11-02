@@ -149,6 +149,20 @@ def test_outdoor_saved_the_day_after_stays_blank():
     assert r["ora_inizio"] == "" and r["ora_fine"] == ""
 
 
+def test_outdoor_log_holding_two_sessions_stays_blank():
+    # B412: morning + afternoon at the same crag are one row whose duration is
+    # the sum and whose created_at is the morning's save — no clock window.
+    merged = [dict(OUTDOOR_DETAIL_ROWS[0], entry={
+        "date": "2026-07-19", "duration_minutes": 493, "session_keys": ["a", "b"]})]
+    r = _outdoor_rows(merged)["2026-07-19"]
+    assert r["orari_fonte"] == "manuale"
+    assert r["ora_inizio"] == "" and r["ora_fine"] == ""
+    # One session (one key) still gets the estimate.
+    single = [dict(OUTDOOR_DETAIL_ROWS[0], entry={
+        "date": "2026-07-19", "duration_minutes": 493, "session_keys": ["a"]})]
+    assert _outdoor_rows(single)["2026-07-19"]["orari_fonte"] == "salvataggio_stimato"
+
+
 def test_outdoor_without_a_detail_row_stays_blank():
     r = _outdoor_rows(OUTDOOR_DETAIL_ROWS)["2026-07-21"]
     assert r["orari_fonte"] == "manuale"

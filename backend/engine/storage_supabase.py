@@ -394,8 +394,9 @@ def append_outdoor_log_line(user_id: Optional[str], entry: Dict[str, Any]) -> st
     # (entry->>'spot_name'), never sent in the payload. Before B341 it was
     # (user_id, session_date) alone, which meant a second crag finished the
     # same day silently overwrote the first one's log via this same upsert.
-    # Re-finishing the *same* crag on the *same* day still idempotently
-    # UPDATEs that one row.
+    # Writing the *same* crag on the *same* day UPDATEs that one row: since
+    # B412 the caller (outdoor_log.append_outdoor_session) has already folded
+    # the new session into the stored one, so the row it overwrites is kept.
     result = _sb().table("outdoor_logs").upsert({
         "user_id": uid,
         "session_date": session_date,

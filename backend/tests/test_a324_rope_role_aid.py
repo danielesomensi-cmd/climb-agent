@@ -715,6 +715,8 @@ class TestApi:
         body = self._body(_isatis_day())
         assert self.client.post("/api/outdoor/log", json=body).status_code == 200
         stored = self._stored("2026-10-17")
+        # B412: every log written records its session's fingerprint.
+        assert len(stored.pop("session_keys")) == 1
         assert stored == {**body, "log_version": "outdoor.v2", "load_ref_grade": "8a+"}
 
     def test_explicit_lead_is_stored_as_absent(self):
