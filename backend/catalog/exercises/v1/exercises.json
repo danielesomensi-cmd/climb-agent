@@ -2570,7 +2570,7 @@
     {
       "id": "four_by_four_bouldering",
       "name": "4x4 Bouldering (Power-Endurance)",
-      "category": "main_strength",
+      "category": "power_endurance",
       "time_min": 40,
       "role": [
         "main"
@@ -2631,7 +2631,7 @@
     {
       "id": "linked_boulders",
       "name": "Linked Boulders (No Pause)",
-      "category": "main_strength",
+      "category": "power_endurance",
       "time_min": 35,
       "role": [
         "main"
@@ -2687,7 +2687,7 @@
     {
       "id": "route_intervals",
       "name": "Route Intervals (Timed Rest)",
-      "category": "main_strength",
+      "category": "power_endurance",
       "time_min": 35,
       "role": [
         "main"
@@ -2708,11 +2708,11 @@
       "contraindications": [],
       "prescription_defaults": {
         "sets": 4,
-        "reps": null,
-        "work_seconds": 60,
+        "reps": 1,
+        "work_seconds": null,
         "rest_between_reps_seconds": null,
-        "rest_between_sets_seconds": 60,
-        "notes": "Climb route sections with timed rest. Grade 1 below your PE anchor (your onsight; 3 half grades below your redpoint only if you have no onsight). Focus sustained effort.",
+        "rest_between_sets_seconds": 180,
+        "notes": "1 rep = one full ascent of the same route (lead or top-rope; an auto-belay is ideal). Tap done when you are back on the ground. The 3:00 rest is the 1:1 default for a 2-3 min ascent: rest about as long as you climbed, never more than double. Grade 1 below your PE anchor (your onsight; 3 half grades below your redpoint only if you have no onsight). Stop when you can no longer complete the route; if you complete every set easily, go one grade harder next time.",
         "grade_ref": "lead_pe_anchor",
         "grade_offset": -1
       },

@@ -89,6 +89,12 @@ B405 changed 2 resolver keys (raw diff against origin/main @ 98d0f84):
 drill's ``suggested_grade`` 7B → 7A and ``grade_anchor_from`` lead_max_rp →
 lead_max_os (the PE anchor is the onsight now, never RP − 3 half grades when
 there is one). Same ids, same order, same prescriptions; pools unchanged.
+
+C283 changed 3 resolver keys (raw diff against origin/main @ bbe77a1, ladder
+stage off as in the test): ``power_endurance_gym`` 10-07 × the 3 profiles —
+``route_intervals`` is one ascent per set (``reps`` 1, ``work_seconds`` null,
+``rest_between_sets_seconds`` 60 → 180) and ``category`` main_strength →
+power_endurance. Same ids, same order; pools and ad-hoc unchanged.
 """
 
 from __future__ import annotations

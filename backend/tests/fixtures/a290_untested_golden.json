@@ -154,7 +154,7 @@
   ]
  },
  "no_tests_onboarding_baselines|2026-10-22|power_endurance_gym": {
-  "digest": "6497d7600d50f0a60bbf93b98eed4a9cffa1c883f80367597e0c14e98e2b7658",
+  "digest": "95f5db7facd8669a43257cea998794a125e11c0952b91290ff77248a97ef589b",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
@@ -348,7 +348,7 @@
   ]
  },
  "stale_tests|2026-10-22|power_endurance_gym": {
-  "digest": "4a5929572f5610c714faf03b0b177063220c80bbbf12384bdc2cc9ec6ddbab75",
+  "digest": "13544d608e17969c9c84bcaa1329138f3833b05d84fc7272fdb9c815a6e659fe",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",

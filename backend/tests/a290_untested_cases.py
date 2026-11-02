@@ -84,6 +84,12 @@ onsight"; seven texts of the four ``lead_pe_anchor`` exercises). The two
 output (both week_plan modes) against origin/main @ a6111df with the same text
 substitutions applied: zero other differences.
 
+C283 changed the 2 ``power_endurance_gym`` digests (10-22): ``route_intervals``
+is now one ascent per set (``reps`` 1, ``work_seconds`` null, 180" rest instead
+of 60" + 60"), with a new note and ``category`` ``power_endurance``. Raw
+resolver output diffed against origin/main @ bbe77a1 (both week_plan modes):
+same ids, same order, zero other differences.
+
 Pure data + one function, importable by the generator without pytest.
 """
 

@@ -644,7 +644,7 @@
    ]
   },
   "advanced|2026-10-07|power_endurance_gym": {
-   "digest": "0f58382dc34fe82443328f7096d252443f589311cb3eb59842b0925c32c8a149",
+   "digest": "a3f68fc0cdc2c6b4f4c09d99e36730cbb14992f6ca4d9d31be470881001d68ca",
    "exercise_ids": [
     "active_hip_mobility",
     "dynamic_mobility_flow",
@@ -1661,7 +1661,7 @@
    ]
   },
   "intermediate|2026-10-07|power_endurance_gym": {
-   "digest": "5de2f64b4bb8e66f1525b5189c3313c27c5d9af7f0ec751b155d12901be975a1",
+   "digest": "21c8703c4496d5e2ea71769f72ef16e6de9bd0632f8ff4c4da15f085b042cf8f",
    "exercise_ids": [
     "active_hip_mobility",
     "dynamic_mobility_flow",
@@ -2678,7 +2678,7 @@
    ]
   },
   "untested|2026-10-07|power_endurance_gym": {
-   "digest": "04156aed2cf94d8213175e8f4fd5a95b9debfbb8882383cad89b3eaff91f52e5",
+   "digest": "a5e12179e835b6679b38a1410da05dfd0795326feface0f2b9ad4a3ce2197f5e",
    "exercise_ids": [
     "active_hip_mobility",
     "dynamic_mobility_flow",
