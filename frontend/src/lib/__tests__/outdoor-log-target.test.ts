@@ -44,6 +44,20 @@ describe("resolveOutdoorLogTarget", () => {
     expect(r.kind === "edit" && r.session).toEqual({ date: "2026-07-20" });
   });
 
+  it("B410: the edit target carries every crag of the day", async () => {
+    const a = { date: "2026-08-25", spot_name: "Symplegades" };
+    const b = { date: "2026-08-25", spot_name: "Snake Valley" };
+    getOutdoorLogByDate.mockResolvedValue({ session: b, sessions: [a, b] });
+    const r = await mod.resolveOutdoorLogTarget("2026-08-25");
+    expect(r.kind === "edit" && r.sessions).toEqual([a, b]);
+  });
+
+  it("B410: without `sessions` (older server) the one session is the list", async () => {
+    getOutdoorLogByDate.mockResolvedValue({ session: { date: "2026-07-20" } });
+    const r = await mod.resolveOutdoorLogTarget("2026-07-20");
+    expect(r.kind === "edit" && r.sessions).toEqual([{ date: "2026-07-20" }]);
+  });
+
   it("returns new ONLY on a genuine 404", async () => {
     getOutdoorLogByDate.mockRejectedValue(new ApiError(404, "No outdoor session"));
 

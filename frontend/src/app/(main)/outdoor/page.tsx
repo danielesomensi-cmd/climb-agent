@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { useUserState } from "@/lib/hooks/use-state";
 import { fetchOutdoorSpots, useOutdoorSessions, useOutdoorStats, useQuaderno } from "@/lib/hooks/queries/use-outdoor";
 import { resolveOutdoorLogTarget } from "@/lib/outdoor-log-target";
+import { OutdoorCragPicker } from "@/components/training/outdoor-crag-picker";
 import { toISODateLocal } from "@/lib/dates";
 import { toast } from "sonner";
 import { invalidateOutdoor } from "@/lib/invalidation";
@@ -60,6 +61,10 @@ export default function OutdoorPage() {
   const [showLogDialog, setShowLogDialog] = useState(false);
   const [logSpots, setLogSpots] = useState<OutdoorSpot[]>([]);
   const [editData, setEditData] = useState<OutdoorSession | null>(null);
+  // B410: today's crags when «Quick log» finds a log — the dialog asks which
+  // crag to edit, or opens a new log for another crag (blank crag name).
+  const [daySessions, setDaySessions] = useState<OutdoorSession[]>([]);
+  const [addingCrag, setAddingCrag] = useState(false);
   const [ctaLoading, setCtaLoading] = useState(false);
   // B401 / A324: a day can hold one session per crag (B341), so the trash,
   // its confirmation and the expanded rows are per (date, crag), not per date.
@@ -86,9 +91,13 @@ export default function OutdoorPage() {
         return;
       }
       setLogSpots(target.spots);
+      setAddingCrag(false);
       if (target.kind === "edit") {
-        setEditData(target.session);
+        // B410: edit which crag, or add another one? Asked in the dialog.
+        setDaySessions(target.sessions);
+        setEditData(null);
       } else {
+        setDaySessions([]);
         setEditData(null);
         if (target.spotsFailed) {
           toast("Couldn't load your spots — you can still log the session.", { duration: 6000 });
@@ -103,6 +112,8 @@ export default function OutdoorPage() {
   const handleLogSuccess = useCallback(() => {
     setShowLogDialog(false);
     setEditData(null);
+    setDaySessions([]);
+    setAddingCrag(false);
     reloadData();
   }, [reloadData]);
 
@@ -652,24 +663,35 @@ export default function OutdoorPage() {
       </main>
 
       {/* Log / Edit dialog */}
-      <Dialog open={showLogDialog} onOpenChange={(v) => { if (!v) { setShowLogDialog(false); setEditData(null); } }}>
+      <Dialog open={showLogDialog} onOpenChange={(v) => { if (!v) { setShowLogDialog(false); setEditData(null); setDaySessions([]); setAddingCrag(false); } }}>
         <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editData ? "Edit Today's Session" : "Log Outdoor Session"}</DialogTitle>
-            {editData && (
-              <p className="text-xs text-warning mt-1">
-                You already have a session logged today — editing it. Type another crag&apos;s name to add it as a second crag.
-              </p>
-            )}
-          </DialogHeader>
-          <OutdoorLogForm
-            spots={logSpots}
-            defaultDate={today}
-            defaultSpotName={outdoorSpots[0]?.name}
-            defaultDiscipline={outdoorSpots[0]?.discipline}
-            initialData={editData ?? undefined}
-            onSuccess={handleLogSuccess}
-          />
+          {/* B410: a day with a log asks first — edit which crag, or add another. */}
+          {(() => {
+            const picking = !editData && !addingCrag && daySessions.length > 0;
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle>{picking ? "Which crag?" : editData ? "Edit Today's Session" : "Log Outdoor Session"}</DialogTitle>
+                </DialogHeader>
+                {picking ? (
+                  <OutdoorCragPicker
+                    sessions={daySessions}
+                    onEdit={setEditData}
+                    onAdd={() => setAddingCrag(true)}
+                  />
+                ) : (
+                  <OutdoorLogForm
+                    spots={logSpots}
+                    defaultDate={today}
+                    defaultSpotName={addingCrag ? undefined : outdoorSpots[0]?.name}
+                    defaultDiscipline={outdoorSpots[0]?.discipline}
+                    initialData={editData ?? undefined}
+                    onSuccess={handleLogSuccess}
+                  />
+                )}
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </>

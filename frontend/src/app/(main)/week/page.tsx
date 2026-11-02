@@ -48,6 +48,8 @@ import { siblingsOf, writeWeekCache, type WeekSiblings } from "@/lib/week-cache"
 import { alertMessagesFor, describeActionAlerts } from "@/lib/week-alerts";
 import { buildDialogFeedbackItems, extractFeedbackExercises, sessionEstimatedMinutes } from "@/lib/feedback-items";
 import { resolveOutdoorLogTarget } from "@/lib/outdoor-log-target";
+import { needsCragPicker, sessionsOfDay } from "@/lib/outdoor-crag-choice";
+import { OutdoorCragPicker } from "@/components/training/outdoor-crag-picker";
 import { toast } from "sonner";
 import { scrollBehavior, useTabReselect, weekReselectAction } from "@/lib/tab-reselect";
 const OutdoorLogForm = dynamic(() => import("@/components/training/OutdoorLogForm"), { ssr: false });
@@ -693,6 +695,7 @@ export default function WeekPage() {
 
   /** Open outdoor log form — check for existing session first (B186) */
   async function handleLogOutdoor(date: string) {
+    setOutdoorAddingCrag(false);
     // A245 C-5 (F37): only a real 404 means "no log yet" — see
     // lib/outdoor-log-target.ts for why the old bare catch was wrong.
     // B398 (O5/O11): spots from the React Query cache, read in parallel with the log.
@@ -703,7 +706,9 @@ export default function WeekPage() {
     }
     setOutdoorSpots(target.spots);
     if (target.kind === "edit") {
-      setOutdoorEditData(target.session);
+      // B410: the day already has a log — edit which crag, or add another one?
+      setOutdoorEditSessions(target.sessions);
+      setOutdoorEditData(needsCragPicker(target.sessions, "log") ? null : target.session);
       setOutdoorEditDate(date);
       return;
     }
@@ -748,6 +753,7 @@ export default function WeekPage() {
       setError(e instanceof Error ? e.message : "Failed to mark outdoor as done");
     } finally {
       setOutdoorLogDate(null);
+      setOutdoorAddingCrag(false);
     }
   }
 
@@ -814,10 +820,19 @@ export default function WeekPage() {
   /** Edit outdoor session — fetch entry, open form in edit mode */
   const [weekPickerOpen, setWeekPickerOpen] = useState(false);
   const [outdoorEditData, setOutdoorEditData] = useState<OutdoorSession | null>(null);
+  // B410: every crag of the day being opened; with more than one (or from
+  // «Log routes») the dialog asks which crag before showing the form.
+  const [outdoorEditSessions, setOutdoorEditSessions] = useState<OutdoorSession[]>([]);
+  // B410: the new-log form opened by «Add another crag» starts with no crag name
+  // (the planned one is usually the crag already logged).
+  const [outdoorAddingCrag, setOutdoorAddingCrag] = useState(false);
   async function handleEditOutdoor(date: string) {
     try {
       const data = await getOutdoorLogByDate(date);
-      setOutdoorEditData(data.session);
+      // B410: a multi-crag day asks which crag (it opened the last one only).
+      const sessions = sessionsOfDay(data);
+      setOutdoorEditSessions(sessions);
+      setOutdoorEditData(needsCragPicker(sessions, "edit") ? null : data.session);
       setOutdoorEditDate(date);
       // B398 (O11): cached spots — a GET only when the cache is cold or stale.
       fetchOutdoorSpots(qc).then((d) => setOutdoorSpots(d.spots)).catch((err) => { console.error("Failed to load outdoor spots:", err); });
@@ -829,6 +844,7 @@ export default function WeekPage() {
   async function handleEditOutdoorSuccess() {
     setOutdoorEditDate(null);
     setOutdoorEditData(null);
+    setOutdoorEditSessions([]);
     // B398 (O1): refresh the outdoor routes map. `refetchAll()` reloaded state,
     // the week and every resolved session but never the outdoor sessions the
     // routes are read from, so the card kept the routes from before the edit.
@@ -1207,7 +1223,7 @@ export default function WeekPage() {
       />
 
       {/* Outdoor log dialog */}
-      <Dialog open={outdoorLogDate !== null} onOpenChange={(v) => !v && setOutdoorLogDate(null)}>
+      <Dialog open={outdoorLogDate !== null} onOpenChange={(v) => { if (!v) { setOutdoorLogDate(null); setOutdoorAddingCrag(false); } }}>
         <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Log Outdoor Session</DialogTitle>
@@ -1218,7 +1234,7 @@ export default function WeekPage() {
               <OutdoorLogForm
                 spots={outdoorSpots}
                 defaultDate={outdoorLogDate}
-                defaultSpotName={logDay?.outdoor_spot_name}
+                defaultSpotName={outdoorAddingCrag ? undefined : logDay?.outdoor_spot_name}
                 defaultDiscipline={logDay?.outdoor_discipline}
                 defaultGrade={currentGrade ?? undefined}
                 onSuccess={handleOutdoorLogSuccess}
@@ -1229,11 +1245,25 @@ export default function WeekPage() {
       </Dialog>
 
       {/* Outdoor edit dialog */}
-      <Dialog open={outdoorEditDate !== null} onOpenChange={(v) => { if (!v) { setOutdoorEditDate(null); setOutdoorEditData(null); } }}>
+      <Dialog open={outdoorEditDate !== null} onOpenChange={(v) => { if (!v) { setOutdoorEditDate(null); setOutdoorEditData(null); setOutdoorEditSessions([]); } }}>
         <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Outdoor Session</DialogTitle>
+            <DialogTitle>{outdoorEditData || outdoorEditSessions.length === 0 ? "Edit Outdoor Session" : "Which crag?"}</DialogTitle>
           </DialogHeader>
+          {/* B410: pick the crag first when the day has several, or from «Log routes». */}
+          {!outdoorEditData && outdoorEditSessions.length > 0 && (
+            <OutdoorCragPicker
+              sessions={outdoorEditSessions}
+              onEdit={setOutdoorEditData}
+              onAdd={() => {
+                const d = outdoorEditDate;
+                setOutdoorEditDate(null);
+                setOutdoorEditSessions([]);
+                setOutdoorAddingCrag(true);
+                setOutdoorLogDate(d);
+              }}
+            />
+          )}
           {outdoorEditData && (
             <OutdoorLogForm
               spots={outdoorSpots}

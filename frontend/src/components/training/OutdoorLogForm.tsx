@@ -362,6 +362,17 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
             return;
           }
         }
+        if (mode !== "add") {
+          // B410: a new log on a day that already has this crag would replace
+          // it (POST upserts on date + crag), routes and all — e.g. «Add
+          // another crag» typed with the logged crag's name, or a date changed
+          // in the new-log form. When the check cannot run (offline), the log
+          // goes as before: the outbox keeps offline logging possible.
+          if ((await cragLoggedOn(date, spotName)) === true) {
+            setError(`${spotName.trim()} is already logged on ${date} — nothing saved. Open that crag to edit it.`);
+            return;
+          }
+        }
         planSynced = await postNewLog(mode === "add" ? buildAddPayload() : buildPayload(false));
       }
       onSuccess?.({ planSynced });
@@ -380,12 +391,21 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
       {/* Date */}
       <div>
         <label className="block text-sm text-muted-foreground mb-1">Date</label>
+        {/* B410: an edit stays on its day. Moving it replaced a same-name crag
+            on the new date and left the old entry behind (B401 review). */}
         <input
           type="date"
           value={date}
           onChange={e => setDate(e.target.value)}
-          className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+          disabled={isEdit}
+          aria-describedby={isEdit ? "outdoor-date-locked" : undefined}
+          className="w-full rounded-md border bg-background px-3 py-2 text-sm disabled:opacity-70"
         />
+        {isEdit && (
+          <p id="outdoor-date-locked" className="mt-1 text-xs text-muted-foreground">
+            The date can&apos;t change here. To move this session, delete it and log it again on the right day.
+          </p>
+        )}
       </div>
 
       {/* Spot */}

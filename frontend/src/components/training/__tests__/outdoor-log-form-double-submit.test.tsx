@@ -17,10 +17,23 @@ import { render, screen, cleanup, act, waitFor } from "@testing-library/react";
 const postOutdoorLog = vi.fn();
 const putOutdoorLog = vi.fn();
 
-vi.mock("@/lib/api", () => ({
-  postOutdoorLog: (...a: unknown[]) => postOutdoorLog(...a),
-  putOutdoorLog: (...a: unknown[]) => putOutdoorLog(...a),
-}));
+// B410: before a NEW log the form reads the day's crags (a POST on a crag
+// already logged would replace it); here the day has none (404).
+vi.mock("@/lib/api", () => {
+  class ApiError extends Error {
+    status: number;
+    constructor(status: number, message: string) {
+      super(message);
+      this.status = status;
+    }
+  }
+  return {
+    ApiError,
+    getOutdoorLogByDate: () => Promise.reject(new ApiError(404, "No outdoor session")),
+    postOutdoorLog: (...a: unknown[]) => postOutdoorLog(...a),
+    putOutdoorLog: (...a: unknown[]) => putOutdoorLog(...a),
+  };
+});
 vi.mock("sonner", () => ({ toast: vi.fn() }));
 vi.mock("@/lib/outbox", () => ({ enqueue: vi.fn(() => false) }));
 

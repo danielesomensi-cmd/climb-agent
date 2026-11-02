@@ -18,7 +18,7 @@ import type { OutdoorSession, OutdoorSpot } from "@/lib/types";
  * handler — the kind of duplication that eventually diverges (see F35).
  */
 export type OutdoorLogTarget =
-  | { kind: "edit"; session: OutdoorSession; spots: OutdoorSpot[] }
+  | { kind: "edit"; session: OutdoorSession; sessions: OutdoorSession[]; spots: OutdoorSpot[] }
   | { kind: "new"; spots: OutdoorSpot[]; spotsFailed: boolean }
   | { kind: "unavailable"; message: string };
 
@@ -48,7 +48,9 @@ export async function resolveOutdoorLogTarget(
   }
 
   if (logResult.status === "fulfilled") {
-    return { kind: "edit", session: logResult.value.session, spots };
+    // B410: every crag of the day (B341), so the caller can ask which one.
+    const { session, sessions } = logResult.value;
+    return { kind: "edit", session, sessions: sessions?.length ? sessions : [session], spots };
   }
   const err = logResult.reason;
   if (err instanceof ApiError && err.status === 404) {
