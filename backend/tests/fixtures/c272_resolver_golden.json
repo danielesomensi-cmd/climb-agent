@@ -564,7 +564,7 @@
    ]
   },
   "advanced|2026-10-07|legs_maintenance_lunch": {
-   "digest": "2746f29c405bd94524c676873f561fb622e077410985bc770f91164513df5156",
+   "digest": "83b557005cfed04213d0959f2b226f6849d0f2cb3db8d6bc10a6efa4806f550e",
    "exercise_ids": [
     "general_pulse_raise",
     "copenhagen_plank",
@@ -1073,7 +1073,7 @@
    ]
   },
   "advanced|2026-10-21|legs_maintenance_lunch": {
-   "digest": "7616c1edc53e78b8867e9e4eebf89d3e2e517dfb5485aa582339ee12f5dd65da",
+   "digest": "657d9d15566bfa3819b4580f763ca476a639db126696276d42f556ed64ee5401",
    "exercise_ids": [
     "general_pulse_raise",
     "copenhagen_plank",
@@ -1581,7 +1581,7 @@
    ]
   },
   "intermediate|2026-10-07|legs_maintenance_lunch": {
-   "digest": "9468e1409eafb2a32a059bfb8a2c743e49da34560efefa4122f769e13c4aa445",
+   "digest": "0e63ba9ae76e4f222f05864155a2d7e4fd41dbe025083b498011707535923855",
    "exercise_ids": [
     "general_pulse_raise",
     "copenhagen_plank",
@@ -2090,7 +2090,7 @@
    ]
   },
   "intermediate|2026-10-21|legs_maintenance_lunch": {
-   "digest": "89c97254c8c52e7eb0fa4763b3afe0044efbbf676fe6bec1f97e47ebfa839d7d",
+   "digest": "b5e561d3129017ffcd660e4f9f9c3decc7793f38d309d9d58004ec6e012f289a",
    "exercise_ids": [
     "general_pulse_raise",
     "copenhagen_plank",
@@ -2598,7 +2598,7 @@
    ]
   },
   "untested|2026-10-07|legs_maintenance_lunch": {
-   "digest": "725901c2bf99e590d674819de1c87166528230b66dc6fa0aaa6764021217b609",
+   "digest": "8a2cf89a8778aff3c78198a4f5567eedc76764ad8533465fed7c60b1652f84fa",
    "exercise_ids": [
     "general_pulse_raise",
     "core_hollow_hold",
@@ -3107,7 +3107,7 @@
    ]
   },
   "untested|2026-10-21|legs_maintenance_lunch": {
-   "digest": "6a3ded957a4886c89f63a1cacd14f8e943055a1ca0a61fc8fff44993d1fcad6e",
+   "digest": "715f5acf0e6fb334779f8d12ab2885da560cefef21629ead0f669fec6c83f5da",
    "exercise_ids": [
     "general_pulse_raise",
     "core_hollow_hold",

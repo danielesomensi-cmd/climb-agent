@@ -128,8 +128,8 @@
             "sets": 3,
             "deload_sets": 2,
             "reps": 8,
-            "rest_between_sets_seconds": 90,
-            "notes": "3 x 8 per leg at RIR 1-2, rear foot on a bench, a dumbbell in each hand (load per dumbbell). Front knee tracks over the toes, 2-3 s down. If every set felt like RIR 3 or more, log it as easy and the load goes up."
+            "rest_between_sets_seconds": 60,
+            "notes": "3 x 8 per leg at RIR 1-2, rear foot on a bench, a dumbbell in each hand (load per dumbbell). Right leg, then left: each leg rests while the other works, so 60 s between sets is enough. Front knee tracks over the toes, 2-3 s down. If every set felt like RIR 3 or more, log it as easy and the load goes up."
           },
           "filters": {
             "role": [
@@ -188,7 +188,12 @@
       "required": false,
       "priority": 72,
       "module_role": "accessory",
-      "notes": "Second floor core exercise: hollow hold, the body tension of steep climbing. No hanging here either.",
+      "notes": "Second floor core exercise: hollow hold, the body tension of steep climbing; a tested athlete gets his rollout ladder level instead (else his hollow ladder). No hanging here either.",
+      "ladder_pin": {
+        "families": [
+          "rollout"
+        ]
+      },
       "selection": {
         "primary": {
           "exercise_id": "core_hollow_hold",

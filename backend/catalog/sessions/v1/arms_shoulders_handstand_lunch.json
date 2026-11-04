@@ -277,7 +277,12 @@
       "required": false,
       "priority": 72,
       "module_role": "accessory",
-      "notes": "Floor core, lateral chain: side plank on the forearm. No hanging, no front lever.",
+      "notes": "Floor core, lateral chain: side plank on the forearm; a tested athlete gets his lateral ladder level instead (Copenhagen). No hanging, no front lever.",
+      "ladder_pin": {
+        "families": [
+          "lateral"
+        ]
+      },
       "selection": {
         "primary": {
           "exercise_id": "side_plank",
@@ -296,9 +301,10 @@
               "core"
             ],
             "pattern": [
-              "anti_lateral_flexion"
+              "anti_lateral_flexion",
+              "anti_rotation"
             ],
-            "intensity_max": "medium"
+            "intensity_max": "high"
           }
         }
       }
@@ -308,7 +314,13 @@
       "required": false,
       "priority": 70,
       "module_role": "accessory",
-      "notes": "Floor core to close: hollow hold, the line the handstand needs. No hanging, no front lever.",
+      "notes": "Floor core to close: hollow hold, the line the handstand needs; a tested athlete gets his L-sit or rollout ladder level instead (else his hollow ladder). No hanging, no front lever.",
+      "ladder_pin": {
+        "families": [
+          "compression_floor",
+          "rollout"
+        ]
+      },
       "selection": {
         "primary": {
           "exercise_id": "core_hollow_hold",
@@ -327,7 +339,8 @@
               "core"
             ],
             "pattern": [
-              "anti_extension"
+              "anti_extension",
+              "compression"
             ],
             "intensity_max": "high"
           }

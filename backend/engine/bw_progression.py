@@ -1315,6 +1315,25 @@ def swap_plan(ctx: Optional[Mapping[str, Any]], exercise_id: str) -> Optional[Di
     if not hit:
         return None
     family, _lvl = hit
+    return _ladder_plan(ctx, family)
+
+
+def pin_plan(ctx: Optional[Mapping[str, Any]], family: str, *,
+             level_offset: int = 0) -> Optional[Dict[str, Any]]:
+    """B413 (D4): the plan of a ``ladder_pin`` block (a pinned floor-core
+    block of a lunch) on ``family``: the athlete's level (capped by R12)
+    shifted by ``level_offset`` (≤ 0, floor L0), then downwards. A hanging or
+    heavy-pull level is never offered (lunch guard, :func:`is_guarded_level`).
+    ``pin_level`` is the level the pin asks for (the only one exempt from the
+    exercise's phase affinity). None = family already used in the session, no
+    entry, or nothing left after the guard."""
+    if not ctx:
+        return None
+    return _ladder_plan(ctx, family, level_offset=min(0, int(level_offset or 0)), no_guarded=True)
+
+
+def _ladder_plan(ctx: Mapping[str, Any], family: str, *, level_offset: int = 0,
+                 no_guarded: bool = False) -> Optional[Dict[str, Any]]:
     if family in ctx["used_families"]:
         return None
     entry = ctx["entries"].get(family)
@@ -1329,9 +1348,13 @@ def swap_plan(ctx: Optional[Mapping[str, Any]], exercise_id: str) -> Optional[Di
         # (settings, promotion tap — or moved by feedback from there) is his
         # explicit choice and is honoured, or the loop dies on that family.
         start = min(start, auto_ceiling(fam, ctx["lower_back_zone"]))
-    order = list(range(start, -1, -1))
-    return {"family": family, "entry": eff, "fam": fam, "order": order,
-            "candidates": [_levels(fam)[i]["exercise_id"] for i in order]}
+    shifted = max(0, start + level_offset)
+    level_offset, start = shifted - start, shifted  # the shift that applied (floor L0)
+    order = [i for i in range(start, -1, -1) if not (no_guarded and is_guarded_level(fam, i))]
+    if not order:
+        return None
+    return {"family": family, "entry": eff, "fam": fam, "order": order, "pin_level": start,
+            "level_offset": level_offset, "candidates": [_levels(fam)[i]["exercise_id"] for i in order]}
 
 
 def stage_prescription(ctx: Mapping[str, Any], plan: Mapping[str, Any], level_idx: int,

@@ -105,6 +105,14 @@ n=1 re-entries lose the × 0.90: the max hang 7 s goes 93.5 → 104.0 total
 (+15.5 → +26.0, cap 93.5 → 104.0) on both dates and the pull caps go 98.0 →
 109.0 / 98.5 → 109.5 (the loads under them unchanged). Same ids, same order;
 the untested and intermediate profiles, pools and ad-hoc unchanged.
+
+B413 (step 5, D4) changed 6 resolver keys: ``legs_maintenance_lunch`` × the 3
+profiles × 2 dates, digest only — the Bulgarian split squat rest 90 → 60 s
+(the catalog change that keeps the lunch within 55' with the ladder core).
+Checked by running this golden on the step-5 tree with that one value set
+back to 90: every key identical, so the ``ladder_pin`` keys and the widened
+core filters change nothing with the ladder stage off. The ladder-on side is
+pinned by ``b413_lunch_golden_cases``.
 """
 
 from __future__ import annotations

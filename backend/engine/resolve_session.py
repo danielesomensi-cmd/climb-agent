@@ -1339,6 +1339,28 @@ def _resolve_inline_block(
             finger_device=_finger_dev, user_age=user_age, experience_years=experience_years,
         )
 
+    # B413 (D4): a pinned floor-core block of a lunch that declares
+    # `ladder_pin` follows the athlete's own ladder (tested athletes only; no
+    # entry in any of its families → the catalog pin, bit for bit). Inline
+    # blocks only, never a strict (C274) or a test (B261) pin.
+    _pin_ex_id = None
+    _pin_catalog_rx: Optional[Dict[str, Any]] = None
+    _ladder_pin = mod.get("ladder_pin")
+    if (bw_ctx and isinstance(_ladder_pin, dict) and selected_ex is not None
+            and chosen_by == "explicit_exercise_id" and primary.get("pin_strict") is not True
+            and not _is_test_exercise(selected_ex)):
+        _picked = _bw_ladder_pin_stage(
+            bw_ctx, _ladder_pin, selected_ex, exercises,
+            location=location, available_equipment=available_equipment,
+            role_req=role_req, domain_req=domain_req, pattern_req=pattern_req,
+            intensity_max=intensity_max_req, limitation_map=limitation_map,
+            finger_device=_finger_dev, user_age=user_age, experience_years=experience_years,
+        )
+        if _picked is not None:
+            _pin_ex_id = norm_str(get_ex_id(selected_ex))
+            selected_ex, _bw_plan, _bw_lvl = _picked
+            chosen_by = "ladder_pin"
+
     selected_list: List[Dict[str, Any]] = []
     if selected_ex:
         instance_counter += 1
@@ -1369,6 +1391,11 @@ def _resolve_inline_block(
         if _bw_plan is None:
             merged = _apply_deload_sets(merged, user_state=user_state, target_date=target_date)
         else:
+            if _pin_ex_id is not None:
+                # B413 (D4): the catalog dose of the pin (deload applied) —
+                # the floor of a seeded level on the same exercise.
+                _pin_catalog_rx = _apply_deload_sets(dict(merged), user_state=user_state,
+                                                     target_date=target_date)
             merged.pop("deload_sets", None)
 
         merged = _apply_load_override(
@@ -1380,6 +1407,9 @@ def _resolve_inline_block(
         if _bw_plan is not None:
             from backend.engine import bw_progression as _bwp
             _bw_audit = _bwp.stage_prescription(bw_ctx, _bw_plan, _bw_lvl, merged)
+            if _pin_ex_id is not None:
+                _ladder_pin_finish(merged, _bw_audit, _bw_plan, selected_ex,
+                                   pin_ex_id=_pin_ex_id, catalog_rx=_pin_catalog_rx or {})
 
         ex_attrs = selected_ex.get("attributes") or {}
         inst = {
@@ -1542,6 +1572,108 @@ def _bw_ladder_stage(
         if _bw_candidate_ok(cand, phase=bw_ctx.get("phase"), **filters):
             return cand, plan, lvl
     return selected_ex, None, None
+
+
+def _bw_ladder_pin_stage(
+    bw_ctx: Dict[str, Any],
+    ladder_pin: Dict[str, Any],
+    pinned_ex: Dict[str, Any],
+    exercises: List[Dict[str, Any]],
+    **filters: Any,
+) -> Optional[Tuple[Dict[str, Any], Dict[str, Any], int]]:
+    """B413 (D4): (exercise, ladder plan, level) of a ``ladder_pin`` block, or
+    None (the catalog pin stays, no ladder dose).
+
+    The families of ``ladder_pin.families`` are tried in order, then the
+    pinned exercise's own family. In each one: the athlete's level (capped by
+    R12) shifted by ``ladder_pin.level_offset`` (≤ 0, floor L0), then
+    downwards; never a hanging or heavy-pull level (``bw_progression.pin_plan``).
+    A level must pass every block filter (``_bw_candidate_ok``); only the level
+    the pin asks for is exempt from the exercise's phase affinity, and the
+    pinned exercise itself always passes. A family with no entry, or already
+    used by another block of the session, is skipped (one family per
+    session)."""
+    from backend.engine import bw_ladders as _bl
+    from backend.engine import bw_progression as _bwp
+
+    pinned = norm_str(get_ex_id(pinned_ex))
+    families = [str(f) for f in as_list(ladder_pin.get("families")) if f]
+    own = _bl.family_of(pinned, bw_ctx.get("date"))
+    if own and own[0] not in families:
+        families.append(own[0])
+    try:
+        offset = int(ladder_pin.get("level_offset") or 0)
+    except (TypeError, ValueError):
+        offset = 0
+    by_id = {norm_str(get_ex_id(e)): e for e in exercises}
+    for family in families:
+        plan = _bwp.pin_plan(bw_ctx, family, level_offset=offset)
+        if not plan:
+            continue
+        for lvl, cand_id in zip(plan["order"], plan["candidates"]):
+            if cand_id == pinned:
+                return pinned_ex, plan, lvl
+            cand = by_id.get(cand_id)
+            if cand is None:
+                continue
+            phase = None if lvl == plan["pin_level"] else bw_ctx.get("phase")
+            if _bw_candidate_ok(cand, phase=phase, **filters):
+                return cand, plan, lvl
+    return None
+
+
+def _ladder_pin_finish(merged: Dict[str, Any], audit: Dict[str, Any], plan: Dict[str, Any],
+                       selected_ex: Dict[str, Any], *, pin_ex_id: str,
+                       catalog_rx: Dict[str, Any]) -> None:
+    """B413 (D4): the two rules of a ``ladder_pin`` row after the ladder dose.
+
+    1. Pin floor — a SEEDED level (history / test) on the pinned exercise
+       itself never prescribes less than the catalog dose (sets and
+       reps-or-seconds, deload applied). A level moved by feedback or set by
+       hand (``MANUAL_SOURCES``) is the athlete's and wins.
+    2. Notes — a row the ladder moved (another exercise, or another dose)
+       carries the chosen exercise's own notes, never the catalog dose text
+       ("3 x 30 s hollow hold…"). The catalog row keeps its notes.
+
+    A row the pin asks one level below the athlete's (``level_offset`` < 0)
+    is deliberate: no "switch" proposal on it."""
+    from backend.engine import bw_progression as _bwp
+
+    ex_id = norm_str(get_ex_id(selected_ex))
+    key = "work_seconds" if merged.get("work_seconds") is not None else "reps"
+    same_ex = ex_id == pin_ex_id
+
+    def _n(v: Any) -> Optional[int]:
+        try:
+            return int(v) if v is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    cat_sets, cat_val = _n(catalog_rx.get("sets")), _n(catalog_rx.get(key))
+    if (same_ex and plan["entry"].get("source") not in _bwp.MANUAL_SOURCES
+            and cat_sets is not None and cat_val is not None):
+        sets = max(_n(merged.get("sets")) or 0, cat_sets)
+        val = max(_n(merged.get(key)) or 0, cat_val)
+        if (sets, val) != (_n(merged.get("sets")), _n(merged.get(key))):
+            merged["sets"], merged[key] = sets, val
+            dose = audit["dose"]
+            dose["sets"], dose[key] = sets, val
+            dose["summary"] = _bwp.dose_summary({
+                "sets": sets, "target": val, "axis": "seconds" if key == "work_seconds" else "reps",
+                "tempo_ecc_s": dose.get("tempo_ecc_s"), "added_kg": dose.get("added_kg")})
+            dose["pin_floor"] = True
+            audit["ladder"]["dose"] = dose["summary"]
+    if not same_ex or (_n(merged.get("sets")), _n(merged.get(key))) != (cat_sets, cat_val):
+        own_notes = (selected_ex.get("defaults") or selected_ex.get("prescription_defaults") or {}).get("notes")
+        if isinstance(own_notes, str) and own_notes.strip():
+            merged["notes"] = own_notes
+        else:
+            merged.pop("notes", None)
+    info = audit["ladder"]
+    if plan.get("level_offset") and int(info["level_idx"]) == int(plan["pin_level"]):
+        info["level_offset"] = int(plan["level_offset"])
+        if (info.get("proposal") or {}).get("kind") == "switch":
+            info["proposal"] = None
 
 
 def _bw_apply_instance(bw_ctx: Optional[Dict[str, Any]], inst: Dict[str, Any],

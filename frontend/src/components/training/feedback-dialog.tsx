@@ -186,7 +186,7 @@ export function FeedbackDialog({
         <DialogHeader>
           <DialogTitle>Session feedback</DialogTitle>
           <DialogDescription>
-            Rate the exercises you want to. Untouched exercises are saved as not rated and don&apos;t change your loads.
+            Rate the exercises you want to. An exercise you did but didn&apos;t rate counts as &quot;ok&quot;: your progression moves on and nothing goes down.
           </DialogDescription>
         </DialogHeader>
 

@@ -1,0 +1,2342 @@
+{
+ "advanced|2026-10-07|arms_shoulders_handstand_lunch": {
+  "digest": "3970974469d6ce315ea50bde6c3af1b37b09edf385d0be04199799b70f971a29",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "mobility_thoracic_shoulders_flow",
+   "heel_pulls_chest_to_wall",
+   "wall_handstand_hold",
+   "overhead_press",
+   "core_hollow_hold",
+   "side_plank",
+   "hammer_curl",
+   "lateral_raise",
+   "overhead_tricep_extension"
+  ]
+ },
+ "advanced|2026-10-07|boulder_circuit_gym": {
+  "digest": "bc6d82d16d79e6a7ee0096ef0bb2c1d8dffd94e04a2a812b377d09a88b0157ee",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "archer_pullup",
+   "arc_training",
+   "core_hollow_hold",
+   "band_external_rotation",
+   "pushup",
+   "scapular_pullup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "advanced|2026-10-07|complementary_conditioning": {
+  "digest": "3bc6a5fc56c38713c2787cc62444937409fdfb8ecdd2d28e1546203a443d8b33",
+  "exercise_ids": [
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "copenhagen_plank",
+   "hip_90_90_switch",
+   "scapular_pullup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "advanced|2026-10-07|core_training": {
+  "digest": "fe300fb15688a30a91c8060c2a1fe0cb0c3c2c0402c84d55c332d481416b9ed7",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "core_l_sit",
+   "pallof_press",
+   "side_plank",
+   "weighted_hanging_leg_raise",
+   "scapular_pullup",
+   "turkish_getup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "advanced|2026-10-07|deload_recovery": {
+  "digest": "4dda8e039838076ef5032861c15f5afe2ff8b6b1c2361b68ab7b8c4184108eda",
+  "exercise_ids": [
+   "bear_crawl",
+   "side_plank",
+   "pronator_terres_isometric_hold",
+   "scapular_pullup"
+  ]
+ },
+ "advanced|2026-10-07|easy_climbing_deload": {
+  "digest": "7447ec3702f2583608c31d2fe971c80871a668b54e5199cdc5902c2c52cb9bea",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "flag_practice",
+   "pushup",
+   "scapular_pullup",
+   "shoulder_car",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "advanced|2026-10-07|endurance_aerobic_gym": {
+  "digest": "2f9040b0e7bb1742e68653491c9dacbaa5503c904d734d4eda9f2a69ed923c0d",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "arc_training",
+   "long_interval_repeaters",
+   "side_plank",
+   "face_pull",
+   "pushup",
+   "scapular_pullup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "advanced|2026-10-07|finger_aerobic_base": {
+  "digest": "b6b27203b375f23653b7fcb3de86eb303e0cb639e7022f1514e223bccca4009f",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hang_rampup_progressive",
+   "bar_dead_hang",
+   "core_hollow_hold",
+   "pronator_terres_isometric_hold",
+   "scapular_pullup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "advanced|2026-10-07|finger_endurance_short": {
+  "digest": "fcb2df59f8b55db33c57b3adb8d4efcdc64e41da9e951cd7cf60667d91ef0fa4",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hang_rampup_progressive",
+   "kneeling_superman",
+   "density_hangs",
+   "pronator_terres_isometric_hold",
+   "scapular_pullup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "advanced|2026-10-07|finger_maintenance_gym": {
+  "digest": "cae512ae10143a15c006900b0c587c98c99c9f1ad5cc5c8e1867e885c42caacc",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hang_rampup_progressive",
+   "kneeling_superman",
+   "warmup_easy_boulders",
+   "density_hangs",
+   "easy_route_laps",
+   "band_pull_apart",
+   "pronator_terres_isometric_hold",
+   "pushup",
+   "scapular_pullup",
+   "wrist_curl",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "advanced|2026-10-07|finger_maintenance_home": {
+  "digest": "e51427b83374f4efbcf983503c058bf2eb3e9cbb8b3f6e108261a0b1d3357ded",
+  "exercise_ids": [
+   "finger_recruitment_pulls",
+   "hang_rampup_progressive",
+   "power_pullups_explosive",
+   "density_hangs",
+   "core_hollow_hold",
+   "pronator_terres_isometric_hold",
+   "reverse_wrist_curl",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "advanced|2026-10-07|finger_strength_home": {
+  "digest": "fb998ef42b452daab1a42fd8286e425832c183307750c0b8a9edd6307201f333",
+  "exercise_ids": [
+   "finger_recruitment_pulls",
+   "hang_rampup_progressive",
+   "max_hang_7s",
+   "weighted_pullup",
+   "side_plank",
+   "pronator_terres_isometric_hold",
+   "reverse_wrist_curl",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "advanced|2026-10-07|flexibility_full": {
+  "digest": "2b3c962dcb50450fafa3bba5b10b169ab0bcc674a0f3780e1eff556331f5a93e",
+  "exercise_ids": [
+   "bear_crawl",
+   "cooldown_hamstring_fold",
+   "cooldown_hip_frog",
+   "cooldown_spinal_twist",
+   "flexibility_active_leg_raise",
+   "hip_flexor_couch_stretch"
+  ]
+ },
+ "advanced|2026-10-07|handstand_practice": {
+  "digest": "dd23ac0cc791bf90c328a4d5341e634ff760ad9a7fcd345dbd89b704280d4092",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "frog_stand",
+   "wall_handstand_hold",
+   "scapular_pullup",
+   "wall_slide",
+   "wrist_curl"
+  ]
+ },
+ "advanced|2026-10-07|heavy_conditioning_gym": {
+  "digest": "8e2d019ebc3b011f746c8eee9162822e43031bf680107fe1e4f9a22e62c42144",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hang_rampup_progressive",
+   "inverted_row",
+   "copenhagen_plank",
+   "hanging_leg_raise",
+   "bicep_curl",
+   "dip",
+   "dumbbell_external_rotation",
+   "dumbbell_fly",
+   "glute_bridge",
+   "lateral_raise",
+   "pushup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "advanced|2026-10-07|lead_tryhard_gym": {
+  "digest": "492b4754e82aab5c4baf78fa52564f41355b37f7603f11fb75ebaf1a24b7b863",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "fall_practice",
+   "lead_precision_feet_above_bolt",
+   "lead_technique_under_pump",
+   "dumbbell_external_rotation",
+   "pushup",
+   "scapular_pullup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "advanced|2026-10-07|legs_maintenance_lunch": {
+  "digest": "d38c40f5be0965c4f0b78526f708726957658ece273613360eba0305b71eb525",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "copenhagen_plank",
+   "core_hollow_hold",
+   "bulgarian_split_squat",
+   "edge_calf_raise_bigtoe",
+   "goblet_squat",
+   "romanian_deadlift",
+   "toe_flexor_isometric"
+  ]
+ },
+ "advanced|2026-10-07|legs_strength": {
+  "digest": "796774ea9a0d87e735830cdc5e5ceb18ee1c3ccac68ddeea5f6c72598e1f15e7",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "glute_bridge",
+   "reverse_lunge",
+   "scapular_pullup",
+   "single_leg_calf_raise",
+   "split_squat",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "advanced|2026-10-07|limit_boulder_gym": {
+  "digest": "72617a78300a287dea6f070877a4d759183d9b3feaeb8c6134aa3b45a8d07a61",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "limit_bouldering",
+   "archer_pullup",
+   "suitcase_carry",
+   "face_pull",
+   "pushup",
+   "scapular_pullup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "advanced|2026-10-07|lower_body_gym": {
+  "digest": "2bccf6466607e5fd5a67a4c7e03e60b9e41b712285300072946a120c1277bf3c",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hang_rampup_progressive",
+   "front_lever_one_leg",
+   "glute_bridge",
+   "reverse_lunge",
+   "single_leg_calf_raise",
+   "split_squat",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "advanced|2026-10-07|power_contact_gym": {
+  "digest": "15fe4cec04b3718ec0c9b9a3798fb4dd2c258300401f38cf7335cc545d0eb51d",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "campus_max_ladders",
+   "system_board_limit",
+   "core_l_sit",
+   "dumbbell_external_rotation",
+   "pushup",
+   "scapular_pullup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "advanced|2026-10-07|power_endurance_gym": {
+  "digest": "a3f68fc0cdc2c6b4f4c09d99e36730cbb14992f6ca4d9d31be470881001d68ca",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "power_pullups_explosive",
+   "hangboard_moving_hangs",
+   "linked_boulders_circuit",
+   "route_intervals",
+   "ab_wheel_rollout",
+   "dumbbell_external_rotation",
+   "pushup",
+   "scapular_pullup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "advanced|2026-10-07|prehab_maintenance": {
+  "digest": "325a04dd386185bb1e8647f70276fff965a75325e307d63990ad9beca9fe1197",
+  "exercise_ids": [
+   "mobility_thoracic_shoulders_flow",
+   "pronator_terres_isometric_hold",
+   "reverse_wrist_curl",
+   "scapular_pullup"
+  ]
+ },
+ "advanced|2026-10-07|pulling_strength_gym": {
+  "digest": "77ff0cd063896ab5962a2c55035b29404a38cff9af050a3e95bd271a47ce5e15",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hang_rampup_progressive",
+   "l_sit_pullup",
+   "pullup",
+   "weighted_pullup",
+   "windshield_wipers",
+   "band_pull_apart",
+   "pushup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "advanced|2026-10-07|regeneration_easy": {
+  "digest": "97985365d0ad0c22259b6f3944f090e1c7ecb3e8421eec0e93db5237b9c943ea",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "easy_route_laps",
+   "scapular_pullup",
+   "forearm_stretches"
+  ]
+ },
+ "advanced|2026-10-07|route_endurance_gym": {
+  "digest": "949a03de0aa51371038a557bde359b2c289bf623d53cdf1542fc1da4b4bdf4d7",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "arc_training",
+   "route_on_the_minute",
+   "core_hollow_hold",
+   "pushup",
+   "scapular_pullup",
+   "shoulder_car",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "advanced|2026-10-07|route_projecting_gym": {
+  "digest": "391542bd5b0e97689bebb8012daeba07e0c6693e5c553b9cd21603a731509324",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "fall_practice",
+   "route_redpoint_attempt",
+   "route_redpoint_attempt",
+   "core_l_sit",
+   "dumbbell_external_rotation",
+   "pushup",
+   "scapular_pullup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "advanced|2026-10-07|strength_long": {
+  "digest": "37964b9da7daafbf16f04a873dd98c9217393b5db3348d0a3ff5c705b43fcdcb",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hang_rampup_progressive",
+   "warmup_easy_boulders",
+   "max_hang_7s",
+   "weighted_pullup",
+   "fall_practice",
+   "front_lever_one_leg",
+   "face_pull",
+   "pronator_terres_isometric_hold",
+   "pushup",
+   "scapular_pullup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "advanced|2026-10-07|technique_focus_gym": {
+  "digest": "614fe29425363c235c162bbfb8db85bec94c06b5a91c126e89a00b165818c2de",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "fall_practice",
+   "tech_throwing_the_shoe",
+   "tech_trust_the_eyes",
+   "arc_training",
+   "windshield_wipers",
+   "band_external_rotation",
+   "pushup",
+   "scapular_pullup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "advanced|2026-10-07|treadmill_hiit_4x4": {
+  "digest": "cacd12c3e8d7e972713589396c4d99ef9a5648e42e248965b3070dc10d52e685",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "core_hollow_hold",
+   "side_plank",
+   "hip_opener_flow"
+  ]
+ },
+ "advanced|2026-10-07|treadmill_zone2_cardio": {
+  "digest": "4362253f718beedfa696041183971e7243805867d56c55f779e5bf24708361e2",
+  "exercise_ids": [
+   "treadmill_incline_walk",
+   "hip_opener_flow"
+  ]
+ },
+ "advanced|2026-10-07|upper_body_weights": {
+  "digest": "0fbcae3d7789792686dfa4c4ba7c3bc34d3cddd220e76f2cf755c0655e54b784",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "dumbbell_fly",
+   "face_pull",
+   "handstand_pushup_wall",
+   "pushup",
+   "scapular_pullup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "advanced|2026-10-07|upper_push_arms_lunch": {
+  "digest": "f4de2ed5d9f9714948009c9d53a287ee8074a7e13d598621bbb9f3653ca990b9",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "ab_wheel_rollout",
+   "core_hollow_hold",
+   "bicep_curl",
+   "dumbbell_bench_press",
+   "dumbbell_fly",
+   "handstand_pushup_wall",
+   "incline_pushup"
+  ]
+ },
+ "advanced|2026-10-07|yoga_recovery": {
+  "digest": "dd41ad6abf93d50bc8904f6b0cd1f232aa06f7d91a777e86a62b83aaa0f2543a",
+  "exercise_ids": [
+   "cooldown_spinal_twist"
+  ]
+ },
+ "advanced|2026-10-21|arms_shoulders_handstand_lunch": {
+  "digest": "cbb211e5e50447713eb82d68a1dde5055b7369f35cb0d2a998afbbed525f022d",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "mobility_thoracic_shoulders_flow",
+   "heel_pulls_chest_to_wall",
+   "wall_handstand_hold",
+   "overhead_press",
+   "core_hollow_hold",
+   "side_plank",
+   "hammer_curl",
+   "lateral_raise",
+   "overhead_tricep_extension"
+  ]
+ },
+ "advanced|2026-10-21|boulder_circuit_gym": {
+  "digest": "ba11a4d9767435876582333ef23b88386a5b2534c9a616586c337450b592ab75",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hangboard_moving_hangs",
+   "one_arm_pullup_assisted",
+   "side_plank",
+   "band_external_rotation",
+   "pushup",
+   "shoulder_car",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "advanced|2026-10-21|complementary_conditioning": {
+  "digest": "c3560d4d87839a2a022fd6032cc307f584ad9053850ee7cbcabcbbbd458e4b94",
+  "exercise_ids": [
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "core_hollow_hold",
+   "farmers_carry",
+   "shoulder_car",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "advanced|2026-10-21|core_training": {
+  "digest": "2d5c65e63d83b7cabe8918b51395a28aece9bfe07872130a6ccb9d04a74f40ef",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "core_l_sit",
+   "plank_shoulder_tap",
+   "suitcase_carry",
+   "v_up",
+   "shoulder_car",
+   "turkish_getup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "advanced|2026-10-21|deload_recovery": {
+  "digest": "99df8fcab7c5a2ceb46e751a600104dfa01d4d840fd83493db6ea786ab4c48fc",
+  "exercise_ids": [
+   "bear_crawl",
+   "plank_shoulder_tap",
+   "shoulder_car",
+   "stick_pronation_supination_eccentric"
+  ]
+ },
+ "advanced|2026-10-21|easy_climbing_deload": {
+  "digest": "41786725366ffc0cb4405af724c1a881c4b1b8605b72597d8c01cbd15f9a0b4b",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "pushup",
+   "shoulder_car",
+   "wall_slide",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "advanced|2026-10-21|endurance_aerobic_gym": {
+  "digest": "83fda1de09d21fdcdffc89698da42275e5432ab1e77cc6a91ba97d93ec872818",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hangboard_moving_hangs",
+   "intermittent_dead_hangs",
+   "pallof_press",
+   "band_pull_apart",
+   "pushup",
+   "shoulder_car",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "advanced|2026-10-21|finger_aerobic_base": {
+  "digest": "25b3264fd9e50d189f224591ed7e4ec5611906c515085b94e9e4010a329314e8",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "finger_recruitment_pulls",
+   "general_pulse_raise",
+   "bar_dead_hang",
+   "pallof_press",
+   "shoulder_car",
+   "stick_pronation_supination_eccentric",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "advanced|2026-10-21|finger_endurance_short": {
+  "digest": "ac8358621b22ea8057209caa53f440df6090d152c4eb41fce0857e889809873b",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "finger_recruitment_pulls",
+   "general_pulse_raise",
+   "lopez_subhangs",
+   "windshield_wipers",
+   "shoulder_car",
+   "stick_pronation_supination_eccentric",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "advanced|2026-10-21|finger_maintenance_gym": {
+  "digest": "41d00b1b3a0dfa08751142829a3ebc313c769713af9f6e3064945eacb9ca5d2f",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "finger_recruitment_pulls",
+   "general_pulse_raise",
+   "lopez_subhangs",
+   "bar_dead_hang",
+   "hanging_leg_raise",
+   "band_external_rotation",
+   "pushup",
+   "reverse_wrist_curl",
+   "shoulder_car",
+   "stick_pronation_supination_eccentric",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "advanced|2026-10-21|finger_maintenance_home": {
+  "digest": "65cc87c5809540208c30fda8244de432551f3a7f47c0cb34d8cf53f605d24ff6",
+  "exercise_ids": [
+   "finger_recruitment_pulls",
+   "warmup_repeaters_large",
+   "lopez_subhangs",
+   "archer_pullup",
+   "front_lever_one_leg",
+   "reverse_wrist_curl",
+   "stick_pronation_supination_eccentric",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "advanced|2026-10-21|finger_strength_home": {
+  "digest": "2353dba2057209cf54f739da7a58f4044c5e95b145e9b3cd1967e4c694567e72",
+  "exercise_ids": [
+   "finger_recruitment_pulls",
+   "warmup_repeaters_large",
+   "max_hang_7s",
+   "weighted_pullup",
+   "front_lever_one_leg",
+   "reverse_wrist_curl",
+   "stick_pronation_supination_eccentric",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "advanced|2026-10-21|flexibility_full": {
+  "digest": "75e781150e0d29e1ea38f1ec70bad6d83a484c2312163afede12d2206d37b2b7",
+  "exercise_ids": [
+   "bear_crawl",
+   "cooldown_hamstring_fold",
+   "cooldown_hip_frog",
+   "cooldown_shoulder_chest",
+   "cooldown_spinal_twist",
+   "flexibility_active_leg_raise"
+  ]
+ },
+ "advanced|2026-10-21|handstand_practice": {
+  "digest": "6e372f5ddaafe83d5c21209949d3806992eb295fec037f2566737931120fc1a8",
+  "exercise_ids": [
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "frog_stand",
+   "heel_pulls_chest_to_wall",
+   "shoulder_car",
+   "wall_slide"
+  ]
+ },
+ "advanced|2026-10-21|heavy_conditioning_gym": {
+  "digest": "55378684d04e3e60095e938798a88e764ebd01ea85ba6bff668fc974fa0d2263",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hang_rampup_progressive",
+   "kneeling_superman",
+   "inverted_row",
+   "hanging_leg_raise",
+   "bicep_curl",
+   "dip",
+   "handstand_pushup_wall",
+   "lateral_raise",
+   "pushup",
+   "shoulder_car",
+   "single_leg_glute_bridge",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "advanced|2026-10-21|lead_tryhard_gym": {
+  "digest": "8db8e0ed2f362c21ce066963d7b59bfd7d1dd73c6a2c2988443a00be4374fcf7",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "band_pull_apart",
+   "pushup",
+   "shoulder_car",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "advanced|2026-10-21|legs_maintenance_lunch": {
+  "digest": "90a68b2aa1ded5bcf3d7e68707691c530d6617ccd1f1df247f71134b755f90a1",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "copenhagen_plank",
+   "core_hollow_hold",
+   "bulgarian_split_squat",
+   "edge_calf_raise_bigtoe",
+   "goblet_squat",
+   "romanian_deadlift",
+   "toe_flexor_isometric"
+  ]
+ },
+ "advanced|2026-10-21|legs_strength": {
+  "digest": "0cc5c85ec556b40214d8a86bf2eff67ac69f9a25d3da862da6db90c41228357f",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "bulgarian_split_squat",
+   "cossack_squat",
+   "shoulder_car",
+   "single_leg_calf_raise",
+   "single_leg_glute_bridge",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "advanced|2026-10-21|limit_boulder_gym": {
+  "digest": "7185adbaf37f7a65701b1fc93ead1c559a138e1b6c2472aa93ebb5ebe0b62572",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "archer_pullup",
+   "power_pullups_explosive",
+   "suitcase_carry",
+   "band_external_rotation",
+   "pushup",
+   "shoulder_car",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "advanced|2026-10-21|lower_body_gym": {
+  "digest": "b38fd8cd10c4fb78f731c9a871fc0c73b7052821e91434fd69c5534bc1243ad5",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hang_rampup_progressive",
+   "bulgarian_split_squat",
+   "cossack_squat",
+   "single_leg_calf_raise",
+   "single_leg_glute_bridge",
+   "turkish_getup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "advanced|2026-10-21|power_contact_gym": {
+  "digest": "9eb1f93f7d7143041c69c08fbdb10c045408a68372f37e1bfcacb5c7c10db310",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "overcoming_isometric_pull",
+   "rfd_explosive_pulls",
+   "pallof_press",
+   "dumbbell_external_rotation",
+   "pushup",
+   "shoulder_car",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "advanced|2026-10-21|power_endurance_gym": {
+  "digest": "961e0bb834bfb66139809640e210cf8aa4cd02622eeb4001f647dbd7f8765d9e",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "rfd_explosive_pulls",
+   "archer_pullup",
+   "one_arm_pullup_assisted",
+   "intermittent_dead_hangs",
+   "front_lever_one_leg",
+   "band_pull_apart",
+   "pushup",
+   "shoulder_car",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "advanced|2026-10-21|prehab_maintenance": {
+  "digest": "e70758014f2a83465affa5f20741056e0cec39ed5b9acdbae56825586df27916",
+  "exercise_ids": [
+   "reverse_wrist_curl",
+   "shoulder_car",
+   "stick_pronation_supination_eccentric",
+   "wall_slide"
+  ]
+ },
+ "advanced|2026-10-21|pulling_strength_gym": {
+  "digest": "63834191827891c7da31c0a021b1a7d208c607169b1b1a5fbbe3b716b29d166a",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hang_rampup_progressive",
+   "lock_off_isometric",
+   "power_pullups_explosive",
+   "weighted_pullup",
+   "hanging_leg_raise",
+   "pushup",
+   "shoulder_car",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "advanced|2026-10-21|regeneration_easy": {
+  "digest": "23d368a2b643166cee85b3ba30881e424f54771e55c2851bd5044f3d55cf6905",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "bar_dead_hang",
+   "shoulder_car",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "advanced|2026-10-21|route_endurance_gym": {
+  "digest": "a56e75a216bcac08728ae11407c601fb01b4922df763d7b5d860989f25ba1e8b",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hangboard_moving_hangs",
+   "core_hollow_hold",
+   "dumbbell_external_rotation",
+   "pushup",
+   "reverse_barbell_curl",
+   "shoulder_car",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "advanced|2026-10-21|route_projecting_gym": {
+  "digest": "bd57c359b30ca7f0cab2d7cf216caee63092a735503b80816e72b1830004d2fe",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "supinated_inverted_row",
+   "front_lever_one_leg",
+   "dumbbell_external_rotation",
+   "pushup",
+   "reverse_barbell_curl",
+   "shoulder_car",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "advanced|2026-10-21|strength_long": {
+  "digest": "8e9731ea4e332c2635033da1dd9b811a2271ab4aabd85ddabcac3f67c10c0611",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "finger_recruitment_pulls",
+   "general_pulse_raise",
+   "max_hang_7s",
+   "weighted_pullup",
+   "hanging_leg_raise",
+   "band_pull_apart",
+   "pushup",
+   "shoulder_car",
+   "stick_pronation_supination_eccentric",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "advanced|2026-10-21|technique_focus_gym": {
+  "digest": "a9d7dab4ee4d02c3afe7d22017d2fa53a2a36126cb2c1609688cefacdd92dcbf",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hangboard_moving_hangs",
+   "toes_to_bar",
+   "face_pull",
+   "pushup",
+   "shoulder_car",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "advanced|2026-10-21|treadmill_hiit_4x4": {
+  "digest": "901914be142e5797e2834d286288f9fd290daff8ab30f8c78b7cd8f64e27cfba",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "core_hollow_hold",
+   "side_plank",
+   "hip_opener_flow"
+  ]
+ },
+ "advanced|2026-10-21|treadmill_zone2_cardio": {
+  "digest": "8f7507004685e9595c047615f77015010abfa7747ace5044df98a394d301f86f",
+  "exercise_ids": [
+   "treadmill_incline_walk",
+   "hip_opener_flow"
+  ]
+ },
+ "advanced|2026-10-21|upper_body_weights": {
+  "digest": "642e0b33369c0f6c36a3f976df38f5a75735ce13e254684010ac9347252d4f57",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "face_pull",
+   "handstand_pushup_wall",
+   "overhead_press",
+   "pushup",
+   "shoulder_car",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "advanced|2026-10-21|upper_push_arms_lunch": {
+  "digest": "a942774e72cb3308fc7c56873d8e69202b5360cb10c2431f3fb633bd68fcb14a",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "core_hollow_hold",
+   "suitcase_carry",
+   "bicep_curl",
+   "dumbbell_bench_press",
+   "dumbbell_fly",
+   "handstand_pushup_wall",
+   "incline_pushup"
+  ]
+ },
+ "advanced|2026-10-21|yoga_recovery": {
+  "digest": "93018eb2015dc548a6aac1ad379a026105539ab1684846b17d63a007f60c8525",
+  "exercise_ids": [
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "daniele|2026-10-13|base|arms_shoulders_handstand_lunch": {
+  "digest": "ec03a8a9d9ec0878f03297837c3162529da23a0edd17ab1898f54796b5beb697",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "mobility_thoracic_shoulders_flow",
+   "heel_pulls_chest_to_wall",
+   "wall_handstand_hold",
+   "overhead_press",
+   "copenhagen_dynamic",
+   "core_l_sit",
+   "hammer_curl",
+   "lateral_raise",
+   "overhead_tricep_extension"
+  ]
+ },
+ "daniele|2026-10-13|base|legs_maintenance_lunch": {
+  "digest": "a7e0a4d5ff5d90ba25245e39707b39b4dc69cea4d14ca7352a07ba807e955618",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "ab_wheel_rollout",
+   "core_l_sit",
+   "bulgarian_split_squat",
+   "edge_calf_raise_bigtoe",
+   "goblet_squat",
+   "romanian_deadlift",
+   "toe_flexor_isometric"
+  ]
+ },
+ "daniele|2026-10-13|base|treadmill_hiit_4x4": {
+  "digest": "13a8c0f23d4b2b1e219da0334377a3a5a2957eebfbaf363f1c658fd14d935c21",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "treadmill_hiit_4x4",
+   "ab_wheel_rollout",
+   "copenhagen_plank",
+   "hip_opener_flow"
+  ]
+ },
+ "daniele|2026-10-13|base|upper_push_arms_lunch": {
+  "digest": "7611a52143f503139b77d22c804722a28cce2a2949cf3963111e6c81ece80fab",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "ab_wheel_rollout",
+   "core_l_sit",
+   "bicep_curl",
+   "dumbbell_bench_press",
+   "dumbbell_fly",
+   "ring_pushup",
+   "triceps_cable_pushdown"
+  ]
+ },
+ "daniele|2026-10-13|strength_power|arms_shoulders_handstand_lunch": {
+  "digest": "ec03a8a9d9ec0878f03297837c3162529da23a0edd17ab1898f54796b5beb697",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "mobility_thoracic_shoulders_flow",
+   "heel_pulls_chest_to_wall",
+   "wall_handstand_hold",
+   "overhead_press",
+   "copenhagen_dynamic",
+   "core_l_sit",
+   "hammer_curl",
+   "lateral_raise",
+   "overhead_tricep_extension"
+  ]
+ },
+ "daniele|2026-10-13|strength_power|legs_maintenance_lunch": {
+  "digest": "a7e0a4d5ff5d90ba25245e39707b39b4dc69cea4d14ca7352a07ba807e955618",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "ab_wheel_rollout",
+   "core_l_sit",
+   "bulgarian_split_squat",
+   "edge_calf_raise_bigtoe",
+   "goblet_squat",
+   "romanian_deadlift",
+   "toe_flexor_isometric"
+  ]
+ },
+ "daniele|2026-10-13|strength_power|treadmill_hiit_4x4": {
+  "digest": "13a8c0f23d4b2b1e219da0334377a3a5a2957eebfbaf363f1c658fd14d935c21",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "treadmill_hiit_4x4",
+   "ab_wheel_rollout",
+   "copenhagen_plank",
+   "hip_opener_flow"
+  ]
+ },
+ "daniele|2026-10-13|strength_power|upper_push_arms_lunch": {
+  "digest": "7611a52143f503139b77d22c804722a28cce2a2949cf3963111e6c81ece80fab",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "ab_wheel_rollout",
+   "core_l_sit",
+   "bicep_curl",
+   "dumbbell_bench_press",
+   "dumbbell_fly",
+   "ring_pushup",
+   "triceps_cable_pushdown"
+  ]
+ },
+ "daniele|2026-10-27|power_endurance|arms_shoulders_handstand_lunch": {
+  "digest": "ec03a8a9d9ec0878f03297837c3162529da23a0edd17ab1898f54796b5beb697",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "mobility_thoracic_shoulders_flow",
+   "heel_pulls_chest_to_wall",
+   "wall_handstand_hold",
+   "overhead_press",
+   "copenhagen_dynamic",
+   "core_l_sit",
+   "hammer_curl",
+   "lateral_raise",
+   "overhead_tricep_extension"
+  ]
+ },
+ "daniele|2026-10-27|power_endurance|legs_maintenance_lunch": {
+  "digest": "a7e0a4d5ff5d90ba25245e39707b39b4dc69cea4d14ca7352a07ba807e955618",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "ab_wheel_rollout",
+   "core_l_sit",
+   "bulgarian_split_squat",
+   "edge_calf_raise_bigtoe",
+   "goblet_squat",
+   "romanian_deadlift",
+   "toe_flexor_isometric"
+  ]
+ },
+ "daniele|2026-10-27|power_endurance|treadmill_hiit_4x4": {
+  "digest": "13a8c0f23d4b2b1e219da0334377a3a5a2957eebfbaf363f1c658fd14d935c21",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "treadmill_hiit_4x4",
+   "ab_wheel_rollout",
+   "copenhagen_plank",
+   "hip_opener_flow"
+  ]
+ },
+ "daniele|2026-10-27|power_endurance|upper_push_arms_lunch": {
+  "digest": "7611a52143f503139b77d22c804722a28cce2a2949cf3963111e6c81ece80fab",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "ab_wheel_rollout",
+   "core_l_sit",
+   "bicep_curl",
+   "dumbbell_bench_press",
+   "dumbbell_fly",
+   "ring_pushup",
+   "triceps_cable_pushdown"
+  ]
+ },
+ "daniele|2026-11-10|performance|arms_shoulders_handstand_lunch": {
+  "digest": "ec03a8a9d9ec0878f03297837c3162529da23a0edd17ab1898f54796b5beb697",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "mobility_thoracic_shoulders_flow",
+   "heel_pulls_chest_to_wall",
+   "wall_handstand_hold",
+   "overhead_press",
+   "copenhagen_dynamic",
+   "core_l_sit",
+   "hammer_curl",
+   "lateral_raise",
+   "overhead_tricep_extension"
+  ]
+ },
+ "daniele|2026-11-10|performance|legs_maintenance_lunch": {
+  "digest": "a7e0a4d5ff5d90ba25245e39707b39b4dc69cea4d14ca7352a07ba807e955618",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "ab_wheel_rollout",
+   "core_l_sit",
+   "bulgarian_split_squat",
+   "edge_calf_raise_bigtoe",
+   "goblet_squat",
+   "romanian_deadlift",
+   "toe_flexor_isometric"
+  ]
+ },
+ "daniele|2026-11-10|performance|treadmill_hiit_4x4": {
+  "digest": "13a8c0f23d4b2b1e219da0334377a3a5a2957eebfbaf363f1c658fd14d935c21",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "treadmill_hiit_4x4",
+   "ab_wheel_rollout",
+   "copenhagen_plank",
+   "hip_opener_flow"
+  ]
+ },
+ "daniele|2026-11-10|performance|upper_push_arms_lunch": {
+  "digest": "7611a52143f503139b77d22c804722a28cce2a2949cf3963111e6c81ece80fab",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "ab_wheel_rollout",
+   "core_l_sit",
+   "bicep_curl",
+   "dumbbell_bench_press",
+   "dumbbell_fly",
+   "ring_pushup",
+   "triceps_cable_pushdown"
+  ]
+ },
+ "daniele|2026-11-17|performance|arms_shoulders_handstand_lunch": {
+  "digest": "ec03a8a9d9ec0878f03297837c3162529da23a0edd17ab1898f54796b5beb697",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "mobility_thoracic_shoulders_flow",
+   "heel_pulls_chest_to_wall",
+   "wall_handstand_hold",
+   "overhead_press",
+   "copenhagen_dynamic",
+   "core_l_sit",
+   "hammer_curl",
+   "lateral_raise",
+   "overhead_tricep_extension"
+  ]
+ },
+ "daniele|2026-11-17|performance|legs_maintenance_lunch": {
+  "digest": "e0f75451afd2b20d18e6f5375718e8c7680bbd04cea147a5b8494b258a7b898c",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "ab_wheel_rollout",
+   "copenhagen_dynamic",
+   "bulgarian_split_squat",
+   "edge_calf_raise_bigtoe",
+   "goblet_squat",
+   "romanian_deadlift",
+   "toe_flexor_isometric"
+  ]
+ },
+ "daniele|2026-11-17|performance|treadmill_hiit_4x4": {
+  "digest": "13a8c0f23d4b2b1e219da0334377a3a5a2957eebfbaf363f1c658fd14d935c21",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "treadmill_hiit_4x4",
+   "ab_wheel_rollout",
+   "copenhagen_plank",
+   "hip_opener_flow"
+  ]
+ },
+ "daniele|2026-11-17|performance|upper_push_arms_lunch": {
+  "digest": "1d4976d2ccd06f16abf2f9e1fac05e9c347a014118dd2da56dbb913914002e77",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "cable_woodchop",
+   "core_l_sit",
+   "bicep_curl",
+   "dumbbell_bench_press",
+   "dumbbell_fly",
+   "ring_pushup",
+   "triceps_cable_pushdown"
+  ]
+ },
+ "daniele|2026-12-01|deload|arms_shoulders_handstand_lunch": {
+  "digest": "e6f62057ea30c47a3f3dcb1c80e773721335a7c9e44e60645a7c3e825edc4fde",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "mobility_thoracic_shoulders_flow",
+   "heel_pulls_chest_to_wall",
+   "wall_handstand_hold",
+   "overhead_press",
+   "copenhagen_dynamic",
+   "core_l_sit",
+   "hammer_curl",
+   "lateral_raise",
+   "overhead_tricep_extension"
+  ]
+ },
+ "daniele|2026-12-01|deload|legs_maintenance_lunch": {
+  "digest": "c577ec2e1d60d7e5d8cfc6166264bb1322109a1cf973dc94cff0f45fdff85244",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "ab_wheel_rollout",
+   "copenhagen_plank",
+   "bulgarian_split_squat",
+   "edge_calf_raise_bigtoe",
+   "goblet_squat",
+   "romanian_deadlift",
+   "toe_flexor_isometric"
+  ]
+ },
+ "daniele|2026-12-01|deload|treadmill_hiit_4x4": {
+  "digest": "0ae1c1beb56e97f188d51893e344445876f9ea4e5553dcdc4ce48a27a6f0c74e",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "treadmill_hiit_4x4",
+   "ab_wheel_rollout",
+   "copenhagen_plank",
+   "hip_opener_flow"
+  ]
+ },
+ "daniele|2026-12-01|deload|upper_push_arms_lunch": {
+  "digest": "15271188a0c7c6c0eb30a29d7f03d957989d57311d022660944f94c3e19abc5d",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "ab_wheel_rollout",
+   "core_l_sit",
+   "bicep_curl",
+   "dumbbell_bench_press",
+   "dumbbell_fly",
+   "ring_pushup",
+   "triceps_cable_pushdown"
+  ]
+ },
+ "intermediate|2026-10-07|arms_shoulders_handstand_lunch": {
+  "digest": "99b59622e7b2a93d3c28e98ccb5034248bccae706df4228eb7de8a5f36ccd6fa",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "mobility_thoracic_shoulders_flow",
+   "heel_pulls_chest_to_wall",
+   "wall_handstand_hold",
+   "overhead_press",
+   "core_hollow_hold",
+   "side_plank",
+   "hammer_curl",
+   "lateral_raise",
+   "overhead_tricep_extension"
+  ]
+ },
+ "intermediate|2026-10-07|boulder_circuit_gym": {
+  "digest": "09b3d37e1213921544ddd679ed7684d33d61c8fd44df7e7b3f4728c2b52c9be2",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "archer_pullup",
+   "arc_training",
+   "core_hollow_hold",
+   "band_external_rotation",
+   "pushup",
+   "scapular_pullup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "intermediate|2026-10-07|complementary_conditioning": {
+  "digest": "3bc6a5fc56c38713c2787cc62444937409fdfb8ecdd2d28e1546203a443d8b33",
+  "exercise_ids": [
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "copenhagen_plank",
+   "hip_90_90_switch",
+   "scapular_pullup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "intermediate|2026-10-07|core_training": {
+  "digest": "5be302612973b1a91d7c201a0c331ec1b2f485260d2fc7d67d92d0a73dd9cbdc",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "core_l_sit",
+   "pallof_press",
+   "side_plank",
+   "weighted_hanging_leg_raise",
+   "scapular_pullup",
+   "turkish_getup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "intermediate|2026-10-07|deload_recovery": {
+  "digest": "4dda8e039838076ef5032861c15f5afe2ff8b6b1c2361b68ab7b8c4184108eda",
+  "exercise_ids": [
+   "bear_crawl",
+   "side_plank",
+   "pronator_terres_isometric_hold",
+   "scapular_pullup"
+  ]
+ },
+ "intermediate|2026-10-07|easy_climbing_deload": {
+  "digest": "96f53232ba3112bf07d95a90885a50c6f10d312daff45624d4b777df91bbf069",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "flag_practice",
+   "pushup",
+   "scapular_pullup",
+   "shoulder_car",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "intermediate|2026-10-07|endurance_aerobic_gym": {
+  "digest": "e6eb365285ea63baf14e7bf39321745122de67947d51465f479c828dcc864781",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "arc_training",
+   "long_interval_repeaters",
+   "side_plank",
+   "face_pull",
+   "pushup",
+   "scapular_pullup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "intermediate|2026-10-07|finger_aerobic_base": {
+  "digest": "b6b27203b375f23653b7fcb3de86eb303e0cb639e7022f1514e223bccca4009f",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hang_rampup_progressive",
+   "bar_dead_hang",
+   "core_hollow_hold",
+   "pronator_terres_isometric_hold",
+   "scapular_pullup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "intermediate|2026-10-07|finger_endurance_short": {
+  "digest": "004f0c7513bc7caaf8b024f7c28e0f4cfcc040dfb5e962358eedc3077a0d3e87",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hang_rampup_progressive",
+   "density_hangs",
+   "plank",
+   "pronator_terres_isometric_hold",
+   "scapular_pullup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "intermediate|2026-10-07|finger_maintenance_gym": {
+  "digest": "25de063ccec440c97a8327ee9d2ad91405f358ae0be8216e1fec04cf76281828",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hang_rampup_progressive",
+   "kneeling_superman",
+   "warmup_easy_boulders",
+   "density_hangs",
+   "easy_route_laps",
+   "band_pull_apart",
+   "pronator_terres_isometric_hold",
+   "pushup",
+   "scapular_pullup",
+   "wrist_curl",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "intermediate|2026-10-07|finger_maintenance_home": {
+  "digest": "e8639b6cabdbbcab2c2885ae9e3ad6bc1005cf4c940aa37e9607487cea3075cb",
+  "exercise_ids": [
+   "finger_recruitment_pulls",
+   "hang_rampup_progressive",
+   "power_pullups_explosive",
+   "density_hangs",
+   "core_hollow_hold",
+   "pronator_terres_isometric_hold",
+   "reverse_wrist_curl",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "intermediate|2026-10-07|finger_strength_home": {
+  "digest": "bae0cf5bef3e5e2d164f6e38e4ab89688708dcfa1f7fbd49a6153d60b5a2bfb5",
+  "exercise_ids": [
+   "finger_recruitment_pulls",
+   "hang_rampup_progressive",
+   "horst_7_53",
+   "pullup",
+   "plank",
+   "pronator_terres_isometric_hold",
+   "reverse_wrist_curl",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "intermediate|2026-10-07|flexibility_full": {
+  "digest": "2b3c962dcb50450fafa3bba5b10b169ab0bcc674a0f3780e1eff556331f5a93e",
+  "exercise_ids": [
+   "bear_crawl",
+   "cooldown_hamstring_fold",
+   "cooldown_hip_frog",
+   "cooldown_spinal_twist",
+   "flexibility_active_leg_raise",
+   "hip_flexor_couch_stretch"
+  ]
+ },
+ "intermediate|2026-10-07|handstand_practice": {
+  "digest": "dd23ac0cc791bf90c328a4d5341e634ff760ad9a7fcd345dbd89b704280d4092",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "frog_stand",
+   "wall_handstand_hold",
+   "scapular_pullup",
+   "wall_slide",
+   "wrist_curl"
+  ]
+ },
+ "intermediate|2026-10-07|heavy_conditioning_gym": {
+  "digest": "f2b04258322787524568cbcb27f529b03be0ff18ce8b76d4d52d663b2a867662",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hang_rampup_progressive",
+   "inverted_row",
+   "copenhagen_plank",
+   "hanging_leg_raise",
+   "bicep_curl",
+   "dip",
+   "dumbbell_external_rotation",
+   "dumbbell_fly",
+   "glute_bridge",
+   "lateral_raise",
+   "pushup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "intermediate|2026-10-07|lead_tryhard_gym": {
+  "digest": "492b4754e82aab5c4baf78fa52564f41355b37f7603f11fb75ebaf1a24b7b863",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "fall_practice",
+   "lead_precision_feet_above_bolt",
+   "lead_technique_under_pump",
+   "dumbbell_external_rotation",
+   "pushup",
+   "scapular_pullup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "intermediate|2026-10-07|legs_maintenance_lunch": {
+  "digest": "f00d80ef73454670732bb43c0bf6687919fdc5b2622f4ec785db408068f5552b",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "copenhagen_plank",
+   "core_hollow_hold",
+   "bulgarian_split_squat",
+   "edge_calf_raise_bigtoe",
+   "goblet_squat",
+   "romanian_deadlift",
+   "toe_flexor_isometric"
+  ]
+ },
+ "intermediate|2026-10-07|legs_strength": {
+  "digest": "2ed69cc4b3e8bdda29d1f0d6f55a0e76f17cf32aa9a41fa54164c6b0ad3a4833",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "glute_bridge",
+   "reverse_lunge",
+   "scapular_pullup",
+   "single_leg_calf_raise",
+   "split_squat",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "intermediate|2026-10-07|limit_boulder_gym": {
+  "digest": "2d7130919f6ce431d3b0c9c1d894995af0f9add6e4b0450070c2b3b23b31aa42",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "limit_bouldering",
+   "archer_pullup",
+   "suitcase_carry",
+   "face_pull",
+   "pushup",
+   "scapular_pullup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "intermediate|2026-10-07|lower_body_gym": {
+  "digest": "2340d4b060a5b7754db7879d712738de49c13c23338a52575bdc3313ecd090fc",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hang_rampup_progressive",
+   "front_lever_one_leg",
+   "glute_bridge",
+   "reverse_lunge",
+   "single_leg_calf_raise",
+   "split_squat",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "intermediate|2026-10-07|power_contact_gym": {
+  "digest": "f1c3b0b4d549c034a74a44a065ff183d0d629e26f280299fbdc088697cb2ca56",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "campus_laddering_feet_on",
+   "spray_wall_limit",
+   "core_l_sit",
+   "dumbbell_external_rotation",
+   "pushup",
+   "scapular_pullup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "intermediate|2026-10-07|power_endurance_gym": {
+  "digest": "21c8703c4496d5e2ea71769f72ef16e6de9bd0632f8ff4c4da15f085b042cf8f",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "power_pullups_explosive",
+   "hangboard_moving_hangs",
+   "linked_boulders_circuit",
+   "route_intervals",
+   "plank_shoulder_tap",
+   "dumbbell_external_rotation",
+   "pushup",
+   "scapular_pullup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "intermediate|2026-10-07|prehab_maintenance": {
+  "digest": "325a04dd386185bb1e8647f70276fff965a75325e307d63990ad9beca9fe1197",
+  "exercise_ids": [
+   "mobility_thoracic_shoulders_flow",
+   "pronator_terres_isometric_hold",
+   "reverse_wrist_curl",
+   "scapular_pullup"
+  ]
+ },
+ "intermediate|2026-10-07|pulling_strength_gym": {
+  "digest": "4a8bb9f2baecdb91b38f0c902c6952c3ee69c05a3e38dd049c58ab0eb9ce9e8e",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hang_rampup_progressive",
+   "archer_pullup",
+   "l_sit_pullup",
+   "pullup",
+   "windshield_wipers",
+   "band_pull_apart",
+   "pushup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "intermediate|2026-10-07|regeneration_easy": {
+  "digest": "97985365d0ad0c22259b6f3944f090e1c7ecb3e8421eec0e93db5237b9c943ea",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "easy_route_laps",
+   "scapular_pullup",
+   "forearm_stretches"
+  ]
+ },
+ "intermediate|2026-10-07|route_endurance_gym": {
+  "digest": "1bf83ee31d4d1219f17820bcb0d890f2d06bf06650ed575088b7ecbcbe353294",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "arc_training",
+   "route_on_the_minute",
+   "plank",
+   "pushup",
+   "scapular_pullup",
+   "shoulder_car",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "intermediate|2026-10-07|route_projecting_gym": {
+  "digest": "391542bd5b0e97689bebb8012daeba07e0c6693e5c553b9cd21603a731509324",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "fall_practice",
+   "route_redpoint_attempt",
+   "route_redpoint_attempt",
+   "core_l_sit",
+   "dumbbell_external_rotation",
+   "pushup",
+   "scapular_pullup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "intermediate|2026-10-07|strength_long": {
+  "digest": "dcedc713407625b4af33d8857f371017235c48411539f5b0e6cc1b2137506a93",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hang_rampup_progressive",
+   "warmup_easy_boulders",
+   "horst_7_53",
+   "pullup",
+   "fall_practice",
+   "front_lever_one_leg",
+   "face_pull",
+   "pronator_terres_isometric_hold",
+   "pushup",
+   "scapular_pullup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "intermediate|2026-10-07|technique_focus_gym": {
+  "digest": "4fc2e0ec1db49210cf0e4270ac7d9e29b6af51b21b48151573e4909b94ed87d3",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "fall_practice",
+   "tech_throwing_the_shoe",
+   "tech_trust_the_eyes",
+   "arc_training",
+   "plank_shoulder_tap",
+   "band_external_rotation",
+   "pushup",
+   "scapular_pullup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "intermediate|2026-10-07|treadmill_hiit_4x4": {
+  "digest": "cacd12c3e8d7e972713589396c4d99ef9a5648e42e248965b3070dc10d52e685",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "core_hollow_hold",
+   "side_plank",
+   "hip_opener_flow"
+  ]
+ },
+ "intermediate|2026-10-07|treadmill_zone2_cardio": {
+  "digest": "4362253f718beedfa696041183971e7243805867d56c55f779e5bf24708361e2",
+  "exercise_ids": [
+   "treadmill_incline_walk",
+   "hip_opener_flow"
+  ]
+ },
+ "intermediate|2026-10-07|upper_body_weights": {
+  "digest": "fed5410a0c7b65629b58abc40184760c7c738aaf11426522f62184cc6ce7e9e8",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "dumbbell_fly",
+   "face_pull",
+   "handstand_pushup_wall",
+   "pushup",
+   "scapular_pullup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "intermediate|2026-10-07|upper_push_arms_lunch": {
+  "digest": "a8f7c3760b03fc0907b50863636d26b9f44cf36f46ec3b901807e01fc0df0aa3",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "ab_wheel_rollout",
+   "core_hollow_hold",
+   "bicep_curl",
+   "dumbbell_bench_press",
+   "dumbbell_fly",
+   "handstand_pushup_wall",
+   "incline_pushup"
+  ]
+ },
+ "intermediate|2026-10-07|yoga_recovery": {
+  "digest": "dd41ad6abf93d50bc8904f6b0cd1f232aa06f7d91a777e86a62b83aaa0f2543a",
+  "exercise_ids": [
+   "cooldown_spinal_twist"
+  ]
+ },
+ "intermediate|2026-10-21|arms_shoulders_handstand_lunch": {
+  "digest": "1caadb2156cbd6f30132fa00a8bfb4b38c1c4a08163542001a22706fd3334ff4",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "mobility_thoracic_shoulders_flow",
+   "heel_pulls_chest_to_wall",
+   "wall_handstand_hold",
+   "overhead_press",
+   "core_hollow_hold",
+   "side_plank",
+   "hammer_curl",
+   "lateral_raise",
+   "overhead_tricep_extension"
+  ]
+ },
+ "intermediate|2026-10-21|boulder_circuit_gym": {
+  "digest": "746433de26999f86de3b5c7f939ed75823f050578b8970a8f3af1ba4e8366114",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hangboard_moving_hangs",
+   "one_arm_pullup_assisted",
+   "side_plank",
+   "band_external_rotation",
+   "pushup",
+   "shoulder_car",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "intermediate|2026-10-21|complementary_conditioning": {
+  "digest": "1510f2e57a8cead7f555a145a6c4d1b82e9c4905383624c6a5599919a5d7d45d",
+  "exercise_ids": [
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "core_hollow_hold",
+   "farmers_carry",
+   "shoulder_car",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "intermediate|2026-10-21|core_training": {
+  "digest": "97674987918dbed319fe1b2de1aac98a9ddd4bf078f7ff44d93eb20d1c9e8556",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "core_l_sit",
+   "plank_shoulder_tap",
+   "suitcase_carry",
+   "v_up",
+   "shoulder_car",
+   "turkish_getup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "intermediate|2026-10-21|deload_recovery": {
+  "digest": "99df8fcab7c5a2ceb46e751a600104dfa01d4d840fd83493db6ea786ab4c48fc",
+  "exercise_ids": [
+   "bear_crawl",
+   "plank_shoulder_tap",
+   "shoulder_car",
+   "stick_pronation_supination_eccentric"
+  ]
+ },
+ "intermediate|2026-10-21|easy_climbing_deload": {
+  "digest": "41786725366ffc0cb4405af724c1a881c4b1b8605b72597d8c01cbd15f9a0b4b",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "pushup",
+   "shoulder_car",
+   "wall_slide",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "intermediate|2026-10-21|endurance_aerobic_gym": {
+  "digest": "2706ebfee741a5cc6b3c3c57df8062e07bde59e3b658ef9b1d85cc3c1fe8a6d4",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hangboard_moving_hangs",
+   "intermittent_dead_hangs",
+   "pallof_press",
+   "band_pull_apart",
+   "pushup",
+   "shoulder_car",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "intermediate|2026-10-21|finger_aerobic_base": {
+  "digest": "25b3264fd9e50d189f224591ed7e4ec5611906c515085b94e9e4010a329314e8",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "finger_recruitment_pulls",
+   "general_pulse_raise",
+   "bar_dead_hang",
+   "pallof_press",
+   "shoulder_car",
+   "stick_pronation_supination_eccentric",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "intermediate|2026-10-21|finger_endurance_short": {
+  "digest": "77b021c4bfc4674d9094a1134b19e66209466c480e5c4acf59f2e426ffed0212",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "finger_recruitment_pulls",
+   "general_pulse_raise",
+   "lopez_subhangs",
+   "windshield_wipers",
+   "shoulder_car",
+   "stick_pronation_supination_eccentric",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "intermediate|2026-10-21|finger_maintenance_gym": {
+  "digest": "6be74501f3088627cef45be049056e0a6f5691a152b3a38b57242fce7aa5ef97",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "finger_recruitment_pulls",
+   "general_pulse_raise",
+   "lopez_subhangs",
+   "bar_dead_hang",
+   "hanging_leg_raise",
+   "band_external_rotation",
+   "pushup",
+   "reverse_wrist_curl",
+   "shoulder_car",
+   "stick_pronation_supination_eccentric",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "intermediate|2026-10-21|finger_maintenance_home": {
+  "digest": "6f55d47ebe6c1b1e0d134897655ab23f151fd9588040de180806f675ad042a4e",
+  "exercise_ids": [
+   "dead_bug",
+   "finger_recruitment_pulls",
+   "warmup_repeaters_large",
+   "lopez_subhangs",
+   "archer_pullup",
+   "reverse_wrist_curl",
+   "stick_pronation_supination_eccentric",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "intermediate|2026-10-21|finger_strength_home": {
+  "digest": "61e11d00a02881e26d993cdab3f96e5c89e50e464c7fad504bbc49299bd48f9e",
+  "exercise_ids": [
+   "finger_recruitment_pulls",
+   "warmup_repeaters_large",
+   "horst_7_53",
+   "pullup",
+   "front_lever_one_leg",
+   "reverse_wrist_curl",
+   "stick_pronation_supination_eccentric",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "intermediate|2026-10-21|flexibility_full": {
+  "digest": "75e781150e0d29e1ea38f1ec70bad6d83a484c2312163afede12d2206d37b2b7",
+  "exercise_ids": [
+   "bear_crawl",
+   "cooldown_hamstring_fold",
+   "cooldown_hip_frog",
+   "cooldown_shoulder_chest",
+   "cooldown_spinal_twist",
+   "flexibility_active_leg_raise"
+  ]
+ },
+ "intermediate|2026-10-21|handstand_practice": {
+  "digest": "6e372f5ddaafe83d5c21209949d3806992eb295fec037f2566737931120fc1a8",
+  "exercise_ids": [
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "frog_stand",
+   "heel_pulls_chest_to_wall",
+   "shoulder_car",
+   "wall_slide"
+  ]
+ },
+ "intermediate|2026-10-21|heavy_conditioning_gym": {
+  "digest": "5f63a5379abe3f1d20943d18478f5c350b9a244074eec9ee7cc7a37878e19322",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hang_rampup_progressive",
+   "kneeling_superman",
+   "inverted_row",
+   "hanging_leg_raise",
+   "bicep_curl",
+   "dip",
+   "handstand_pushup_wall",
+   "lateral_raise",
+   "pushup",
+   "shoulder_car",
+   "single_leg_glute_bridge",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "intermediate|2026-10-21|lead_tryhard_gym": {
+  "digest": "8db8e0ed2f362c21ce066963d7b59bfd7d1dd73c6a2c2988443a00be4374fcf7",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "band_pull_apart",
+   "pushup",
+   "shoulder_car",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "intermediate|2026-10-21|legs_maintenance_lunch": {
+  "digest": "35a8f0b5646670bf7215bc2b91f126fd9fb0b5f7c3c4c570953a3e77251a6fea",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "copenhagen_plank",
+   "core_hollow_hold",
+   "bulgarian_split_squat",
+   "edge_calf_raise_bigtoe",
+   "goblet_squat",
+   "romanian_deadlift",
+   "toe_flexor_isometric"
+  ]
+ },
+ "intermediate|2026-10-21|legs_strength": {
+  "digest": "cbe733afc757dcd6775c5f27f0f2ad5545a614ab109b15d1bd794e022d4cbe3b",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "bulgarian_split_squat",
+   "cossack_squat",
+   "shoulder_car",
+   "single_leg_calf_raise",
+   "single_leg_glute_bridge",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "intermediate|2026-10-21|limit_boulder_gym": {
+  "digest": "7185adbaf37f7a65701b1fc93ead1c559a138e1b6c2472aa93ebb5ebe0b62572",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "archer_pullup",
+   "power_pullups_explosive",
+   "suitcase_carry",
+   "band_external_rotation",
+   "pushup",
+   "shoulder_car",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "intermediate|2026-10-21|lower_body_gym": {
+  "digest": "a4c34548fdbf2b76ec9f93e5324e81a991c93d85e51a8244f99de651dcc59790",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hang_rampup_progressive",
+   "bulgarian_split_squat",
+   "cossack_squat",
+   "single_leg_calf_raise",
+   "single_leg_glute_bridge",
+   "turkish_getup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "intermediate|2026-10-21|power_contact_gym": {
+  "digest": "9eb1f93f7d7143041c69c08fbdb10c045408a68372f37e1bfcacb5c7c10db310",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "overcoming_isometric_pull",
+   "rfd_explosive_pulls",
+   "pallof_press",
+   "dumbbell_external_rotation",
+   "pushup",
+   "shoulder_car",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "intermediate|2026-10-21|power_endurance_gym": {
+  "digest": "c4be5508be2751e1172c5cfa25e95d275911cf7d8fe6115f188c2ccd7be1f84f",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "rfd_explosive_pulls",
+   "archer_pullup",
+   "one_arm_pullup_assisted",
+   "intermittent_dead_hangs",
+   "front_lever_one_leg",
+   "band_pull_apart",
+   "pushup",
+   "shoulder_car",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "intermediate|2026-10-21|prehab_maintenance": {
+  "digest": "e70758014f2a83465affa5f20741056e0cec39ed5b9acdbae56825586df27916",
+  "exercise_ids": [
+   "reverse_wrist_curl",
+   "shoulder_car",
+   "stick_pronation_supination_eccentric",
+   "wall_slide"
+  ]
+ },
+ "intermediate|2026-10-21|pulling_strength_gym": {
+  "digest": "7c9904c289251cb8bcd68c72d480c3c2a3540f5f20df3fc9f6bb6344068eea51",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hang_rampup_progressive",
+   "lock_off_isometric",
+   "power_pullups_explosive",
+   "pullup",
+   "hanging_leg_raise",
+   "pushup",
+   "shoulder_car",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "intermediate|2026-10-21|regeneration_easy": {
+  "digest": "23d368a2b643166cee85b3ba30881e424f54771e55c2851bd5044f3d55cf6905",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "bar_dead_hang",
+   "shoulder_car",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "intermediate|2026-10-21|route_endurance_gym": {
+  "digest": "6ca827afab7438b7e2555eb117150c7d6c58e52afb7d14bcbdff13fc246a7741",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hangboard_moving_hangs",
+   "core_hollow_hold",
+   "dumbbell_external_rotation",
+   "pushup",
+   "reverse_barbell_curl",
+   "shoulder_car",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "intermediate|2026-10-21|route_projecting_gym": {
+  "digest": "8e05d7ea6015464a775623945a074e22a936c4616f3128c9ea4946b33d1d4f67",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "bear_crawl",
+   "dead_bug",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "supinated_inverted_row",
+   "dumbbell_external_rotation",
+   "pushup",
+   "reverse_barbell_curl",
+   "shoulder_car",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "intermediate|2026-10-21|strength_long": {
+  "digest": "e8fe1300985a88827d952209db8223a3b88d69b6947584ecfb43a7f3f95e8e7a",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "finger_recruitment_pulls",
+   "general_pulse_raise",
+   "horst_7_53",
+   "pullup",
+   "hanging_leg_raise",
+   "band_pull_apart",
+   "pushup",
+   "shoulder_car",
+   "stick_pronation_supination_eccentric",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "intermediate|2026-10-21|technique_focus_gym": {
+  "digest": "1d3b9dea4ce1255ed5f3c8796f8841a87f78251436c7a58581f204f44ffe0ef6",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hangboard_moving_hangs",
+   "toes_to_bar",
+   "face_pull",
+   "pushup",
+   "shoulder_car",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "intermediate|2026-10-21|treadmill_hiit_4x4": {
+  "digest": "901914be142e5797e2834d286288f9fd290daff8ab30f8c78b7cd8f64e27cfba",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "core_hollow_hold",
+   "side_plank",
+   "hip_opener_flow"
+  ]
+ },
+ "intermediate|2026-10-21|treadmill_zone2_cardio": {
+  "digest": "8f7507004685e9595c047615f77015010abfa7747ace5044df98a394d301f86f",
+  "exercise_ids": [
+   "treadmill_incline_walk",
+   "hip_opener_flow"
+  ]
+ },
+ "intermediate|2026-10-21|upper_body_weights": {
+  "digest": "2facf7ec6ddcd612faabc366ce6609189c5abb5849c9ea23a36a6850774599ac",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "face_pull",
+   "handstand_pushup_wall",
+   "overhead_press",
+   "pushup",
+   "shoulder_car",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "intermediate|2026-10-21|upper_push_arms_lunch": {
+  "digest": "42a0640c6526bd903c0ae45b300702508afb030e54dfbab672061b8ed0a50273",
+  "exercise_ids": [
+   "general_pulse_raise",
+   "core_hollow_hold",
+   "suitcase_carry",
+   "bicep_curl",
+   "dumbbell_bench_press",
+   "dumbbell_fly",
+   "handstand_pushup_wall",
+   "incline_pushup"
+  ]
+ },
+ "intermediate|2026-10-21|yoga_recovery": {
+  "digest": "93018eb2015dc548a6aac1ad379a026105539ab1684846b17d63a007f60c8525",
+  "exercise_ids": [
+   "cooldown_shoulder_chest"
+  ]
+ }
+}

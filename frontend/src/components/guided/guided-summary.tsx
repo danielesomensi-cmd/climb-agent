@@ -176,7 +176,7 @@ export function GuidedSummary({
               <AlertTriangle className="size-4 text-warning mt-0.5 shrink-0" />
               <p className="text-sm">
                 {nonWarmupPending.length} exercise{nonWarmupPending.length > 1 ? "s" : ""} not completed.
-                Mark remaining as done (not rated) or skip them:
+                Mark remaining as done (no rating counts as &quot;ok&quot;) or skip them:
               </p>
             </div>
             <div className="flex items-center gap-2">

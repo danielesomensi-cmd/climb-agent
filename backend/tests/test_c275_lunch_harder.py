@@ -60,7 +60,9 @@ LOADED_PINS = {
     # C279 (2026-10-30): one more set on every lift to fill a 55' lunch.
     "legs_maintenance_lunch": [("squat_main", "goblet_squat", 5, 6, 120),
                                ("hinge", "romanian_deadlift", 4, 6, 120),
-                               ("single_leg", "bulgarian_split_squat", 3, 8, 90)],
+                               # B413 (D4): 90 → 60 s — each leg rests while the other
+                               # works; the ladder core keeps the lunch within 55'.
+                               ("single_leg", "bulgarian_split_squat", 3, 8, 60)],
     "upper_push_arms_lunch": [("chest_press", "dumbbell_bench_press", 5, 6, 120),
                               ("chest_fly", "dumbbell_fly", 4, 12, 75),
                               ("biceps", "bicep_curl", 4, 8, 75)],

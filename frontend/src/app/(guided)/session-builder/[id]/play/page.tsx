@@ -746,7 +746,7 @@ export default function SessionPlayPage() {
                 />
               ))}
               <p className="text-[11px] text-muted-foreground text-left">
-                Untouched exercises are saved as not rated and don&apos;t change your loads.
+                An exercise you did but didn&apos;t rate counts as &quot;ok&quot;: your progression moves on and nothing goes down.
               </p>
               <div className="rounded-lg border bg-muted/20 p-3 text-left">
                 <PainPicker value={pain} onChange={setPain} />

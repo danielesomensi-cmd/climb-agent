@@ -89,7 +89,13 @@
       "required": false,
       "priority": 70,
       "module_role": "accessory",
-      "notes": "Floor core after the intervals: hollow hold. The legs are tired, the trunk is not.",
+      "notes": "Floor core after the intervals: hollow hold; a tested athlete gets his rollout or L-sit ladder level instead (else his hollow ladder). The legs are tired, the trunk is not.",
+      "ladder_pin": {
+        "families": [
+          "rollout",
+          "compression_floor"
+        ]
+      },
       "selection": {
         "primary": {
           "exercise_id": "core_hollow_hold",
@@ -108,7 +114,8 @@
               "core"
             ],
             "pattern": [
-              "anti_extension"
+              "anti_extension",
+              "compression"
             ],
             "intensity_max": "high"
           }
@@ -120,7 +127,13 @@
       "required": false,
       "priority": 68,
       "module_role": "accessory",
-      "notes": "Floor core, lateral chain: side plank on the forearm.",
+      "notes": "Floor core, lateral chain: side plank on the forearm; a tested athlete gets ONE level below his lateral ladder level, at the top of its band (the arms lunch the day before carries his own level: never the same Copenhagen two days in a row).",
+      "ladder_pin": {
+        "families": [
+          "lateral"
+        ],
+        "level_offset": -1
+      },
       "selection": {
         "primary": {
           "exercise_id": "side_plank",
@@ -139,9 +152,10 @@
               "core"
             ],
             "pattern": [
-              "anti_lateral_flexion"
+              "anti_lateral_flexion",
+              "anti_rotation"
             ],
-            "intensity_max": "medium"
+            "intensity_max": "high"
           }
         }
       }

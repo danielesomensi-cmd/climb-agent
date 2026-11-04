@@ -222,7 +222,12 @@
       "required": false,
       "priority": 72,
       "module_role": "accessory",
-      "notes": "Second floor core exercise: hollow hold. Never hanging: this lunch can sit on the same day as a limit evening session.",
+      "notes": "Second floor core exercise: hollow hold; a tested athlete gets his L-sit ladder level instead (else his hollow ladder). Never hanging: this lunch can sit on the same day as a limit evening session.",
+      "ladder_pin": {
+        "families": [
+          "compression_floor"
+        ]
+      },
       "selection": {
         "primary": {
           "exercise_id": "core_hollow_hold",
@@ -241,7 +246,8 @@
               "core"
             ],
             "pattern": [
-              "anti_extension"
+              "anti_extension",
+              "compression"
             ],
             "intensity_max": "high"
           }
