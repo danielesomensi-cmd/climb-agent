@@ -10430,7 +10430,7 @@
         "work_seconds": null,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 60,
-        "notes": "Progressive: start with short falls (30cm above clip), increase to 1m, then 2m. Always with a trusted belayer. Focus on posture: push away from wall, feet facing wall, knees slightly bent. NEVER on terrain with ledge-fall risk."
+        "notes": "Progressive: start with short falls (tie-in knot 30cm above the clip), increase to 1m, then 2m (distance = knot to last clip; the fall is about twice that plus rope stretch). Always with a trusted belayer. Focus on posture: push away from wall, feet facing wall, knees slightly bent. NEVER on terrain with ledge-fall risk."
       },
       "stress_tags": {
         "elbow": "none",
@@ -10440,9 +10440,9 @@
       },
       "description": "Practice taking intentional falls on lead to build confidence and reduce fear response. Progressive: start with short falls, increase distance over sessions. Source: Garrido-Palomino (2023) RCT — intentional fall practice significantly reduces fear of falling.",
       "cues": [
-        "Step 1: Fall from 30cm above last clip (rope tight)",
-        "Step 2: Fall from 1m above clip",
-        "Step 3: Fall from 2m above (normal lead fall)",
+        "Step 1: Tie-in knot ~30cm above the last clip (rope tight)",
+        "Step 2: Knot 1m above the clip (feet about level with it)",
+        "Step 3: Knot 2m above the clip, feet ~1m above it (normal lead fall, 4-5m total)",
         "Step 4: Partner calls 'fall' from unexpected positions",
         "Do 3-5 falls per step — push away from wall, feet facing wall, knees slightly bent"
       ],
