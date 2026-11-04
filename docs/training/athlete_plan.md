@@ -263,7 +263,7 @@ Le **16 scale** stanno in `backend/catalog/progressions/v1/bw_ladders.json` (liv
 
 `dead_bug`, `plank`, `core_hollow_hold`, `pallof_press` e `plank_shoulder_tap` restano **solo come attivazione** e mai come blocco principale, quando esiste un'alternativa.
 
-**Core dei pranzi di catalogo (B413, chiave di catalogo ladder_pin).** Il blocco hollow e il plank laterale dei pranzi seguono la sua scala: braccia (lun) = laterale al suo livello + L-sit (o rollout); HIIT (mar) = rollout (o L-sit) + laterale **un livello sotto il suo**, in cima a quella banda (mai il Copenhagen dinamico due giorni di fila); gambe = rollout; spinta (ven) = L-sit. Mai livelli appesi, una famiglia per seduta. Limite noto: con tutte le famiglie in cima alla banda i pranzi stimano 56-59' sul tetto di 55' (roadmap).
+**Core dei pranzi di catalogo (B413, chiave di catalogo ladder_pin).** Il blocco hollow e il plank laterale dei pranzi seguono la sua scala: braccia (lun) = laterale al suo livello + L-sit (o rollout); HIIT (mar) = rollout (o L-sit) + laterale **un livello sotto il suo**, in cima a quella banda (mai il Copenhagen dinamico due giorni di fila); gambe = rollout; spinta (ven) = L-sit. Mai livelli appesi, una famiglia per seduta. Con le scale che salgono i pranzi stimano 56-59' invece di 55': accettato da Daniele il 2026-11-04 («se scavalla di qualche minuto fa nulla»), tetto 60'.
 
 ## 7. Registro (cosa scrivere nelle note)
 

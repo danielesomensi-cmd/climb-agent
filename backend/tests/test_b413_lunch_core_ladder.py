@@ -606,11 +606,11 @@ class TestDuration:
         "hollow_plank": {"level_idx": 2, "sets": 3, "target": 45, "source": "feedback"},
     }
 
-    @pytest.mark.xfail(reason=(
-        "B413 open decision (ROADMAP B413-LUNCH-55): at the top of every band the arms and legs lunches "
-        "reach ~59'. strict: a fix shows up as an XPASS failure, so the marker is removed with it."),
-        strict=True)
-    def test_within_55_minutes_at_the_top_of_every_band(self, catalog):
+    def test_within_60_minutes_at_the_top_of_every_band(self, catalog):
+        """B413-LUNCH-55, Daniele 2026-11-04: a lunch may run a few minutes
+        past 55' while the ladders climb ("se scavalla di qualche minuto fa
+        nulla") — at the top of every band the arms and legs lunches reach
+        ~59'. The bound is 60'."""
         over = []
         for sid in lg.LUNCHES:
             for date, phase in lg.DANIELE_SLOTS:
@@ -620,7 +620,7 @@ class TestDuration:
                     rx["alt_sides"] = bool(catalog[inst["exercise_id"]].get("alt_sides"))
                     rows.append(rx)
                 minutes = estimate_custom_session_duration(rows)
-                if minutes > 55:
+                if minutes > 60:
                     over.append((sid, date, phase, minutes))
         assert over == []
 

@@ -565,14 +565,11 @@ def test_lunches_fit_the_lunch_slot_at_the_starting_levels(sim):
     assert [(d, s, m) for d, s, m in first if m > 55] == []
 
 
-@pytest.mark.xfail(reason=(
-    "B413 open decision (ROADMAP B413-LUNCH-55): with the ladders climbing on ok / no rating the lunches "
-    "reach 56-57' within two weeks (59' with every core family at the top of its band). Fixing it needs a "
-    "content choice — the ladder_pin rows keeping the block's rest, a catalog trim of the lifts, or a "
-    "time-budget rule in the resolver — left to Daniele. strict: a fix shows up as an XPASS failure, so "
-    "the marker goes with it."), strict=True)
 def test_lunches_fit_the_lunch_slot_over_four_weeks(sim):
-    over = sorted({(d, s, m) for d, s, m in sim.durations if m > 55})
+    """B413-LUNCH-55, Daniele 2026-11-04: with the ladders climbing the
+    lunches reach 56-57' within two weeks, and a few minutes past 55' is
+    accepted ("se scavalla di qualche minuto fa nulla"). The bound is 60'."""
+    over = sorted({(d, s, m) for d, s, m in sim.durations if m > 60})
     assert over == []
 
 
