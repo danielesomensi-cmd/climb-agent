@@ -493,8 +493,9 @@ class TestChatPrompt:
         st = _st()
         athlete_block._archived_weeks(st, None, date.fromisoformat(TODAY))
         assert reads  # weeks before 21/09 are not hot in the fixture
-        # Look-back 90 + 21 + 7 = 118 d, Monday-aligned: 08/06 → 28/09 (17 weeks).
-        hot = {(date(2026, 6, 8) + timedelta(days=7 * k)).isoformat(): {} for k in range(17)}
+        # B413: the ladder window, 120 d Monday-aligned: 01/06 → 28/09 (18 weeks;
+        # it was 90 + 21 + 7 = 118 d, 08/06, before the ladders read the archive).
+        hot = {(date(2026, 6, 1) + timedelta(days=7 * k)).isoformat(): {} for k in range(18)}
         reads.clear()
         athlete_block._archived_weeks({"week_plans": hot}, None, date.fromisoformat(TODAY))
         assert not reads
@@ -632,8 +633,12 @@ class TestReviewFixes:
 
     def test_archive_lookback_matches_week_and_cli(self, monkeypatch):
         from backend.api.routers import week as week_router
+        from backend.engine import bw_ladders
 
-        assert athlete_block.ARCHIVE_LOOKBACK_D == week_router._RETEST_ARCHIVE_LOOKBACK_D
+        # B413 (D1): coach, CLI and the API ladder loader read ONE window,
+        # wide enough for the /week retest policy's range (filtered out of it).
+        assert athlete_block.ARCHIVE_LOOKBACK_D == bw_ladders.archive_lookback_days() == 120
+        assert athlete_block.ARCHIVE_LOOKBACK_D >= week_router._RETEST_ARCHIVE_LOOKBACK_D
         reads = []
         monkeypatch.setattr("backend.engine.storage.read_archived_weeks_in_range",
                             lambda uid, a, b: reads.append((a, b)) or {})

@@ -260,18 +260,21 @@ def guard_client_plan(
 # Response side
 # --------------------------------------------------------------------------- #
 
-def read_view(plan: Optional[Dict[str, Any]], state: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
+def read_view(plan: Optional[Dict[str, Any]], state: Mapping[str, Any],
+              archived_weeks: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
     """The plan as ``GET /api/week`` serves it: a COPY where every not-yet-played
     custom session carries the read-time values of its day (B364 anchored
     loads, A298 ladder doses, A295 measures, A299 limit targets, B370 rest
     default), plus a ``plan_revision`` the client can send back. The stored
-    plan is untouched. Done/skipped sessions are returned as stored."""
+    plan is untouched. Done/skipped sessions are returned as stored.
+    ``archived_weeks``: the ladders' cold-store weeks (B413, D1 —
+    ``backend.api.ladder_archive``), so the view shows the dose GET shows."""
     if not isinstance(plan, dict):
         return plan
     from backend.api.routers.week import _with_custom_anchored_loads
 
     try:
-        out = _with_custom_anchored_loads(plan, dict(state))
+        out = _with_custom_anchored_loads(plan, dict(state), archived_weeks)
     except Exception:
         # A read-time view must never fail a write that already succeeded.
         logger.warning("B371: read_view failed — returning the stored plan", exc_info=True)
@@ -284,13 +287,15 @@ def freeze_played_customs(
     after: Optional[Dict[str, Any]],
     before: Optional[Mapping[str, Any]],
     state: Mapping[str, Any],
+    archived_weeks: Optional[Dict[str, Any]] = None,
 ) -> int:
     """Custom sessions pending in *before* and done/skipped in *after* keep, in
     *after*, the exercises of the read-time view of *before* — the prescription
     the athlete saw when they played it (GET never re-derives a played
     session, so this is the only moment to record it). Matched on (date, slot,
     session_id); a session moved and marked in the same call keeps its raw
-    rows. Returns how many were frozen."""
+    rows. Returns how many were frozen. ``archived_weeks``: the ladders'
+    cold-store weeks (B413, D1) — the frozen dose is the one GET showed."""
     if not isinstance(after, dict) or not isinstance(before, Mapping):
         return 0
     pending: Dict[tuple, int] = {}
@@ -313,7 +318,7 @@ def freeze_played_customs(
                     targets.append((k, s))
     if not targets:
         return 0
-    view = read_view(dict(before), state) or {}
+    view = read_view(dict(before), state, archived_weeks) or {}
     shown: Dict[tuple, list] = {}
     for wb in view.get("weeks") or []:
         for d in wb.get("days") or []:

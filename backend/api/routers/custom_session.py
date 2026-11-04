@@ -467,7 +467,13 @@ def get_session(
                 # A298: ladder rows get the dose of the athlete's level that
                 # day (+ badge / promotion proposal); technique drills their
                 # one-number measure. Tested athletes only.
-                out["exercises"] = resolve_custom_ladder_rows(state, out.get("exercises") or [], day)
+                # B413 (D1): with the ladders' archived weeks (read-only: a
+                # failed read falls back to the recent weeks).
+                from backend.api.ladder_archive import load as _ladder_load
+
+                out["exercises"] = resolve_custom_ladder_rows(
+                    state, out.get("exercises") or [], day, _ladder_load(state, user_id, [day]).weeks,
+                )
                 out["exercises"] = attach_technique_measures(state, out.get("exercises") or [], day)
                 out["resolved_for_date"] = day
             # A295: measure kind (+ double-progression target with a date).

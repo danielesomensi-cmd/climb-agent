@@ -37,7 +37,10 @@ a deterministic closed loop (BW spec, ``engine_rules`` R0-R12):
 Pure and deterministic: the only time input is the session date
 (``ref_date``), never ``date.today()``. The writers (``apply_bw_item``,
 ``apply_technique_measures``, ``set_level``, ``resolve_promotion``) mutate the
-state passed in; everything else returns new objects.
+state passed in; everything else returns new objects. B413 (D1): every
+reader of the seed takes an optional ``archived_weeks`` (the A221 cold-store
+weeks of the history window, loaded once per request by
+``backend/api/ladder_archive.py``); None reads the hot weeks only.
 
 Every numeric threshold without a published source is an ENGINEERING
 CONSTANT (listed in docs/vocabulary_v1.md §4.9).
@@ -809,7 +812,7 @@ def item_measure(item: Mapping[str, Any], axis: str) -> Tuple[Optional[float], b
 
 def apply_bw_item(
     updated: Dict[str, Any], item: Mapping[str, Any], *, rating: Optional[str], date_value: str,
-    session_key: str, phase: Optional[str] = None,
+    session_key: str, phase: Optional[str] = None, archived_weeks: Any = None,
 ) -> Optional[Dict[str, Any]]:
     """Move ``bw_progression`` for one ladder feedback item. Returns the
     outcome (with ``message``) when the item belongs to a ladder family the
@@ -827,6 +830,10 @@ def apply_bw_item(
       'ladder' row, or a 'fixed' row whose dose equals the ladder's) or a
       measure; a 'fixed' row with another dose and no measure is ignored;
     - resubmitting the same session replays from the pre-session snapshot.
+
+    ``archived_weeks`` (B413, D1): the A221 cold-store weeks of the history
+    window — without them a family with no persisted entry seeds from ~2
+    weeks of history. None = the hot weeks only (the pre-B413 behaviour).
     """
     exercise_id = str(item.get("exercise_id") or "")
     hit = bl.family_of(exercise_id, date_value or None)
@@ -849,7 +856,8 @@ def apply_bw_item(
     else:
         # The session being logged is already marked done: keep it out of the
         # history seed, or its own dose becomes the base minus one step.
-        base = entries_for(updated, date_value, exclude_session_key=session_key).get(family)
+        base = entries_for(updated, date_value, exclude_session_key=session_key,
+                           archived_weeks=archived_weeks).get(family)
     if base is None:
         return None
     eff = effective_entry(base, fam, date_value)
@@ -963,16 +971,17 @@ def attach_feedback_context(log_entry: Dict[str, Any], state: Mapping[str, Any],
 
 
 def resolve_custom_ladder_rows(state: Mapping[str, Any], exercises: Sequence[Mapping[str, Any]],
-                               on: Any) -> List[Dict[str, Any]]:
+                               on: Any, archived_weeks: Any = None) -> List[Dict[str, Any]]:
     """Copies of custom rows; a row in ``progress_mode: 'ladder'`` on a ladder
     family the athlete has an entry for gets the ladder dose of ``on`` (the
     stored values move to ``stored_*``), ``progress_source: 'bw_ladder'``, the
     ``ladder`` badge / proposal and the bodyweight measure. The saved exercise
-    is kept: only a tap on the proposal rewrites the row. Never mutates input."""
+    is kept: only a tap on the proposal rewrites the row. Never mutates input.
+    ``archived_weeks``: the cold-store weeks of the seed (B413, D1)."""
     rows = [dict(r) for r in exercises or [] if isinstance(r, Mapping)]
     if not on or not any(r.get("progress_mode") == "ladder" for r in rows):
         return rows
-    entries = entries_for(state, on)
+    entries = entries_for(state, on, archived_weeks=archived_weeks)
     if not entries:
         return rows
     phase = phase_on(state, on)
@@ -1048,7 +1057,7 @@ def attach_technique_measures(state: Mapping[str, Any], exercises: Sequence[Mapp
 # ---------------------------------------------------------------------------
 
 def set_level(state: Dict[str, Any], family: str, level_idx: int, ref_date: DateLike, *,
-              confirm: bool = False) -> Dict[str, Any]:
+              confirm: bool = False, archived_weeks: Any = None) -> Dict[str, Any]:
     """Settings 'down' / 'up' (source user_edit). More than one level above the
     current one needs ``confirm``. Lower-back levels are allowed here (manual).
     Raises ValueError on an unknown family / level."""
@@ -1058,7 +1067,7 @@ def set_level(state: Dict[str, Any], family: str, level_idx: int, ref_date: Date
     levels = _levels(fam)
     if not (0 <= int(level_idx) < len(levels)):
         raise ValueError(f"level_idx out of range for {family}: {level_idx}")
-    cur = entries_for(state, ref_date, require_tested=False).get(family)
+    cur = entries_for(state, ref_date, require_tested=False, archived_weeks=archived_weeks).get(family)
     cur_idx = int(cur["level_idx"]) if cur else -1
     if int(level_idx) > cur_idx + 1 and not confirm:
         raise PermissionError("more than one level above the current one: confirm required")
@@ -1075,7 +1084,8 @@ def set_level(state: Dict[str, Any], family: str, level_idx: int, ref_date: Date
 
 
 def resolve_promotion(state: Dict[str, Any], family: str, *, accept: bool, ref_date: DateLike,
-                      to_level_idx: Optional[int] = None) -> Optional[Dict[str, Any]]:
+                      to_level_idx: Optional[int] = None,
+                      archived_weeks: Any = None) -> Optional[Dict[str, Any]]:
     """The custom proposal tap. ``accept`` with a pending promotion → the entry
     moves up (target at the bottom of the new band); a 'switch' proposal (row
     below the athlete's level) leaves the entry as it is. Decline clears the
@@ -1083,7 +1093,7 @@ def resolve_promotion(state: Dict[str, Any], family: str, *, accept: bool, ref_d
     fam = family_doc(family)
     if fam is None:
         raise ValueError(f"unknown family: {family}")
-    cur = entries_for(state, ref_date, require_tested=False).get(family)
+    cur = entries_for(state, ref_date, require_tested=False, archived_weeks=archived_weeks).get(family)
     if cur is None:
         return None
     entry = _strip_private(cur)
@@ -1132,9 +1142,10 @@ def rewrite_ladder_rows(rows: Any, family: str, to_level_idx: int, on: DateLike)
     return n
 
 
-def ladder_view(state: Mapping[str, Any], ref_date: DateLike) -> Dict[str, Any]:
-    """Settings / API view: every family with level, dose and flags."""
-    entries = entries_for(state, ref_date, require_tested=False)
+def ladder_view(state: Mapping[str, Any], ref_date: DateLike, archived_weeks: Any = None) -> Dict[str, Any]:
+    """Settings / API view: every family with level, dose and flags.
+    ``archived_weeks``: the cold-store weeks of the seed (B413, D1)."""
+    entries = entries_for(state, ref_date, require_tested=False, archived_weeks=archived_weeks)
     gate = tested(state, ref_date)
     phase = phase_on(state, ref_date)
     lbz = has_lower_back_zone(state)
@@ -1181,18 +1192,20 @@ def is_recovery_session(session: Optional[Mapping[str, Any]]) -> bool:
 
 def build_resolve_context(state: Optional[Mapping[str, Any]], target_date: Any,
                           phase: Optional[str] = None,
-                          session: Optional[Mapping[str, Any]] = None) -> Optional[Dict[str, Any]]:
+                          session: Optional[Mapping[str, Any]] = None,
+                          archived_weeks: Any = None) -> Optional[Dict[str, Any]]:
     """None (resolver unchanged, bit for bit) unless the athlete is tested on
     ``target_date``. ``entries`` may be empty (technique measures only).
     A recovery / deload session (``session`` intent) gets no ladder stage —
-    only the technique measures."""
+    only the technique measures. ``archived_weeks``: the cold-store weeks of
+    the seed (B413, D1; None = hot weeks only)."""
     if not state or not target_date:
         return None
     try:
         on = _iso(target_date)
         if not on or not tested(state, on):
             return None
-        entries = {} if is_recovery_session(session) else entries_for(state, on)
+        entries = {} if is_recovery_session(session) else entries_for(state, on, archived_weeks=archived_weeks)
     except Exception:  # never let the ladder break a resolution
         return None
     return {"date": on, "entries": entries, "phase": phase or phase_on(state, on),

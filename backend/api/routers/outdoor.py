@@ -244,8 +244,12 @@ def _sync_plan_after_outdoor_log(
     else:
         persist_week_plan(updated, state, user_id)
     # Ripple may have swapped next-day sessions with unresolved replacements
-    # (disabled for past weeks — see allow_ripple above).
-    _auto_resolve(updated, state, user_id)
+    # (disabled for past weeks — see allow_ripple above). B413 (D1): with the
+    # ladders' archived weeks; resolved after the save, so a failed read only
+    # falls back to the recent weeks.
+    from backend.api.ladder_archive import for_plan as _ladder_for_plan
+
+    _auto_resolve(updated, state, user_id, _ladder_for_plan(state, user_id, updated).weeks)
     return True
 
 

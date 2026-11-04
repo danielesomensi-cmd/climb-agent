@@ -78,7 +78,10 @@ def read_state(user_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
         return None
 
 
-@memo_write
+# B413: a state write does NOT clear the request memo (B376) — no memoised
+# read depends on the users row (archive weeks, outdoor logs only), and the
+# key status computed after a save reuses the ladders' archive read instead
+# of a second round-trip. Archive / outdoor writes still invalidate.
 def write_state(state: Dict[str, Any], user_id: Optional[str] = None) -> None:
     """Write user_state.json to disk (atomic). B387: stored through the codec."""
     path = _user_state_path(user_id)

@@ -9,6 +9,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from backend.api import ladder_archive as _ladder_archive
 from backend.api.deps import REPO_ROOT, get_user_id, load_state, require_active_subscription, save_state
 from backend.api.plan_revision import guard_client_plan, read_view, serialized_by_user
 from backend.api.models import (
@@ -50,6 +51,12 @@ def _load_exercises_catalog() -> dict:
     return {e["id"]: e for e in data.get("exercises", [])}
 
 
+def _view(week_plan: dict, state: dict, user_id) -> dict:
+    """B413 (D1): ``read_view`` with the ladders' archived weeks of the plan's
+    week (a failed read falls back to the recent weeks: a view stores nothing)."""
+    return read_view(week_plan, state, _ladder_archive.for_plan(state, user_id, week_plan).weeks)
+
+
 def _persist_week_plan(updated: dict, state: dict, user_id) -> None:
     """Save modified plan to per-week cache and (if current) to legacy cache."""
     from backend.api.routers.replanner import persist_week_plan as _replanner_persist
@@ -68,6 +75,9 @@ def resolve(req: SessionResolveRequest, user_id: Optional[str] = Depends(get_use
     state = load_state(user_id)
     if req.context:
         state["context"] = {**state.get("context", {}), **req.context}
+    _ctx = state.get("context") if isinstance(state.get("context"), dict) else {}
+    # B413 (D1): the ladders' archived weeks of the resolved day (read-only).
+    _ladder = _ladder_archive.load(state, user_id, [_ctx.get("target_date") or _ctx.get("date")])
 
     try:
         resolved = resolve_session(
@@ -80,6 +90,7 @@ def resolve(req: SessionResolveRequest, user_id: Optional[str] = Depends(get_use
             write_output=False,
             user_id=user_id,
             equipment_override=req.equipment_override,
+            archived_weeks=_ladder.weeks,
         )
     except Exception as e:
         logger.error("Session resolution failed: %s", e, exc_info=True)
@@ -174,7 +185,7 @@ def add_exercise(req: AddExerciseRequest, user_id: Optional[str] = Depends(get_u
     session["_user_edited"] = True
     _persist_week_plan(week_plan, state, user_id)
 
-    return {"week_plan": read_view(week_plan, state)}
+    return {"week_plan": _view(week_plan, state, user_id)}
 
 
 def _find_session(week_plan: dict, date: str, session_index: int):
@@ -247,7 +258,7 @@ def remove_exercise(req: RemoveExerciseRequest, user_id: Optional[str] = Depends
     session["_user_edited"] = True
     _persist_week_plan(week_plan, state, user_id)
 
-    return {"week_plan": read_view(week_plan, state)}
+    return {"week_plan": _view(week_plan, state, user_id)}
 
 
 # --------------------------------------------------------------------------- #
@@ -262,6 +273,7 @@ def _resolve_for_slot(
     state: dict,
     user_id,
     equipment_override: Optional[list] = None,
+    archived_weeks: Optional[dict] = None,
 ) -> dict:
     """Resolve `session_id` as if the week router had resolved it for this slot.
 
@@ -294,6 +306,7 @@ def _resolve_for_slot(
             user_id=user_id,
             phase=slot.get("phase_id"),
             equipment_override=equipment_override,
+            archived_weeks=archived_weeks,  # B413 (D1)
         )
     except HTTPException:
         raise
@@ -421,6 +434,9 @@ def surface_override(req: SurfaceOverrideRequest, user_id: Optional[str] = Depen
 
     day, session, resolved, _ = _find_session(week_plan, req.date, req.session_index)
     _assert_session_mutable(session, req.date)
+    # B413 (D1): the slot keeps the resolution made here (``_user_edited``) —
+    # its ladder dose must see the archived weeks: a failed read is a 503.
+    _lw = _ladder_archive.load(state, user_id, [req.date], write=True).weeks
 
     if session.get("is_custom"):
         raise HTTPException(
@@ -432,20 +448,20 @@ def surface_override(req: SurfaceOverrideRequest, user_id: Optional[str] = Depen
         planned_id = session.get("surface_override_from")
         if not planned_id:
             # Nothing to revert — idempotent, mirrors mark_planned's no-op.
-            return {"week_plan": read_view(week_plan, state)}
+            return {"week_plan": _view(week_plan, state, user_id)}
         session["session_id"] = planned_id
         session["resolved"] = _resolve_for_slot(
-            planned_id, session, req.date, state, user_id
+            planned_id, session, req.date, state, user_id, archived_weeks=_lw,
         )
         _apply_slot_meta(session, planned_id)
         for key in ("surface_override", "surface_override_from", "_user_edited"):
             session.pop(key, None)
         _persist_week_plan(week_plan, state, user_id)
-        return {"week_plan": read_view(week_plan, state)}
+        return {"week_plan": _view(week_plan, state, user_id)}
 
     if session.get("surface_override"):
         # Already adapted — applying twice must not lose the planned session_id.
-        return {"week_plan": read_view(week_plan, state)}
+        return {"week_plan": _view(week_plan, state, user_id)}
 
     planned_id = session.get("session_id")
     fallback_id = ((resolved or {}).get("session") or {}).get("boulder_fallback")
@@ -472,6 +488,7 @@ def surface_override(req: SurfaceOverrideRequest, user_id: Optional[str] = Depen
         state,
         user_id,
         equipment_override=_boulder_equipment_override(session, state, target_id),
+        archived_weeks=_lw,
     )
 
     instances = (new_resolved.get("resolved_session") or {}).get("exercise_instances") or []
@@ -494,6 +511,6 @@ def surface_override(req: SurfaceOverrideRequest, user_id: Optional[str] = Depen
     session["_user_edited"] = True
     _persist_week_plan(week_plan, state, user_id)
 
-    return {"week_plan": read_view(week_plan, state)}
+    return {"week_plan": _view(week_plan, state, user_id)}
 
 

@@ -51,13 +51,17 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from backend.engine import athlete_context as ac  # noqa: E402
+from backend.engine import bw_ladders as _bw  # noqa: E402
 from backend.engine import state_codec  # noqa: E402
 
 #: Daniele's internal user id (memory reference_prod_user_debug).
 DEFAULT_USER_ID = "7ea9f0ee-e629-4ce9-8f4f-f8e6e3dc771e"
-#: Archived weeks read for the confidence window of a test up to 90 days old
-#: (21 days before it) + a week of look-back (same as GET /api/week, A289).
-ARCHIVE_LOOKBACK_D = 90 + 21 + 7
+#: Archived weeks read for the context. B413 (D1): the ONE ladder window,
+#: Monday-aligned (``bw_ladders.archive_window_start``) — the ladder history
+#: (120 d) and the confidence window of a test up to 90 days old (90 + 21 + 7,
+#: the same GET /api/week filters out of it). An unaligned start lost the week
+#: that contains it (up to ~8 days of history).
+ARCHIVE_LOOKBACK_D = _bw.archive_lookback_days()
 #: Outdoor days read: try-hard window (28 d) + the week.
 OUTDOOR_LOOKBACK_D = 35
 
@@ -141,7 +145,7 @@ def fetch_live(user_id: str, today: date) -> Dict[str, Any]:
     users = rest_get(base, key, "users", [("select", "state,updated_at"), ("user_id", f"eq.{user_id}")])
     if not users:
         return {"state": None, "updated_at": None, "archived_weeks": None, "outdoor_rows": None}
-    arch_since = (today - timedelta(days=ARCHIVE_LOOKBACK_D)).isoformat()
+    arch_since = _bw.archive_window_start(today).isoformat()
     archive = rest_get(base, key, "week_archive", [
         ("select", "week_start,plan"), ("user_id", f"eq.{user_id}"),
         ("week_start", f"gte.{arch_since}"), ("week_start", f"lte.{today.isoformat()}"),

@@ -19,6 +19,7 @@ from backend.api.plan_revision import (
 from backend.api.guard_status import build_guard_warnings, messages_for
 from backend.api.key_status import build_key_conflicts, build_key_status, resolve_today
 from backend.api import auto_reschedule as _auto
+from backend.api import ladder_archive as _ladder_archive
 from backend.engine.outdoor_log import compute_outdoor_load_score, load_outdoor_sessions
 from backend.engine.planner_v2 import _SESSION_META
 from backend.engine.replanner_v1 import (
@@ -189,8 +190,12 @@ def persist_week_plan(updated: dict, state: dict, user_id) -> None:
     save_state(state, user_id)
 
 
-def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None) -> None:
+def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None,
+                  archived_weeks: Optional[dict] = None) -> None:
     """Resolve all sessions in a week plan inline (same logic as week router).
+
+    B413 (D1): ``archived_weeks`` — the ladders' cold-store weeks
+    (``backend.api.ladder_archive``); None = the hot weeks only.
 
     B120: completed/skipped sessions with cached resolved data are never
     re-resolved — this protects past sessions from device-switch corruption.
@@ -262,6 +267,7 @@ def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None) -
                         user_id=user_id,
                         extra_recent_ex_ids=planned_recent,  # B268
                         week_plan=week_plan,  # A290: structural A/B + heavy-slot rank
+                        archived_weeks=archived_weeks,  # B413 (D1)
                     )
                     session_entry["resolved"] = resolved
                     # A stale marker would keep an error banner up forever.
@@ -315,6 +321,10 @@ def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)
     # B96: pass gyms so override can check equipment compatibility
     equipment = state.get("equipment", {})
     gyms = equipment.get("gyms", [])
+    # B413 (D1): the ladders' archived weeks, for the response view only (the
+    # plan is saved before it is resolved) — a failed read falls back to the
+    # recent weeks. Read first: the key status filters its range out of it.
+    _ladder = _ladder_archive.for_plan(state, user_id, week_plan)
     # A315: the week's key debts before the override.
     _debts_before = _auto.debts_before(state, user_id, week_plan, req.today)
 
@@ -352,8 +362,8 @@ def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)
 
     persist_week_plan(updated, state, user_id)
 
-    # Auto-resolve all sessions so the frontend gets exercises inline
-    _auto_resolve(updated, state, user_id)
+    # Auto-resolve all sessions so the frontend gets exercises inline.
+    _auto_resolve(updated, state, user_id, _ladder.weeks)
 
     # A301: the override rewrites nothing around it — ``adjustments`` stays
     # in the contract and is always empty. ``guard_warnings`` are the alerts
@@ -378,8 +388,8 @@ def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)
 
     # B371 review: the response is the same read-time view GET serves (the
     # stored plan stays raw).
-    return {"week_plan": read_view(updated, state), "adjustments": adjustments, "warnings": warnings,
-            "guard_warnings": guard_warnings,
+    return {"week_plan": read_view(updated, state, _ladder.weeks), "adjustments": adjustments,
+            "warnings": warnings, "guard_warnings": guard_warnings,
             # A294: sibling, never inside week_plan (nothing can persist it).
             "key_status": build_key_status(state, user_id, week_start=updated.get("start_date"),
                                            today=req.today),
@@ -479,11 +489,13 @@ def quick_add(req: QuickAddRequest, user_id: Optional[str] = Depends(get_user_id
 
     persist_week_plan(updated, state, user_id)
 
-    _auto_resolve(updated, state, user_id)
+    # B413: the response view only (saved above).
+    _ladder = _ladder_archive.for_plan(state, user_id, updated)
+    _auto_resolve(updated, state, user_id, _ladder.weeks)
 
     # A301: nothing is rewritten after a quick-add — `adjustments` is always
     # empty (kept for the contract); `guard_warnings` are the week's alerts.
-    return {"week_plan": read_view(updated, state), "warnings": warnings, "adjustments": adjustments,
+    return {"week_plan": read_view(updated, state, _ladder.weeks), "warnings": warnings, "adjustments": adjustments,
             "guard_warnings": build_guard_warnings(state, updated, req.today, user_id=user_id),
             "key_status": build_key_status(state, user_id, week_start=updated.get("start_date"),
                                            today=req.today)}
@@ -552,6 +564,14 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
         preview.setdefault("id", "preview")
         raw_customs = [c for c in raw_customs if c.get("id") != preview["id"]] + [preview]
     custom_sessions = enrich_custom_sessions_for_play(raw_customs)
+
+    # B413 (D1): a custom marked here keeps the prescription of the read-time
+    # view — computed on the ladders' archived weeks, read first so the key
+    # status of this request filters its range out of the same read. A failed
+    # read answers 503 before anything is written. The dry run reads nothing
+    # of the ladders (it writes nothing and shows no ladder dose).
+    _ladder = (_ladder_archive.NOT_NEEDED if req.dry_run
+               else _ladder_archive.for_plan(state, user_id, week_plan, write=True))
 
     # A294: dry run — the events go through the same apply_events on a COPY;
     # nothing below (outdoor store, outdoor log, closed loop, completion log,
@@ -770,11 +790,11 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
     updated, auto_reschedules = _auto.apply(state, user_id, updated, _debts_before, today=req.today,
                                             custom_sessions=custom_sessions)
 
-    freeze_played_customs(updated, _before_events, state)
+    freeze_played_customs(updated, _before_events, state, _ladder.weeks)
     persist_week_plan(updated, state, user_id)
 
     # Auto-resolve all sessions so the frontend gets exercises inline
-    _auto_resolve(updated, state, user_id)
+    _auto_resolve(updated, state, user_id, _ladder.weeks)
 
     # A294: what a reconcile rewrote in THIS call — A301: nothing any more, so
     # always empty (kept for the contract; a legacy plan may still carry old
@@ -790,7 +810,7 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
         elif a.get("type") == "change_gym":
             warnings.extend(a.get("warnings") or [])
     return {
-        "week_plan": read_view(updated, state),
+        "week_plan": read_view(updated, state, _ladder.weeks),
         "adjustments": adjustments,
         "warnings": warnings,
         "guard_warnings": build_guard_warnings(state, updated, req.today, user_id=user_id),

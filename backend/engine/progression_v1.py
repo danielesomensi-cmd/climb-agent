@@ -2845,7 +2845,15 @@ def _apply_dp_feedback(
     return next_load, fields
 
 
-def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dict[str, Any]:
+def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any],
+                   archived_weeks: Any = None) -> Dict[str, Any]:
+    """Apply one session's feedback to a COPY of ``user_state``.
+
+    ``archived_weeks`` (B413, D1): the A221 cold-store weeks of the ladder
+    history window, read by the API once per request. Only the bodyweight
+    ladder seed reads them (a family with no persisted level); None = the hot
+    weeks only, the pre-B413 behaviour bit for bit.
+    """
     from backend.engine import measured_feedback as mf
 
     updated = deepcopy(user_state)
@@ -2973,7 +2981,7 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
                 bw_phase = _get_current_phase_id(updated, date_value)
             _bw_out = _bwp.apply_bw_item(
                 updated, item, rating=rating, date_value=date_value,
-                session_key=session_key, phase=bw_phase,
+                session_key=session_key, phase=bw_phase, archived_weeks=archived_weeks,
             )
             if _bw_out is not None:
                 bw_outcomes.append(_bw_out)

@@ -1680,6 +1680,7 @@ def resolve_session(
     equipment_override: Optional[List[str]] = None,
     extra_recent_ex_ids: Optional[List[str]] = None,
     week_plan: Optional[Dict[str, Any]] = None,
+    archived_weeks: Any = None,
 ) -> Dict[str, Any]:
     """Resolve a catalog session into concrete exercise instances.
 
@@ -1687,6 +1688,10 @@ def resolve_session(
     structural truth for the A/B occurrence index and the heavy-slot rank when
     it is not yet (or not identically) in ``user_state["week_plans"]``. Only
     read for tested athletes (``phase_anchor.build_rotation_context``).
+
+    B413 (D1): ``archived_weeks`` (optional) are the A221 cold-store weeks of
+    the ladder history window, passed to the bodyweight ladder stage only
+    (``bw_progression.build_resolve_context``). None = the hot weeks only.
     """
     # --- Input validation ---
     if not session_path:
@@ -1786,7 +1791,8 @@ def resolve_session(
     if user_state and target_date:
         from backend.engine import bw_progression as _bwp
         try:
-            bw_ctx = _bwp.build_resolve_context(user_state, target_date, phase, session=session)
+            bw_ctx = _bwp.build_resolve_context(user_state, target_date, phase, session=session,
+                                                archived_weeks=archived_weeks)
         except Exception:  # never let the ladder layer break a resolution
             logger.warning("resolve_session: bw ladder context failed — catalog doses", exc_info=True)
             bw_ctx = None

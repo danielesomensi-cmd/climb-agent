@@ -32,14 +32,17 @@ import os
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, Mapping, Optional
 
+from backend.engine import bw_ladders as _bl
+
 logger = logging.getLogger(__name__)
 
-#: Look-back of the archived weeks read for the context: the confidence window
-#: of a test up to TEST_FRESH_DAYS old (21 days before it) + a week — the SAME
-#: 90 + 21 + 7 the /week retest policy (A289) and the A293 CLI read, so the
-#: chat never states a confidence the rest of the app contradicts. It also
+#: Look-back of the archived weeks read for the context. B413 (D1): the ONE
+#: ladder window (``bw_ladders.archive_lookback_days``, Monday-aligned) — the
+#: ladder history (120 d) and the confidence window of a test up to 90 days
+#: old (90 + 21 + 7, the same the /week retest policy filters out of it), so
+#: the chat never states a level or a confidence the app contradicts. It also
 #: covers the variety window (3 weeks) and the guards (8 days back).
-ARCHIVE_LOOKBACK_D = 90 + 21 + 7
+ARCHIVE_LOOKBACK_D = _bl.archive_lookback_days()
 #: Outdoor logs read for the context (try-hard window, 28 days).
 OUTDOOR_LOOKBACK_D = 28
 
@@ -60,8 +63,7 @@ def _archived_weeks(state: Mapping[str, Any], user_id: Optional[str], day: date)
     week of it is no longer hot. None when not needed or on failure."""
     # Monday-aligned: the store filters on week_start >= lo, so an unaligned
     # lo would lose the week that contains it.
-    lo = day - timedelta(days=ARCHIVE_LOOKBACK_D)
-    lo = lo - timedelta(days=lo.weekday())
+    lo = _bl.archive_window_start(day)
     hot = set((state.get("week_plans") or {}).keys())
     wk = lo
     this_monday = day - timedelta(days=day.weekday())

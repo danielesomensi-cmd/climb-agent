@@ -22,6 +22,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from backend.api import ladder_archive as _ladder_archive
 from backend.api.deps import get_user_id, load_state, require_active_subscription, save_state
 from backend.engine import bw_progression as bwp
 
@@ -52,30 +53,38 @@ class PromotionRequest(BaseModel):
 @router.get("", dependencies=[Depends(require_active_subscription)])
 def get_levels(date: Optional[str] = Query(None), user_id: Optional[str] = Depends(get_user_id)):
     state = load_state(user_id)
-    return bwp.ladder_view(state, _day(date))
+    day = _day(date)
+    # B413 (D1): the seed of a family with no stored level reads the archive.
+    return bwp.ladder_view(state, day, _ladder_archive.load(state, user_id, [day]).weeks)
 
 
 @router.put("/{family}", dependencies=[Depends(require_active_subscription)])
 def put_level(family: str, req: LevelRequest, user_id: Optional[str] = Depends(get_user_id)):
     state = load_state(user_id)
     day = _day(req.date)
+    # B413 (D1): the level written is checked against the seeded one — a
+    # failed archive read is a 503, nothing is written.
+    arch = _ladder_archive.load(state, user_id, [day], write=True).weeks
     try:
-        entry = bwp.set_level(state, family, req.level_idx, day, confirm=req.confirm)
+        entry = bwp.set_level(state, family, req.level_idx, day, confirm=req.confirm, archived_weeks=arch)
     except PermissionError as exc:
         raise HTTPException(status_code=409, detail=str(exc))
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
     save_state(state, user_id)
     return {"family": family, "entry": {k: v for k, v in entry.items() if k != "_prev"},
-            "view": bwp.ladder_view(state, day)}
+            "view": bwp.ladder_view(state, day, arch)}
 
 
 @router.post("/{family}/promotion", dependencies=[Depends(require_active_subscription)])
 def post_promotion(family: str, req: PromotionRequest, user_id: Optional[str] = Depends(get_user_id)):
     state = load_state(user_id)
     day = _day(req.date)
+    # B413 (D1): a seeded entry is written as it is read — never from half the
+    # history (a failed archive read is a 503).
+    arch = _ladder_archive.load(state, user_id, [day], write=True).weeks
     try:
-        entry = bwp.resolve_promotion(state, family, accept=req.accept, ref_date=day)
+        entry = bwp.resolve_promotion(state, family, accept=req.accept, ref_date=day, archived_weeks=arch)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
     if entry is None:

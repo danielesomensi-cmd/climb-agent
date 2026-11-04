@@ -121,7 +121,8 @@ class TestLiveReaderIsGetOnly:
         data = cli.fetch_live("u1", date(2026, 10, 4))
         assert [c[0] for c in calls] == ["users", "week_archive", "outdoor_logs"]
         assert calls[0][1]["user_id"] == "eq.u1"
-        assert ("week_start", "gte.2026-06-08") in calls[1][1]
+        # B413 (D1): the ladder window, 120 d Monday-aligned (was 118 d unaligned).
+        assert ("week_start", "gte.2026-06-01") in calls[1][1]
         assert data["state"] == {"goal": {}} and data["archived_weeks"] == []
 
     def test_fetch_live_no_user(self, monkeypatch):

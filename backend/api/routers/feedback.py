@@ -36,6 +36,7 @@ from backend.api.deps import (
     save_state,
     week_num_to_phase_context,
 )
+from backend.api import ladder_archive as _ladder_archive
 from backend.api.rate_limit import limiter
 from backend.api.models import FeedbackRequest
 from backend.api.key_status import resolve_today
@@ -235,6 +236,14 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
     target_date = req.log_entry.get("date")
     target_sid = req.log_entry.get("session_id")
     _week_snap = _snapshot_weeks(state, target_date)
+    # B413 (D1): the archived weeks the ladders read — the frozen custom
+    # prescription, the feedback base and the response view all step from the
+    # same history. A failed read answers 503 before anything is written.
+    _ladder = _ladder_archive.load(
+        state, user_id,
+        [target_date] + _ladder_archive.plan_dates(state.get("current_week_plan")),
+        write=True,
+    )
 
     # 1. A194: Apply mark_done inline to current_week_plan (idempotent — safe if
     # frontend already called applyEvents separately, e.g. from /today).
@@ -281,7 +290,7 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
             )
             # B371 review: a custom played here keeps the prescription of the
             # read-time view (the athlete saw it, GET never re-derives it).
-            freeze_played_customs(week_plan, _before_mark, state)
+            freeze_played_customs(week_plan, _before_mark, state, _ladder.weeks)
             state["current_week_plan"] = week_plan
             # Sync to per-week cache so subsequent operations in this request
             # mutate the same object (B136b).
@@ -312,7 +321,7 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
                         prev_days=_prev_week_days(state, alt_plan.get("start_date")),  # B367
                         today=_event_floor(target_date),  # B367
                     )
-                    freeze_played_customs(alt_plan, _before_alt, state)
+                    freeze_played_customs(alt_plan, _before_alt, state, _ladder.weeks)
                     state.setdefault("week_plans", {})[target_monday] = alt_plan
                     # If target_monday is the current macrocycle week, also
                     # refresh legacy current_week_plan so downstream readers
@@ -403,7 +412,7 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
 
     # 2. Apply progression feedback (updates working loads)
     try:
-        state = apply_feedback(req.log_entry, state)
+        state = apply_feedback(req.log_entry, state, archived_weeks=_ladder.weeks)
     except Exception as e:
         logger.error("Feedback application failed: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Feedback application failed. Please try again.")
@@ -646,7 +655,7 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
     response: dict = {"status": "ok"}
     if final_plan:
         # Same read-time view GET serves (the stored plan stays raw).
-        response["week_plan"] = read_view(final_plan, state)
+        response["week_plan"] = read_view(final_plan, state, _ladder.weeks)
     # A296: what the limit log made of this session (target step, the
     # hard-attempts warning, a send above the boulder RP to confirm).
     _limit_summary = _limit_summary_for(state, target_date, target_sid)

@@ -295,6 +295,33 @@ def seed_target(rows: Sequence[Mapping[str, Any]], band: Mapping[str, Any]) -> T
 # Seed (read-only)
 # ---------------------------------------------------------------------------
 
+#: The retest confidence window of a test up to ``TEST_FRESH_DAYS`` old (its
+#: ``LOW_CONF_WINDOW_D`` days before it) + a week — what GET /week (A289), the
+#: coach chat (A297) and the CLI (A293) read with the ladders.
+RETEST_ARCHIVE_LOOKBACK_D = rp.TEST_FRESH_DAYS + rp.LOW_CONF_WINDOW_D + 7
+
+
+def archive_lookback_days(ladders: Optional[Mapping[str, Any]] = None) -> int:
+    """B413 (D1): the ONE look-back of archived weeks read with the ladders —
+    the history window (120 d; the skill families' 60 d and the L-sit test's
+    90 d sit inside it) and the retest confidence window read by the same
+    callers. A221 moves past weeks to the cold store after a week: a reader
+    that does not pass them sees ~2 weeks of history instead of 120 days."""
+    doc = ladders if ladders is not None else _load_file()
+    seed = doc.get("seed_rules") or {}
+    return max(int(seed.get("history_window_days") or 120),
+               int(seed.get("skill_family_history_window_days") or 60),
+               TEST_MAX_AGE_D, RETEST_ARCHIVE_LOOKBACK_D)
+
+
+def archive_window_start(ref_date: DateLike, ladders: Optional[Mapping[str, Any]] = None) -> date:
+    """The first Monday of the archive window of ``ref_date``. Monday-aligned:
+    the store filters on ``week_start >= lo``, so an unaligned start would
+    lose the week that contains it."""
+    lo = _as_date(ref_date) - timedelta(days=archive_lookback_days(ladders))
+    return lo - timedelta(days=lo.weekday())
+
+
 def tested_gate(state: Mapping[str, Any], ref_date: DateLike) -> bool:
     """The BW "tested athlete" gate: an official max with a test log < 90 days
     on the finger or the pulling protocol (``retest_policy.is_tested``)."""

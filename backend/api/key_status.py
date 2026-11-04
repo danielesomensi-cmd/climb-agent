@@ -84,9 +84,11 @@ def _archived_for_phase(state: Mapping[str, Any], user_id: Optional[str], ws: da
     if not missing:
         return None
     try:
-        from backend.api import deps as _deps
+        # B413: served from the ladders' wider read of this request when there
+        # is one (same weeks, no second round-trip).
+        from backend.api.ladder_archive import read_range
 
-        return _deps._storage.read_archived_weeks_in_range(user_id, lo.isoformat(), ws.isoformat())
+        return read_range(user_id, lo.isoformat(), ws.isoformat())
     except Exception:
         logger.warning("A294: archived weeks unavailable for the key status", exc_info=True)
         return None

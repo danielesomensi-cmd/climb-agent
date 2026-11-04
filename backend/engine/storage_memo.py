@@ -17,9 +17,11 @@ duration of ONE request:
   shared between requests or users.
 - **Keyed by** ``(function, bound arguments)`` — the user id is the first
   argument of every memoised read, so it is part of the key.
-- **Any write invalidates.** Every storage write (state, archive, outdoor log,
-  deletes) clears the whole memo of the request, before and after the write.
-  Conservative on purpose: a request has at most a handful of writes.
+- **Any write of a memoised table invalidates.** Every archive / outdoor log
+  write and every delete clears the whole memo of the request, before and
+  after the write. Conservative on purpose: a request has at most a handful of
+  writes. B413: a state write (``write_state``) does not — no memoised read
+  depends on the users row.
 - **Callers never share an object with the memo.** The value is snapshotted as
   JSON when stored and every hit returns a fresh ``json.loads`` of it, so a
   caller that mutates what it got cannot poison a later read. The first (miss)
@@ -91,6 +93,27 @@ def _restore(snap: Tuple[str, Any]) -> Any:
     if kind == "json":
         return json.loads(payload)
     return copy.deepcopy(payload)
+
+
+#: Returned by :func:`find` when nothing in the memo matches.
+MISSING = _MISSING
+
+
+def find(name: str, match: Callable[[Dict[str, Any]], bool]) -> Any:
+    """B413: a value already memoised in this request for the read ``name``
+    whose bound arguments satisfy ``match`` (a fresh copy, as on a hit), or
+    :data:`MISSING` — outside a scope, with the memo off, or with no match.
+    Lets a caller serve a narrower range from a wider one read earlier in the
+    request instead of a second round-trip. Never reads storage."""
+    memo = _memo.get()
+    if memo is None or not _enabled():
+        return _MISSING
+    for key, snap in list(memo.items()):
+        if key[0] != name:
+            continue
+        if match(dict(key[1])):
+            return _restore(snap)
+    return _MISSING
 
 
 def memo_read(fn: Callable) -> Callable:

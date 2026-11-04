@@ -21,7 +21,9 @@ from backend.api.deps import (
     save_state,
     week_num_to_phase_context,
 )
+from backend.api import ladder_archive as _ladder_archive
 from backend.api.models import TestReminderResponse
+from backend.engine.bw_ladders import RETEST_ARCHIVE_LOOKBACK_D
 from backend.engine.macrocycle_v1 import compute_pretrip_dates, compute_taper_windows
 from backend.engine.cues import get_session_cue
 from backend.engine.planner_v2 import (
@@ -103,8 +105,13 @@ def _apply_taper_volume(resolved: dict, multiplier: float, *, is_test_session: b
         prescription["taper_scaled_from"] = sets
 
 
-def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None, phase: Optional[str] = None) -> None:
+def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None, phase: Optional[str] = None,
+                  archived_weeks: Optional[dict] = None) -> None:
     """Resolve all sessions in a week plan inline.
+
+    B413 (D1): ``archived_weeks`` — the cold-store weeks of the ladder history
+    window (``backend.api.ladder_archive``), passed to the resolver's
+    bodyweight ladder stage. None = the hot weeks only.
 
     Preserves user-added exercises (source: "user_added") that were appended
     via POST /api/session/add-exercise — they are re-appended after the
@@ -175,6 +182,7 @@ def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None, p
                         phase=phase,
                         extra_recent_ex_ids=planned_recent,  # B268
                         week_plan=week_plan,  # A290: structural A/B + heavy-slot rank
+                        archived_weeks=archived_weeks,  # B413 (D1)
                     )
                     # Re-append user-added exercises
                     if user_added:
@@ -218,11 +226,12 @@ def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None, p
             planned_recent.extend(day_ex_ids)
 
 
-def _with_custom_anchored_loads(week_plan: dict, state: dict) -> dict:
+def _with_custom_anchored_loads(week_plan: dict, state: dict, archived_weeks: Optional[dict] = None) -> dict:
     """B364: a copy of ``week_plan`` where every not-yet-played custom /
     generated session carries the anchored loads of its own day
     (``anchored_load.resolve_custom_exercises``). Done and skipped sessions are
-    returned exactly as stored (immutability); the stored plan is untouched."""
+    returned exactly as stored (immutability); the stored plan is untouched.
+    ``archived_weeks``: the ladders' cold-store weeks (B413, D1)."""
     from backend.engine.anchored_load import resolve_custom_exercises
     from backend.engine.bw_progression import attach_technique_measures, resolve_custom_ladder_rows
     from backend.engine.measured_feedback import attach_measure_fields
@@ -250,7 +259,7 @@ def _with_custom_anchored_loads(week_plan: dict, state: dict) -> dict:
                     # A298: ladder rows (progress_mode 'ladder') get the dose
                     # of the athlete's level; feet / falls drills their measure.
                     session_entry["exercises"] = resolve_custom_ladder_rows(
-                        state, session_entry["exercises"], day,
+                        state, session_entry["exercises"], day, archived_weeks,
                     )
                     session_entry["exercises"] = attach_technique_measures(
                         state, session_entry["exercises"], day,
@@ -510,8 +519,9 @@ def _is_servable_plan(plan: Optional[dict], week_start_key: str) -> bool:
 # ---------------------------------------------------------------------------
 
 #: Archived weeks read for the retest policy: the confidence window of a test
-#: up to 90 days old (21 days before it) plus the blocker look-back.
-_RETEST_ARCHIVE_LOOKBACK_D = 90 + 21 + 7
+#: up to 90 days old (21 days before it) plus the blocker look-back. B413: one
+#: definition, shared with the coach and the CLI (inside the ladder window).
+_RETEST_ARCHIVE_LOOKBACK_D = RETEST_ARCHIVE_LOOKBACK_D
 #: Outdoor days read for the retest blockers (finger-hard days before a test).
 _RETEST_OUTDOOR_LOOKBACK_D = 14
 
@@ -522,11 +532,13 @@ def _retest_archived_weeks(user_id: Optional[str], ref_iso: str) -> Optional[dic
     Fail-soft: the policy then counts the hot weeks + the persisted exposure
     registry only (an under-estimate of past exposures, never a crash)."""
     try:
-        from backend.api import deps as _deps
+        # B413: served from the ladders' wider read of this request when there
+        # is one (same weeks, no second round-trip).
+        from backend.api.ladder_archive import read_range
 
         ref = datetime.strptime(ref_iso[:10], "%Y-%m-%d").date()
         start = (ref - timedelta(days=_RETEST_ARCHIVE_LOOKBACK_D)).isoformat()
-        return _deps._storage.read_archived_weeks_in_range(user_id, start, ref.isoformat())
+        return read_range(user_id, start, ref.isoformat())
     except Exception:
         logger.warning("A289: archived weeks unavailable for the retest policy", exc_info=True)
         return None
@@ -636,6 +648,12 @@ def get_week(
     if gyms:
         sorted_gyms = sorted(gyms, key=lambda g: (g.get("priority", 999), g.get("gym_id", "")))
         default_gym_id = sorted_gyms[0].get("gym_id")
+
+    # B413 (D1): the archived weeks the bodyweight ladders read for this week,
+    # loaded once, up front — the retest policy and the key status of this
+    # request filter their own ranges out of the same read. A failed read
+    # serves the recent-weeks view and persists nothing derived from it.
+    _ladder = _ladder_archive.load(state, user_id, _ladder_archive.plan_dates(ctx))
 
     # For the current week, try to use the cached plan from state
     is_current_week = (week_num == 0) or (ctx["week_num"] == _current_week_num(macrocycle))
@@ -934,14 +952,15 @@ def get_week(
     # B375: the played sessions without a stored resolution, taken BEFORE
     # _auto_resolve fills them (on a cache hit week_plan IS the stored plan).
     # A221: a week served from the cold store is never written back into hot.
+    # B413: a view resolved without the archive it needed is never persisted.
     _to_cache = (
         _played_without_resolved(week_plan)
-        if not served_from_archive and not regeneration_failed
+        if not served_from_archive and not regeneration_failed and not _ladder.failed
         else []
     )
 
     # Auto-resolve each session so the frontend gets exercises inline
-    _auto_resolve(week_plan, state, user_id, phase=ctx["phase_id"])
+    _auto_resolve(week_plan, state, user_id, phase=ctx["phase_id"], archived_weeks=_ladder.weeks)
 
     # B120: persist resolved data for completed sessions so they survive cache
     # roundtrips and are never re-resolved with changed state (device switch).
@@ -978,7 +997,7 @@ def get_week(
         "phase_id": ctx["phase_id"],
         # B364: anchored loads of custom sessions are computed at read, on a
         # copy — never persisted, never applied to done/skipped sessions.
-        "week_plan": _with_custom_anchored_loads(week_plan, state),
+        "week_plan": _with_custom_anchored_loads(week_plan, state, _ladder.weeks),
     }
     # B371: the client always gets a revision to send back as base_revision
     # (a plan from before B369 has none → 1, the server's own default).
