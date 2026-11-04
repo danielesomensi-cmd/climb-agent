@@ -41,7 +41,8 @@ from backend.api.rate_limit import limiter
 from backend.api.models import FeedbackRequest
 from backend.api.key_status import resolve_today
 from backend.api.plan_revision import (
-    REVISION_KEY, freeze_played_customs, read_view, revision_of, serialized_by_user,
+    REVISION_KEY, compute_played_resolved, freeze_played_customs, read_view, revision_of,
+    serialized_by_user, write_played_resolved,
 )
 from backend.api.routers.replanner import _event_floor, _prev_week_days, persist_week_plan
 from backend.engine.adaptive_replan import (
@@ -251,6 +252,12 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
     planning_prefs = state.get("planning_prefs")
     gyms = (state.get("equipment") or {}).get("gyms")
     week_plan = state.get("current_week_plan")
+    # B413 (D2): the prescription GET served for the engine session this
+    # request marks done — computed on the plan before the "done" and the
+    # state before the feedback, written only at step 7b, after the closed loop
+    # (every input of the closed loop stays what it was without the freeze).
+    _frozen: dict = {}
+    _frozen_week: Optional[str] = None
 
     def _already_done(plan) -> bool:
         # B371 review: the inline mark_done is skipped when the session is
@@ -291,6 +298,9 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
             # B371 review: a custom played here keeps the prescription of the
             # read-time view (the athlete saw it, GET never re-derives it).
             freeze_played_customs(week_plan, _before_mark, state, _ladder.weeks)
+            _frozen = compute_played_resolved(week_plan, _before_mark, state,
+                                              user_id=user_id, archived_weeks=_ladder.weeks)
+            _frozen_week = week_plan.get("start_date")
             state["current_week_plan"] = week_plan
             # Sync to per-week cache so subsequent operations in this request
             # mutate the same object (B136b).
@@ -322,6 +332,9 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
                         today=_event_floor(target_date),  # B367
                     )
                     freeze_played_customs(alt_plan, _before_alt, state, _ladder.weeks)
+                    _frozen = compute_played_resolved(alt_plan, _before_alt, state,
+                                                      user_id=user_id, archived_weeks=_ladder.weeks)
+                    _frozen_week = alt_plan.get("start_date")
                     state.setdefault("week_plans", {})[target_monday] = alt_plan
                     # If target_monday is the current macrocycle week, also
                     # refresh legacy current_week_plan so downstream readers
@@ -627,6 +640,16 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
                         max(prev, duration) if isinstance(prev, (int, float)) else duration
                     )
                 break
+
+    # 7b. B413 (D2): the engine session marked done above keeps the
+    # prescription it was shown (computed before the feedback moved anything).
+    # Without it B375 would cache, on the next GET, a resolution derived from
+    # the state this feedback just changed (03/11: the dynamic Copenhagen
+    # stored in place of the Copenhagen plank that was played).
+    # apply_feedback returned a copy of the state: the week is looked up again.
+    if _frozen and _frozen_week:
+        for _p in _week_objects(state, _frozen_week):
+            write_played_resolved(_p, _frozen)
 
     # 8. A194: Persist via persist_week_plan when we have a current plan —
     # this handles both state["current_week_plan"] and week_plans[start_key]

@@ -36,8 +36,11 @@ a deterministic closed loop (BW spec, ``engine_rules`` R0-R12):
 
 Pure and deterministic: the only time input is the session date
 (``ref_date``), never ``date.today()``. The writers (``apply_bw_item``,
-``apply_technique_measures``, ``set_level``, ``resolve_promotion``) mutate the
-state passed in; everything else returns new objects. B413 (D1): every
+``apply_technique_measures``, ``set_level``, ``resolve_promotion``,
+``revert_session``) mutate the state passed in; everything else returns new
+objects. B413 (D3): a session marked done with no feedback feeds
+``apply_bw_item`` the ladder rows of its frozen prescription
+(``mark_done_items``) as done, unrated rows; its undo is ``revert_session``. B413 (D1): every
 reader of the seed takes an optional ``archived_weeks`` (the A221 cold-store
 weeks of the history window, loaded once per request by
 ``backend/api/ladder_archive.py``); None reads the hot weeks only.
@@ -879,6 +882,12 @@ def apply_bw_item(
     done = bl.ladder_row_done(item, player_session=bl._is_player_session({"session_id": sid}),
                               dose_sets=_int(item.get("prescribed_sets")) or int(dose["sets"]))
     if rating is None and measured is None and not done:
+        # B413 (D3): a replay of a session whose "done" already moved the
+        # ladder (/events mark_done, or an earlier submission) — the row was
+        # not done after all: back to the pre-session snapshot.
+        if _revert_family(updated, family, session_key):
+            return {"family": family, "kind": "hold", "applied": True, "reverted": True,
+                    "message": NOT_DONE_MESSAGE}
         return {"family": family, "kind": "hold", "applied": False, "message": NOT_DONE_MESSAGE}
     completed = item.get("completed")
     if completed is False and done:
@@ -897,6 +906,86 @@ def apply_bw_item(
     new["_prev"] = {"session_key": session_key, "entry": snap}
     _store(updated)[family] = new
     return {"family": family, "applied": True, **outcome}
+
+
+_SEED_SOURCES = frozenset({"seed_history", "seed_test"})
+
+
+def _revert_family(updated: Dict[str, Any], family: str, session_key: str) -> bool:
+    """Put ``family`` back to the snapshot taken before ``session_key`` moved
+    it — only when that session is still the last writer (a later session, a
+    settings edit or a promotion tap leave no ``_prev`` of that key: the entry
+    changed in the meantime and stays). A snapshot of a read-time seed (no
+    persisted entry before) removes the entry: the seed is derived again."""
+    store = _persisted(updated)
+    cur = store.get(family)
+    prev = cur.get("_prev") if isinstance(cur, Mapping) and isinstance(cur.get("_prev"), Mapping) else None
+    if not prev or prev.get("session_key") != session_key or not isinstance(prev.get("entry"), Mapping):
+        return False
+    snap = dict(prev["entry"])
+    if snap.get("source") in _SEED_SOURCES:
+        _store(updated).pop(family, None)
+    else:
+        _store(updated)[family] = _strip_private(snap)
+    return True
+
+
+def revert_session(updated: Dict[str, Any], session_key: str) -> List[str]:
+    """B413 (D3): the undo of a "done" (``mark_planned``) — every ladder family
+    whose last write is ``session_key`` (``date|session_id``) goes back to its
+    pre-session snapshot (:func:`_revert_family`). Technique ladders are not
+    touched. Returns the families reverted, sorted."""
+    out = []
+    for name in sorted(_persisted(updated)):
+        if name == TECHNIQUE_KEY:
+            continue
+        if _revert_family(updated, name, session_key):
+            out.append(name)
+    return out
+
+
+def mark_done_items(session: Mapping[str, Any]) -> List[Dict[str, Any]]:
+    """B413 (D3): a session marked done with no feedback — the ladder rows of
+    its frozen prescription as done, unrated feedback items (= "ok", A1).
+
+    - engine session: the resolved instances the ladder stage wrote
+      (``prescription.source == 'bw_ladder'``) → ``bw_ladder: 'engine'``;
+    - custom session: the rows in ``progress_mode: 'ladder'`` that carry the
+      ladder dose (``progress_source == 'bw_ladder'``) → ``bw_ladder: 'ladder'``
+      (a promotion stays a proposal).
+
+    Each item counts every prescribed set as done (``completed_sets``), so the
+    shared "done" rule holds for the players too. Nothing else of the session
+    is turned into feedback: loads, grades and measures are untouched."""
+    out: List[Dict[str, Any]] = []
+
+    def _item(eid: str, ctx: str, sets: Any, reps: Any, secs: Any) -> Dict[str, Any]:
+        n = _int(sets)
+        it: Dict[str, Any] = {"exercise_id": eid, "bw_ladder": ctx, "completed": True}
+        if n:
+            it["completed_sets"] = n
+            it["prescribed_sets"] = n
+        if _int(reps):
+            it["prescribed_reps"] = _int(reps)
+        if _int(secs):
+            it["prescribed_work_seconds"] = _int(secs)
+        return it
+
+    for r in session.get("exercises") or []:
+        if not isinstance(r, Mapping) or r.get("progress_mode") != "ladder":
+            continue
+        if r.get("progress_source") != "bw_ladder" or not r.get("exercise_id"):
+            continue
+        out.append(_item(str(r["exercise_id"]), "ladder", r.get("sets"), r.get("reps"), r.get("work_seconds")))
+    resolved = (session.get("resolved") or {}).get("resolved_session") or {}
+    for inst in resolved.get("exercise_instances") or []:
+        if not isinstance(inst, Mapping) or not inst.get("exercise_id"):
+            continue
+        pr = inst.get("prescription") or {}
+        if pr.get("source") != "bw_ladder":
+            continue
+        out.append(_item(str(inst["exercise_id"]), "engine", pr.get("sets"), pr.get("reps"), pr.get("work_seconds")))
+    return out
 
 
 # ---------------------------------------------------------------------------

@@ -6,7 +6,7 @@ import logging
 import os
 from copy import deepcopy
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Iterable, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -106,12 +106,18 @@ def _apply_taper_volume(resolved: dict, multiplier: float, *, is_test_session: b
 
 
 def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None, phase: Optional[str] = None,
-                  archived_weeks: Optional[dict] = None) -> None:
+                  archived_weeks: Optional[dict] = None, stop_after: Optional[Iterable[tuple]] = None) -> None:
     """Resolve all sessions in a week plan inline.
 
     B413 (D1): ``archived_weeks`` — the cold-store weeks of the ladder history
     window (``backend.api.ladder_archive``), passed to the resolver's
     bodyweight ladder stage. None = the hot weeks only.
+
+    B413 (D2): ``stop_after`` — ``(date, slot, session_id)`` keys; the walk
+    stops once every one of them has been passed (the prescription freeze needs
+    the sessions up to the one being played: B268 recency only flows from
+    earlier days, so the sessions after it change nothing). None = the whole
+    week, exactly as before.
 
     Preserves user-added exercises (source: "user_added") that were appended
     via POST /api/session/add-exercise — they are re-appended after the
@@ -123,10 +129,17 @@ def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None, p
     # B268: exercise_ids planned on EARLIER days this week, fed into the
     # resolver as recency so a session repeated on a later day varies.
     planned_recent: list = []
+    # B413 (D2): the keys still to pass before the walk may stop.
+    remaining = set(stop_after) if stop_after is not None else None
     for week_block in week_plan.get("weeks", []):
         for day_entry in week_block.get("days", []):
             day_ex_ids: list = []  # B268: this day's resolved exercise_ids
             for session_entry in day_entry.get("sessions", []):
+                if remaining is not None and not remaining:
+                    return
+                if remaining is not None:
+                    remaining.discard((day_entry.get("date"), session_entry.get("slot"),
+                                       session_entry.get("session_id")))
                 # B120: never re-resolve completed sessions with cached data
                 # B153b: never re-resolve sessions the user explicitly edited
                 if (

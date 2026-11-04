@@ -14,7 +14,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from backend.api.deps import REPO_ROOT, assert_plan_not_paused, current_phase_and_week, get_user_id, is_past_week, load_state, require_active_subscription, save_state, week_num_to_phase_context
 from backend.api.models import EventsRequest, OverrideRequest, QuickAddRequest
 from backend.api.plan_revision import (
-    freeze_played_customs, guard_client_plan, read_view, serialized_by_user, stamp_revision, stored_plan_for,
+    compute_played_resolved, freeze_played_customs, guard_client_plan, read_view, serialized_by_user,
+    stamp_revision, stored_plan_for, write_played_resolved,
 )
 from backend.api.guard_status import build_guard_warnings, messages_for
 from backend.api.key_status import build_key_conflicts, build_key_status, resolve_today
@@ -289,6 +290,57 @@ def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None,
                     session_entry["resolve_error"] = True
             # B268: a day's exercises become recency for subsequent days only
             planned_recent.extend(day_ex_ids)
+
+
+def _played_sessions(plan: Optional[dict], *, done_only: bool) -> dict:
+    """``{(date, slot, session_id): (date, session)}`` of *plan*'s sessions that
+    are done (``done_only``) or not played at all (``done_only=False``)."""
+    out: dict = {}
+    for w in (plan or {}).get("weeks") or []:
+        for d in w.get("days") or []:
+            for s in d.get("sessions") or []:
+                if not isinstance(s, dict):
+                    continue
+                played = s.get("status") in ("done", "skipped")
+                if (s.get("status") == "done") if done_only else not played:
+                    out.setdefault((d.get("date"), s.get("slot"), s.get("session_id")), (d.get("date"), s))
+    return out
+
+
+def _ladders_on_done_without_feedback(state: dict, after: dict, before: dict, undone: list,
+                                      archived_weeks: Optional[dict]) -> None:
+    """B413 (D3): a session marked done with no feedback is a session of "ok"
+    rows (A1) for the bodyweight ladders — the ladder rows of its FROZEN
+    prescription (``bw_progression.mark_done_items``) go through the same
+    ``apply_bw_item`` as a feedback, unrated. A later feedback of that session
+    replays from the per-session ``_prev`` snapshot (no double count); the undo
+    of a "done" (``undone``: ``(date, session_id)`` of each mark_planned that
+    hit a done session) puts each ladder back to that snapshot, when nothing
+    moved it since. Loads, grades and measures are never touched here; the
+    tested gate keeps an untested athlete out entirely. A failure is logged —
+    the plan status and the completion log matter more."""
+    from backend.engine import bw_progression as _bwp
+
+    try:
+        done_now = _played_sessions(after, done_only=True)
+        for d, sid in undone:
+            if any(k[0] == d and k[2] == sid for k in done_now):
+                continue  # undone then marked again in the same call: still done
+            _bwp.revert_session(state, f"{d}|{sid}")
+        pending = _played_sessions(before, done_only=False)
+        for key, (d, s) in done_now.items():
+            if key not in pending or not d:
+                continue
+            items = _bwp.mark_done_items(s)
+            if not items:
+                continue
+            phase = _bwp.phase_on(state, d)
+            for item in items:
+                _bwp.apply_bw_item(state, item, rating=None, date_value=str(d),
+                                   session_key=f"{d}|{s.get('session_id') or ''}", phase=phase,
+                                   archived_weeks=archived_weeks)
+    except Exception:
+        logger.warning("B413: ladder update on done without feedback failed", exc_info=True)
 
 
 @router.post("/override", dependencies=[Depends(require_active_subscription)])
@@ -626,6 +678,8 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
     # events — the UI sends the stub's id (regeneration_easy), while the skip
     # was logged under the id of the session that was skipped.
     _undo_skipped_ids: dict = {}
+    # B413 (D3): the done sessions each undo hits — their ladders go back.
+    _undone: list = []
     for _i, _ev in enumerate(req.events):
         if _ev.get("event_type") != "mark_planned" or not _ev.get("date"):
             continue
@@ -634,6 +688,8 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
         _t = undo_target(_day, session_ref=_ev.get("session_ref"), slot=_ev.get("slot")) if _day else None
         if _t is not None and _t.get("status") == "skipped" and _t.get("skipped_session_id"):
             _undo_skipped_ids[_i] = _t["skipped_session_id"]
+        if _t is not None and _t.get("status") == "done" and _t.get("session_id"):
+            _undone.append((_ev["date"], _t["session_id"]))
     try:
         updated = apply_events(
             week_plan,
@@ -652,6 +708,15 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
     except Exception as e:
         logger.error("Events application failed: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Events application failed. Please try again.")
+
+    # B413 (D2): an engine session marked done here keeps the prescription GET
+    # served — the server's resolution of the stored week before the events
+    # (the client's copy of ``resolved`` may be older), on the state before
+    # anything below changes it. Written next to the custom freeze.
+    _frozen = compute_played_resolved(
+        updated, stored_plan_for(state, week_plan.get("start_date")) or _before_events, state,
+        user_id=user_id, archived_weeks=_ladder.weeks,
+    )
 
     # B403: undo_outdoor un-ticks the plan day and NEVER deletes the logged
     # routes. It used to delete the day's outdoor log "so re-logging doesn't
@@ -791,6 +856,9 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
                                             custom_sessions=custom_sessions)
 
     freeze_played_customs(updated, _before_events, state, _ladder.weeks)
+    write_played_resolved(updated, _frozen)
+    # B413 (D3): done without feedback = "ok" on the ladders; undo reverts.
+    _ladders_on_done_without_feedback(state, updated, _before_events, _undone, _ladder.weeks)
     persist_week_plan(updated, state, user_id)
 
     # Auto-resolve all sessions so the frontend gets exercises inline

@@ -76,6 +76,11 @@ def _week_plan() -> dict:
                     "session_id": SESSION_ID,
                     "slot": "evening",
                     "estimated_load_score": 65,
+                    # B413 (D2): at "done" the server freezes the prescription
+                    # GET showed. GET re-resolves a planned session, so a stub
+                    # ``resolved`` is what it shows only on a session the user
+                    # edited (B153b) — which keeps this stub the prescription.
+                    "_user_edited": True,
                     "resolved": {
                         "session_load_score": PRESCRIBED,
                         "resolved_session": {

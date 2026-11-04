@@ -33,6 +33,9 @@ Two response-side helpers close the loop:
 - :func:`freeze_played_customs` — when a custom session goes done/skipped, the
   prescription the athlete actually saw (the read-time view of that moment) is
   what the history keeps, exactly as before B371 when the client sent it back.
+- :func:`freeze_played_resolved` (B413, D2) — the same for a catalog (engine)
+  session going planned → done: its ``resolved`` is the one GET served before
+  the "done", never one derived after the feedback moved the ladders.
 
 Concurrency: :func:`serialized_by_user` serialises the write endpoints of one
 user inside the process (one lock per user), so two writes in flight cannot
@@ -333,6 +336,126 @@ def freeze_played_customs(
         s["exercises"] = deepcopy(twins.pop(0)["exercises"])
         n += 1
     return n
+
+
+def _is_engine(session: Mapping[str, Any]) -> bool:
+    """A catalog session (resolved by ``week._auto_resolve``): not a custom,
+    not a generated (body-part) session."""
+    return not _is_custom(session) and not str(session.get("session_id") or "").startswith("generated_")
+
+
+def played_engine_keys(after: Optional[Mapping[str, Any]], before: Optional[Mapping[str, Any]]) -> list:
+    """B413 (D2): ``(date, slot, session_id)`` of the engine sessions pending
+    in *before* and done in *after* — the planned → done transitions of one
+    request. A session already done in *before* is not a transition (the
+    /today flow marks through /events, then posts the feedback)."""
+    if not isinstance(after, Mapping) or not isinstance(before, Mapping):
+        return []
+    pending = set()
+    for wb in before.get("weeks") or []:
+        for d in wb.get("days") or []:
+            for s in d.get("sessions") or []:
+                if isinstance(s, Mapping) and _is_engine(s) and s.get("status") not in _PLAYED:
+                    pending.add(_session_key(d.get("date"), s))
+    out: list = []
+    for wb in after.get("weeks") or []:
+        for d in wb.get("days") or []:
+            for s in d.get("sessions") or []:
+                if isinstance(s, Mapping) and _is_engine(s) and s.get("status") == "done":
+                    k = _session_key(d.get("date"), s)
+                    if k in pending and k not in out:
+                        out.append(k)
+    return out
+
+
+def _plan_phase(state: Mapping[str, Any], plan: Mapping[str, Any]) -> Optional[str]:
+    """The phase GET /api/week resolves *plan* with (its week's position in
+    the macrocycle), else the plan's own snapshot."""
+    from backend.engine.macro_position import position_on
+
+    start = plan.get("start_date")
+    try:
+        pos = position_on(state.get("macrocycle"), start) if start else None
+    except (TypeError, ValueError, KeyError):
+        pos = None
+    return (pos or {}).get("phase_id") or (plan.get("profile_snapshot") or {}).get("phase_id")
+
+
+def compute_played_resolved(
+    after: Optional[Mapping[str, Any]],
+    before: Optional[Mapping[str, Any]],
+    state: Mapping[str, Any],
+    *,
+    user_id: Optional[str] = None,
+    archived_weeks: Optional[Dict[str, Any]] = None,
+) -> Dict[tuple, dict]:
+    """B413 (D2): ``{key: resolved}`` for every planned → done engine session
+    of *after* (:func:`played_engine_keys`) — the resolution GET served before
+    the "done": ``week._auto_resolve`` (B268 order, A281 taper, user_added
+    rows, the phase of the week) on a COPY of *before*, with *state* as it was
+    before the request changed it and the ladders' archived weeks of D1.
+
+    Fail-soft: any error is logged and nothing is frozen (B375 stays the
+    fallback). Neither argument is mutated."""
+    keys = played_engine_keys(after, before)
+    if not keys:
+        return {}
+    try:
+        from backend.api.routers.week import _auto_resolve
+
+        view = deepcopy(dict(before))
+        # _auto_resolve reads the state and resolves each session on its own
+        # deep copy: the state passed in is never written.
+        _auto_resolve(view, dict(state), user_id, phase=_plan_phase(state, view),
+                      archived_weeks=archived_weeks, stop_after=keys)
+        wanted = set(keys)
+        out: Dict[tuple, dict] = {}
+        for wb in view.get("weeks") or []:
+            for d in wb.get("days") or []:
+                for s in d.get("sessions") or []:
+                    k = _session_key(d.get("date"), s)
+                    if k in wanted and k not in out and isinstance(s.get("resolved"), dict):
+                        out[k] = s["resolved"]
+        return out
+    except Exception:
+        logger.warning("B413: freezing the played prescription failed — B375 fallback", exc_info=True)
+        return {}
+
+
+def write_played_resolved(after: Optional[Dict[str, Any]], frozen: Mapping[tuple, dict]) -> int:
+    """Write each frozen ``resolved`` (:func:`compute_played_resolved`) into
+    the matching DONE session of *after*. Only ``resolved`` is written (and a
+    stale ``resolve_error`` cleared). Returns how many were written."""
+    if not isinstance(after, dict) or not frozen:
+        return 0
+    left = dict(frozen)
+    n = 0
+    for wb in after.get("weeks") or []:
+        for d in wb.get("days") or []:
+            for s in d.get("sessions") or []:
+                if not (isinstance(s, dict) and _is_engine(s) and s.get("status") == "done"):
+                    continue
+                k = _session_key(d.get("date"), s)
+                if k in left:
+                    s["resolved"] = deepcopy(left.pop(k))
+                    s.pop("resolve_error", None)
+                    n += 1
+    return n
+
+
+def freeze_played_resolved(
+    after: Optional[Dict[str, Any]],
+    before: Optional[Mapping[str, Any]],
+    state: Mapping[str, Any],
+    *,
+    user_id: Optional[str] = None,
+    archived_weeks: Optional[Dict[str, Any]] = None,
+) -> int:
+    """:func:`compute_played_resolved` then :func:`write_played_resolved`, in
+    one go (a caller that must keep a later step's inputs untouched computes
+    first and writes at the end)."""
+    return write_played_resolved(
+        after, compute_played_resolved(after, before, state, user_id=user_id, archived_weeks=archived_weeks))
 
 
 # --------------------------------------------------------------------------- #
