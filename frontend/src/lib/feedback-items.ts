@@ -309,6 +309,13 @@ export function buildGuidedFeedbackItems(
       // ONLY there — elsewhere it was a copy of completed_sets that the
       // engine could mistake for real reps.
       if (REPEATER_TEST_IDS.has(ex.exerciseId)) item.completed_reps = ex.completedSets;
+    } else if (ex.status === "done" && ex.suggested.ladderSource && ex.prescription.sets) {
+      // B413: a ladder row marked done without counting sets ("Mark remaining
+      // as done", or Done without the set timer) is a done row — no rating
+      // counts as "ok" on the ladder. On a custom / generated session the
+      // server needs a counted set to tell it from the session-builder
+      // player's default completed:true, so the prescribed sets go along.
+      item.completed_sets = ex.prescription.sets;
     }
     Object.assign(item, guidedMeasureFields(ex));
     // Test measurement exercises: send the value as the field name directly

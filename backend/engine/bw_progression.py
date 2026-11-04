@@ -889,6 +889,7 @@ def apply_bw_item(
             return {"family": family, "kind": "hold", "applied": True, "reverted": True,
                     "message": NOT_DONE_MESSAGE}
         return {"family": family, "kind": "hold", "applied": False, "message": NOT_DONE_MESSAGE}
+    step_base = _seed_lifted_to_shown(step_base, item, fam, ctx=ctx, phase=phase)
     completed = item.get("completed")
     if completed is False and done:
         completed = True
@@ -909,6 +910,31 @@ def apply_bw_item(
 
 
 _SEED_SOURCES = frozenset({"seed_history", "seed_test"})
+
+
+def _seed_lifted_to_shown(base: Dict[str, Any], item: Mapping[str, Any], fam: Mapping[str, Any], *,
+                          ctx: str, phase: Optional[str]) -> Dict[str, Any]:
+    """B413 (D1, review): the step starts from the dose the athlete was shown.
+
+    A SEEDED entry (history / test, never set by feedback or by hand) on an
+    engine row may have been shown MORE than the seed — the ``ladder_pin``
+    floor of a catalog lunch (``pin_floor``: 3x30 s hollow hold over a 2x20 s
+    seed). Stepping from the seed would make the next lunch prescribe less
+    than the session just done "ok". So the base is lifted to the row's
+    prescribed sets and reps-or-seconds (same level only, clamped to the band;
+    never lowered). Deload freezes the ladder: no lift there."""
+    if base.get("source") not in _SEED_SOURCES or ctx != "engine" or is_frozen(phase):
+        return base
+    sets = _int(item.get("prescribed_sets"))
+    if base["axis"] == "seconds":
+        val = _int(item.get("prescribed_work_seconds")) or _int(item.get("work_seconds"))
+    else:
+        val = _int(item.get("prescribed_reps")) or _int(item.get("reps"))
+    lifted_sets = max(int(base["sets"]), sets or 0)
+    lifted_val = max(int(base["target"]), val or 0)
+    if (lifted_sets, lifted_val) == (int(base["sets"]), int(base["target"])):
+        return base
+    return _normalize(dict(base, sets=lifted_sets, target=lifted_val), fam) or base
 
 
 def _revert_family(updated: Dict[str, Any], family: str, session_key: str) -> bool:

@@ -162,6 +162,49 @@ class TestUntestedUnchanged:
         assert _block(r, "core_lateral")["source"]["picked_by"] == "resolver_v0.2/explicit_exercise_id"
 
 
+#: c272 digests of the legs lunch on origin/main before B413 (frozen here: the
+#: golden fixture was regenerated with the rest 90 → 60 s, so it can no longer
+#: tell whether ladder_pin and the widened core filters moved anything else).
+PRE_B413_LEGS_DIGESTS = {
+    "advanced|2026-10-07|legs_maintenance_lunch": "2746f29c405bd94524c676873f561fb622e077410985bc770f91164513df5156",
+    "advanced|2026-10-21|legs_maintenance_lunch": "7616c1edc53e78b8867e9e4eebf89d3e2e517dfb5485aa582339ee12f5dd65da",
+    "intermediate|2026-10-07|legs_maintenance_lunch": "9468e1409eafb2a32a059bfb8a2c743e49da34560efefa4122f769e13c4aa445",
+    "intermediate|2026-10-21|legs_maintenance_lunch": "89c97254c8c52e7eb0fa4763b3afe0044efbbf676fe6bec1f97e47ebfa839d7d",
+    "untested|2026-10-07|legs_maintenance_lunch": "725901c2bf99e590d674819de1c87166528230b66dc6fa0aaa6764021217b609",
+    "untested|2026-10-21|legs_maintenance_lunch": "6a3ded957a4886c89f63a1cacd14f8e943055a1ca0a61fc8fff44993d1fcad6e",
+}
+
+
+def test_c272_legs_lunch_differs_from_main_only_by_the_split_squat_rest(tmp_path, monkeypatch):
+    """Review B413: with only the Bulgarian split squat rest put back to 90 s,
+    the c272 legs lunch (untested, intermediate, advanced; both slots; ladder
+    stage off, as the c272 golden runs) is the pre-B413 output bit for bit —
+    the rest is the one change; ladder_pin and the widened filters move
+    nothing without the ladder."""
+    monkeypatch.setattr(bp, "build_resolve_context", lambda *a, **k: None)
+    doc = json.loads((SESSIONS / f"{LEGS}.json").read_text(encoding="utf-8"))
+    hits = 0
+    for m in doc["modules"]:
+        prim = ((m.get("selection") or {}).get("primary") or {})
+        if prim.get("exercise_id") == "bulgarian_split_squat":
+            assert prim["prescription_overrides"]["rest_between_sets_seconds"] == 60
+            prim["prescription_overrides"]["rest_between_sets_seconds"] = 90
+            hits += 1
+    assert hits == 1
+    path = tmp_path / f"{LEGS}.json"
+    path.write_text(json.dumps(doc), encoding="utf-8")
+    got = {}
+    for name, state in golden.profiles().items():
+        for d, loc, gid, ph in golden._SLOTS:
+            st = copy.deepcopy(state)
+            st["context"] = {"location": loc, "gym_id": gid, "target_date": d, "date": d}
+            r = rs.resolve_session(str(REPO), str(path), golden.TEMPLATES, golden.EXERCISES, "",
+                                   user_state_override=st, write_output=False, phase=ph)
+            r["session"]["source_path"] = f"backend/catalog/sessions/v1/{LEGS}.json"
+            got[f"{name}|{d}|{LEGS}"] = golden._digest(golden._strip(r))
+    assert got == PRE_B413_LEGS_DIGESTS
+
+
 class TestNoEntryUnchanged:
     @pytest.mark.parametrize("sid", lg.LUNCHES)
     @pytest.mark.parametrize("phase", PHASES)
@@ -334,6 +377,46 @@ class TestPinFloor:
                                                      "source": "seed_history"}})
         inst = _block(_resolve(LEGS, _state("2026-12-01"), "deload"), "core_anti_extension")
         assert _rx(inst) == ("core_hollow_hold", 2, 30)  # deload_sets 2, never below 30 s
+
+    @pytest.mark.parametrize("label", ["ok", None])
+    def test_the_step_starts_from_the_floored_dose_shown(self, monkeypatch, label):
+        """Review B413: the loop steps from the 3x30 s shown, not from the 2x20 s
+        seed — after an "ok" (or a done with no rating = ok, A1) the next lunch
+        never prescribes less than the session just done."""
+        seed = {"level_idx": 2, "sets": 2, "target": 20, "source": "seed_history"}
+        _with_entries(monkeypatch, {"hollow_plank": seed})
+        st = _state(levels=_levels(hollow_plank=None))
+        inst = _block(_resolve(LEGS, st, "strength_power"), "core_anti_extension")
+        assert _rx(inst) == ("core_hollow_hold", 3, 30)
+        p = inst["prescription"]
+        item = {"exercise_id": "core_hollow_hold", "bw_ladder": "engine", "completed": True,
+                "completed_sets": p["sets"], "prescribed_sets": p["sets"],
+                "prescribed_work_seconds": p["work_seconds"]}
+        out = bp.apply_bw_item(st, item, rating=label, date_value="2026-11-10",
+                               session_key=f"2026-11-10|{LEGS}", phase="strength_power")
+        assert out["applied"] and out["kind"] == "step_up"
+        new = st["bw_progression"]["hollow_plank"]
+        assert (new["level_idx"], new["sets"], new["target"]) == (2, 3, 35)
+        assert new["_prev"]["entry"]["target"] == 20  # the undo still restores the seed
+        _with_entries(monkeypatch, {"hollow_plank": bp._strip_private(new)})
+        nxt = _block(_resolve(LEGS, _state("2026-11-17", levels=_levels(hollow_plank=None)), "strength_power"),
+                     "core_anti_extension")
+        assert _rx(nxt) == ("core_hollow_hold", 3, 35)
+
+    def test_a_seed_is_never_lowered_by_a_smaller_row(self):
+        fam = bp.family_doc("hollow_plank")
+        base = bp._normalize({"level_idx": 2, "sets": 3, "target": 40, "source": "seed_history"}, fam)
+        item = {"prescribed_sets": 2, "prescribed_work_seconds": 20}
+        assert bp._seed_lifted_to_shown(base, item, fam, ctx="engine", phase="base") is base
+        lifted = bp._seed_lifted_to_shown(dict(base, target=20), {"prescribed_sets": 3, "prescribed_work_seconds": 99},
+                                          fam, ctx="engine", phase="base")
+        assert (lifted["sets"], lifted["target"]) == (3, 45)  # clamped to the band
+        for kw in ({"ctx": "ladder", "phase": "base"}, {"ctx": "engine", "phase": "deload"}):
+            assert bp._seed_lifted_to_shown(dict(base, target=20), item | {"prescribed_work_seconds": 30},
+                                            fam, **kw)["target"] == 20
+        manual = dict(base, target=20, source="feedback")
+        assert bp._seed_lifted_to_shown(manual, {"prescribed_sets": 3, "prescribed_work_seconds": 30},
+                                        fam, ctx="engine", phase="base") is manual
 
     def test_the_floor_never_applies_to_another_exercise(self, monkeypatch):
         _with_entries(monkeypatch, {"rollout": {"level_idx": 0, "sets": 2, "target": 6, "source": "seed_history"}})
@@ -513,6 +596,33 @@ class TestDuration:
                 rows.append(rx)
             minutes = estimate_custom_session_duration(rows)
             assert 15 <= minutes <= 55, (sid, date, phase, minutes)
+
+    #: Every pinned core family at the top of its band at once (the worst case
+    #: the ladders reach before a promotion resets the target to the bottom).
+    TOP_OF_BAND = {
+        "compression_floor": {"level_idx": 2, "sets": 4, "target": 30, "source": "feedback"},
+        "rollout": {"level_idx": 0, "sets": 3, "target": 12, "source": "feedback"},
+        "lateral": {"level_idx": 3, "sets": 3, "target": 12, "source": "feedback"},
+        "hollow_plank": {"level_idx": 2, "sets": 3, "target": 45, "source": "feedback"},
+    }
+
+    @pytest.mark.xfail(reason=(
+        "B413 open decision (ROADMAP B413-LUNCH-55): at the top of every band the arms and legs lunches "
+        "reach ~59'. strict: a fix shows up as an XPASS failure, so the marker is removed with it."),
+        strict=True)
+    def test_within_55_minutes_at_the_top_of_every_band(self, catalog):
+        over = []
+        for sid in lg.LUNCHES:
+            for date, phase in lg.DANIELE_SLOTS:
+                rows = []
+                for inst in _insts(_resolve(sid, _state(date, self.TOP_OF_BAND), phase)):
+                    rx = dict(inst["prescription"])
+                    rx["alt_sides"] = bool(catalog[inst["exercise_id"]].get("alt_sides"))
+                    rows.append(rx)
+                minutes = estimate_custom_session_duration(rows)
+                if minutes > 55:
+                    over.append((sid, date, phase, minutes))
+        assert over == []
 
 
 class TestDeterminism:

@@ -147,6 +147,9 @@ class TestSteps:
         ("core_training", {"completed": True, "feedback_label": "skipped"}, False),
         ("custom_cs_core", {"completed": True}, False),                                 # custom player, no set
         ("custom_cs_core", {"completed": True, "completed_sets": 1}, True),             # custom player
+        # Guided player on a custom, "Mark remaining as done" / Done without the
+        # set timer: the client ships the prescribed sets (feedback-items.ts).
+        ("custom_cs_core", {"completed": True, "completed_sets": 4, "prescribed_sets": 4}, True),
     ])
     def test_done_predicate_shared_by_seed_and_closed_loop(self, sid, row, done):
         item = dict({"exercise_id": "ring_fallout"}, **row)

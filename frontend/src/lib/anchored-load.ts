@@ -75,6 +75,9 @@ export function anchoredLoadNotes(src: Obj | null | undefined): string[] {
     const until = typeof pain.until === "string" ? ` until ${pain.until}` : "";
     notes.push(`Pain reported (${pain.score}/3): load reduced${until}.`);
   }
+  // B413 (A4): the server no longer writes ramp.factor (the re-entry cap is
+  // gone). Keep this branch: frozen past sessions still carry it, and for
+  // that day the note is true.
   const ramp = asObj(anchored.ramp);
   if (ramp && typeof ramp.factor === "number" && ramp.factor < 1 && typeof ramp.n === "number") {
     notes.push(

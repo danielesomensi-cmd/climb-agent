@@ -212,3 +212,33 @@ class TestB312FeedbackEndpoint:
         slot = plan["weeks"][0]["days"][0]["sessions"][0]
         assert "session_load_actual" not in slot
         assert "actual_exercises" not in slot
+
+
+class TestB312WithTheB413Freeze:
+    """B413 (D2) × B312 on an ordinary planned session (not user-edited): the
+    freeze replaces the stored stub ``resolved`` with the prescription GET
+    shows, written at step 7b — AFTER step 4b computed ``session_load_actual``
+    from the stored copy. This pins the CURRENT behaviour of the open decision
+    ROADMAP B312-LOAD-ACTUAL-VS-FROZEN, so a change in either direction is a
+    visible test change, not a silent one."""
+
+    def _seed_planned(self) -> None:
+        wp = _week_plan()
+        wp["weeks"][0]["days"][0]["sessions"][0].pop("_user_edited")
+        state = deps.load_state(None)
+        state["current_week_plan"] = deepcopy(wp)
+        state["week_plans"] = {wp["start_date"]: deepcopy(wp)}
+        state["session_completion_log"] = []
+        deps.save_state(state, None)
+
+    def test_actual_from_the_stored_copy_score_from_the_frozen_view(self):
+        self._seed_planned()
+        slot = _slot(_post([True, True, True]))
+        # Step 4b: the earned load is computed against the stub stored before
+        # the freeze (full completion == the stub's prescribed score) …
+        assert slot["session_load_actual"] == PRESCRIBED
+        # … step 7b: the record is the server view, not the stub.
+        frozen = slot["resolved"]
+        insts = frozen["resolved_session"]["exercise_instances"]
+        assert [i["exercise_id"] for i in insts] != EXERCISES
+        assert frozen["session_load_score"] != PRESCRIBED

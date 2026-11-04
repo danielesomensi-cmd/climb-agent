@@ -358,4 +358,25 @@ describe("A298 — bodyweight ladder dose source travels with the feedback", () 
     const plain = { ...ex, suggested: {} } as GuidedExercise;
     expect(buildGuidedFeedbackItems([plain])[0].bw_ladder).toBeUndefined();
   });
+
+  it("B413: a ladder row done without counted sets ships the prescribed sets", () => {
+    const ex = {
+      exerciseId: "core_l_sit",
+      name: "L-sit",
+      category: "core",
+      blockUid: "",
+      loadModel: "bodyweight_only",
+      prescription: { sets: 4, workSeconds: 10 },
+      suggested: { ladderSource: "ladder" },
+      status: "done",
+      feedbackLabel: null,
+    } as unknown as GuidedExercise;
+    const item = buildGuidedFeedbackItems([ex])[0];
+    expect(item.completed_sets).toBe(4);
+    expect(item.feedback_label).toBeUndefined();
+    // Counted sets win; a skipped row and a non-ladder row get nothing.
+    expect(buildGuidedFeedbackItems([{ ...ex, completedSets: 2 } as GuidedExercise])[0].completed_sets).toBe(2);
+    expect(buildGuidedFeedbackItems([{ ...ex, status: "skipped" } as GuidedExercise])[0].completed_sets).toBeUndefined();
+    expect(buildGuidedFeedbackItems([{ ...ex, suggested: {} } as GuidedExercise])[0].completed_sets).toBeUndefined();
+  });
 });
