@@ -1075,7 +1075,10 @@ def _bw_ladders(state: Mapping[str, Any], today: date, archived_weeks: ArchivedW
         from backend.engine import bw_progression as _bwp
 
         out["technique_levels"] = _bwp.technique_view(state)
-        out["phase_frozen"] = _bwp.is_frozen(_bwp.phase_on(state, today))
+        _phase = _bwp.phase_on(state, today)
+        out["phase_frozen"] = _bwp.is_frozen(_phase)
+        # B413: performance grows the doses; guarded levels defer the change.
+        out["phase_defers_guarded"] = str(_phase or "") in _bwp.DEFER_GUARDED_PHASES
     except Exception:  # pragma: no cover
         pass
     return out
@@ -1334,8 +1337,19 @@ def _render_bw_ladders(L: List[str], bw: Mapping[str, Any]) -> None:
                 f"(banda {band.get('lo')}-{band.get('hi')}{unit}, passo {band.get('step')})"]
         ev = r.get("evidence") or {}
         if r.get("source") == "history" and ev:
+            # B413: the seed is the closed loop's dose after the last session.
+            rule = ev.get("rule")
+            if rule == "previous_dose":
+                how = "dose ignota → tiene la precedente"
+            elif rule == "rated_floor":
+                how = f"non votato: mai sotto la dose votata prima ({ev.get('floor')})"
+            elif rule == "unknown_dose":
+                how = "nessuna dose nota → fondo della banda"
+            else:
+                n = int(ev.get("steps") or 0)
+                how = f"+{n} pass{'o' if n == 1 else 'i'}"
             bits.append(f"[storico: {ev.get('exercise_id')} {ev.get('sets') or '?'}×{ev.get('dose') or '?'} "
-                        f"il {ev.get('date')}, {ev.get('label') or 'non valutato'} → −1 passo]")
+                        f"il {ev.get('date')}, {ev.get('label') or 'non valutato (= ok)'} → {how}]")
         elif r.get("source") == "test":
             sf = r.get("seeded_from") or {}
             bits.append(f"[test {sf.get('test')} {sf.get('value'):g} del {sf.get('log_date')}]")
@@ -1370,8 +1384,14 @@ def _render_bw_ladders(L: List[str], bw: Mapping[str, Any]) -> None:
     if tl:
         L.append(f"  Scale tecniche tracciate: {', '.join(tl)} (piedi: aggiustamenti sul problema campione; cadute: paura 0-10)")
     if bw.get("phase_frozen"):
-        L.append("  Fase performance/deload: dosi congelate (−1 serie), nessuna promozione.")
-    L.append("  Ciclo chiuso A298: lo stato (bw_progression) si muove col feedback (label + misura), le "
+        L.append("  Fase deload: dosi congelate (−1 serie), niente sale, nessuna promozione.")
+    if bw.get("phase_defers_guarded"):
+        L.append("  Fase performance: serie piene, passi e promozioni attivi; i livelli appesi o di tirata "
+                 "pesante salgono nella banda, il cambio di livello o di tempo aspetta il ciclo nuovo.")
+    L.append("  Ciclo chiuso A298/B413: lo stato (bw_progression) si muove col feedback (label + misura). "
+             "Passi nella banda: very_easy +3, easy +2, ok +1, hard −1; un esercizio fatto senza voto vale "
+             "ok (non fatto o saltato: niente); una misura sotto l'obiettivo è un dato (ok non aggiunge il "
+             "passo). In cima alla banda ok ed easy contano per la promozione, very_easy promuove subito. Le "
              "promozioni nel motore sono automatiche, nelle custom sono proposte da confermare con un tap. "
              "Nelle custom scrivi le righe di scala con progress_mode 'ladder' (dose letta il giorno della "
              "seduta); 'fixed' solo se vuoi una dose diversa.")

@@ -20,10 +20,12 @@ a deterministic closed loop (BW spec, ``engine_rules`` R0-R12):
   custom read path and in ``apply_feedback``: tested athletes only (official
   max with a test log < 90 days). Untested athletes have no entry and every
   consumer is a no-op for them (bit-for-bit unchanged).
-- **next_state** — label / measure steps, promotion after ``advance_sessions``
-  sessions at the top of the band, terminal (tempo → load / handoff / cap),
-  frozen in performance and deload, re-entry after a long gap, lower-back
-  levels never assigned automatically.
+- **next_state** — label / measure steps (B413: very_easy +3, easy +2, ok
+  +1, a done unrated row = ok), promotion after ``advance_sessions`` sessions
+  at the top of the band (a very_easy at the top at once), terminal (tempo →
+  load / handoff / cap), frozen in deload, in performance a guarded level
+  (hanging / heavy pull) defers its level change, re-entry after a long gap,
+  lower-back levels never assigned automatically.
 - **dose_for** — the prescription a level carries (sets, reps or seconds,
   rest, tempo, added kg), written by the resolver into ``prescription`` with
   ``source: "bw_ladder"`` and by the custom read path into ladder rows.
@@ -54,12 +56,19 @@ DateLike = Union[date, str]
 STATE_KEY = "bw_progression"
 TECHNIQUE_KEY = "technique"
 
-#: Label → steps inside the band (BW spec R1-R5). very_easy is +2 steps and
-#: never a level jump (R5: the spec removed the level skip, it has no source).
-LABEL_STEPS: Dict[str, int] = {"very_easy": 2, "easy": 1, "ok": 0, "hard": -1, "very_hard": -2}
-#: R-PHASE: no promotion, no tempo/load step, one set fewer (min 2).
-FROZEN_PHASES = frozenset({"performance", "deload"})
+#: Label → steps inside the band (BW spec R1-R5, B413 D5: very_easy +3,
+#: easy +2, ok +1 — a done row with no label counts as ok). A projected target
+#: above the band is never a level jump (R5). Shared with the history seed
+#: (``bw_ladders.LABEL_STEPS``).
+LABEL_STEPS: Dict[str, int] = bl.LABEL_STEPS
+#: R-PHASE (B413): only the deload is frozen — one set fewer (min 2), nothing
+#: goes up (the taper: less volume, same intensity; Mujika & Padilla 2003).
+FROZEN_PHASES = frozenset({"deload"})
 FROZEN_MIN_SETS = 2
+#: B413: in performance the doses grow (full sets, steps, promotions), but a
+#: guarded level (hanging, or a heavy pull) defers its level / tempo / load
+#: change to the next cycle and keeps its top streak.
+DEFER_GUARDED_PHASES = frozenset({"performance"})
 #: R0: a hold declared to failure (a test) counts at 80 % of the time held.
 #: ENGINEERING CONSTANT.
 TEST_HOLD_FACTOR = 0.80
@@ -75,7 +84,7 @@ VH_STREAK_LEVEL_DOWN = 2
 OUTCOME_KINDS = (
     "hold", "step_up", "step_down", "promoted", "promotion_proposed", "top_streak",
     "frozen", "manual_only", "tempo_up", "load_up", "tempo_down", "load_down",
-    "level_down", "floor_warning", "handoff", "cap", "ramp", "reentry",
+    "level_down", "floor_warning", "handoff", "cap", "ramp", "reentry", "deferred",
 )
 
 # Technique ladders (TECH.json, bw_ladders.json "technique_ladders").
@@ -185,6 +194,29 @@ def _skill_window(fam: Mapping[str, Any]) -> int:
 
 def is_frozen(phase: Optional[str]) -> bool:
     return str(phase or "") in FROZEN_PHASES
+
+
+def is_guarded_level(fam: Mapping[str, Any], level_idx: int) -> bool:
+    """A hanging level or a heavy-pull level (``hanging_from_level`` /
+    ``heavy_pull_from_level`` of the ladder file): front lever, toes-to-bar,
+    wipers from L1, pulls from L3."""
+    idx = int(level_idx)
+    for flag, start in (("hanging", "hanging_from_level"), ("heavy_pull", "heavy_pull_from_level")):
+        if fam.get(flag) and idx >= int(fam.get(start) or 0):
+            return True
+    return False
+
+
+def defers_level_change(fam: Mapping[str, Any], level_idx: int, phase: Optional[str]) -> bool:
+    """B413: performance defers the level / tempo / load change of a guarded
+    level — and the promotion INTO one (wipers L0 → L1, pulls L2 → L3): no
+    new hanging or heavy-pull level enters the performance block. The dose
+    still grows inside the band."""
+    if str(phase or "") not in DEFER_GUARDED_PHASES:
+        return False
+    idx = int(level_idx)
+    nxt = min(idx + 1, len(_levels(fam)) - 1)
+    return is_guarded_level(fam, idx) or is_guarded_level(fam, nxt)
 
 
 def phase_on(state: Mapping[str, Any], on: DateLike) -> str:
@@ -472,11 +504,16 @@ def measure_for_axis(axis: str) -> str:
 # ---------------------------------------------------------------------------
 
 HANDOFF_MESSAGE = "Top of the ladder: move on to the loaded variant."
-#: Shown when no label and no measure came back (A295 "not rated").
-NOT_RATED_MESSAGE = "Not rated: the level stays as it is."
+#: Shown when a ladder row was not done (skipped, not completed, a player row
+#: with no counted set) and carries no label and no measure. B413: a DONE row
+#: with no label is an ok (A1), never "not rated".
+NOT_DONE_MESSAGE = "Not done: the level stays as it is."
+#: Kept for callers that still import it (pre-B413 name of the same case).
+NOT_RATED_MESSAGE = NOT_DONE_MESSAGE
 
 _MESSAGES = {
-    "frozen": "Performance phase: doses frozen.",
+    "frozen": "Deload: doses frozen.",
+    "deferred": "Performance phase: the level change waits for the new cycle.",
     "manual_only": "Next level is manual only (no lower-back zone configured).",
     "cap": "Top of the ladder: hold the top of the band.",
     "floor_warning": "Two very hard sessions at your floor level: check recovery.",
@@ -498,8 +535,6 @@ def outcome_message(outcome: Mapping[str, Any], new: Mapping[str, Any], fam: Map
         left = int(outcome.get("sessions_left") or 1)
         return f"{left} more session{'s' if left != 1 else ''} at the top to move up"
     if kind == "hold":
-        # A rated 'ok' (the unrated case never reaches here: apply_bw_item
-        # answers it with NOT_RATED_MESSAGE).
         return f"Same dose next time: {dose['summary']}"
     if kind == "handoff":
         hid = outcome.get("handoff_exercise_id")
@@ -521,15 +556,22 @@ def next_state(
 ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """One session of feedback on one family → (new entry, outcome).
 
-    ``label`` None = not rated (A295); with no measure either, the state is
-    returned UNCHANGED (R3: a legacy 'ok' is not an answer). ``measured``:
-    min reps across the sets (reps axis) or min seconds held (seconds axis).
+    ``completed``: whether the row was done (``bw_ladders.ladder_row_done``,
+    computed by ``apply_bw_item``; None = no information, read as done).
+    B413 (A1): a DONE row with ``label`` None counts exactly as ``ok`` — the
+    step, the top of the band, the promotion (a proposal in a custom). A row
+    NOT done with no label and no measure returns the state UNCHANGED; not
+    done with a label or a measure is a failed session (R1). ``measured``:
+    min reps across the sets (reps axis) or min seconds held (seconds axis) —
+    a datum: below the target an ``ok`` adds no step, and it can lower.
     """
     levels = _levels(fam)
     cur = effective_entry(entry, fam, ref_date)
-    if label is None and measured is None:
-        # Not rated (or skipped: completed false with nothing else) → no step.
+    if label is None and measured is None and completed is False:
+        # Not done (skipped, not completed) and nothing else → no step.
         return dict(entry), {"kind": "hold"}
+    # A1: done and not rated = ok.
+    step_label = str(label) if label is not None else "ok"
     new: Dict[str, Any] = dict(cur)
     new.pop("reentry", None)
     idx = int(cur["level_idx"])
@@ -540,7 +582,8 @@ def next_state(
     cap = max_s if lv["axis"] == "seconds" else max_reps
     target = int(cur["target"])
     frozen = is_frozen(phase)
-    delta = LABEL_STEPS.get(str(label or ""), 0)
+    defer = defers_level_change(fam, idx, phase)
+    delta = LABEL_STEPS.get(step_label, 0)
 
     # R0: the measure is the base, the label only decides the delta.
     if measured is not None:
@@ -552,6 +595,9 @@ def next_state(
                 base = m if m < target else float(target)
         else:
             base = m
+        if step_label == "ok" and base < target:
+            # B413: a measure below the target is data — 'ok' adds no step.
+            delta = 0
         raw = int(round(base)) + delta * step
     else:
         base = float(target)
@@ -608,11 +654,13 @@ def next_state(
             new["target"] = hi
             top = int(cur.get("top_streak") or 0) + 1
             new["top_streak"] = top
-            need = int(lv.get("advance_sessions") or 1)
+            # B413: a very_easy AT the top moves up at once, also on the
+            # two-session levels; ok (and a done unrated row) counts like easy.
+            need = 1 if step_label == "very_easy" else int(lv.get("advance_sessions") or 1)
             if top < need:
                 outcome = {"kind": "top_streak", "sessions_left": need - top}
             else:
-                new, outcome = _advance(new, fam, idx, frozen=frozen, custom=custom,
+                new, outcome = _advance(new, fam, idx, frozen=frozen, defer=defer, custom=custom,
                                         lower_back_zone=lower_back_zone, ref_date=ref_date)
         else:
             new["top_streak"] = 0
@@ -627,10 +675,21 @@ def next_state(
                 outcome = {"kind": "hold"}
         # Seeded ramp (Copenhagen short → long): counts clean sessions.
         ramp = new.get("ramp") if isinstance(new.get("ramp"), Mapping) else None
-        if ramp and label not in ("hard",) and outcome.get("kind") not in ("promoted", "promotion_proposed"):
+        ramp_to = ramp.get("then_level") if ramp else None
+        if ramp and outcome.get("kind") == "promoted" and (
+                ramp_to is None or int(new["level_idx"]) >= int(ramp_to)):
+            # B413: ok now climbs the band, so the top of the short lever can
+            # promote before the ramp ends — the promotion already did the
+            # ramp's job; a ramp left behind would pull the level back to its
+            # then_target on the next session.
+            new.pop("ramp", None)
+        elif ramp and label not in ("hard",) and outcome.get("kind") not in ("promoted", "promotion_proposed"):
             left = int(ramp.get("sessions_left") or 0) - 1
             if left > 0:
                 new["ramp"] = {**ramp, "sessions_left": left}
+            elif defer:
+                # B413: the ramp's level change waits for the next cycle.
+                new["ramp"] = {**ramp, "sessions_left": 0}
             else:
                 to = ramp.get("then_level")
                 new.pop("ramp", None)
@@ -659,11 +718,15 @@ def _move_to(new: Dict[str, Any], fam: Mapping[str, Any], to: int, target: Any, 
 
 
 def _advance(new: Dict[str, Any], fam: Mapping[str, Any], idx: int, *, frozen: bool, custom: bool,
-             lower_back_zone: bool, ref_date: DateLike) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-    """R6 promotion / R7 terminal, once ``advance_sessions`` are met."""
+             lower_back_zone: bool, ref_date: DateLike, defer: bool = False) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """R6 promotion / R7 terminal, once ``advance_sessions`` are met.
+    ``defer`` (B413, performance on a guarded level): nothing changes level,
+    tempo or load, and the top streak stays for the next cycle."""
     levels = _levels(fam)
     if frozen:
         return new, {"kind": "frozen"}
+    if defer:
+        return new, {"kind": "deferred"}
     lv = levels[idx]
     band = lv["band"]
     lo, hi, step = int(band["lo"]), int(band["hi"]), int(band["step"])
@@ -753,7 +816,11 @@ def apply_bw_item(
     athlete has an entry for, ``None`` otherwise (the caller falls through).
 
     Rules (BW spec "DOVE NEL CODICE" b):
-    - no entry (untested athlete, no persisted state) → no-op;
+    - B413: the tested gate closed (untested, or the official test expired)
+      → no-op: the ladders are neither read nor written (no invisible climb);
+    - no entry (no persisted state, no seed) → no-op;
+    - B413 (A1): a done row with no label counts as ok (``ladder_row_done``);
+      a row not done with no label and no measure moves nothing;
     - the item's level must be the entry's level (a mastered lower level, or a
       harder level the athlete chose, never moves the memory);
     - the row must carry the ladder dose (engine ``bw_ladder`` / custom
@@ -768,6 +835,8 @@ def apply_bw_item(
     family, item_level = hit
     fam = family_doc(family)
     if fam is None or not date_value:
+        return None
+    if not tested(updated, date_value):
         return None
     store = _persisted(updated)
     persisted = store.get(family) if isinstance(store.get(family), Mapping) else None
@@ -796,15 +865,22 @@ def apply_bw_item(
     dose = dose_for(eff, fam, phase=phase)
     if ctx not in ("engine", "ladder") and measured is None and not _dose_matches(item, dose):
         return {"family": family, "kind": "fixed_dose", "applied": False}
+    # B413 (D3): the shared "done" rule. completed:false with every set of the
+    # dose logged is a done row (player bug-inbox 04/11), never a failure.
+    sid = str(session_key).split("|", 1)[-1]
+    done = bl.ladder_row_done(item, player_session=bl._is_player_session({"session_id": sid}),
+                              dose_sets=_int(item.get("prescribed_sets")) or int(dose["sets"]))
+    if rating is None and measured is None and not done:
+        return {"family": family, "kind": "hold", "applied": False, "message": NOT_DONE_MESSAGE}
     completed = item.get("completed")
+    if completed is False and done:
+        completed = True
     completed = None if completed is None else bool(completed)
     new, outcome = next_state(
         step_base, fam, label=rating, completed=completed, measured=measured, test_hold=test_hold,
         phase=phase, ref_date=date_value, custom=(ctx == "ladder"),
         lower_back_zone=has_lower_back_zone(updated),
     )
-    if outcome.get("kind") == "hold" and rating is None and measured is None:
-        return {"family": family, "kind": "hold", "applied": False, "message": NOT_RATED_MESSAGE}
     outcome = dict(outcome)
     outcome["message"] = outcome_message(outcome, new, fam, phase)
     snap = _strip_private(base)

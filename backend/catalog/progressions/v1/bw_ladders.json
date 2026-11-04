@@ -10,7 +10,7 @@
     "tested_gate": "an official max (retest_policy.official_max, test log < 90 days) on the finger or pulling protocol",
     "history_window_days": 120,
     "skill_family_history_window_days": 60,
-    "history_dose_rule": "last completed dose minus one step, never the bottom of the band",
+    "history_dose_rule": "B413: the dose the closed loop would prescribe after the last clean session at the highest level, with the same label steps (very_easy +3, easy +2, ok or unrated-but-done +1), clamped to the band (a seed never changes level); an unrated row never seeds below a dose rated earlier at that level; an unknown dose keeps the previous known dose, never the bottom of the band (only a level with no known dose at all starts at the bottom)",
     "history_excludes_labels": [
       "hard",
       "very_hard"

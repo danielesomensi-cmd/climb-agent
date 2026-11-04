@@ -487,13 +487,17 @@ class TestSeed:
         fl = _fam(bw.seed_levels(st, REF), "front_lever")
         assert (fl["source"], fl["exercise_id"], fl["evidence"]["evidence"]) == ("history", "front_lever_one_leg", "planned")
 
-    def test_history_wins_with_last_dose_minus_one_step(self):
+    def test_history_wins_with_the_closed_loop_dose_after_the_last_session(self):
+        # B413: the seed is the dose the closed loop would give after the last
+        # clean session — 4x12 s with no label = ok = +1 step (2 s): 14 (the
+        # pre-B413 rule took one step off: 10).
         st = _tested_state()
         _add_done(st, "2026-09-30", [{"exercise_id": "front_lever_one_leg", "sets": 4, "work_seconds": 12},
                                      {"exercise_id": "front_lever_straddle", "sets": 4, "work_seconds": 12}])
         seed = bw.seed_levels(st, REF)
         fl = _fam(seed, "front_lever")
-        assert (fl["source"], fl["exercise_id"], fl["target"], fl["sets"]) == ("history", "front_lever_straddle", 10, 4)
+        assert (fl["source"], fl["exercise_id"], fl["target"], fl["sets"]) == ("history", "front_lever_straddle", 14, 4)
+        assert (fl["evidence"]["rule"], fl["evidence"]["steps"]) == ("last_dose", 1)
         assert fl["heavy_pull"] and fl["evidence"]["date"] == "2026-09-30"
 
     def test_history_ignores_hard_labels_and_uses_the_logged_session(self):
@@ -503,13 +507,15 @@ class TestSeed:
                   actual=[{"exercise_id": "toes_to_bar", "completed": True, "completed_sets": 3, "feedback_label": "very_hard"},
                           {"exercise_id": "knees_to_elbows", "completed": True, "completed_sets": 3, "feedback_label": "ok"}])
         ch = _fam(bw.seed_levels(st, REF), "compression_hang")
-        assert (ch["exercise_id"], ch["target"]) == ("knees_to_elbows", 7)
+        assert (ch["exercise_id"], ch["target"]) == ("knees_to_elbows", 9)  # 3x8 'ok' + 1 step (B413)
 
     def test_hlr_counts_as_toes_to_bar_at_the_top_of_the_band(self):
         st = _tested_state()
         _add_done(st, "2026-09-20", [{"exercise_id": "hanging_leg_raise", "sets": 3, "reps": 8}])
         ch = _fam(bw.seed_levels(st, REF), "compression_hang")
-        assert (ch["exercise_id"], ch["target"], ch["at_top_of_band"]) == ("toes_to_bar", 7, True)
+        # 3x8 + 1 step, clamped to the top of the 5-8 band (a seed never
+        # changes level, B413).
+        assert (ch["exercise_id"], ch["target"], ch["at_top_of_band"]) == ("toes_to_bar", 8, True)
 
     def test_history_window_is_120_days_and_60_for_skill_families(self):
         st = _tested_state()

@@ -51,6 +51,11 @@ def _entry(family, level_idx, target, **extra):
     return bp._normalize(e, _fam(family))
 
 
+def _strip(entry):
+    """An entry without the per-session bookkeeping (snapshot, outcome)."""
+    return {k: v for k, v in entry.items() if k not in ("_prev", "last_outcome")}
+
+
 def _log(day, items, sid="custom_cs_core"):
     return {"date": day, "session_id": sid, "feedback_contract": 2,
             "actual": {"exercise_feedback_v1": items}}
@@ -71,8 +76,10 @@ class TestSeedAndDose:
         e = bp.entries_for(_seeded_state(), REF)
         assert (e["compression_floor"]["exercise_id"], e["compression_floor"]["target"]) == ("straddle_l_sit", 20)
         assert e["compression_floor"]["source"] == "seed_test"
+        # B413: the 30/09 4x12 s (no label) seeds the dose the closed loop
+        # would give after it — unrated = ok = +1 step (2 s): 14, not 12 − 2.
         assert (e["front_lever"]["exercise_id"], e["front_lever"]["sets"], e["front_lever"]["target"]) == (
-            "front_lever_straddle", 4, 10)
+            "front_lever_straddle", 4, 14)
         assert e["front_lever"]["source"] == "seed_history"
         assert e["lateral"]["ramp"]["sessions_left"] == 2
         assert "pull_bw" not in e  # tested 2RM keeps the weighted pull-up
@@ -102,11 +109,12 @@ class TestNextState:
                                          phase="strength_power"), sort_keys=True) for _ in range(100)}
         assert len(outs) == 1
 
-    def test_easy_plus_one_step_very_easy_plus_two_never_a_level_jump(self):
+    def test_easy_plus_two_steps_very_easy_plus_three_never_a_level_jump(self):
+        # B413 (D5): easy +2 steps, very_easy +3 (step 5 s on the L-sit band).
         f = _fam("compression_floor")
         e = _entry("compression_floor", 3, 20)
         n, o = bp.next_state(e, f, label="easy", ref_date=REF)
-        assert (n["target"], n["level_idx"], o["kind"]) == (25, 3, "step_up")
+        assert (n["target"], n["level_idx"], o["kind"]) == (30, 3, "step_up")
         n, o = bp.next_state(e, f, label="very_easy", ref_date=REF)
         assert (n["target"], n["level_idx"]) == (30, 3)
         # very_easy from 25: the projection passes the top but 30 s was never
@@ -133,11 +141,15 @@ class TestNextState:
         n2, o2 = bp.next_state(n1, f, label="easy", ref_date="2026-10-08")
         assert (n2["exercise_id"], n2["target"], o2["kind"]) == ("front_lever_full", 5, "promoted")
 
-    def test_ok_between_breaks_the_top_streak(self):
+    def test_ok_at_the_top_counts_hard_between_breaks_the_top_streak(self):
+        # B413 (D5): an ok AT the top counts towards the promotion (it used to
+        # reset the streak); a hard still breaks it.
         f = _fam("front_lever")
         n1, _ = bp.next_state(_entry("front_lever", 3, 15, sets=4), f, label="easy", ref_date="2026-10-06")
-        n2, _ = bp.next_state(n1, f, label="ok", ref_date="2026-10-08")
-        assert (n2["top_streak"], n2["level_idx"]) == (0, 3)
+        n2, o2 = bp.next_state(n1, f, label="ok", ref_date="2026-10-08")
+        assert (n2["exercise_id"], n2["target"], o2["kind"]) == ("front_lever_full", 5, "promoted")
+        n2, _ = bp.next_state(n1, f, label="hard", ref_date="2026-10-08")
+        assert (n2["top_streak"], n2["level_idx"], n2["target"]) == (0, 3, 13)
 
     def test_custom_ladder_promotion_is_a_proposal(self):
         f = _fam("compression_floor")
@@ -185,22 +197,29 @@ class TestNextState:
         n, o = bp.next_state(_entry("rollout", 1, 9), _fam("rollout"), label="hard", ref_date=REF)
         assert (n["level_idx"], n["target"]) == (1, 8)
 
-    def test_not_rated_leaves_the_entry_unchanged(self):
+    def test_not_rated_done_counts_as_ok_not_done_leaves_the_entry_unchanged(self):
+        # B413 (A1): a done row with no label is an ok (+1 step, date moved);
+        # a row not done with no label and no measure moves nothing.
         e = _entry("rollout", 1, 8)
         n, o = bp.next_state(e, _fam("rollout"), label=None, ref_date=REF)
+        assert (n["target"], n["last_session_date"], o["kind"]) == (9, REF, "step_up")
+        n, o = bp.next_state(e, _fam("rollout"), label=None, completed=False, ref_date=REF)
         assert n == e and o["kind"] == "hold"
 
     def test_measure_is_the_base_label_only_the_delta(self):
         f = _fam("compression_hang")
         n, _ = bp.next_state(_entry("compression_hang", 3, 7), f, label="ok", measured=5, ref_date=REF)
         assert n["target"] == 5
+        # easy +2 from the 7 done: 9 projected, but 8 (the top) was never done
+        # → the top only (R5).
         n, _ = bp.next_state(_entry("compression_hang", 3, 6), f, label="easy", measured=7, ref_date=REF)
         assert n["target"] == 8
 
     def test_hold_stopped_at_target_uses_the_target_failure_test_minus_20pct(self):
         f = _fam("compression_floor")
+        # B413: held the target → ok +1 step; held less → the measure, no step.
         n, _ = bp.next_state(_entry("compression_floor", 3, 20), f, label="ok", measured=20, ref_date=REF)
-        assert n["target"] == 20
+        assert n["target"] == 25
         n, _ = bp.next_state(_entry("compression_floor", 3, 20), f, label="ok", measured=15, ref_date=REF)
         assert n["target"] == 15
         n, _ = bp.next_state(_entry("compression_floor", 3, 25), f, label="ok", measured=25, test_hold=True,
@@ -243,16 +262,23 @@ class TestNextState:
         assert o["kind"] == "cap" and n["added_kg"] == 0.0
         assert o["then_exercise_ids"] == ["front_lever_raise", "front_lever_row"]
 
-    def test_frozen_in_performance_and_deload(self):
+    def test_frozen_in_deload_not_in_performance(self):
         f = _fam("compression_floor")
-        for phase in ("performance", "deload"):
-            n, o = bp.next_state(_entry("compression_floor", 3, 30), f, label="very_easy", phase=phase, ref_date=REF)
-            assert (n["level_idx"], n["target"], o["kind"]) == (3, 30, "frozen")
-            n, o = bp.next_state(_entry("compression_floor", 3, 20), f, label="easy", phase=phase, ref_date=REF)
-            assert n["target"] == 20
-            n, o = bp.next_state(_entry("compression_floor", 3, 20), f, label="hard", phase=phase, ref_date=REF)
-            assert n["target"] == 15  # regressions stay active
-            assert bp.dose_for(_entry("compression_floor", 3, 20), f, phase=phase)["sets"] == 2  # 3 − 1
+        n, o = bp.next_state(_entry("compression_floor", 3, 30), f, label="very_easy", phase="deload", ref_date=REF)
+        assert (n["level_idx"], n["target"], o["kind"]) == (3, 30, "frozen")
+        n, o = bp.next_state(_entry("compression_floor", 3, 20), f, label="easy", phase="deload", ref_date=REF)
+        assert n["target"] == 20
+        n, o = bp.next_state(_entry("compression_floor", 3, 20), f, label="hard", phase="deload", ref_date=REF)
+        assert n["target"] == 15  # regressions stay active
+        assert bp.dose_for(_entry("compression_floor", 3, 20), f, phase="deload")["sets"] == 2  # 3 − 1
+        # B413 (D5): performance is no longer frozen — full sets, steps and
+        # promotions (the L-sit is not a guarded level).
+        n, o = bp.next_state(_entry("compression_floor", 3, 30), f, label="very_easy", phase="performance",
+                             ref_date=REF)
+        assert (n["exercise_id"], n["target"], o["kind"]) == ("v_sit_45", 5, "promoted")
+        n, o = bp.next_state(_entry("compression_floor", 3, 20), f, label="easy", phase="performance", ref_date=REF)
+        assert n["target"] == 30
+        assert bp.dose_for(_entry("compression_floor", 3, 20), f, phase="performance")["sets"] == 3
 
     def test_reentry_after_120_days_60_for_skills(self):
         e = _entry("rollout", 2, 6, last_session_date="2026-05-01")
@@ -273,10 +299,19 @@ class TestNextState:
         st = _seeded_state()
         lat = bp.entries_for(st, REF)["lateral"]
         f = _fam("lateral")
-        n1, o1 = bp.next_state(lat, f, label="ok", ref_date="2026-10-06")
-        assert n1["ramp"]["sessions_left"] == 1 and n1["level_idx"] == 1
-        n2, o2 = bp.next_state(n1, f, label="ok", ref_date="2026-10-08")
+        # Held short of the target twice: ok adds no step (B413), the ramp
+        # counts the two clean sessions and moves to the long lever.
+        n1, o1 = bp.next_state(lat, f, label="ok", measured=12, ref_date="2026-10-06")
+        assert n1["ramp"]["sessions_left"] == 1 and (n1["level_idx"], n1["target"]) == (1, 12)
+        n2, o2 = bp.next_state(n1, f, label="ok", measured=12, ref_date="2026-10-08")
         assert (n2["exercise_id"], n2["target"], o2["kind"]) == ("copenhagen_plank", 10, "ramp")
+        # B413: two plain ok climb the short lever (15 → 20 → top) and the
+        # promotion does the ramp's job — and clears it, or the next session
+        # would pull the level back to its then_target.
+        n1, _ = bp.next_state(lat, f, label="ok", ref_date="2026-10-06")
+        n2, o2 = bp.next_state(n1, f, label="ok", ref_date="2026-10-08")
+        assert (n2["exercise_id"], n2["target"], o2["kind"]) == ("copenhagen_plank", 10, "promoted")
+        assert "ramp" not in n2
 
 
 # ---------------------------------------------------------------------------
@@ -289,7 +324,7 @@ class TestFeedback:
         out = apply_feedback(_log("2026-10-06", [{"exercise_id": "straddle_l_sit", "feedback_label": "easy",
                                                   "completed": True, "bw_ladder": "engine"}]), st)
         e = out["bw_progression"]["compression_floor"]
-        assert (e["target"], e["source"], e["last_outcome"]["message"]) == (25, "feedback", "Next time: 3x25 s")
+        assert (e["target"], e["source"], e["last_outcome"]["message"]) == (30, "feedback", "Next time: 3x30 s")
         assert not any(str(x.get("exercise_id", "")).startswith("bw:") for x in out["working_loads"]["entries"])
         assert out["tests"] == st["tests"] and out.get("assessment") == st.get("assessment")  # R9
 
@@ -301,10 +336,10 @@ class TestFeedback:
         assert "compression_floor" not in (out.get("bw_progression") or {})
         same = dict(other, prescribed_sets=3, prescribed_work_seconds=20)
         out = apply_feedback(_log("2026-10-06", [same]), st)
-        assert out["bw_progression"]["compression_floor"]["target"] == 25
+        assert out["bw_progression"]["compression_floor"]["target"] == 30  # easy +2 steps (B413)
         measured = dict(other, held_s=18)
         out = apply_feedback(_log("2026-10-06", [measured]), st)
-        assert out["bw_progression"]["compression_floor"]["target"] == 23  # held 18 < 20 → base 18, easy +5
+        assert out["bw_progression"]["compression_floor"]["target"] == 28  # held 18 < 20 → base 18, easy +10
 
     def test_measured_hold_short_of_target(self):
         st = _seeded_state()
@@ -328,7 +363,7 @@ class TestFeedback:
                                    "bw_ladder": "engine"}])
         once = apply_feedback(log, st)
         twice = apply_feedback(log, once)
-        assert twice["bw_progression"]["compression_floor"]["target"] == 25
+        assert twice["bw_progression"]["compression_floor"]["target"] == 30
 
     def test_custom_ladder_row_sets_a_pending_promotion(self):
         st = _seeded_state()
@@ -352,28 +387,31 @@ class TestFeedback:
         assert [i.get("bw_ladder") for i in items] == ["ladder", "fixed", None]
 
     def test_history_seed_excludes_the_session_being_logged(self):
-        # front lever seeded 4x10 from the 30/09 history; the 07/10 session
-        # (4x10, already marked done by post_feedback) must not re-seed it.
+        # front lever seeded 4x14 from the 30/09 history (4x12 + 1 step, B413);
+        # the 07/10 session (4x10, already marked done by post_feedback) must
+        # not re-seed it (it would seed 4x12).
         st = _seeded_state()
         _add_done(st, "2026-10-07", [{"exercise_id": "front_lever_straddle", "sets": 4, "work_seconds": 10}],
                   sid="custom_cs_fl")
         item = {"exercise_id": "front_lever_straddle", "completed": True, "bw_ladder": "engine"}
-        easy = apply_feedback(_log("2026-10-07", [dict(item, feedback_label="easy")], sid="custom_cs_fl"),
+        hard = apply_feedback(_log("2026-10-07", [dict(item, feedback_label="hard")], sid="custom_cs_fl"),
                               copy.deepcopy(st))
-        assert easy["bw_progression"]["front_lever"]["target"] == 12
+        assert hard["bw_progression"]["front_lever"]["target"] == 12
         ok = apply_feedback(_log("2026-10-07", [dict(item, feedback_label="ok")], sid="custom_cs_fl"),
                             copy.deepcopy(st))
         e = ok["bw_progression"]["front_lever"]
-        assert e["target"] == 10 and e["last_outcome"]["message"] == "Same dose next time: 4x10 s"
+        assert e["target"] == 15 and e["last_outcome"]["message"] == "Next time: 4x15 s"
 
-    def test_rated_ok_is_not_reported_as_not_rated(self):
+    def test_rated_ok_steps_up_and_a_done_unrated_row_is_an_ok(self):
+        # B413 (D5 + A1): ok is +1 step; a dialog row marked done with no
+        # label is exactly an ok (it used to move nothing).
         st = _seeded_state()
         out = apply_feedback(_log("2026-10-06", [{"exercise_id": "straddle_l_sit", "feedback_label": "ok",
                                                   "completed": True, "bw_ladder": "engine"}]), st)
-        assert out["bw_progression"]["compression_floor"]["last_outcome"]["message"] == "Same dose next time: 3x20 s"
+        assert out["bw_progression"]["compression_floor"]["last_outcome"]["message"] == "Next time: 3x25 s"
         un = apply_feedback(_log("2026-10-06", [{"exercise_id": "straddle_l_sit", "completed": True,
-                                                 "bw_ladder": "engine"}]), _seeded_state())
-        assert "compression_floor" not in (un.get("bw_progression") or {})
+                                                 "bw_ladder": "engine"}], sid="core_training"), _seeded_state())
+        assert _strip(un["bw_progression"]["compression_floor"]) == _strip(out["bw_progression"]["compression_floor"])
 
     def test_external_load_ladder_levels_progress_too(self):
         st = _seeded_state()
@@ -387,7 +425,7 @@ class TestFeedback:
         bw = out["bw_progression"]
         assert (bw["posterior_chain"]["exercise_id"], bw["posterior_chain"]["last_outcome"]["kind"]) == (
             "single_leg_back_extension", "promoted")
-        assert bw["anti_rotation"]["target"] == 11
+        assert bw["anti_rotation"]["target"] == 12  # easy +2 (B413)
         un = copy.deepcopy(golden.profiles()["untested"])
         before = copy.deepcopy(un)
         out = apply_feedback(_log("2026-10-06", items), un)
@@ -406,7 +444,7 @@ class TestFeedback:
         res = apply_feedback(_log("2026-10-06", [{"exercise_id": "straddle_l_sit", "feedback_label": "easy",
                                                   "completed": True, "held_s": 10, "bw_ladder": "ladder"}]), st)
         e = res["bw_progression"]["compression_floor"]
-        assert (e["level_idx"], e["target"], e["last_session_date"]) == (3, 15, "2026-10-06")
+        assert (e["level_idx"], e["target"], e["last_session_date"]) == (3, 20, "2026-10-06")  # 10 + easy 2 × 5
 
     def test_engine_tag_from_the_played_instances(self):
         st = _seeded_state()
@@ -510,7 +548,7 @@ class TestResolverStage:
                                                   "feedback_label": "easy", "completed": True,
                                                   "bw_ladder": "engine"}], sid="core_training"), st)
         e = out["bw_progression"]["rollout"]
-        assert (e["level_idx"], e["target"], e["last_outcome"]["kind"]) == (3, 4, "step_up")
+        assert (e["level_idx"], e["target"], e["last_outcome"]["kind"]) == (3, 5, "step_up")  # 3 + easy 2
 
     def test_recovery_session_gets_no_ladder_stage(self):
         st = _seeded_state()

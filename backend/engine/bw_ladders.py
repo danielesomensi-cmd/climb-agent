@@ -14,10 +14,11 @@ What this module does today — and what it does NOT:
   stands on each family, derived at read time from the history (done
   sessions of the last 120 days, 60 for the skill families) or, failing that,
   from the L-sit test. It is what Claude Code reads (athlete_context) before
-  writing a custom session. It NEVER writes state: there is no
-  ``bw_progression`` key yet — the closed loop (R0-R12 of the BW spec, label
-  steps, promotions) is a later A brief behind the schema STOP gate. When
-  that key exists, its entry wins and is reported as ``source: "state"``.
+  writing a custom session. It NEVER writes state: the closed loop (A298,
+  ``bw_progression``) does, and a persisted entry wins (``source: "state"``).
+  B413: the history seed is the dose the closed loop would give after the
+  last clean session, with the same ``LABEL_STEPS`` and the same
+  ``ladder_row_done`` rule.
 
 Pure and deterministic: no ``date.today()``, the only time input is
 ``ref_date``; the only file read is the static ladder file (cached).
@@ -33,7 +34,13 @@ from functools import lru_cache
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 
 from backend.engine import retest_policy as rp
-from backend.engine.stimulus import counted_entries, is_finger_hard_session, is_test_session, iter_plan_sessions
+from backend.engine.stimulus import (
+    counted_entries,
+    is_finger_hard_session,
+    is_test_session,
+    iter_plan_sessions,
+    session_exercise_entries,
+)
 
 DateLike = Union[date, str]
 ArchivedWeeks = Optional[Union[Mapping[str, Any], Sequence[Mapping[str, Any]]]]
@@ -43,6 +50,13 @@ LADDERS_PATH = os.path.join(_REPO_ROOT, "backend", "catalog", "progressions", "v
 
 #: Labels that disqualify a history entry as "completed cleanly" (BW seed rule).
 _BAD_LABELS = frozenset({"hard", "very_hard", "skipped"})
+#: B413 (D5): label → steps inside the band, shared by the closed loop
+#: (``bw_progression.next_state``) and the history seed. A done row with no
+#: label counts exactly as ``ok`` (A1). very_hard is the failure path of the
+#: closed loop (its −2 is the target of a failed session). ENGINEERING CONSTANT.
+LABEL_STEPS: Dict[str, int] = {"very_easy": 3, "easy": 2, "ok": 1, "hard": -1, "very_hard": -2}
+#: Labels that are an answer of the athlete (the seed's "rated" rows).
+RATED_LABELS = frozenset({"very_easy", "easy", "ok"})
 #: The L-sit test exercise and the assessment field it writes.
 L_SIT_TEST_ID = "test_l_sit_hold"
 L_SIT_FIELD = "l_sit_hold_seconds"
@@ -198,6 +212,85 @@ def _clamp_target(value: int, band: Mapping[str, Any]) -> int:
     return max(int(band["lo"]), min(int(band["hi"]), int(value)))
 
 
+def _count(value: Any) -> Optional[float]:
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def ladder_row_done(row: Mapping[str, Any], *, player_session: bool,
+                    dose_sets: Optional[int] = None) -> bool:
+    """B413 (D3): the ONE "was this ladder row done" rule, shared by the
+    history seed (a logged ``actual_exercises`` row) and the closed loop (a
+    feedback item — the same dict, feedback.py stores the items as they are).
+
+    - a ``skipped`` label → not done;
+    - ``completed: false`` → done only when the counted sets reach the dose
+      (``dose_sets``, else the row's ``prescribed_sets``): the player that
+      saves a fully logged row as not completed (bug-inbox 04/11) is not a
+      failure;
+    - counted sets present → done with at least one;
+    - no counted sets: the players (custom / generated sessions — the custom
+      player always sends ``completed: true``) need a counted set; the dialog
+      needs nothing more than not ``completed: false``.
+
+    It does not replace ``stimulus.logged_entry_counts`` (guards, exposures)."""
+    if str(row.get("feedback_label") or "").strip().lower() == "skipped":
+        return False
+    sets = _count(row.get("completed_sets"))
+    if row.get("completed") is False:
+        need = dose_sets if dose_sets else _int(row.get("prescribed_sets"))
+        return sets is not None and need is not None and sets >= need
+    if sets is not None:
+        return sets >= 1
+    return not player_session
+
+
+def _is_player_session(session: Mapping[str, Any]) -> bool:
+    """Custom / generated sessions (``stimulus._is_player_session``)."""
+    sid = str(session.get("session_id") or "")
+    return bool(session.get("is_custom")) or sid.startswith("custom_") or sid.startswith("generated_")
+
+
+def seed_target(rows: Sequence[Mapping[str, Any]], band: Mapping[str, Any]) -> Tuple[Optional[int], Dict[str, Any]]:
+    """B413 (D1/D5): the history seed of one level — the dose the closed loop
+    would prescribe after the LAST clean session at that level, with the same
+    label steps (``LABEL_STEPS``; unrated = ok), clamped to the band (a seed
+    never changes level). ``rows``: the clean rows at that level, oldest
+    first, each ``{dose, label}``.
+
+    - only the last row steps: the seed never walks the band retroactively;
+    - an unrated last row never seeds below a dose rated earlier at that level;
+    - an unknown last dose keeps the previous known dose (no step);
+    - no known dose at all → ``None`` (the caller's default: bottom of the band,
+      the only value without data).
+
+    Returns ``(target, how)``; ``how`` says which rule fired (evidence)."""
+    if not rows:
+        return None, {"rule": "none"}
+    last = rows[-1]
+    step = int(band["step"])
+    label = str(last.get("label") or "")
+    rated_doses = [int(r["dose"]) for r in rows[:-1] if r.get("dose") is not None and r.get("label") in RATED_LABELS]
+    if last.get("dose") is not None:
+        steps = LABEL_STEPS[label] if label in RATED_LABELS else LABEL_STEPS["ok"]
+        target = int(last["dose"]) + steps * step
+        how: Dict[str, Any] = {"rule": "last_dose", "steps": steps}
+    else:
+        prev = next((r for r in reversed(rows[:-1]) if r.get("dose") is not None), None)
+        if prev is None:
+            return None, {"rule": "unknown_dose"}
+        target = int(prev["dose"])
+        how = {"rule": "previous_dose", "steps": 0, "previous_date": prev.get("date")}
+    if label not in RATED_LABELS and rated_doses and max(rated_doses) > target:
+        target = max(rated_doses)
+        how = dict(how, rule="rated_floor", floor=target)
+    return _clamp_target(target, band), how
+
+
 # ---------------------------------------------------------------------------
 # Seed (read-only)
 # ---------------------------------------------------------------------------
@@ -247,15 +340,21 @@ def _history(state: Mapping[str, Any], ref: date, archived_weeks: ArchivedWeeks,
              doc: Mapping[str, Any], exclude: Optional[Iterable[Tuple[str, str]]] = None,
              ) -> Dict[str, Dict[str, Any]]:
     """Per family: the highest level completed cleanly in the window, with
-    the latest dose logged at that level. ``exclude``: ``(date, session_id)``
-    pairs left out (A298: the session whose feedback is being applied — it is
-    already marked done, and seeding from its own dose would count it twice)."""
+    the latest row logged at that level and (``rows``, oldest first) every
+    clean row at that level — ``seed_target`` reads them. ``exclude``:
+    ``(date, session_id)`` pairs left out (A298: the session whose feedback is
+    being applied — it is already marked done, and seeding from its own dose
+    would count it twice).
+
+    B413: a logged row counts when ``ladder_row_done`` says it was done (the
+    closed loop's own rule), a planned row of a done session as it is."""
     skip = {(str(d), str(sid)) for d, sid in (exclude or ())}
     seed = doc.get("seed_rules") or {}
     win = int(seed.get("history_window_days") or 120)
     win_skill = int(seed.get("skill_family_history_window_days") or 60)
     fams = {str(f["family"]): f for f in _families(doc)}
-    best: Dict[str, Dict[str, Any]] = {}
+    found: Dict[str, List[Tuple[int, str, int, Dict[str, Any]]]] = {}
+    seq = 0
     for d, s, _src in iter_plan_sessions(state, archived_weeks):
         if s.get("status") != "done" or is_test_session(s):
             continue
@@ -264,7 +363,8 @@ def _history(state: Mapping[str, Any], ref: date, archived_weeks: ArchivedWeeks,
         dd = _as_date(d)
         if dd > ref:
             continue
-        entries, origin = counted_entries(s)
+        entries, origin = session_exercise_entries(s)
+        player = _is_player_session(s)
         for e in entries:
             ex = str(e.get("exercise_id") or "")
             hit = family_of(ex, dd, doc)
@@ -275,17 +375,24 @@ def _history(state: Mapping[str, Any], ref: date, archived_weeks: ArchivedWeeks,
             window = win_skill if fam.get("skill_family") else win
             if (ref - dd).days > window:
                 continue
-            label = str(e.get("feedback_label") or "")
+            label = str(e.get("feedback_label") or "").strip().lower()
             if label in _BAD_LABELS:
                 continue
-            lvl = fam["levels"][idx]
             twin = _planned_twin(s, ex)
-            dose = _dose_of(e, twin, lvl["axis"])
-            row = {"level_idx": idx, "date": d, "exercise_id": ex, "dose": dose,
+            if origin == "actual" and not ladder_row_done(e, player_session=player, dose_sets=_sets_of({}, twin)):
+                continue
+            lvl = fam["levels"][idx]
+            row = {"level_idx": idx, "date": d, "exercise_id": ex, "dose": _dose_of(e, twin, lvl["axis"]),
                    "sets": _sets_of(e, twin), "label": label or None, "evidence": origin}
-            cur = best.get(family)
-            if cur is None or (idx, d) > (cur["level_idx"], cur["date"]):
-                best[family] = row
+            found.setdefault(family, []).append((idx, str(d), -seq, row))
+            seq += 1
+    best: Dict[str, Dict[str, Any]] = {}
+    for family, rows in found.items():
+        top = max(r[0] for r in rows)
+        # Oldest first; on the same day the row met first stays the last one
+        # (the pre-B413 tie-break: strictly later (level, date) replaced it).
+        at_top = sorted((r for r in rows if r[0] == top), key=lambda r: (r[1], r[2]))
+        best[family] = dict(at_top[-1][3], rows=[r[3] for r in at_top])
     return best
 
 
@@ -377,12 +484,18 @@ def seed_levels(state: Mapping[str, Any], ref_date: DateLike, *, archived_weeks:
         h = hist.get(name)
         if h:
             lvl = fam["levels"][h["level_idx"]]
-            step = int(lvl["band"]["step"])
-            dose = h["dose"]
-            target = (dose - step) if dose is not None else None
-            rows.append(_row(fam, h["level_idx"], source="history", target=target, sets=h["sets"], extra={
-                "evidence": {k: h[k] for k in ("date", "exercise_id", "dose", "sets", "label", "evidence")},
-                "at_top_of_band": dose is not None and dose >= int(lvl["band"]["hi"]),
+            # B413: the dose the closed loop would give after the last clean
+            # session (same label steps), never below an earlier rated dose,
+            # an unknown dose keeps the previous one; no level change.
+            target, how = seed_target(h["rows"], lvl["band"])
+            sets = h["sets"]
+            if sets is None:
+                sets = next((r["sets"] for r in reversed(h["rows"]) if r.get("sets") is not None), None)
+            evidence = {k: h[k] for k in ("date", "exercise_id", "dose", "sets", "label", "evidence")}
+            evidence.update(how)
+            rows.append(_row(fam, h["level_idx"], source="history", target=target, sets=sets, extra={
+                "evidence": evidence,
+                "at_top_of_band": target is not None and target >= int(lvl["band"]["hi"]),
             }))
             continue
         seeded = None
@@ -415,8 +528,9 @@ def seed_levels(state: Mapping[str, Any], ref_date: DateLike, *, archived_weeks:
         "tested_gate": gate,
         "l_sit_test": l_sit,
         "families": rows,
-        "note": ("read-only seed (C272): history = last clean dose − 1 step; the closed loop "
-                 "(label steps, promotions) arrives with the bodyweight-progression A brief"),
+        "note": ("read-only seed (C272, B413 rule): history = the dose the closed loop would give after "
+                 "the last clean session (very_easy +3, easy +2, ok or unrated +1 step), never below an "
+                 "earlier rated dose, no level change; a persisted bw_progression entry (A298) wins"),
     }
 
 
