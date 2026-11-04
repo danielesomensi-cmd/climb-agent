@@ -223,25 +223,24 @@ SURFACE_PRIORITY = ("board_kilter", "board_moonboard", "board_other", "spraywall
 # - a limit grade memory is trusted for 180 days (the global 60-day gate made
 #   a Kilter grade from the summer vanish and the target jump back to the
 #   outdoor RP anchor);
-# - a gap of ≥14 days since the last limit session on a surface opens a
-#   re-entry (same gap as the programme-wide re-entry ramp, DECISIONS
-#   2026-10-04): the target is the pre-gap base minus one half grade for 2
-#   sessions, then the base again (± the label delta applied to the BASE, so
-#   the discount never becomes permanent);
+# - B413 (Daniele, 2026-11-04 «limit a grado pieno»): no re-entry discount.
+#   After a gap of any length the target is the remembered grade (180-day
+#   trust); B365's re-entry (−½ grade for 2 sessions after ≥14 days) is gone,
+#   for everyone. Entries written while a re-entry was open keep their BASE in
+#   next_target_grade, so they read as that base with no migration;
 # - boards (Kilter, Moon, spray, system) with no memory anchor 2 half grades
 #   below the outdoor boulder RP — a Kilter 7A is not a gym 7A;
 # - floor/ceiling: the target stays within ±2 half grades of the best grade
 #   logged on that surface in the last 180 days; the band low is target − 2
 #   half grades (one letter).
 LIMIT_MEMORY_FRESHNESS_DAYS = 180
-LIMIT_REENTRY_GAP_DAYS = 14
-LIMIT_REENTRY_EXPOSURES = 2
-LIMIT_REENTRY_HALF_STEPS = 1
 LIMIT_BOARD_ANCHOR_HALF_STEPS = 2
 LIMIT_SURFACE_BAND_HALF_STEPS = 2
 LIMIT_TARGET_LOW_HALF_STEPS = 2
 LIMIT_BOARD_SURFACES = frozenset({"board_kilter", "board_moonboard", "board_other", "spraywall"})
-_LIMIT_REENTRY_FIELDS = (
+# B365 re-entry fields, written until B413 removed the re-entry. Read by
+# nothing; a limit write drops them from the entry it rewrites.
+_LIMIT_LEGACY_REENTRY_FIELDS = (
     "reentry_base_grade",
     "reentry_exposures",
     "reentry_started_at",
@@ -1037,20 +1036,16 @@ def _limit_target_state(
 
     Shared by inject_targets (read), apply_feedback (write) and the read-only
     consumers (coach prompt, weekly report — via `limit_next_target`) so all
-    of them agree on whether a re-entry is open, on its base and on the
-    prescribed grade. Returns:
-      target, target_low, source (anchor|memory|reentry),
-      reentry: None | {base_grade, exposures_done, exposures_required, started_at}
-    Re-entry opens only when the athlete HAS climbed limit on this surface
-    before (any age) and the newest entry is ≥14 days old; a first-ever
-    session is the plain anchor. A new gap ≥14 days restarts an open
-    re-entry from zero. An entry older than 180 days is not trusted as a
-    grade: the re-entry base is then min(anchor, that stale grade), so a
-    longer absence never gives a harder target than a shorter one.
-
-    Order: the per-surface floor/ceiling clamps the BASE (memory or re-entry
-    base), then the re-entry discount is applied — the floor can never cancel
-    the discount or lift a re-entry above its base.
+    of them agree on the prescribed grade. Returns:
+      target, target_low, source (anchor|memory)
+    - a trusted memory (newest family entry on the surface, ≤ 180 days) →
+      its next_target_grade, clamped to the per-surface floor/ceiling;
+    - an entry older than 180 days is not trusted as a grade: the target is
+      min(anchor, that stale grade), so a longer absence never gives a harder
+      target than a shorter one;
+    - no entry → the anchor.
+    B413: no re-entry discount after a gap any more (B365 gave the base − ½
+    grade for 2 sessions after ≥ 14 days); the target is the base.
     """
     anchor = _limit_anchor_target(user_state, prescription, surface, benchmark_grade)
     latest = _limit_family_entry(user_state, surface, date_value)
@@ -1062,42 +1057,21 @@ def _limit_target_state(
             return norm
         return _clamp_font(norm, band[0], band[1])
 
-    reentry: Optional[Dict[str, Any]] = None
     source = "anchor"
     target = anchor
 
     if latest is not None:
         age = _days_between(latest.get("updated_at"), date_value) or 0
         trusted = age <= LIMIT_MEMORY_FRESHNESS_DAYS
-        remembered = normalize_font_grade(latest.get("next_target_grade")) if trusted else None
-        open_base = normalize_font_grade(latest.get("reentry_base_grade")) if trusted else None
-        open_done = int(latest.get("reentry_exposures") or 0)
-        if age >= LIMIT_REENTRY_GAP_DAYS:
-            # A gap (new or during an open re-entry) restarts the ramp.
-            if remembered:
-                base = remembered
-            else:
-                stale = normalize_font_grade(latest.get("next_target_grade"))
-                base = anchor
-                if stale is not None and normalize_font_grade(anchor) is not None and FONT_GRADE_TO_INDEX[stale] < FONT_GRADE_TO_INDEX[normalize_font_grade(anchor)]:
-                    base = stale
-            reentry = {"base_grade": _clamped(base), "exposures_done": 0, "started_at": None}
-        elif open_base and open_done < LIMIT_REENTRY_EXPOSURES:
-            reentry = {
-                "base_grade": _clamped(open_base),
-                "exposures_done": open_done,
-                "started_at": latest.get("reentry_started_at"),
-            }
-        elif remembered:
-            target = _clamped(remembered)
-            source = "memory"
-
-    if reentry is not None:
-        reentry["exposures_required"] = LIMIT_REENTRY_EXPOSURES
-        target = _step_font_half(reentry["base_grade"], -LIMIT_REENTRY_HALF_STEPS) or reentry["base_grade"]
-        source = "reentry"
-    elif source == "anchor":
-        target = _clamped(target)
+        remembered = normalize_font_grade(latest.get("next_target_grade"))
+        if trusted and remembered:
+            target, source = remembered, "memory"
+        elif not trusted and remembered:
+            # A stale grade never gives a harder target than the anchor.
+            norm_anchor = normalize_font_grade(anchor)
+            if norm_anchor is not None and FONT_GRADE_TO_INDEX[remembered] < FONT_GRADE_TO_INDEX[norm_anchor]:
+                target, source = remembered, "memory"
+    target = _clamped(target)
 
     # B365: the band low is computed from the FINAL target. It used to be
     # derived from the anchor before the memory override, so a 7A memory
@@ -1107,7 +1081,6 @@ def _limit_target_state(
         "target": target,
         "target_low": target_low,
         "source": source,
-        "reentry": reentry,
     }
 
 
@@ -1119,8 +1092,8 @@ def limit_next_target(
     """B365: the limit grade the app would prescribe for `entry`'s surface.
 
     For read-only consumers (coach prompt, weekly report) that used to quote
-    `next_target_grade` raw: during a re-entry, or when the floor/ceiling
-    clamps, the stored value is the BASE, not the prescribed target. Uses the
+    `next_target_grade` raw: when the floor/ceiling clamps, or for a stale
+    entry, the stored value is not the prescribed target. Uses the
     catalog default anchor (boulder_max_rp + 0). None when `entry` is not a
     limit-family entry with a surface.
     """
@@ -1185,8 +1158,6 @@ def limit_grade_target(
         "target_source": state["source"],
         "log_problems": True,
     }
-    if state["reentry"]:
-        out["reentry"] = dict(state["reentry"])
     # Without a known gym the surface is only a guess (first by priority over
     # all the gyms): the target of EVERY option travels too, so a player can
     # let the athlete say which wall he is on (review A296).
@@ -1195,10 +1166,7 @@ def limit_grade_target(
         opt_state = state if opt == surface else _limit_target_state(
             user_state, presc, opt, date_value, _extract_grade_benchmark(user_state),
         )
-        row: Dict[str, Any] = {"target_grade": opt_state["target"], "target_grade_low": opt_state["target_low"]}
-        if opt_state["reentry"]:
-            row["reentry"] = dict(opt_state["reentry"])
-        surface_targets[opt] = row
+        surface_targets[opt] = {"target_grade": opt_state["target"], "target_grade_low": opt_state["target_low"]}
     if surface_targets:
         out["surface_targets"] = surface_targets
     return out
@@ -1801,9 +1769,9 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                 # benchmark (~onsight level) is only a fallback when the assessment
                 # grade is missing. boulder_info still drives attempt/rest guidance.
                 # B365 (R6.0): memory read across the whole family on the
-                # selected surface (180-day trust), re-entry after a ≥14-day
-                # gap, board anchor, per-surface floor/ceiling, band low from
-                # the final target — see _limit_target_state.
+                # selected surface (180-day trust), board anchor, per-surface
+                # floor/ceiling, band low from the final target — see
+                # _limit_target_state (B413: no re-entry discount).
                 limit_state = _limit_target_state(
                     user_state,
                     prescription,
@@ -1820,8 +1788,6 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                     "target_source": limit_state["source"],
                     "intensity_label": intensity,
                 }
-                if limit_state["reentry"]:
-                    boulder_target["reentry"] = dict(limit_state["reentry"])
                 # A296: the players log this exercise problem by problem.
                 boulder_target["log_problems"] = True
                 if boulder_info.get("attempt_guidance"):
@@ -2845,6 +2811,54 @@ def _apply_dp_feedback(
     return next_load, fields
 
 
+def _is_unrated_done(
+    item: Dict[str, Any], rating: Optional[str], log_entry: Dict[str, Any], planned_prescription: Dict[str, Any],
+) -> bool:
+    """B413 (D3): ``measured_feedback.unrated_done`` for a feedback item (the
+    players are the custom / generated sessions, the dose is the planned sets)."""
+    from backend.engine import measured_feedback as mf
+
+    sid = str(log_entry.get("session_id") or "")
+    sets = _first_not_none(planned_prescription.get("sets"), item.get("prescribed_sets"))
+    try:
+        dose_sets = int(sets) if sets is not None and not isinstance(sets, bool) else None
+    except (TypeError, ValueError):
+        dose_sets = None
+    return mf.unrated_done(
+        item, rating, player_session=sid.startswith("custom_") or sid.startswith("generated_"), dose_sets=dose_sets,
+    )
+
+
+def _fresh_memory_value(
+    existing: Optional[Dict[str, Any]], field: str, date_value: str, freshness_days: int,
+    *, offset: float = 0.0,
+) -> Optional[float]:
+    """B413 (D3): what a memory entry proposes on ``date_value`` (``field`` +
+    ``offset``), or None when the read would not use it (missing, not fresh)."""
+    if not existing or not _is_fresh(existing.get("updated_at"), date_value, freshness_days):
+        return None
+    value = existing.get(field)
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return float(value) + offset
+    except (TypeError, ValueError):
+        return None
+
+
+def _keep_unrated_memory(
+    existing: Optional[Dict[str, Any]], proposed: Optional[float], new_value: float, date_value: str,
+) -> bool:
+    """B413 (D3): an unrated done item never rewrites a memory lower. When the
+    new value is below what the memory proposed, the entry stays as it was and
+    only its date is refreshed (the athlete trained it: the memory stays
+    fresh). Returns True when it kept the entry (the caller writes nothing)."""
+    if existing is None or proposed is None or float(new_value) >= float(proposed) - 1e-9:
+        return False
+    existing["updated_at"] = max(str(existing.get("updated_at") or ""), date_value)
+    return True
+
+
 def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any],
                    archived_weeks: Any = None) -> Dict[str, Any]:
     """Apply one session's feedback to a COPY of ``user_state``.
@@ -3071,6 +3085,15 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any],
                     extra["escalation_anchor"] = {
                         "date": date_value, "total_kg": _round_half_step(max(next_total, float(used_total))),
                     }
+            if pain_blk is None and _is_unrated_done(item, rating, log_entry, planned_prescription):
+                # B413 (D3): unrated + no measure = ok, never below the memory
+                # (the read prefers next_external + bodyweight).
+                proposed = _fresh_memory_value(existing_entry, "next_external_load_kg", date_value, 60,
+                                               offset=bodyweight)
+                if proposed is None:
+                    proposed = _fresh_memory_value(existing_entry, "next_total_load_kg", date_value, 60)
+                if _keep_unrated_memory(existing_entry, proposed, next_total, date_value):
+                    continue
             next_external = _round_half_step(next_total - bodyweight)
 
             entry = _find_working_load_entry(updated, exercise_id, setup)
@@ -3130,6 +3153,12 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any],
                     computed_next=next_load, session_key=session_key, date_value=date_value,
                     reference_before=ref.get("suggested_external_load_kg"), reference_cut=cut.get("suggested_external_load_kg"),
                 )
+            elif _is_unrated_done(item, rating, log_entry, planned_prescription) and _keep_unrated_memory(
+                existing_entry,
+                _fresh_memory_value(existing_entry, "next_external_load_kg", date_value, EXTERNAL_LOAD_FRESHNESS_DAYS),
+                next_load, date_value,
+            ):
+                continue  # B413 (D3): unrated + no measure = ok, never below the memory
             entry = _find_working_load_entry(updated, exercise_id, {})
             if pain_blk is None:
                 entry.pop("pain_hold", None)
@@ -3164,40 +3193,12 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any],
                 gym_id=session.get("gym_id"),
                 user_state=updated,
             )
-            # B365 (R6.0): is this session part of a re-entry? Evaluated on the
-            # state BEFORE this write, with the same function the read uses.
-            # Idempotent on a same-day resubmission (B197): an entry whose
-            # re-entry already counted today is recomputed, not re-counted.
-            prior = _limit_family_entry(updated, surface_selected, date_value)
-            reentry_fields: Optional[Dict[str, Any]] = None
-            if (
-                prior is not None
-                and normalize_font_grade(prior.get("reentry_base_grade"))
-                and str(prior.get("reentry_last_at") or "") == date_value
-            ):
-                reentry_fields = {
-                    "reentry_base_grade": normalize_font_grade(prior.get("reentry_base_grade")),
-                    "reentry_exposures": int(prior.get("reentry_exposures") or 1),
-                    "reentry_started_at": prior.get("reentry_started_at") or date_value,
-                    "reentry_last_at": date_value,
-                }
-            else:
-                limit_prescription = planned_prescription or (catalog_info.get("prescription_defaults") or {})
-                limit_state = _limit_target_state(
-                    updated,
-                    limit_prescription,
-                    surface_selected,
-                    date_value,
-                    _extract_grade_benchmark(updated),
-                )
-                if limit_state["reentry"]:
-                    reentry = limit_state["reentry"]
-                    reentry_fields = {
-                        "reentry_base_grade": reentry["base_grade"],
-                        "reentry_exposures": int(reentry["exposures_done"]) + 1,
-                        "reentry_started_at": reentry.get("started_at") or date_value,
-                        "reentry_last_at": date_value,
-                    }
+            limit_prescription = planned_prescription or (catalog_info.get("prescription_defaults") or {})
+            # The read on the state BEFORE this write (B413: no re-entry —
+            # after a gap the target is the remembered grade).
+            limit_read = _limit_target_state(
+                updated, limit_prescription, surface_selected, date_value, _extract_grade_benchmark(updated),
+            )
 
             # A296: the prescribed target of the day — planned instance first,
             # then the target this same session already logged (a resubmission
@@ -3215,64 +3216,66 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any],
                 or limit_day_targets.get(surface_selected)
             )
             if day_target is None:
-                day_target = _limit_target_state(
-                    updated,
-                    planned_prescription or (catalog_info.get("prescription_defaults") or {}),
-                    surface_selected,
-                    date_value,
-                    _extract_grade_benchmark(updated),
-                )["target"]
+                day_target = limit_read["target"]
             if day_target:
                 limit_day_targets.setdefault(surface_selected, day_target)
 
             delta = _grade_delta_for_feedback(feedback_label)
             classification: Optional[Dict[str, Any]] = None
             reference: Optional[str] = None
-            if problems and (reentry_fields is None or reentry_fields["reentry_exposures"] >= LIMIT_REENTRY_EXPOSURES):
+            if problems:
                 # Measured: the problems decide (the label is kept for info).
-                # Closing a re-entry, progression is judged against the BASE.
-                reference = reentry_fields["reentry_base_grade"] if reentry_fields is not None else day_target
+                reference = day_target
                 classification = limit_log.classify_session(
                     problems, reference, limit_log.previous_entry(updated, surface_selected, date_value),
                 )
                 delta = int(classification["delta"])
-            if reentry_fields is None:
-                # A291: half grades, the '+' survives ('ok' on 7A+ stays 7A+;
-                # step_grade used to strip it to 7A).
-                # A296: with problems the step applies to the day's target.
-                base_grade = reference if classification is not None else used_grade
-                next_grade = _step_font_half(base_grade, delta) or base_grade
-            elif reentry_fields["reentry_exposures"] < LIMIT_REENTRY_EXPOSURES:
-                # Still re-entering: keep the BASE as the memory (the read
-                # applies the discount), never the discounted grade.
-                next_grade = reentry_fields["reentry_base_grade"]
-            else:
-                # Re-entry closes: progression relative to the base.
-                next_grade = _step_font_half(reentry_fields["reentry_base_grade"], delta) or reentry_fields["reentry_base_grade"]
-            setup, setup_key = _progression_setup_and_key(exercise_id, {"surface": surface_selected})
-            entry = _find_working_load_entry(updated, exercise_id, setup)
-            # The band reads last_used_grade as "the best grade CLIMBED": with
-            # problems it is the hardest send, else the grade the athlete
-            # typed; with neither the previous value is kept (never the target).
-            climbed = (limit_log.best_sent(problems) if problems else None) or used_grade
-            entry.update(
-                {
-                    "exercise_id": exercise_id,
-                    "key": setup_key,
-                    "setup": setup,
-                    "surface_selected": surface_selected,
-                    "last_feedback_label": rating,
-                    "last_rated": rated or bool(problems),
-                    "next_target_grade": next_grade,
-                    "updated_at": date_value,
-                }
+            # A291: half grades, the '+' survives ('ok' on 7A+ stays 7A+;
+            # step_grade used to strip it to 7A).
+            # A296: with problems the step applies to the day's target.
+            base_grade = reference if classification is not None else used_grade
+            next_grade = _step_font_half(base_grade, delta) or base_grade
+            # B413 (D3): a done session with no label and no problem log is an
+            # 'ok' that never lowers the memory: a grade typed below what the
+            # memory proposed leaves the memory entry as it was (only its date
+            # is refreshed) — the entry the read took it from, whichever
+            # exercise of the family wrote it.
+            prior = _limit_family_entry(updated, surface_selected, date_value)
+            kept = (
+                prior is not None
+                and not problems
+                and limit_read["source"] == "memory"
+                and _is_unrated_done(item, rating, log_entry, planned_prescription)
+                and FONT_GRADE_TO_INDEX.get(normalize_font_grade(next_grade) or "", -1)
+                < FONT_GRADE_TO_INDEX.get(normalize_font_grade(limit_read["target"]) or "", -1)
             )
-            if climbed:
-                entry["last_used_grade"] = climbed
-            for field in _LIMIT_REENTRY_FIELDS:
-                entry.pop(field, None)
-            if reentry_fields is not None:
-                entry.update(reentry_fields)
+            if kept:
+                prior["updated_at"] = max(str(prior.get("updated_at") or ""), date_value)
+                next_grade = limit_read["target"]
+            else:
+                setup, setup_key = _progression_setup_and_key(exercise_id, {"surface": surface_selected})
+                entry = _find_working_load_entry(updated, exercise_id, setup)
+                # The band reads last_used_grade as "the best grade CLIMBED":
+                # with problems it is the hardest send, else the grade the
+                # athlete typed; with neither the previous value is kept
+                # (never the target).
+                climbed = (limit_log.best_sent(problems) if problems else None) or used_grade
+                entry.update(
+                    {
+                        "exercise_id": exercise_id,
+                        "key": setup_key,
+                        "setup": setup,
+                        "surface_selected": surface_selected,
+                        "last_feedback_label": rating,
+                        "last_rated": rated or bool(problems),
+                        "next_target_grade": next_grade,
+                        "updated_at": date_value,
+                    }
+                )
+                if climbed:
+                    entry["last_used_grade"] = climbed
+                for field in _LIMIT_LEGACY_REENTRY_FIELDS:
+                    entry.pop(field, None)
 
             # A296: the limit log entry (one per date+session+exercise).
             log_row: Dict[str, Any] = {
@@ -3296,8 +3299,6 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any],
                 })
                 if classification["guard"]:
                     log_row["warning"] = "hard_attempts_guard"
-            elif problems and reentry_fields is not None:
-                log_row["step_reason"] = "reentry"
             if problems:
                 log_row["qualifies"] = limit_log.qualifies(problems, day_target)
             # A sent above the boulder redpoint never writes the max: it is
@@ -3337,12 +3338,26 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any],
                 direction = -1
             else:
                 direction = 0
+            # B413 (D3, A1): not rated = 'ok' (it resets the streak, below),
+            # but a done item never lowers the remembered target: a grade
+            # below the fresh memory leaves the entry as it was (date only).
+            existing_entry = next(
+                (e for e in _working_entries_ro(updated) if str(e.get("key") or "") == exercise_id), None,
+            )
+            remembered = normalize_grade_on_scale(
+                (existing_entry or {}).get("next_target_grade"), endurance_scale,
+            ) if existing_entry is not None and _is_fresh(existing_entry.get("updated_at"), date_value, 60) else None
+            unrated_done = _is_unrated_done(item, rating, log_entry, planned_prescription)
+            if remembered and unrated_done:
+                _ladder, index = _GRADE_SCALES.get(endurance_scale) or _GRADE_SCALES["font"]
+                if _keep_unrated_memory(existing_entry, float(index[remembered]), float(index[used_grade]), date_value):
+                    continue
             entry = _find_working_load_entry(updated, exercise_id, {})
             prev_dir = int(entry.get("grade_streak_direction") or 0)
             prev_count = int(entry.get("grade_streak_count") or 0)
-            if rating is None:
-                # A295: not rated — the target follows the grade climbed and
-                # the concordance streak is left exactly as it was.
+            if rating is None and not unrated_done:
+                # A295: not rated and not done — the target follows the grade
+                # climbed and the concordance streak is left exactly as it was.
                 streak_dir, streak_count = prev_dir, prev_count
                 next_grade = used_grade
             elif direction == 0:
@@ -3406,6 +3421,10 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any],
                     reference_before=(ref.get(f"{hand}_hand") or {}).get("suggested_external_load_kg"),
                     reference_cut=(cut.get(f"{hand}_hand") or {}).get("suggested_external_load_kg"),
                 )
+            elif _is_unrated_done(item, rating, log_entry, planned_prescription) and _keep_unrated_memory(
+                entry, _fresh_memory_value(entry, "next_external_load_kg", date_value, 60), next_load, date_value,
+            ):
+                continue  # B413 (D3): unrated + no measure = ok, never below the memory
             if entry is None:
                 entry = {"exercise_id": exercise_id, "key": hand_key, "hand": hand}
                 entries.append(entry)

@@ -204,7 +204,8 @@ def test_pullup_caps_by_volume_with_daniele_1rm():
 def test_working_load_108_at_3_prescribes_108():
     anch = _al(_daniele(), "weighted_pullup", "2026-10-09", sets=4, reps=3)
     assert (anch["total"], anch["external"], anch["source"], anch["clamped"]) == (108.0, 30.0, "working_load", None)
-    assert anch["ramp"]["n"] >= 3 and anch["ramp"]["factor"] == 1.0
+    # B413: the re-entry carries no load factor any more.
+    assert anch["ramp"]["n"] >= 3 and "factor" not in anch["ramp"] and anch["ramp"]["in_reentry"] is False
 
 
 def test_working_load_108_at_4_is_held_by_the_4x3_cap():
@@ -240,14 +241,16 @@ def test_hang_never_reaches_the_official_max_outside_tests(day, ex, secs):
     assert anch["total"] < anch["official"]["total_at_duration"]
 
 
-# --- (4) re-entry ramp -------------------------------------------------------
+# --- (4) re-entry (B413: no load factor) -------------------------------------
 
 def test_daniele_hang_13_10_is_the_first_exposure_after_a_gap():
+    # B413 (Daniele, 2026-11-02): the re-entry no longer scales the cap. It
+    # was 110.2 × 0.90 = 99.0; now the phase target 0.90 × 116 = 104.4 → 104.5,
+    # under the full strength_power cap (110.0).
     anch = _al(_daniele(), "max_hang_7s", "2026-10-13")
-    assert anch["ramp"]["n"] == 1 and anch["ramp"]["factor"] == 0.90
-    assert anch["total"] <= 99.5
-    assert anch["total"] == 99.0  # 110.2 × 0.90 = 99.2 → 99.0 (cap rounds down)
-    assert anch["external"] == 21.0
+    assert anch["ramp"]["n"] == 1 and anch["ramp"]["in_reentry"] is True and "factor" not in anch["ramp"]
+    assert (anch["total"], anch["cap"], anch["clamped"]) == (104.5, 110.0, None)
+    assert anch["external"] == 26.5
 
 
 def test_second_hang_session_is_n2():
@@ -261,7 +264,20 @@ def test_second_hang_session_is_n2():
 
 def test_pulling_n3_has_no_reduction():
     anch = _al(_daniele(), "weighted_pullup", "2026-10-09")
-    assert anch["ramp"]["factor"] == 1.0
+    assert anch["ramp"]["in_reentry"] is False
+
+
+def test_pulling_after_a_gap_has_no_reduction_either():
+    # B413: a re-entry (n=1) prescribes exactly what n≥3 prescribes.
+    gap = _daniele(registry={"finger_max": [], "pulling_max": [
+        {"date": "2026-09-24", "exercise_id": "weighted_pullup", "total_kg": 123.0, "is_test": True}]})
+    assert _al(gap, "weighted_pullup", "2026-10-21")["ramp"]["n"] == 1
+    full = _daniele(registry={"finger_max": [], "pulling_max": [
+        {"date": d, "exercise_id": "weighted_pullup"} for d in ("2026-10-14", "2026-10-16", "2026-10-18")]})
+    assert _al(full, "weighted_pullup", "2026-10-21")["ramp"]["n"] >= 3
+    keys = ("total", "cap", "floor", "clamped")
+    assert {k: _al(gap, "weighted_pullup", "2026-10-21")[k] for k in keys} == \
+        {k: _al(full, "weighted_pullup", "2026-10-21")[k] for k in keys}
 
 
 def test_empty_registry_and_fresh_entry_means_n3():
@@ -306,7 +322,9 @@ def test_empty_date_is_conservative():
     anch = _al(_daniele(), "max_hang_7s", "")
     assert anch["no_date"] is True
     assert anch["phase_id"] == "base"
-    assert anch["ramp"]["factor"] == 0.90
+    # B413: no date is still read as a re-entry (5 max-hang sets), but the
+    # load cap is no longer scaled by 0.90.
+    assert anch["ramp"]["in_reentry"] is True and "factor" not in anch["ramp"]
     assert anch["source"] == "phase_target"
 
 
@@ -328,8 +346,9 @@ def test_inject_overwrites_resolver_suggested_fields():
                                    "suggested": {"target_total_load_kg": 104.5, "added_weight_kg": 26.5,
                                                  "assistance_kg": 0.0, "setup": {"edge_mm": 20}}}]}]}
     sug = inject_targets(day, _daniele())["sessions"][0]["exercise_instances"][0]["suggested"]
-    assert sug["target_total_load_kg"] == sug["suggested_total_load_kg"] == 99.0
-    assert sug["added_weight_kg"] == sug["suggested_external_load_kg"] == 21.0
+    # B413: no re-entry factor — 104.5 (was 99.0 with the 0.90 ramp).
+    assert sug["target_total_load_kg"] == sug["suggested_total_load_kg"] == 104.5
+    assert sug["added_weight_kg"] == sug["suggested_external_load_kg"] == 26.5
     assert sug["setup"] == {"edge_mm": 20}
 
 

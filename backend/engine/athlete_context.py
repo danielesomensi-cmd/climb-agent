@@ -1236,11 +1236,11 @@ def _anchor_line(ex: str, a: Mapping[str, Any]) -> str:
     pct = a.get("pct_of_official")
     ref = a.get("official_one_rm") or a.get("official_total")
     ref_lbl = "1RM" if a.get("official_one_rm") else "massimale"
-    ramp = a.get("ramp") or {}
-    ramp_s = f"rientro n={ramp.get('n')} ×{ramp.get('factor')}" if ramp.get("factor", 1.0) < 1.0 else "rampa piena"
+    # B413: no re-entry factor on the cap any more (no «rientro n ×0.95» to
+    # print); a re-entry only caps max hangs at 5 sets — guard reentry_sets.
     parts = [f"  {ex}: {a.get('rep_scheme')} a {ext_s} kg (totale {_fmt_kg(a.get('total'))})",
              f"= {round(pct * 100) if pct else '—'}% di {_fmt_kg(ref)} kg {ref_lbl} (test {a.get('official_date')})",
-             f"| tetto {_fmt_kg(a.get('cap'))} / pavimento {_fmt_kg(a.get('floor'))} | {ramp_s}"]
+             f"| tetto {_fmt_kg(a.get('cap'))} / pavimento {_fmt_kg(a.get('floor'))}"]
     ev = a.get("evidence") or {}
     if ev:
         parts.append(f"| tetto da misura {_fmt_kg(ev.get('one_rm') or ev.get('total_at_duration'))} kg ({ev.get('date')})")
@@ -1924,9 +1924,9 @@ def _anchor_line_en(ex: str, a: Mapping[str, Any]) -> str:
     ref_lbl = "1RM" if a.get("official_one_rm") else "max"
     line = (f"- {ex}: {a.get('rep_scheme')} at {ext_s} ({_fmt_kg(a.get('total'))} kg total"
             + (f", {round(pct * 100)}% of the {_fmt_kg(ref)} kg {ref_lbl}" if pct else "") + ")")
-    ramp = a.get("ramp") or {}
-    if (ramp.get("factor") or 1.0) < 1.0:
-        line += f"; re-entry after a break (exposure {ramp.get('n')}), capped lower"
+    # B413: the re-entry no longer lowers the cap, so no "re-entry after a
+    # break, capped lower" line (D283 COACH-REENTRY-FRAMING); the max-hang set
+    # cap still shows as the reentry_sets guard.
     if a.get("guards"):
         line += f"; capped by {', '.join(str(g) for g in a['guards'])}"
     if a.get("pain"):

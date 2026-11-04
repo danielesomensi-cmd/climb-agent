@@ -51,7 +51,7 @@ python scripts/athlete_context.py --date YYYY-MM-DD                        # se 
 1. **Carichi degli esercizi ancorati** (weighted_pullup, weighted_chinup, max_hang_5s/7s):
    - la sezione «Carichi ancorati oggi» vale **solo per lo schema che stampa** (serie×ripetizioni del catalogo, per esempio 4×3 trazioni, 5 hang);
    - con un altro schema (3×5, 3×2, 4 hang...) il carico è diverso: lancia la simulazione (§4) e prendi il numero dalla riga **«carico al play»**, che lo ricalcola sullo schema della bozza;
-   - nota di calcolo nella riga, copiata dalla riga «carico al play» (o dalla sezione, se lo schema è lo stesso): «+X kg = Y% di Z kg (1RM/massimale), test gg/mm, rientro n/N». Mai un numero che il player non prescriverebbe;
+   - nota di calcolo nella riga, copiata dalla riga «carico al play» (o dalla sezione, se lo schema è lo stesso): «+X kg = Y% di Z kg (1RM/massimale), test gg/mm». Mai un numero che il player non prescriverebbe;
    - nel payload: `load_kg` = carico **aggiunto** ≥ 0 (per l'assistito 0 + nota) e `load_mode` lasciato `anchored`, così il player ricalcola il giorno in cui si gioca;
    - mai `working_loads` grezzi, mai il 2RM, mai «oppure».
 2. **Gli anchor entrano in una custom solo se tutte e tre:**

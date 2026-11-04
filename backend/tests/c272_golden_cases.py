@@ -95,6 +95,16 @@ stage off as in the test): ``power_endurance_gym`` 10-07 × the 3 profiles —
 ``route_intervals`` is one ascent per set (``reps`` 1, ``work_seconds`` null,
 ``rest_between_sets_seconds`` 60 → 180) and ``category`` main_strength →
 power_endurance. Same ids, same order; pools and ad-hoc unchanged.
+
+B413 (step 4, A4: the re-entry factor on the anchored cap is gone) changed 6
+resolver keys, all on the tested ``advanced`` profile: ``finger_strength_home``,
+``pulling_strength_gym`` and ``strength_long`` × 10-07 / 10-21 (raw diff of the
+stripped resolver output against the B413 step-3 tree @ fc71ca6, ladder stage
+off). Every ``anchored.ramp`` loses ``factor`` and gains ``in_reentry``; the
+n=1 re-entries lose the × 0.90: the max hang 7 s goes 93.5 → 104.0 total
+(+15.5 → +26.0, cap 93.5 → 104.0) on both dates and the pull caps go 98.0 →
+109.0 / 98.5 → 109.5 (the loads under them unchanged). Same ids, same order;
+the untested and intermediate profiles, pools and ad-hoc unchanged.
 """
 
 from __future__ import annotations

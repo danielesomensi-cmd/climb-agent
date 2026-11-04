@@ -203,28 +203,34 @@ def _hang_state(dates):
     return _state(week_plans={"w": _week("w", days)})
 
 
-def test_factor_table():
-    assert [rp.reentry_factor(n) for n in (0, 1, 2, 3, 7)] == [0.90, 0.90, 0.95, 1.0, 1.0]
+def test_no_load_factor_any_more():
+    # B413 (Daniele, 2026-11-02): the re-entry no longer scales the load cap —
+    # the 0.90 / 0.95 factor table is gone; only the count and in_reentry stay.
+    assert not hasattr(rp, "REENTRY_FACTORS") and not hasattr(rp, "reentry_factor")
+    r = rp.reentry_step(_hang_state(["2026-09-24"]), "finger_max", "2026-10-13")
+    assert "factor" not in r
+    assert rp.REENTRY_EXPOSURES == 2
 
 
 def test_no_history_is_first_exposure():
     r = rp.reentry_step(_state(), "finger_max", "2026-10-13")
-    assert (r["n"], r["factor"], r["gap_days"], r["in_reentry"]) == (1, 0.90, None, True)
+    assert (r["n"], r["gap_days"], r["in_reentry"]) == (1, None, True)
 
 
 def test_daniele_like_finger_gap_reopens_ramp():
     # test 24/09, next hang 13/10: 19 days → gap → n=1 (B364 example)
     r = rp.reentry_step(_hang_state(["2026-09-24"]), "finger_max", "2026-10-13")
-    assert (r["n"], r["factor"], r["gap_days"], r["last_exposure"]) == (1, 0.90, 19, "2026-09-24")
+    assert (r["n"], r["in_reentry"], r["gap_days"], r["last_exposure"]) == (1, True, 19, "2026-09-24")
 
 
 def test_run_counts_and_current_session():
     s = _hang_state(["2026-09-24", "2026-10-04"])
     r = rp.reentry_step(s, "finger_max", "2026-10-09")
-    assert (r["n"], r["factor"], r["run_dates"]) == (3, 1.0, ["2026-09-24", "2026-10-04"])
+    assert (r["n"], r["run_dates"]) == (3, ["2026-09-24", "2026-10-04"])
     assert r["in_reentry"] is False
     r2 = rp.reentry_step(s, "finger_max", "2026-10-09", include_current=False)
-    assert (r2["n"], r2["factor"]) == (2, 0.95)
+    # n=2 is still a re-entry (it used to read factor 0.95).
+    assert (r2["n"], r2["in_reentry"]) == (2, True)
 
 
 def test_gap_boundary_thirteen_vs_fourteen_days():

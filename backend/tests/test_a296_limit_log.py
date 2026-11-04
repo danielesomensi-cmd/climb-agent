@@ -1,8 +1,8 @@
 """A296 (R6c) — limit log + problem logger, source of the limit_power exposure.
 
 Fixture: the B365 Kilter/gym state (Daniele's real limit memory on 04/10,
-boulder RP 7C). On 05/10 the Kilter target is 7A+ (re-entry from 7B), so
-most progression cases run after a re-entry is closed, or on a fresh surface.
+boulder RP 7C). On 05/10 the Kilter target is 7B (B413: no re-entry discount
+after a gap any more; it was 7A+).
 """
 
 from __future__ import annotations
@@ -256,20 +256,19 @@ def test_resubmission_replaces_the_entry_and_does_not_restep():
     assert _wl(s2)["next_target_grade"] == "7B+"
 
 
-def test_reentry_problems_keep_the_base_until_closed():
-    st = _state()  # Kilter 7B on 30/07 → re-entry on 05/10 (target 7A+)
+def test_problems_after_a_gap_are_judged_against_the_base():
+    # B413: no re-entry — Kilter 7B on 30/07, 05/10 is a normal session at the
+    # 7B base (B365 gave 7A+ and held the memory for 2 sessions).
+    st = _state()
     bt = _target(st, "2026-10-05")
-    assert bt["target_grade"] == "7A+" and bt["target_source"] == "reentry"
+    assert bt["target_grade"] == "7B" and bt["target_source"] == "memory"
     s1 = _feedback(st, "2026-10-05", [P("7B+", "sent"), P("7B", "sent")])
     e1 = next(e for e in s1["working_loads"]["entries"] if e["key"] == "limit_bouldering|surface=board_kilter")
-    assert e1["next_target_grade"] == "7B"            # the base, never stepped during re-entry
-    assert e1["reentry_exposures"] == 1
-    assert s1["limit_log"][0]["step_reason"] == "reentry"
-    assert _target(s1, "2026-10-08")["target_grade"] == "7A+"
-    # Second session closes the re-entry: judged against the BASE (7B).
-    s2 = _feedback(s1, "2026-10-08", [P("7B+", "sent")])
-    assert _wl(s2)["next_target_grade"] == "7B+"
-    assert s2["limit_log"][-1]["reference_grade"] == "7B"
+    row = s1["limit_log"][0]
+    assert row["reference_grade"] == "7B" and row["step_reason"] != "reentry"
+    assert e1["next_target_grade"] == "7B+"
+    assert not any(k.startswith("reentry_") for k in e1)
+    assert _target(s1, "2026-10-08")["target_grade"] == "7B+"
 
 
 def test_send_above_boulder_rp_is_only_proposed():

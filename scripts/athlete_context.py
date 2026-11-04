@@ -412,10 +412,9 @@ def _play_line(e: Dict[str, Any]) -> str:
         ref_lbl = "1RM" if off.get("one_rm") else "massimale"
         pct = an.get("pct_of_official")
         ext = e.get("suggested_external_load_kg")
-        ramp = an.get("ramp") or {}
-        ramp_s = (f", rientro n={ramp.get('n')}" if (ramp.get("factor") or 1.0) < 1.0 else "")
+        # B413: no re-entry factor on the load any more — the note names no «rientro».
         line += (f" → nota: «{'+' if (ext or 0) >= 0 else ''}{ext} kg (totale {e.get('suggested_total_load_kg')}) "
-                 f"= {round(pct * 100) if pct else '—'}% di {ref} kg {ref_lbl}, test {off.get('date')}{ramp_s}»")
+                 f"= {round(pct * 100) if pct else '—'}% di {ref} kg {ref_lbl}, test {off.get('date')}»")
     return line
 
 

@@ -390,7 +390,7 @@ def _to_custom_exercise(
     if (
         p.get("load_mode") == "anchored"
         and eid in HANG_SECONDS
-        and float(((p.get("anchored") or {}).get("ramp") or {}).get("factor", 1.0)) < 1.0
+        and bool(((p.get("anchored") or {}).get("ramp") or {}).get("in_reentry"))
     ):
         sets = min(sets, REENTRY_MAX_HANG_SETS)
     load_val = float(load) if isinstance((load := p.get("load_kg")), (int, float)) else 0

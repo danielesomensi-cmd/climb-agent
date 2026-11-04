@@ -342,6 +342,8 @@ def get_blocks(user_id: Optional[str] = Depends(get_user_id)):
     return result
 
 
+# "reentry": B413 removed the limit re-entry; the key stays here only so a
+# custom row stored with it before B413 gets it stripped on the next read.
 _LIMIT_TARGET_FIELDS = ("target_grade", "target_grade_low", "target_source", "surface_selected", "surface_options", "surface_targets", "log_problems", "reentry")
 
 

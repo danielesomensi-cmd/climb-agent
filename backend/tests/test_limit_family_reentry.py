@@ -1,4 +1,9 @@
-"""B365 (R6.0) — limit-boulder grade memory per family + surface, re-entry.
+"""B365 (R6.0) — limit-boulder grade memory per family + surface.
+
+B413 (Daniele, 2026-11-04 «limit a grado pieno»): the re-entry discount (−½
+grade for 2 sessions after a ≥14-day gap) is gone, for everyone — after a gap
+the target is the remembered grade. The tests that pinned the re-entry now pin
+its absence (base grade after a gap, legacy re-entry fields inert).
 
 Fixture = Daniele's real working_loads on 2026-10-04 (read-only snapshot):
   limit_bouldering|board_kilter   7A  (2026-06-18)
@@ -103,11 +108,13 @@ def _target(state, date, gym_id=KILTER_GYM, exercise_id="limit_bouldering"):
     return out["sessions"][0]["exercise_instances"][0]["suggested"]["suggested_boulder_target"]
 
 
-def _feedback(state, date, label, used_grade, surface="board_kilter", gym_id=KILTER_GYM, exercise_id="limit_bouldering"):
+def _feedback(state, date, label, used_grade, surface="board_kilter", gym_id=KILTER_GYM, exercise_id="limit_bouldering",
+              contract=None):
     planned = inject_targets(_day(date, gym_id, exercise_id), deepcopy(state))["sessions"]
     log = {
         "date": date,
         "planned": planned,
+        **({"feedback_contract": contract} if contract is not None else {}),
         "actual": {
             "exercise_feedback_v1": [
                 {
@@ -135,48 +142,46 @@ def _idx(grade):
 # ─── Read side ───────────────────────────────────────────────────────────
 
 
-def test_kilter_reads_family_memory_and_opens_reentry():
+def test_kilter_reads_family_memory_at_the_base_after_a_gap():
     """05/10: newest family entry on the Kilter is spray_wall_limit 7B (67 days,
-    inside 180, past the 14-day gap) → re-entry at 7B − 1 half = 7A+."""
+    inside 180, past the old 14-day gap). B413: no re-entry — the target is the
+    base 7B (B365 gave 7B − 1 half = 7A+ for 2 sessions)."""
     bt = _target(_state(), "2026-10-05")
     assert bt["surface_selected"] == "board_kilter"
-    assert bt["target_grade"] == "7A+"
-    assert bt["target_grade_low"] == "6C+"
-    assert bt["target_source"] == "reentry"
-    assert bt["reentry"]["base_grade"] == "7B"
-    assert bt["reentry"]["exposures_done"] == 0
-    assert bt["reentry"]["exposures_required"] == 2
+    assert bt["target_grade"] == "7B"
+    assert bt["target_grade_low"] == "7A"
+    assert bt["target_source"] == "memory"
+    assert "reentry" not in bt
 
 
 def test_family_memory_shared_across_exercises():
     """The same Kilter memory drives every exercise of the family."""
     for ex in ("board_limit_boulders", "system_board_limit", "spray_wall_limit"):
         bt = _target(_state(), "2026-10-05", exercise_id=ex)
-        assert bt["target_grade"] == "7A+", ex
+        assert bt["target_grade"] == "7B", ex
 
 
-def test_gym_boulder_memory_older_than_180_days_reenters_from_lower_of_anchor_and_stale():
+def test_gym_boulder_memory_older_than_180_days_reads_lower_of_anchor_and_stale():
     """gym_boulder 7B is from 28/03 (191 days): not trusted as a grade, but a
     longer absence must not give a HARDER target than a shorter one (review
-    finding): base = min(anchor 7C, stale 7B) = 7B → re-entry 7A+, the same
-    as at 179 days."""
+    finding): min(anchor 7C, stale 7B) = 7B, the same as at 179 days (B413: no
+    discount on either)."""
     bt = _target(_state(), "2026-10-05", gym_id=WALL_GYM)
     assert bt["surface_selected"] == "gym_boulder"
-    assert bt["target_grade"] == "7A+"
-    assert bt["target_grade_low"] == "6C+"
-    assert bt["reentry"]["base_grade"] == "7B"
+    assert bt["target_grade"] == "7B"
+    assert bt["target_grade_low"] == "7A"
+    assert bt["target_source"] == "memory"
     at_179 = _target(_state(), "2026-09-23", gym_id=WALL_GYM)
     assert at_179["target_grade"] == bt["target_grade"]
 
 
-def test_stale_memory_above_anchor_reenters_from_anchor():
+def test_stale_memory_above_anchor_reads_the_anchor():
     """Stale grade above the anchor: the anchor is the lower one and wins."""
     state = _state()
     gym = _entry(state, "limit_bouldering", "gym_boulder")
     gym["next_target_grade"] = gym["last_used_grade"] = "8A"
     bt = _target(state, "2026-10-05", gym_id=WALL_GYM)
-    assert bt["reentry"]["base_grade"] == "7C"
-    assert bt["target_grade"] == "7B+"
+    assert (bt["target_grade"], bt["target_source"]) == ("7C", "anchor")
 
 
 def test_board_without_any_memory_anchors_two_half_grades_below_rp():
@@ -267,23 +272,19 @@ def _kilter_only(next_grade, last_grade, label, updated_at="2026-09-01"):
     return state
 
 
-def test_floor_never_lifts_reentry_above_base_after_very_hard():
-    """Review finding (high): very_hard @7B → memory 6C, then a 34-day gap.
-    The floor used to be applied AFTER the discount and gave 7A, a full letter
-    above the 6C base. Now the floor clamps the base (7B − 1 half = 7A+ cap
-    after a failure, best-climbed floor 7A → base 7A), then the discount: 6C+."""
+def test_floor_after_very_hard_then_gap_is_the_clamped_base():
+    """very_hard @7B → memory 6C, then a 34-day gap. The floor clamps the
+    memory (best climbed 7B − 2 half = 7A; 7B − 1 half after the failure is
+    above it) → 7A. B413: no discount after it (B365 gave 6C+)."""
     bt = _target(_kilter_only("6C", "7B", "very_hard"), "2026-10-05")
-    assert bt["target_source"] == "reentry"
-    assert bt["target_grade"] == "6C+"
-    assert _idx(bt["target_grade"]) < _idx(bt["reentry"]["base_grade"])
+    assert (bt["target_source"], bt["target_grade"]) == ("memory", "7A")
 
 
-def test_hard_then_gap_still_discounted():
-    """hard @7B → memory 7A, gap → re-entry 6C+ (the floor no longer cancels
-    the discount)."""
+def test_hard_then_gap_is_the_memory():
+    """hard @7B → memory 7A, gap → 7A (B365 discounted it to 6C+)."""
     bt = _target(_kilter_only("7A", "7B", "hard"), "2026-10-05")
-    assert bt["reentry"]["base_grade"] == "7A"
-    assert bt["target_grade"] == "6C+"
+    assert (bt["target_source"], bt["target_grade"]) == ("memory", "7A")
+    assert "reentry" not in bt
 
 
 def test_floor_ignores_targets_never_climbed():
@@ -321,29 +322,28 @@ def test_run_of_very_hard_walks_target_down():
     assert all(_idx(a) > _idx(b) for a, b in zip(seen, seen[1:] + [final])), (seen, final)
 
 
-def test_new_gap_restarts_open_reentry():
-    """Review finding: one re-entry session, then 46 days off → the ramp
-    restarts from zero (2 eased sessions), not closed after one."""
-    state = _feedback(_state(), "2026-10-05", "ok", "7A+")
+def test_gap_after_gap_is_still_the_base():
+    """B413: a rated ok at the base, then 46 days off → still the base (B365
+    restarted a 2-session discount here)."""
+    state = _feedback(_state(), "2026-10-05", "ok", "7B", contract=2)
+    assert _entry(state, "limit_bouldering", "board_kilter")["next_target_grade"] == "7B"
     bt = _target(state, "2026-11-20")
-    assert bt["target_grade"] == "7A+"
-    assert bt["reentry"]["exposures_done"] == 0
-    state = _feedback(state, "2026-11-20", "ok", "7A+")
+    assert (bt["target_grade"], bt["target_source"]) == ("7B", "memory")
+    state = _feedback(state, "2026-11-20", "ok", "7B", contract=2)
     e = _entry(state, "limit_bouldering", "board_kilter")
-    assert e["reentry_exposures"] == 1
-    assert e["reentry_started_at"] == "2026-11-20"
-    assert _target(state, "2026-11-22")["target_grade"] == "7A+"
+    assert not any(k.startswith("reentry_") for k in e)
+    assert _target(state, "2026-11-22")["target_grade"] == "7B"
 
 
 def test_limit_next_target_matches_card():
     """Coach prompt / weekly report read the prescribed grade, not the stored
-    base (review finding)."""
+    value (review finding): the per-surface floor lifts a stored 6C to 7A."""
     from backend.engine.progression_v1 import limit_next_target
 
-    state = _feedback(_state(), "2026-10-05", "ok", "7A+")
+    state = _kilter_only("6C", "7B", "very_hard")
     e = _entry(state, "limit_bouldering", "board_kilter")
-    assert e["next_target_grade"] == "7B"
-    assert limit_next_target(state, e, "2026-10-07") == _target(state, "2026-10-07")["target_grade"] == "7A+"
+    assert e["next_target_grade"] == "6C"
+    assert limit_next_target(state, e, "2026-10-07") == _target(state, "2026-10-07")["target_grade"] == "7A"
     assert limit_next_target(state, {"exercise_id": "weighted_pullup"}, "2026-10-07") is None
 
 
@@ -360,7 +360,7 @@ def test_surfaces_do_not_leak():
             "next_target_grade": "8A",
         }
     )
-    assert _target(state, "2026-10-05")["target_grade"] == "7A+"
+    assert _target(state, "2026-10-05")["target_grade"] == "7B"
 
 
 def test_future_entry_ignored_for_past_date():
@@ -370,62 +370,71 @@ def test_future_entry_ignored_for_past_date():
     assert bt["target_source"] == "memory"
 
 
-# ─── Write side: the discount must not become permanent ──────────────────
+# ─── Write side (B413: no re-entry) ───────────────────────────────────────
 
 
-def test_three_sessions_ok_reentry_then_base():
-    """7A+ → 7A+ → 7B with 'ok' each time (the spec's stability test)."""
+def test_three_sessions_ok_after_a_gap_stay_at_the_base():
+    """7B → 7B → 7B with a rated 'ok' each time: the first session after the
+    gap is already the base, and no re-entry field is written."""
     state = _state()
-
-    assert _target(state, "2026-10-05")["target_grade"] == "7A+"
-    state = _feedback(state, "2026-10-05", "ok", "7A+")
-    e = _entry(state, "limit_bouldering", "board_kilter")
-    assert e["next_target_grade"] == "7B"  # the BASE, not the discounted 7A+
-    assert e["reentry_base_grade"] == "7B"
-    assert e["reentry_exposures"] == 1
-    assert e["reentry_started_at"] == "2026-10-05"
-
-    bt = _target(state, "2026-10-12")
-    assert bt["target_grade"] == "7A+"
-    assert bt["reentry"]["exposures_done"] == 1
-    state = _feedback(state, "2026-10-12", "ok", "7A+")
-    e = _entry(state, "limit_bouldering", "board_kilter")
-    assert e["next_target_grade"] == "7B"
-    assert e["reentry_exposures"] == 2
-
-    bt = _target(state, "2026-10-19")
-    assert bt["target_grade"] == "7B"
-    assert bt["target_source"] == "memory"
-    assert "reentry" not in bt
+    for d in ("2026-10-05", "2026-10-12", "2026-10-19"):
+        bt = _target(state, d)
+        assert (bt["target_grade"], bt["target_source"]) == ("7B", "memory"), d
+        state = _feedback(state, d, "ok", "7B", contract=2)
+        e = _entry(state, "limit_bouldering", "board_kilter")
+        assert e["next_target_grade"] == "7B"
+        assert not any(k.startswith("reentry_") for k in e)
 
 
-def test_reentry_closing_applies_label_delta_to_base():
-    """Second re-entry session 'easy' → base + 1 half grade (A291; was a whole
-    letter) = 7B+, regardless of the discounted grade that was actually climbed."""
-    state = _feedback(_state(), "2026-10-05", "very_easy", "7A+")
-    assert _entry(state, "limit_bouldering", "board_kilter")["next_target_grade"] == "7B"
-    state = _feedback(state, "2026-10-12", "easy", "7A+")
+def test_label_after_a_gap_steps_from_the_grade_climbed():
+    """The first session after a gap is a normal session: 'easy' at the 7B
+    base → 7B+ (A291: +1 half grade). B365 held the base for 2 sessions."""
+    state = _feedback(_state(), "2026-10-05", "easy", "7B")
     assert _entry(state, "limit_bouldering", "board_kilter")["next_target_grade"] == "7B+"
+    state = _feedback(state, "2026-10-12", "very_easy", "7B+")
+    assert _entry(state, "limit_bouldering", "board_kilter")["next_target_grade"] == "7C+"
 
 
-def test_normal_progression_after_reentry_unchanged():
+def test_unrated_lower_grade_after_a_gap_keeps_the_memory():
+    """B413 (D3): a legacy 'ok' is not rated; done at 7A+ under the 7B memory,
+    it never lowers it — the memory entry keeps 7B, only its date moves. Then
+    'easy' at 7B steps from the base as usual."""
     state = _feedback(_state(), "2026-10-05", "ok", "7A+")
-    state = _feedback(state, "2026-10-12", "ok", "7A+")
+    spray = _entry(state, "spray_wall_limit", "board_kilter")
+    assert (spray["next_target_grade"], spray["updated_at"]) == ("7B", "2026-10-05")
+    assert _target(state, "2026-10-12")["target_grade"] == "7B"
     state = _feedback(state, "2026-10-19", "easy", "7B")
     e = _entry(state, "limit_bouldering", "board_kilter")
     assert e["next_target_grade"] == "7B+"  # A291: easy = +1 half grade
     assert "reentry_base_grade" not in e
 
 
-def test_same_day_resubmission_is_idempotent():
-    state = _feedback(_state(), "2026-10-05", "ok", "7A+")
-    again = _feedback(state, "2026-10-05", "ok", "7A+")
-    e = _entry(again, "limit_bouldering", "board_kilter")
-    assert e["reentry_exposures"] == 1
+def test_legacy_open_reentry_fields_are_inert_and_dropped():
+    """An entry written while a B365 re-entry was open keeps the BASE in
+    next_target_grade: it reads as that base (no discount, no migration) and
+    the next write drops the old fields."""
+    state = _kilter_only("7B", "7A+", "ok", updated_at="2026-10-01")
+    _entry(state, "limit_bouldering", "board_kilter").update({
+        "reentry_base_grade": "7B", "reentry_exposures": 1,
+        "reentry_started_at": "2026-10-01", "reentry_last_at": "2026-10-01"})
+    bt = _target(state, "2026-10-05")
+    assert (bt["target_grade"], bt["target_source"]) == ("7B", "memory")
+    out = _feedback(state, "2026-10-05", "ok", "7B", contract=2)
+    e = _entry(out, "limit_bouldering", "board_kilter")
     assert e["next_target_grade"] == "7B"
+    assert not any(k.startswith("reentry_") for k in e)
 
 
-def test_first_ever_feedback_has_no_reentry():
+def test_same_day_resubmission_is_idempotent():
+    state = _feedback(_state(), "2026-10-05", "ok", "7B", contract=2)
+    again = _feedback(state, "2026-10-05", "ok", "7B", contract=2)
+    assert again["working_loads"] == state["working_loads"]
+    assert _entry(again, "limit_bouldering", "board_kilter")["next_target_grade"] == "7B"
+    unrated = _feedback(_state(), "2026-10-05", "ok", "7A+")
+    assert _feedback(unrated, "2026-10-05", "ok", "7A+")["working_loads"] == unrated["working_loads"]
+
+
+def test_first_ever_feedback_steps_from_the_grade():
     """No memory at all → the legacy per-feedback step (B289 unchanged)."""
     state = _state()
     state["working_loads"]["entries"] = []
@@ -462,23 +471,20 @@ def test_coach_prompt_quotes_prescribed_limit_grade():
     from backend.coach.prompt_builder import _baselines_section
 
     today = date.today()
-    state = _feedback(_state(), today.isoformat(), "ok", "7A+")
-    # Force an open re-entry dated today: base 7B, 1 exposure done.
-    e = _entry(state, "limit_bouldering", "board_kilter")
-    e.update({"next_target_grade": "7B", "reentry_base_grade": "7B", "reentry_exposures": 1,
-              "reentry_started_at": today.isoformat(), "reentry_last_at": today.isoformat()})
+    # A stored 6C under a 7B climbed today: the floor makes the card 7A.
+    state = _kilter_only("6C", "7B", "very_hard", updated_at=today.isoformat())
     text = _baselines_section(state)
     line = next(l for l in text.splitlines() if "limit_bouldering" in l and "board_kilter" in l)
-    assert "next target grade 7A+" in line, line
+    assert "next target grade 7A" in line and "7A+" not in line, line
 
 
 def test_weekly_report_progression_quotes_prescribed_limit_grade():
     from backend.engine.report_engine import _build_progression
 
-    state = _feedback(_state(), "2026-10-05", "ok", "7A+")
+    state = _kilter_only("6C", "7B", "very_hard", updated_at="2026-10-06")
     rows = _build_progression(state["working_loads"], "2026-10-05", state)
     row = next(r for r in rows if r["exercise_id"] == "limit_bouldering")
-    assert row["current_load"] == "7A+"  # stored base is 7B
+    assert row["current_load"] == "7A"  # stored value is 6C, the floor lifts it
     # Without user_state the legacy raw value is kept (back-compat).
     legacy = _build_progression(state["working_loads"], "2026-10-05")
-    assert next(r for r in legacy if r["exercise_id"] == "limit_bouldering")["current_load"] == "7B"
+    assert next(r for r in legacy if r["exercise_id"] == "limit_bouldering")["current_load"] == "6C"

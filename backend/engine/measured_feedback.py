@@ -20,9 +20,13 @@ Contract (``log_entry.feedback_contract``):
 - **absent (legacy)** — ``ok`` cannot be told apart from the old default, so a
   legacy ``ok`` is NOT RATED too (DECISIONS 2026-10-04). Other labels stay.
 
-What "not rated" means: the working load is held at the load actually used,
-and the exercise is left out of the session difficulty, the feedback log, the
-fatigue labels and the endurance grade streak. Nothing pretends it was "ok".
+What "not rated" means: the exercise is left out of the session difficulty,
+the feedback log and the fatigue labels. B413 (D3, A1): a DONE exercise with
+no label and no measure is an "ok" for every progression — ladders, anchored
+and working loads, grades (the endurance streak resets as on "ok") — and it
+never rewrites a memory lower than what that memory proposed for the session
+without temporary cuts (``unrated_done``; the entry stays, only its date is
+refreshed). A rated "ok" keeps following the load used.
 
 Pure: no I/O except the catalog cache, never ``date.today()``.
 """
@@ -90,6 +94,26 @@ def feedback_rating(item: Mapping[str, Any], contract: int) -> Optional[str]:
 
 def has_measure(item: Mapping[str, Any]) -> bool:
     return any(item.get(k) is not None for k in ("last_set_reps", "hang_margin", "hang_held_s"))
+
+
+def unrated_done(
+    item: Mapping[str, Any], rating: Optional[str], *, player_session: bool, dose_sets: Optional[int] = None,
+) -> bool:
+    """B413 (D3): a DONE exercise with no label and no measure — the athlete
+    did it and said nothing, i.e. an 'ok' (Daniele, 2026-11-04: «se uno non
+    clicca vuol dire che non è successo niente»). Such an item never rewrites
+    a load or grade memory lower than what the memory proposed.
+
+    "Done" is the one rule of the ladders (``bw_ladders.ladder_row_done``):
+    not skipped, not ``completed: false`` unless the counted sets reach the
+    dose, and at least one counted set in the players. A measure (last-set
+    reps, hang margin / held seconds, limit problems — checked by the caller)
+    is data: it can lower."""
+    if rating is not None or has_measure(item):
+        return False
+    from backend.engine.bw_ladders import ladder_row_done
+
+    return ladder_row_done(item, player_session=player_session, dose_sets=dose_sets)
 
 
 # ---------------------------------------------------------------------------

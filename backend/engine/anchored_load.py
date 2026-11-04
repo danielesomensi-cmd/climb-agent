@@ -25,7 +25,7 @@ bit for bit.
 Clamp order (one place, documented because R4's pain hook depends on it):
   starting point (working load normalised, or phase target)
   → structural cap (Prilepin band + (r+2)RM for pulls, 3 s of reserve + phase
-    cap for hangs) × re-entry factor
+    cap for hangs) — B413: no re-entry factor any more (it was × 0.90 / 0.95)
   → pain (−10 %, pain cap)            [read-only hook, R4 writes pain_blocks]
   → guards (heavy-pull week, same-session finger work, finger-hard yesterday)
   → floor_eff = min(phase floor, cap_eff)   (the floor never lifts the cap)
@@ -58,7 +58,9 @@ from backend.engine.stimulus import (
 ANCHORED_EXERCISES: Tuple[str, ...] = ("weighted_pullup", "weighted_chinup", "max_hang_5s", "max_hang_7s")
 PULL_EXERCISES: Tuple[str, ...] = ("weighted_pullup", "weighted_chinup")
 HANG_SECONDS: Dict[str, int] = {"max_hang_7s": 7, "max_hang_5s": 5}
-# R3: max hang sets during the re-entry ramp. ENGINEERING CONSTANT.
+# R3: max hang sets during the re-entry (``retest_policy.reentry_step``:
+# the first REENTRY_EXPOSURES exposures after a gap). ENGINEERING CONSTANT.
+# B413 removed the re-entry factor on the load cap; this set cap stays.
 REENTRY_MAX_HANG_SETS = 5
 #: Catalog rep scheme each pull is calibrated on (prescription_defaults.reps).
 CATALOG_REPS: Dict[str, int] = {"weighted_pullup": 3, "weighted_chinup": 5}
@@ -364,7 +366,12 @@ def _family_exercises(family: str) -> Tuple[str, ...]:
 def ramp_for(
     state: Mapping[str, Any], family: str, on: Optional[date], official_date: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """The re-entry ramp (``retest_policy.reentry_step``) + B364's deploy rule.
+    """The re-entry count (``retest_policy.reentry_step``) + B364's deploy rule.
+
+    B413: it only says whether the session is a re-entry (``in_reentry``, the
+    max-hang set cap); it no longer scales the load cap, so it carries no
+    ``factor``. The key stays ``ramp`` in the payload (``anchored.ramp``) so
+    stored prescriptions and the coach read the same shape.
 
     Deploy rule (B364 §2c): with an EMPTY registry for the family (existing
     users before the migration seeds it), a working entry of the family updated
@@ -373,8 +380,7 @@ def ramp_for(
     test day is the pre-B363 copy of the test itself, not training).
     """
     if on is None:
-        return {"family": family, "n": 1, "factor": rp.reentry_factor(1), "gap_days": None,
-                "in_reentry": True, "source": "no_date"}
+        return {"family": family, "n": 1, "gap_days": None, "in_reentry": True, "source": "no_date"}
     info = dict(rp.reentry_step(state, family, on, extra_dates=_test_dates(state, family)))
     info["source"] = "exposures"
     registry = ((state.get("progression_counters") or {}).get("stimulus_exposures") or {})
@@ -386,8 +392,7 @@ def ramp_for(
             if official_date and str(e.get("updated_at") or "")[:10] <= str(official_date)[:10]:
                 continue
             if upd is not None and 0 <= (on - upd).days < rp.REENTRY_GAP_D:
-                info.update({"n": 3, "factor": rp.REENTRY_FULL_FACTOR, "in_reentry": False,
-                             "source": "fresh_working_entry"})
+                info.update({"n": 3, "in_reentry": False, "source": "fresh_working_entry"})
                 break
     return info
 
@@ -543,6 +548,7 @@ def anchored_load(
     session_exercise_ids: Optional[Iterable[str]] = None,
     setup: Optional[Mapping[str, Any]] = None,
     catalog_intensity: Optional[float] = None,
+    temporary_cuts: bool = True,
 ) -> Optional[Dict[str, Any]]:
     """The prescription of an anchored exercise on ``date``, or ``None``.
 
@@ -550,13 +556,19 @@ def anchored_load(
     caller keeps its pre-B364 path. ``state`` must be the PERSISTED state
     (never the output of ``estimate_missing_baselines``).
 
+    ``temporary_cuts=False`` (B413, D3 — the feedback's reference read only):
+    the same prescription without the cuts of the day — the heavy-pull /
+    same-session / finger-hard guards and the fatigue floor (pain has its own
+    hold, ``measured_feedback.pain_hold_next``). Structural cap and phase
+    floor stay.
+
     Returns::
 
         {exercise_id, axis, total, external, source: working_load|phase_target,
          phase_id, intensity, sets, reps | work_seconds, rep_scheme,
          official: {protocol, total, one_rm?, date, source, age_days,
                     confidence, converted},
-         floor, cap, ramp: {n, factor, gap_days, source}, clamped,
+         floor, cap, ramp: {n, gap_days, in_reentry, source}, clamped,
          pct_of_official, guards: [...], pain?, fatigue?, ceiling_note?,
          no_date: bool}
     """
@@ -649,13 +661,14 @@ def anchored_load(
             total0 = float(intensity_pct) * float(om7["total_kg"])
             source = "phase_target"
         # R3: 5 sets in re-entry, never more.
-        if ramp["factor"] < 1.0 and n_sets > REENTRY_MAX_HANG_SETS:
+        if ramp["in_reentry"] and n_sets > REENTRY_MAX_HANG_SETS:
             n_sets = REENTRY_MAX_HANG_SETS
             guards.append({"guard": "reentry_sets", "sets": REENTRY_MAX_HANG_SETS})
         rep_scheme = f"{n_sets}x{int(t) if float(t).is_integer() else t}s"
         dose = {"work_seconds": t}
 
-    cap_eff = cap * float(ramp["factor"])
+    # B413: the cap is the full structural cap — no re-entry factor.
+    cap_eff = cap
 
     pain = pain_for(state, axis, on)
     if pain is not None:
@@ -670,7 +683,7 @@ def anchored_load(
         if pain_cap is not None:
             cap_eff = min(cap_eff, pain_cap * ref)
 
-    if axis == AXIS_PULLING and on is not None:
+    if axis == AXIS_PULLING and on is not None and temporary_cuts:
         heavy = _heavy_pull_days(state, on, ref, bw)
         if len(heavy) >= HEAVY_PULL_WEEKLY_MAX:
             guard_cap = HEAVY_PULL_GUARD_CAP_PCT * ref
@@ -683,7 +696,7 @@ def anchored_load(
             if same_cap < cap_eff:
                 cap_eff = same_cap
                 guards.append({"guard": "same_session_finger"})
-    if axis == AXIS_FINGER and on is not None and entry is not None:
+    if axis == AXIS_FINGER and on is not None and entry is not None and temporary_cuts:
         last_total = _num(entry.get("last_total_load_kg"))
         hard_days = finger_hard_days(state, since=on - timedelta(days=FINGER_FREEZE_WINDOW_D),
                                      until=on - timedelta(days=1))
@@ -704,7 +717,7 @@ def anchored_load(
     elif total < floor_r:
         total, clamped = floor_r, "floor"
 
-    fatigue = fatigue_for(state, axis, on)
+    fatigue = fatigue_for(state, axis, on) if temporary_cuts else None
     if fatigue is not None and total > floor_r:
         total, clamped = floor_r, "fatigue_floor"
 
@@ -723,8 +736,8 @@ def anchored_load(
         "official": official_out,
         "floor": floor_r,
         "cap": cap_r,
-        "ramp": {"n": int(ramp["n"]), "factor": float(ramp["factor"]),
-                 "gap_days": ramp.get("gap_days"), "source": ramp.get("source")},
+        "ramp": {"n": int(ramp["n"]), "gap_days": ramp.get("gap_days"),
+                 "in_reentry": bool(ramp.get("in_reentry")), "source": ramp.get("source")},
         "clamped": clamped,
         "pct_of_official": round(total / ref, 3) if ref else None,
         "guards": guards,
@@ -844,7 +857,7 @@ def resolve_custom_exercises(
     - anchored exercise, mode 'anchored', tested athlete → ``load_kg`` is the
       external load of ``anchored_load`` on that date (≥ 0; an assisted hang
       shows 0 + ``suggested_external_load_kg`` < 0), the stored kg moves to
-      ``stored_load_kg``; when the re-entry ramp caps the sets (max hangs, 5),
+      ``stored_load_kg``; when the re-entry caps the sets (max hangs, 5),
       ``sets`` is lowered too and the stored count moves to ``stored_sets``;
     - mode 'fixed' → the user's kg, untouched, ``load_source: 'user_fixed'``;
     - untested athlete → stored kg untouched (pre-B364 behaviour);
@@ -1127,18 +1140,19 @@ def apply_anchored_feedback(
     # session. Hold the pre-block working load (down steps still apply).
     from backend.engine import measured_feedback as mf
 
+    # The reference reads of this date (pain hold, B413 unrated keep).
+    read_kw = dict(
+        date=date_value, intensity=intensity,
+        sets=_num(planned_prescription.get("sets")) and int(_num(planned_prescription.get("sets"))),
+        reps=reps if axis == AXIS_PULLING else None,
+        work_seconds=t if axis != AXIS_PULLING else None,
+        session_exercise_ids=[str(i.get("exercise_id") or "") for i in
+                              ((planned_session or {}).get("exercise_instances") or [])],
+        setup=setup,
+    )
     if pain_now is not None:
         # The pre-block reference: this date's prescription without the block
         # (exact whether it came from the working load or the phase target).
-        read_kw = dict(
-            date=date_value, intensity=intensity,
-            sets=_num(planned_prescription.get("sets")) and int(_num(planned_prescription.get("sets"))),
-            reps=reps if axis == AXIS_PULLING else None,
-            work_seconds=t if axis != AXIS_PULLING else None,
-            session_exercise_ids=[str(i.get("exercise_id") or "") for i in
-                                  ((planned_session or {}).get("exercise_instances") or [])],
-            setup=setup,
-        )
         unpained = anchored_load(mf.state_without_pain(updated), exercise_id, **read_kw)
         pained = anchored_load(updated, exercise_id, **read_kw)
         held_next, hold = mf.pain_hold_next(
@@ -1155,6 +1169,22 @@ def apply_anchored_feedback(
                 fields["escalation_anchor"] = {"date": date_value, "total_kg": round_half(max(held_next, used_total))}
         next_total = held_next
         fields["pain_hold"] = hold
+    elif existing is not None:
+        # B413 (D3): a done item with no label and no measure is an 'ok' that
+        # never rewrites the memory lower than what the memory proposed for
+        # this session without the temporary cuts (guards, fatigue floor —
+        # B413 also removed the re-entry factor). The athlete did the cut
+        # prescription: the entry stays as it was (escalation anchor
+        # included), only its date is refreshed. Not done, skipped, a measure
+        # or a rated 'ok' keep following the load used.
+        sid = str(session_key or "").split("|", 1)[-1] if session_key else ""
+        presc_sets = _num(planned_prescription.get("sets")) or _num(item.get("prescribed_sets"))
+        if mf.unrated_done(item, feedback_label, player_session=sid.startswith(("custom_", "generated_")),
+                           dose_sets=int(presc_sets) if presc_sets else None):
+            uncut = anchored_load(updated, exercise_id, temporary_cuts=False, **read_kw)
+            if uncut is not None and uncut["source"] == "working_load" and next_total < float(uncut["total"]) - 1e-9:
+                existing["updated_at"] = max(str(existing.get("updated_at") or ""), date_value)
+                return True
 
     if feedback_label in ("hard", "very_hard"):
         _record_hard_label(counters, axis, date_value)

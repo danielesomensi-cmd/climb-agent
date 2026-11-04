@@ -111,10 +111,10 @@ def test_reference_is_the_tested_2rm():
 
 def test_daniele_prescription_today_is_not_his_2rm():
     sug = _pullup_suggested(_state())
-    # B364: 2RM 123 → e1RM 128.9 → SP/hard 82.5 % = 106.3, capped by the 4x3
-    # Prilepin band (0.85 × 1RM = 109.6) × re-entry 0.95 (2nd exposure after the
-    # 24/09 test) = 104.1 → 104.0 total → +26.0.
-    assert sug["suggested_external_load_kg"] == 26.0
+    # B364: 2RM 123 → e1RM 128.9 → SP/hard 82.5 % = 106.3 → 106.5, under the
+    # 4x3 Prilepin cap (0.85 × 1RM = 109.6). B413: no re-entry factor (it was
+    # × 0.95 → 104.0 total, +26.0) → +28.5.
+    assert sug["suggested_external_load_kg"] == 28.5
     assert sug["suggested_total_load_kg"] < 123.0
     assert sug["reference_2rm_total_kg"] == 123.0
     assert sug["load_source"] == "anchored"
@@ -149,7 +149,8 @@ def test_polluted_legacy_entry_is_ignored():
         "last_external_load_kg": 45.0, "next_external_load_kg": 45.0, "last_feedback_label": "ok",
     }]
     # B364: an entry dated on the test day is not fresher than the test → ignored.
-    assert _pullup_suggested(state)["suggested_external_load_kg"] == 26.0
+    # (B413: the phase target is +28.5 without the re-entry factor; was +26.0.)
+    assert _pullup_suggested(state)["suggested_external_load_kg"] == 28.5
 
 
 # --- B364: training moves the WORKING load, never the 2RM -------------------
@@ -215,7 +216,7 @@ def test_builder_never_proposes_the_2rm():
                                           "last_external_load_kg": 45.0, "next_external_load_kg": 45.0,
                                           "updated_at": "2026-09-24"}]
     p = propose_exercise_prescription("weighted_pullup", _catalog(), state, "strength_power", today="2026-10-04")
-    assert p["load_kg"] == 26.0
+    assert p["load_kg"] == 28.5  # B413: no re-entry factor (was 26.0)
     assert p["last_logged"]["load_kg"] == 45.0  # the true last value is still shown
 
 
@@ -224,7 +225,7 @@ def test_adhoc_anchor_uses_the_anchored_load():
     anch = anchored_load(_state(), "weighted_pullup", date="2026-10-04", phase_id="strength_power",
                          intensity="hard", sets=4, reps=3)
     assert anchor_adhoc_load(_catalog()["weighted_pullup"], _state(), "strength_power",
-                             today="2026-10-04") == anch["external"] == 26.0
+                             today="2026-10-04") == anch["external"] == 28.5  # B413: was 26.0
 
 
 def test_adhoc_anchor_untested_keeps_the_2rm_reference():
@@ -276,10 +277,11 @@ def test_pure_test_exercises_keep_no_training_memory():
 def test_weighted_chinup_follows_the_pullup_reference_not_the_finger_max():
     sug = _inject_one(_state(), "weighted_chinup", {"sets": 4, "reps": 5})
     # B364: anchored on the pull-up 2RM (ratio 1.0); 4x5 cap = 0.80 × 128.9
-    # (Prilepin ≤24 reps, ≤6/set) × re-entry 0.95 = 97.9 → 97.5 total.
+    # (Prilepin ≤24 reps, ≤6/set) = 103.1 → 103.0 total. B413: no re-entry
+    # factor (it was × 0.95 = 97.9 → 97.5 total, +19.5).
     assert sug["load_source"] == "anchored"
     assert sug["anchored"]["official"]["protocol"] == "weighted_pullup_2rm"
-    assert sug["suggested_external_load_kg"] == 19.5
+    assert sug["suggested_external_load_kg"] == 25.0
     assert sug["suggested_rep_scheme"] == "4x5"
 
 
@@ -319,7 +321,7 @@ def test_body_part_picker_uses_reference_and_freshness_gate():
     ]
     wp = apply_resolver_light({"id": "weighted_pullup", "load_model": "total_load",
                                "prescription_defaults": {"sets": 4, "reps": 3}}, state, "2026-10-04")
-    assert wp["suggested_external_load_kg"] == 26.0
+    assert wp["suggested_external_load_kg"] == 28.5  # B413: no re-entry factor (was 26.0)
     assert wp["load_source"] == "anchored"
     mh = apply_resolver_light({"id": "max_hang_5s", "load_model": "total_load",
                                "prescription_defaults": {"sets": 5, "work_seconds": 5}}, state, "2026-10-04")

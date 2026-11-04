@@ -162,16 +162,18 @@ def test_endurance_ok_resets_streak_and_reanchors():
     assert entry["grade_streak_count"] == 0
 
 
-def test_endurance_unrated_leaves_the_streak_alone():
-    """A295: a legacy 'ok' (old default at zero input) is not rated — the target
-    follows the grade climbed, the concordance streak is untouched."""
+def test_endurance_unrated_done_is_an_ok():
+    """A295: a legacy 'ok' (old default at zero input) is not rated. B413 (A1):
+    a DONE unrated item counts exactly as a rated 'ok' — the target follows the
+    grade climbed (6C, not below the 6B memory) and the concordance streak
+    resets, as 'ok' does (A295 left the streak untouched)."""
     state = _user_state()
     state = apply_feedback(_log("four_by_four_bouldering", "easy", "6B", date="2026-01-05"), state)
     out = apply_feedback(_log("four_by_four_bouldering", "ok", "6C", date="2026-01-08"), state)
     entry = next(e for e in _entries(out) if e["exercise_id"] == "four_by_four_bouldering")
     assert entry["next_target_grade"] == "6C"
-    assert entry["grade_streak_direction"] == 1
-    assert entry["grade_streak_count"] == 1
+    assert entry["grade_streak_direction"] == 0
+    assert entry["grade_streak_count"] == 0
     assert entry["last_rated"] is False
 
 

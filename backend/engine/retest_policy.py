@@ -22,8 +22,9 @@ Primitives (pure, deterministic, never write state, never ``date.today()``):
   (A221 moves past weeks to ``week_archive``): pass them, or the count is an
   under-estimate.
 - ``reentry_step(state, family, as_of, archived_weeks=...)`` — the single
-  re-entry ramp: n exposures since the last gap ≥ ``REENTRY_GAP_D`` days,
-  counting the session being prescribed; factor 0.90 / 0.95 / 1.0.
+  re-entry count: n exposures since the last gap ≥ ``REENTRY_GAP_D`` days,
+  counting the session being prescribed. B413: it no longer scales any load
+  (the 0.90 / 0.95 cap factors are gone); only the max-hang set cap reads it.
 - ``is_heavy_pulling_session(state, session, as_of)`` — the "heavy pulling"
   blocker definition.
 - Shared constants for the scheduling briefs (A289 / A293 / A294).
@@ -36,7 +37,7 @@ A289 adds the scheduling half: ``retest_decisions`` (what planner PASS 3 must
 place, week by week) and ``retest_status`` (the live payload for the UI).
 
 Production callers since B364: ``anchored_load`` (official max, tested gate,
-re-entry ramp) and ``progression_v1._update_test_from_log`` (confidence).
+re-entry count) and ``progression_v1._update_test_from_log`` (confidence).
 """
 
 from __future__ import annotations
@@ -75,13 +76,15 @@ LOW_CONF_WINDOW_D = 21
 #: waits HIGH_CONF_RETEST_D, whatever its confidence. Name and value kept.
 LOW_CONF_RETEST_D = 28
 
-#: Re-entry ramp. ENGINEERING CONSTANTS. A gap of at least REENTRY_GAP_D days
-#: without an exposure re-opens the ramp; the test counts as an exposure.
+#: Re-entry. ENGINEERING CONSTANTS. A gap of at least REENTRY_GAP_D days
+#: without an exposure re-opens the re-entry; the test counts as an exposure.
 REENTRY_GAP_D = 14
-#: Factor on the CAP by exposure index n (the session being prescribed
-#: included): n=1 → 0.90, n=2 → 0.95, n≥3 → 1.0. floor_eff = min(floor, cap_eff).
-REENTRY_FACTORS: Dict[int, float] = {1: 0.90, 2: 0.95}
-REENTRY_FULL_FACTOR = 1.0
+#: The first REENTRY_EXPOSURES exposures after a gap (the session being
+#: prescribed included) are the re-entry: ``in_reentry`` (anchored_load caps
+#: max hangs at 5 sets there). B413 (Daniele, 2026-11-02 «togliamo il cap
+#: rientro, era veramente troppo facile»): the re-entry no longer scales the
+#: load cap — the 0.90 / 0.95 factors (REENTRY_FACTORS) are gone, for everyone.
+REENTRY_EXPOSURES = 2
 
 #: ENGINEERING CONSTANT: relative load change per second of hang duration
 #: (official_t = official_src × (1 + HANG_PCT_PER_S × (t_src − t))).
@@ -392,13 +395,6 @@ test_confidence.__test__ = False  # type: ignore[attr-defined]
 # reentry_step
 # ---------------------------------------------------------------------------
 
-def reentry_factor(n: int) -> float:
-    """Cap factor for exposure index ``n`` (n ≤ 1 → 0.90)."""
-    if n <= 1:
-        return REENTRY_FACTORS[1]
-    return REENTRY_FACTORS.get(n, REENTRY_FULL_FACTOR)
-
-
 def reentry_step(
     state: Mapping[str, Any],
     family: str,
@@ -420,11 +416,11 @@ def reentry_step(
     being prescribed when ``include_current``. A gap between the last exposure
     and ``as_of`` itself also re-opens the ramp. No history → n = 1.
 
-    Returns ``{family, as_of, n, factor, gap_days, run_start, last_exposure,
+    Returns ``{family, as_of, n, gap_days, run_start, last_exposure,
     run_dates, in_reentry}``:
     - ``gap_days``: length of the gap that opened the current run (``None``
       when the history holds no such gap).
-    - ``in_reentry``: ``factor < 1.0``.
+    - ``in_reentry``: ``n ≤ REENTRY_EXPOSURES``. B413: no load factor any more.
     """
     on = _as_date(as_of)
     day_set = {
@@ -447,17 +443,15 @@ def reentry_step(
         run.insert(0, d)
         prev = d
     n = len(run) + (1 if include_current else 0)
-    factor = reentry_factor(n)
     return {
         "family": family,
         "as_of": on.isoformat(),
         "n": n,
-        "factor": factor,
         "gap_days": gap_days,
         "run_start": run[0].isoformat() if run else None,
         "last_exposure": dates[-1].isoformat() if dates else None,
         "run_dates": [d.isoformat() for d in run],
-        "in_reentry": factor < REENTRY_FULL_FACTOR,
+        "in_reentry": n <= REENTRY_EXPOSURES,
     }
 
 
@@ -1810,12 +1804,12 @@ def _planned_reason(state: Mapping[str, Any], axis: str, planned: Mapping[str, A
 
 __all__ = [
     "TEST_FRESH_DAYS", "LOW_CONF_MIN_EXPOSURES", "LOW_CONF_WINDOW_D", "LOW_CONF_RETEST_D",
-    "REENTRY_GAP_D", "REENTRY_FACTORS", "REENTRY_FULL_FACTOR", "HANG_PCT_PER_S",
+    "REENTRY_GAP_D", "REENTRY_EXPOSURES", "HANG_PCT_PER_S",
     "FINGER_GAP_H", "RETEST_BLOCK_H", "PULL_TEST_BLOCK_H", "HEAVY_PULL_PCT_1RM",
     "VERY_HARD_BLOCK_D", "PRE_TRIP_BLOCK_D", "RETEST_BLOCKED_PHASES",
     "PROTOCOL_HANG_7S", "PROTOCOL_HANG_5S", "PROTOCOL_PULLUP_2RM", "PROTOCOL_FAMILY",
     "EXERCISE_PROTOCOL", "convert_hang_seconds", "official_max", "is_tested",
-    "test_confidence", "reentry_factor", "reentry_step", "is_heavy_pulling_session",
+    "test_confidence", "reentry_step", "is_heavy_pulling_session",
     "is_pulling_hard_session",
     # A289
     "AXIS_FINGER", "AXIS_PULLING", "RETEST_AXES", "AXIS_TEST_SESSION", "AXIS_PROTOCOL",

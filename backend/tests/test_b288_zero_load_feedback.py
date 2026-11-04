@@ -41,9 +41,13 @@ def _entry(state: dict, key: str) -> dict | None:
 
 
 def _log(items: list[dict]) -> dict:
+    # B413: contract 2, so "ok" is a RATED ok that follows the load used. A
+    # legacy 'ok' (no contract) is not rated, and since B413 (D3) an unrated
+    # done item never rewrites a memory lower: 0 kg would keep the 5 kg.
     return {
         "date": "2026-07-20",
         "session_id": "prehab_maintenance",
+        "feedback_contract": 2,
         "actual": {"exercise_feedback_v1": items},
     }
 

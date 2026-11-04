@@ -351,7 +351,7 @@ def _anchored_line(state: Dict[str, Any], exercise_id: str, entry: Dict[str, Any
     off = anch["official"]
     text = (f"training load today {anch['external']} kg added ({anch['total']} kg total, "
             f"{anch['rep_scheme']}, {anch['source'].replace('_', ' ')}, "
-            f"cap {anch['cap']} / floor {anch['floor']} kg, re-entry n={anch['ramp']['n']}) "
+            f"cap {anch['cap']} / floor {anch['floor']} kg) "
             f"from an official max of {off['total']} kg tested {off['date']} — "
             "the max is never a training load")
     if anch.get("fatigue"):
