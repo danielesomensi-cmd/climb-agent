@@ -306,11 +306,23 @@ After completing a session, you can rate each exercise:
 - **Hard** — Struggled but completed
 - **Very Hard** — Barely completed or had to reduce
 
-**Nothing is pre-selected, and every answer is optional.** An exercise you don't
-touch is saved as **not rated** (shown as "—"): its load stays exactly at what you
-used, and the weekly report and the Coach don't pretend it felt "OK". Tap a
-selected rating again to clear it. Exercises you mark done from the summary
-("Mark remaining as done") are not rated either.
+**Nothing is pre-selected, and every answer is optional.** An exercise you did
+but didn't rate (shown as "—") **counts as "OK"**: if you don't tap anything,
+nothing unusual happened. Your progression moves on exactly as after an "OK" —
+a bodyweight level steps up (see *How a bodyweight level moves*) — and **nothing
+ever goes down** because of a missing rating: a load or a grade is never set
+below what the app would have given you for that session. The weekly report and
+the Coach still don't count it in the session's difficulty. Tap a selected rating
+again to clear it. Exercises you mark done from the summary ("Mark remaining as
+done") count as "OK" the same way; an exercise you skipped, or marked not done
+without its sets, changes nothing.
+
+**Marking a session done without sending the feedback** (the tick on the card)
+counts the same way: its bodyweight-level exercises move on as after an "OK"
+(loads are not touched). If you send the feedback later, it replaces that
+step — nothing is counted twice — and undoing the tick puts the levels back.
+The session keeps the exercises and doses it showed you when you played it,
+even after your levels move on.
 
 **A rating drives your progression.** The closed-loop system uses it to adjust loads for next time:
 
@@ -429,10 +441,10 @@ The load you're given always stays **below your max**, with room to spare:
 - a max hang always leaves about three seconds in the tank (in Strength & Power at
   most ~95% of your max).
 
-**Coming back after a break.** If you haven't done that kind of work for two weeks
-or more, the first session back is capped at 90% of the usual ceiling and the
-second at 95%; from the third session the full ceiling applies. Your test counts as
-a session.
+**Coming back after a break.** There is no reduced ceiling any more after a break:
+the first session back already uses the full ceiling of the phase. The only thing
+that changes is the number of max-hang sets — at most 5 in the first two sessions
+after two weeks or more without that kind of work (your test counts as a session).
 
 **Three hard sessions in two weeks** on the same exercise family bring the load
 down to the bottom of the phase range — the app does not lower your max for it.
@@ -448,7 +460,7 @@ itself never changes until your next test.
 When you rate a session "Easy" but you are already at the ceiling, the load stays
 where it is: log the hang margin (or the last-set reps) and the ceiling follows.
 
-These notes — fatigue, ceiling, a reported pain, the comeback cap — are shown
+These notes — fatigue, ceiling, a reported pain — are shown
 under the suggested load, in the exercise details and in the guided session.
 
 **Custom sessions follow the same numbers.** In a session you built (or one the
@@ -478,9 +490,8 @@ gym 7A. It does not matter which limit exercise the session picked: a grade from
 "board limit boulders" on the Kilter counts for "limit bouldering" on the Kilter too.
 
 - The grade is remembered for **6 months**.
-- **Coming back after two weeks or more** on a surface, the first **2 sessions** are
-  half a grade easier (e.g. 7A+ instead of 7B). After that you are back on your
-  grade — the easier sessions never lower it for good.
+- **Coming back after two weeks or more** on a surface: the target is your grade —
+  no easier comeback sessions any more.
 - On a board you have never logged, the first target is one letter below your
   outdoor boulder redpoint (7C outdoors → 7B on the Kilter).
 - One bad session does not drop the target far below the best you climbed on that
@@ -521,9 +532,6 @@ next target instead of the effort chips:
 - A send **above your boulder redpoint** on the gym wall never changes your redpoint by
   itself: after saving you get a message suggesting you update it in Settings → Profile & Maxes
   if it was a real send.
-- In a re-entry (the 2 easier sessions after a break) the problems are logged but the
-  target stays on your pre-break grade; the session that closes the re-entry is judged
-  against that grade.
 
 Not logging any problem keeps the old behaviour: the target grade is sent as the grade
 you climbed and the effort chip moves it.
@@ -734,11 +742,11 @@ The Quick-Add dialog also offers supplementary sessions — non-climbing work yo
 
 Five of them are sized for a **lunch break** of about 55 minutes at a weights gym:
 
-- **Treadmill HIIT 4x4** — 8 min warm-up, then 4 × 4 min at 90-95% of max heart rate with 3 min of easy jogging (about 70%) between, as in the original protocol (Helgerud 2007); then floor core (hollow hold, side plank) and hip mobility. With your max heart rate in Settings the guided session shows both bands in bpm. Needs a *Treadmill* in the gym's equipment. Zero finger load, but systemically hard: keep it to one a week and away from the day of (or before) a maximal or limit session.
+- **Treadmill HIIT 4x4** — 8 min warm-up, then 4 × 4 min at 90-95% of max heart rate with 3 min of easy jogging (about 70%) between, as in the original protocol (Helgerud 2007); then floor core (hollow hold, side plank — with a recent strength test, your own levels: ab-wheel rollout or L-sit, and the lateral exercise **one level below** your lateral level, at the top of its range, so the hardest Copenhagen is never on two days in a row with the arms lunch) and hip mobility. With your max heart rate in Settings the guided session shows both bands in bpm. Needs a *Treadmill* in the gym's equipment. Zero finger load, but systemically hard: keep it to one a week and away from the day of (or before) a maximal or limit session.
 - **Treadmill Zone 2 + Hip Mobility** — 45 min steady incline walk at conversational pace, then optional hip mobility. Needs a *Treadmill*. Fits next to any climbing day.
-- **Upper Push + Arms** — a strength dose: bench press 5×6, dumbbell fly 4×12, triceps cable pushdown 4×10 and a dumbbell curl 4×8, all at RIR 1-2 (one or two clean reps left), plus a ring push-up that follows your push level (where the gym has rings), one core exercise that changes week by week (ab-wheel rollout or cable woodchop) and a hollow hold. Loads come from your training loads and go up when you rate them easy. About 55 min. Needs dumbbells and a *Cable machine* in the gym's equipment, so the triceps work is real triceps work. Keep it out of the 24 h before a heavy pulling session.
-- **Arms, Shoulders + Handstand** — handstand practice first, straight after a short warm-up with wrist preparation: toe pulls from a chest-to-wall handstand (the bridge to freestanding) and a chest-to-wall hold, 4 × 30 s as the target. Then the shoulder press 4×8, lateral raises 4×12, an overhead triceps extension 4×10 and a hammer curl 4×8, all at RIR 1-2 with loads from your training loads, and floor core to close (side plank, hollow hold). The handstand goes first because it is a balance skill that needs fresh shoulders and locked elbows — practising it after pressing is when falls happen. For dumbbell exercises the load is per dumbbell. About 55 min. Needs dumbbells. Keep it out of the 24 h before a heavy pulling session (it has curls).
-- **Legs Strength + Foot Strength** — goblet squat 5×6, Romanian deadlift 4×6 and Bulgarian split squat 3×8 per leg at RIR 1-2 (loads from your training loads), one core exercise that changes week by week (Copenhagen plank or L-sit, at your level), a hollow hold and about 11 min of foot strength: toe flexor presses and big-toe calf raises on an edge. The app orders the exercises with its usual sequence, so the light calf raise can come before the squat. Keep heavy legs out of the 48 h before a limit or outdoor day.
+- **Upper Push + Arms** — a strength dose: bench press 5×6, dumbbell fly 4×12, triceps cable pushdown 4×10 and a dumbbell curl 4×8, all at RIR 1-2 (one or two clean reps left), plus a ring push-up that follows your push level (where the gym has rings), one core exercise that changes week by week (ab-wheel rollout or cable woodchop) and a hollow hold (with a recent strength test: your L-sit level instead). Loads come from your training loads and go up when you rate them easy. About 55 min. Needs dumbbells and a *Cable machine* in the gym's equipment, so the triceps work is real triceps work. Keep it out of the 24 h before a heavy pulling session.
+- **Arms, Shoulders + Handstand** — handstand practice first, straight after a short warm-up with wrist preparation: toe pulls from a chest-to-wall handstand (the bridge to freestanding) and a chest-to-wall hold, 4 × 30 s as the target. Then the shoulder press 4×8, lateral raises 4×12, an overhead triceps extension 4×10 and a hammer curl 4×8, all at RIR 1-2 with loads from your training loads, and floor core to close (side plank, hollow hold — with a recent strength test, your own levels instead: your lateral level, e.g. the Copenhagen, and your L-sit, or your ab-wheel level when you have no L-sit level). The handstand goes first because it is a balance skill that needs fresh shoulders and locked elbows — practising it after pressing is when falls happen. For dumbbell exercises the load is per dumbbell. About 55 min. Needs dumbbells. Keep it out of the 24 h before a heavy pulling session (it has curls).
+- **Legs Strength + Foot Strength** — goblet squat 5×6, Romanian deadlift 4×6 and Bulgarian split squat 3×8 per leg at RIR 1-2 (loads from your training loads), one core exercise that changes week by week (Copenhagen plank or L-sit, at your level), a hollow hold (with a recent strength test: your ab-wheel level instead) and about 11 min of foot strength: toe flexor presses and big-toe calf raises on an edge. The app orders the exercises with its usual sequence, so the light calf raise can come before the squat. Keep heavy legs out of the 48 h before a limit or outdoor day.
 
 The two treadmill sessions need **Treadmill** ticked in the gym's equipment (Settings → Equipment); without it the 4x4 intervals are never prescribed, and if you add the HIIT session anyway at a gym without a treadmill it shows up empty (warm-up only) instead of quietly turning into an easy walk. These five sessions are only offered for you to add: the planner does not schedule them on its own — unless you set up complementary slots (above), where it fills them from your rotation.
 
@@ -869,7 +877,7 @@ Reached from **Free Sessions**, the Session Builder is for a workout you want to
 
 Exercises that are performed **one side at a time** — Copenhagen plank, Pallof press, side-lying hip abduction and the like — are labelled **"per side"** wherever they appear, and the runner walks you through both: it counts a RIGHT bout and a LEFT bout for each prescribed set, showing which side you're on. So "3×20s" means three sets on each side, and the session's estimated duration accounts for all six. Between the two sides of a set there is only a short **Switch side** countdown (15 s, never longer than the set rest); the full rest comes after the LEFT side. On a timed exercise (plank, hang) the other side starts on its own when the switch ends; on a rep-based one (split squat, one-arm pull-up) it waits for your tap, so you start when you're ready. Loading-pin lifts work the same way now: right hand, left hand, then the rest.
 
-**How a bodyweight level moves** (athletes with a recent strength test only — everyone else keeps the catalog doses): the label you give after the exercise moves the target inside its band (*easy* one step up, *very easy* two, *hard* one down, *very hard* two down); an untouched label changes nothing. If you enter the optional **clean reps / seconds held on your weakest set**, that number is the base and the label only adjusts it. Two *very hard* in a row drop one level. Harder skills (front lever from the advanced tuck, dragon flag, standing rollouts, Copenhagen long, ring dips, one-arm work) need **two** sessions at the top before moving up — and a session only counts once you have actually done the top of the band (a *very easy* one step below it takes you to the top, not to the next level). At the last level of a family that has a loaded version (weighted L-sit, weighted side plank, weighted push-up, back extension, weighted hanging leg raise) the message tells you to move on to it and with how many kg to start; a slower eccentric or added kg prescribed at the last level shows up on the exercise card. After a break of more than four months (two for skills) you restart one level lower — or, in a custom session that keeps your old level, at the bottom of its band. In the performance and deload phases doses are frozen with one set fewer. Lower-back levels (standing rollouts, straddle/full dragon flag, weighted hollow) are never assigned automatically — but if you set one yourself in Settings, planned sessions respect it. Recovery and deload sessions keep their own light doses. In planned sessions the engine itself puts you on your level and moves you up; after each session a short message tells you what changes next time ("Next time: 3x25 s", "Same dose next time: 3x20 s" after an *ok*, "Promoted: …"). Technique: on the feet drills you can enter the **foot readjustments on your sample problem**, on the fall ladder your **max fear (0-10)** (asked only on the drills of your current feet level) — two clean sessions move you one step up the feet (P1-P4) or falls (F1-F3) ladder.
+**How a bodyweight level moves** (athletes with a recent strength test only — everyone else keeps the catalog doses): the label you give after the exercise moves the target inside its band (*ok* one step up — one rep, or 5 s, 2 s on the levers —, *easy* two, *very easy* three, *hard* one down, *very hard* two down); an exercise you did without rating it counts as *ok*, one you skipped changes nothing. A family you have never saved starts from the dose your last session of it would give (+ its steps; your whole history of the last four months counts, never the bottom of the range when a dose is known). If you enter the optional **clean reps / seconds held on your weakest set**, that number is the base and the label only adjusts it. Two *very hard* in a row drop one level. Harder skills (front lever from the advanced tuck, dragon flag, standing rollouts, Copenhagen long, ring dips, one-arm work) need **two** sessions at the top before moving up — an *ok* (or no rating) at the top counts, a *very easy* at the top moves you up at once — and a session only counts once you have actually done the top of the band (a *very easy* one step below it takes you to the top, not to the next level). At the last level of a family that has a loaded version (weighted L-sit, weighted side plank, weighted push-up, back extension, weighted hanging leg raise) the message tells you to move on to it and with how many kg to start; a slower eccentric or added kg prescribed at the last level shows up on the exercise card. After a break of more than four months (two for skills) you restart one level lower — or, in a custom session that keeps your old level, at the bottom of its band. In the deload phase doses are frozen with one set fewer. In the performance phase the sets are full and you keep moving up; only the hanging and heavy-pull levels (front lever, toes to bar, windshield wipers, the hardest pulls) keep climbing inside their range and wait for the next cycle to change level. Lower-back levels (standing rollouts, straddle/full dragon flag, weighted hollow) are never assigned automatically — but if you set one yourself in Settings, planned sessions respect it. Recovery and deload sessions keep their own light doses. In planned sessions the engine itself puts you on your level and moves you up; after each session a short message tells you what changes next time ("Next time: 3x25 s", "Promoted: …"). In the catalog lunches (arms, HIIT, legs, push) the floor core is your own level too — L-sit, ab-wheel rollout, Copenhagen — instead of the fixed hollow hold and side plank; on the HIIT day the lateral exercise is one level below yours, at the top of its range. Technique: on the feet drills you can enter the **foot readjustments on your sample problem**, on the fall ladder your **max fear (0-10)** (asked only on the drills of your current feet level) — two clean sessions move you one step up the feet (P1-P4) or falls (F1-F3) ladder.
 
 Custom sessions sit **outside the macrocycle**: running one logs the work and updates your working loads, but it does not feed the closed loop or alter your planned progression.
 

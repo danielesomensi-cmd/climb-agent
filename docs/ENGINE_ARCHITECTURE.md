@@ -382,6 +382,7 @@ resolve_session(
 8. **Prescription merging:** `exercise.prescription_defaults` ← overridden by `block.prescription` ← overridden by `_apply_load_override()` (user per-exercise overrides).
 9. **Prehab injection (B38):** `_inject_prehab_for_limitations()` auto-adds one prehab exercise per limitation zone if not already present.
 10. **Progression injection:** `inject_targets()` enriches instances with suggested loads, target grades.
+    **Bodyweight ladders (A298, B413):** for a tested athlete `_bw_ladder_stage` replaces a P0 pick on a ladder family with the athlete's level and dose (`prescription.source: "bw_ladder"`), and a pinned inline block that declares `ladder_pin` (B413 D4: the floor-core blocks of the four catalog lunches) takes the athlete's level of its listed families — `level_offset` −1 on the Tuesday HIIT lateral row (A2), never a hanging or heavy-pull level, one family per session, a seeded level never below the catalog dose (pin floor). Untested athletes, or no entry: the catalog pin, bit for bit. The ladders read the archived weeks through `archived_weeks` (§8.5).
 11. **Phase-aware ordering (A121):** `sort_exercises_by_phase()` + `enforce_ordering_constraints()`.
 12. **Load score:** Sum of `fatigue_cost` × 1.5, capped at 85 — formula in `engine/load_score.py` (B312: single source of truth, shared with the add/remove-exercise router).
 13. **Force deload:** If 2+ zones are `severe`, flag the session.
@@ -665,12 +666,22 @@ coach prompt.
 
 Clamp order: start (working load converted by NON-rounded rep factor, seconds,
 phase/intensity; else phase target) → structural cap (pull: min(Prilepin band,
-(r+2)RM); hang: 3 s of reserve, phase cap) × re-entry factor
-(`retest_policy.reentry_step`, tests counted via `extra_dates`) → pain
+(r+2)RM); hang: 3 s of reserve, phase cap) — B413 (A4): no re-entry factor any
+more, after a gap the cap is the full phase cap; `retest_policy.reentry_step`
+(tests counted via `extra_dates`) only caps max hangs at 5 sets in the first
+2 exposures after a ≥ 14-day gap → pain
 (`pain_blocks`, R4; the phase floor is cut by the same 0.90) → guards (2 heavy pulls / 7 days, same-session finger,
 finger-hard day in the 2 days before) → `floor_eff = min(floor, cap_eff)` →
 fatigue (3 hard / 14 days → floor). All engineering constants are labelled in
 the module.
+
+B413 (D3): a DONE exercise with no rating and no measure is an `ok`, and it
+never rewrites the memory lower than what `anchored_load(...,
+temporary_cuts=False)` proposed for that session (no heavy-pull / same-session
+/ finger-hard guard, no fatigue floor): the entry stays, only its date moves
+(`progression_v1._keep_unrated_memory`). The same rule holds for the other
+loads and the grades (endurance, limit — whose B365 re-entry −½ grade is gone,
+A4: after a gap the limit target is the memory).
 
 `apply_feedback` also writes the ONE exposure registry
 (`progression_counters.stimulus_exposures`, read by `stimulus.exposures`), the
@@ -873,13 +884,51 @@ The single owner of "which sessions of the week carry the phase's key stimuli". 
 
 ### 8.4 Measured feedback — `measured_feedback.py` (A295)
 
-Feedback that measures something instead of a default "ok". `log_entry.feedback_contract: 2`: an untouched exercise has no `feedback_label` and is **not rated** (a legacy `ok` without the contract too). `apply_feedback` reads `feedback_rating(item, contract)`; `None` holds the load used and stays out of difficulty, feedback log, fatigue labels and the endurance streak.
+Feedback that measures something instead of a default "ok". `log_entry.feedback_contract: 2`: an untouched exercise has no `feedback_label` and is **not rated** (a legacy `ok` without the contract too). `apply_feedback` reads `feedback_rating(item, contract)`; `None` stays out of difficulty, feedback log and fatigue labels. B413 (D3, A1): a DONE unrated item (`unrated_done`) is an `ok` for every progression — ladders +1 step, loads and grades never written below the memory's own proposal, the endurance streak reset as on `ok`.
 
 - **Measures** (allowlists in `measure_kind`, exposed as `suggested.measure`): `last_set_reps` on pulls (consumed by `anchored_load.apply_anchored_feedback`, which already had the bands and the `retest_signals` rule from B364; A295 adds "fewer sets than prescribed never raises" and the pain freeze), `hang_margin` / `hang_held_s` on max hangs (anchored path, plus a mirror for the non-anchored hangs — untested max hangs, 10 s, Hörst — with the same kg bands and a +5 % rolling-7-day rise cap), `dp_reps` on reps accessories.
 - **Double progression** (`progression_v1._apply_dp_feedback`): measured success → target +1 rep, at the top of the range → load +2.5 % (fingers +1.25 %) and back to `lo`; no measure → easy +5 % / very_easy +10 % (a stored `adjustment_policy` still wins); per-hand items read the weaker hand. Idempotent via `applied {key, base_before}`.
 - **Pain** (`record_pain` at write, `pain_adjust_suggested` / `anchored_load.pain_for` at read, by date): `progression_counters.pain_blocks[site]`; −10 % on the zone, hang caps 0.85 / 0.80, upward steps and retest signals frozen. Nothing is removed from the plan.
 - **Difficulty** (`derive_session_difficulty`): rated items only, ≥ 50 % of the fatigue cost, else absent — `check_adaptive_replan` rule 2 cannot fire on one tapped warm-up.
 - **Clamp order** stays the single one of §8.1 (pain before the floor).
+
+### 8.5 Bodyweight ladders — archive, frozen prescription, done without feedback (B413)
+
+The ladder closed loop (`bw_progression.py`, rules in `docs/vocabulary_v1.md`
+§4.8) has three API-side pieces, all in `backend/api/`:
+
+- **Archive loader** — `ladder_archive.load(state, user_id, refs, write=…)` /
+  `for_plan(...)`: the A221 cold-store weeks of the ONE Monday-aligned ladder
+  window (`bw_ladders.archive_window_start`, 120 d), read once per request with
+  an open end (`OPEN_END`). No read for an athlete the tested gate keeps out,
+  nor when every archivable week of the window is still hot. The retest
+  policy and the key status serve their own narrower ranges from the same read
+  (`ladder_archive.read_range` → `storage_memo.find`), so a tested athlete costs
+  at most one archive range read per request (B376 memo). `write_state` no
+  longer clears the request memo (no memoised read depends on the users row;
+  archive, outdoor and delete writes still clear it). A failed read: GET
+  serves the recent-weeks view and persists nothing derived from it (no B375
+  cache); a write that freezes or consumes a ladder dose (`/feedback`,
+  `/events`, `PUT /bw-progression/{family}`, `POST .../promotion`,
+  `POST /session/surface-override`) answers 503 `archive_unavailable` before
+  writing anything. The `/events` dry run loads no archive.
+- **Frozen prescription (D2)** — `plan_revision.freeze_played_resolved`
+  (`compute_played_resolved` + `write_played_resolved`): at the planned → done
+  transition of an engine session the server stores the `resolved` GET would
+  show (`week._auto_resolve` with `stop_after`: B268 order, A281 taper,
+  user_added rows, the phase of the week) on the plan before the "done", the
+  state before the feedback and the same archive. `/events` freezes from the
+  stored plan of the week (not a stale client copy); `/feedback` (B216 path
+  included) writes it after `apply_feedback`, so the closed-loop inputs are
+  unchanged. Fail-soft; B375 stays the fallback for old records.
+- **Done without feedback (D3)** — `/events` `mark_done`: the ladder rows of
+  the frozen prescription go through `apply_bw_item` as done, unrated rows
+  (`bw_progression.mark_done_items`); a later feedback replays from `_prev`
+  (idempotent); `mark_planned` (undo) reverts the families the session still
+  owns (`revert_session`). Loads are never touched.
+
+The engine stays pure: every ladder reader takes `archived_weeks` as an
+argument (None = hot weeks, the pre-B413 behaviour).
 
 ## 9. Replanner (`replanner_v1.py`)
 

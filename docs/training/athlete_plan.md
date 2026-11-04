@@ -35,7 +35,7 @@ Ultimo aggiornamento: 2026-10-05 (C272: scale corpo libero, libreria tecnica / t
 
 Un'etichetta di feedback non tocca mai il massimale e non programma mai un test.
 
-**Un'unica fonte per i carichi:** `anchored_load` (B364) per weighted_pullup, weighted_chinup, max_hang_5s e max_hang_7s. Lo script stampa il numero del giorno, già con tetto, pavimento, rampa di rientro, guardie, dolore e fatica.
+**Un'unica fonte per i carichi:** `anchored_load` (B364) per weighted_pullup, weighted_chinup, max_hang_5s e max_hang_7s. Lo script stampa il numero del giorno, già con tetto, pavimento, guardie, dolore e fatica (B413: niente più rampa di rientro sul tetto).
 - **Mai** copiare `working_loads` grezzi.
 - **Mai** usare il 2RM come carico (errore del 04/10: 4×3 a +45 kg).
 - **Mai** scrivere «oppure» fra due carichi.
@@ -52,12 +52,9 @@ Un'etichetta di feedback non tocca mai il massimale e non programma mai un test.
   Il 100% compare solo nei test.
 - **Tetto da misura (A302):** i tetti si calcolano sul più alto fra il massimale ufficiale e quello implicito nell'ultima misura pulita. Sospensione: tenuta L con margine m secondi → L × (1 + 1,5% × m), con «>5» letto come 5", «3-5» come 3" e un tempo cronometrato fino a +6". Trazione: ultima serie lasciando una ripetizione → e1RM = L × f(ripetizioni + 1). La misura conta 28 giorni, solo contro il test in vigore, con tutte le serie fatte, senza dolore e senza etichetta hard. Il solo voto non alza mai il tetto. Il massimale ufficiale non si muove.
 
-**Rampa di rientro:** dopo uno stacco di 14 giorni o più, fattore sul tetto:
-- 1ª esposizione 0,90;
-- 2ª esposizione 0,95;
-- dalla 3ª 1,0.
+**Rientro dopo uno stacco (B413, 2026-11-04):** la rampa 0,90 / 0,95 sul tetto **non c'è più**, per tutti: dopo uno stacco di 14 giorni o più il tetto è già quello pieno di fase. Resta solo il limite di serie: nelle prime 2 esposizioni dopo lo stacco, max hang al massimo 5 serie (il test conta come esposizione). Anche il limit non toglie più mezzo grado dopo uno stacco: il target è il grado in memoria.
 
-Il test conta come esposizione. Durante il rientro, max hang al massimo 5 serie.
+Un esercizio fatto e **senza voto vale «ok»** e non abbassa mai la memoria: se il carico scritto è sotto quello che la memoria avrebbe proposto per quella seduta (senza i tagli temporanei), la voce resta com'era e si aggiorna solo la data.
 
 **Passi delle etichette** (Daniele fa esattamente le ripetizioni prescritte, quindi «easy» è un segnale vero). Sempre dentro il tetto:
 
@@ -237,11 +234,11 @@ Senza roccia: giovedì lead in palestra (cadute 10', 2 vie con regola tecnica, n
 Per un atleta col suo livello, un esercizio a corpo libero a due braccia è **troppo facile**: va reso unilaterale, assistito o zavorrato.
 
 Le **16 scale** stanno in `backend/catalog/progressions/v1/bw_ladders.json` (livelli da 0, bande, passi, terminali, fonti). I livelli nuovi hanno role `ladder`: il motore non li sceglie ancora, si usano nelle custom. **Il livello attuale per famiglia lo stampa lo script** (sezione «Scale corpo libero»), calcolato in sola lettura:
-1. dallo **storico** degli ultimi 120 giorni (60 per front lever e dragon flag): il livello più alto fatto senza hard/very_hard, con dose = ultima dose − 1 passo;
+1. dallo **storico** degli ultimi 120 giorni (60 per front lever e dragon flag, archivio compreso): il livello più alto fatto senza hard/very_hard, con dose = quella che il ciclo chiuso darebbe dopo l'ultima seduta pulita (ultima dose + i passi del suo voto, senza voto = ok; una riga senza voto non scende sotto una dose votata prima; dose ignota → la precedente) — B413, non più «ultima dose − 1 passo»;
 2. altrimenti dal **test L-sit** (log `test_l_sit_hold` entro 90 giorni): target ≈ test/3 sul livello d'ingresso;
 3. per un atleta non testato: nessun seed, dosi del catalogo.
 
-**Ciclo chiuso (A298).** Il livello vive nello stato (chiave bw_progression) e si muove col feedback: label ±1/±2 passi nella banda (mai salti di livello), la misura «reps pulite / secondi tenuti sulla serie più debole» fa da base, 2 very_hard di fila → livello giù, promozione dopo 1 seduta in cima alla banda (2 sui livelli a rischio), congelato in performance/deload (−1 serie), livelli lombari solo a mano. Nelle sedute del motore la promozione è automatica; **nelle custom le righe di scala vanno scritte con `progress_mode: "ladder"`**: la dose la calcola l'app il giorno della seduta e la promozione arriva come proposta da confermare con un tap («Switch»). «fixed» solo per una dose volutamente diversa (non muove il livello, salvo una misura). Livello manuale: PUT /api/bw-progression/{family}. Il seed resta il punto di partenza finché il primo feedback non lo scrive.
+**Ciclo chiuso (A298, B413).** Il livello vive nello stato (chiave bw_progression) e si muove col feedback: ok +1 passo, easy +2, very_easy +3, hard −1, very_hard −2 nella banda (mai salti di livello); **fatto senza voto = ok** (anche in cima alla banda e per la promozione), anche quando la seduta è solo segnata «fatta» senza feedback; la misura «reps pulite / secondi tenuti sulla serie più debole» fa da base, 2 very_hard di fila → livello giù, promozione dopo 1 seduta in cima alla banda (2 sui livelli a rischio; very_easy in cima promuove subito), deload congelato (−1 serie), in performance serie piene e crescita attiva ma i livelli appesi / di trazione pesante (front lever, T2B, wipers da L1) cambiano livello solo nel ciclo nuovo, livelli lombari solo a mano. Nelle sedute del motore la promozione è automatica; **nelle custom le righe di scala vanno scritte con `progress_mode: "ladder"`**: la dose la calcola l'app il giorno della seduta e la promozione arriva come proposta da confermare con un tap («Switch»). «fixed» solo per una dose volutamente diversa (non muove il livello, salvo una misura). Livello manuale: PUT /api/bw-progression/{family}. Il seed resta il punto di partenza finché il primo feedback non lo scrive.
 
 | Famiglia | Livelli (dal più facile) | Partenza indicata da BW per Daniele |
 |---|---|---|
@@ -249,7 +246,7 @@ Le **16 scale** stanno in `backend/catalog/progressions/v1/bw_ladders.json` (liv
 | Compressione appesi | `hanging_knee_raise` → `hanging_leg_raise_horizontal` (a 90°) → `knees_to_elbows` → `toes_to_bar` (`hanging_leg_raise` del catalogo arriva alla sbarra: conta come `toes_to_bar`) (poi eccentrica 3 s, 5 s, poi `weighted_hanging_leg_raise` +1 kg) | storico T2B: eccentrica, poi +1 kg alle caviglie |
 | Rollout | `ab_wheel_rollout` → `ring_fallout` → `ab_wheel_rollout_standing_wall` → `ab_wheel_rollout_standing_eccentric` → `ab_wheel_rollout_standing` | `ring_fallout` 3×6 (anelli all'altezza del ginocchio). In piedi solo manuale (zona lombare) |
 | Dragon flag (panca) | `bench_hip_lift` → `candlestick_hold` → `dragon_flag_tuck_negative` → `dragon_flag_tuck` → straddle neg. → straddle → neg. → `dragon_flag` | `dragon_flag_tuck_negative` 3×4 da 5 s al posto di `v_up` |
-| Hollow / plank | `plank` → `rkc_plank` → `core_hollow_hold` → `hollow_rock` → `weighted_hollow_hold` | per lui solo riscaldamento |
+| Hollow / plank | `plank` → `rkc_plank` → `core_hollow_hold` → `hollow_rock` → `weighted_hollow_hold` | per lui solo riscaldamento; nei pranzi di catalogo l'hollow lascia il posto al suo core di scala (B413) |
 | Front lever | `front_lever_tuck` → `front_lever_advanced_tuck` → `front_lever_one_leg` → `front_lever_straddle` → `front_lever_full` (poi `front_lever_raise`, `front_lever_row`; varianti `front_lever_raise_tuck`, `front_lever_negative`) | straddle 4×10 s. Conta come tirata pesante nelle guardie del contesto (2 per 7 gg; `bw_ladders.heavy_pull_exercise_ids`). **A mano:** mai nelle 24 h prima di limit/strength_long e lontano 48 h dal test trazione (la retest policy non lo conta). Nessuna zavorra |
 | Laterale | `side_plank` → `copenhagen_short_lever` → `copenhagen_plank` → `copenhagen_dynamic` (terminale `weighted_side_plank`) | 2 sedute short lever 3×15 s, poi lunga 3×10 s |
 | Catena posteriore | `arch_hold` → `back_extension` → `single_leg_back_extension` | obbligatoria con 2 esercizi di compressione in seduta |
@@ -265,6 +262,8 @@ Le **16 scale** stanno in `backend/catalog/progressions/v1/bw_ladders.json` (liv
 **Budget per seduta:** al massimo `toes_to_bar` **oppure** front lever, più rollout oppure dragon flag, più eventualmente copenhagen. Non tutte le famiglie insieme. Con 2 esercizi di compressione serve un esercizio di catena posteriore (`back_extension`).
 
 `dead_bug`, `plank`, `core_hollow_hold`, `pallof_press` e `plank_shoulder_tap` restano **solo come attivazione** e mai come blocco principale, quando esiste un'alternativa.
+
+**Core dei pranzi di catalogo (B413, chiave di catalogo ladder_pin).** Il blocco hollow e il plank laterale dei pranzi seguono la sua scala: braccia (lun) = laterale al suo livello + L-sit (o rollout); HIIT (mar) = rollout (o L-sit) + laterale **un livello sotto il suo**, in cima a quella banda (mai il Copenhagen dinamico due giorni di fila); gambe = rollout; spinta (ven) = L-sit. Mai livelli appesi, una famiglia per seduta. Limite noto: con tutte le famiglie in cima alla banda i pranzi stimano 56-59' sul tetto di 55' (roadmap).
 
 ## 7. Registro (cosa scrivere nelle note)
 

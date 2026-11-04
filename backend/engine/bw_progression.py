@@ -46,7 +46,7 @@ weeks of the history window, loaded once per request by
 ``backend/api/ladder_archive.py``); None reads the hot weeks only.
 
 Every numeric threshold without a published source is an ENGINEERING
-CONSTANT (listed in docs/vocabulary_v1.md §4.9).
+CONSTANT (listed in docs/vocabulary_v1.md §4.8).
 """
 
 from __future__ import annotations
