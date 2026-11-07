@@ -72,7 +72,7 @@
 
 Drop knee e backstep vanno ripresi dal lato aperto: da dietro tutti i modelli disegnano il bacino frontale.
 
-**Primo lotto in prod:** `flag_practice` (outside flag), `twist_lock_drill` (backstep + drop knee come seconda tavola, `CATALOG_EXERCISE_EXTRA_PANELS`).
+**In prod:** `flag_practice` (outside flag), `twist_lock_drill` (backstep + drop knee come seconda tavola, `CATALOG_EXERCISE_EXTRA_PANELS`), `hip_rotation_drill` (lotto 2). `small_feet_press_hold` bocciato dalla verifica (presa a due dita disegnata come un segno a V): torna in coda.
 
 **Immagini sbagliate tolte.** Lo straddle L-sit era disegnato come una spaccata a terra, il dragon flag tuck come un leg raise sdraiato: tolte dal catalogo e dal circuito, in attesa del ridisegno. `hanging_leg_raise` (gambe fino alla sbarra) passa all'immagine toes-to-bar.
 

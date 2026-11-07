@@ -15,6 +15,20 @@ def key():
     for line in open(os.path.expanduser(os.environ.get("OPENROUTER_ENV_FILE", "~/Projects/fin-sycophancy/.env"))):
         if line.startswith("OPENROUTER_API_KEY="):
             return line.split("=", 1)[1].strip().strip('"')
+def live_remaining():
+    """USD still spendable now: min(key daily limit left, account credits left). OpenRouter reserves a
+    request's maximum cost up front, so a call can be refused while the local ledger still shows room."""
+    def get(path):
+        req = urllib.request.Request("https://openrouter.ai/api/v1/" + path, headers={"Authorization": "Bearer " + key()})
+        return json.load(urllib.request.urlopen(req, timeout=30))["data"]
+    try:
+        k, c = get("key"), get("credits")
+    except Exception:
+        return None
+    left = [c["total_credits"] - c["total_usage"]]
+    if k.get("limit_remaining") is not None:
+        left.append(k["limit_remaining"])
+    return min(left)
 def spent():
     if not LEDGER.exists(): return 0.0
     return sum(json.loads(l).get("cost") or 0 for l in LEDGER.read_text().splitlines() if l.strip())
@@ -27,6 +41,10 @@ lock = open(ROOT / ".lock", "w"); fcntl.flock(lock, fcntl.LOCK_EX)
 s = spent()
 if s >= CAP:
     print(json.dumps({"ok": False, "error": f"budget cap reached: spent {s:.3f} >= {CAP}"})); sys.exit(2)
+live = live_remaining()
+MIN_LEFT = float(os.environ.get("IMG_MIN_REMAINING", "0.25"))
+if live is not None and live < MIN_LEFT:
+    print(json.dumps({"ok": False, "error": f"OpenRouter budget left {live:.3f} < {MIN_LEFT} (key daily limit or credits)"})); sys.exit(2)
 fcntl.flock(lock, fcntl.LOCK_UN)
 content = [{"type": "text", "text": pathlib.Path(a.prompt_file).read_text()}]
 for r in a.ref:

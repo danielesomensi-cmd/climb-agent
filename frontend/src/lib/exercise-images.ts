@@ -85,6 +85,7 @@ export const CATALOG_EXERCISE_IMAGES: Readonly<Record<string, string>> = {
   // C285 — technique drills
   twist_lock_drill: "technique/twist_lock_backstep.webp",
   flag_practice: "technique/flag_outside.webp",
+  hip_rotation_drill: "technique/hip_rotation.webp",
 };
 
 /**

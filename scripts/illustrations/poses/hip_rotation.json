@@ -1,0 +1,104 @@
+{
+ "_comment": "hip_rotation_drill panel 0 'Hip turned in before the reach'. Man (1.78) on a 15 deg overhang. LEFT arm STRAIGHT (elbow ~173 deg, scapula shifted 6 cm = engaged hang, same recipe as drop_knee/twist_lock) on jug LH up-left above his head. Pelvis yaw 85 = RIGHT hip into the wall (right hip joint 10 cm, left 28 cm); chest yaw ~65 (twist -20) facing left, leaning back 9 deg on the straight arm (keeps the right shoulder off the wall). v2 (coach fix): RF (0.05,0.62) under the right hip, OUTSIDE edge, knee ~58 deg pointing left across the body; LF (-0.50,0.33) LOWER-left (29 cm below RF), INSIDE edge, knee ~149 deg bent ready to push; right knee shows LEFT of the left thigh, above the left knee. Right hand OPEN, fingers up, palm to the wall, 32 cm above its start edge RS (chest height, to his right) at shoulder level, elbow ~89 deg pointing down: the hip has turned before the hand travels. Target jug T above the right shoulder, just out of reach (~85 cm from the right shoulder joint, 5-10 cm past fingertips). Head looks up at T (neck pitch clamped). CAMERA (recipe lesson): spec asked rear 3/4 from the right; overridden to the OPEN side, front three-quarter from the climber's left, az -34, el 1 (lens ~hip height), so the turned pelvis, the straight arm and the right hand (clear of the torso) all read; az -48/-58 hide the right hand, az -25 merges the two knees.",
+ "figure": "man",
+ "wall": {
+  "angle_deg": 15,
+  "width": 1.8,
+  "height": 2.8,
+  "x_center": -0.02,
+  "floor": false
+ },
+ "holds": {
+  "LH": {
+   "type": "jug",
+   "pos": [
+    -0.407,
+    2.228
+   ],
+   "lip": "up"
+  },
+  "RS": {
+   "type": "edge",
+   "pos": [
+    0.5,
+    1.36
+   ],
+   "lip": "up",
+   "size": 1.4
+  },
+  "T": {
+   "type": "jug",
+   "pos": [
+    0.12,
+    2.52
+   ],
+   "lip": "up"
+  },
+  "RF": {
+   "type": "chip",
+   "pos": [
+    0.05,
+    0.62
+   ],
+   "size": 1.8
+  },
+  "LF": {
+   "type": "chip",
+   "pos": [
+    -0.5,
+    0.33
+   ],
+   "size": 1.8
+  }
+ },
+ "pelvis": {
+  "pos": [
+   0.0,
+   1.16,
+   0.19
+  ],
+  "yaw": 85
+ },
+ "chest": {
+  "twist": -20,
+  "bend": -9
+ },
+ "left_hand": {
+  "hold": "LH",
+  "straight": true
+ },
+ "right_hand": {
+  "pos": [
+   0.5,
+   1.68,
+   0.14
+  ],
+  "open": true,
+  "fingers": [
+   0,
+   1,
+   0.15
+  ],
+  "pole": "down+0.7*away"
+ },
+ "left_foot": {
+  "hold": "LF",
+  "edge": "inside"
+ },
+ "right_foot": {
+  "hold": "RF",
+  "edge": "outside",
+  "pole": "left+0.3*down"
+ },
+ "head": {
+  "look_at": "T"
+ },
+ "camera": {
+  "azimuth": -34,
+  "elevation": 1,
+  "margin": 0.85
+ },
+ "render": {
+  "background": "#1F2633"
+ }
+}

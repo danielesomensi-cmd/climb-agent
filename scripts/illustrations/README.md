@@ -41,5 +41,5 @@ men), tasteful and never sexualised: the pose is dictated by the technique. Wome
 ## Spend control
 
 `gen.py` / `gen_images.py` append every call to `work/ledger.jsonl` (or `$IMG_WORKDIR`) and refuse once
-`$IMG_BUDGET_CAP` (USD) is reached. The key comes from `$OPENROUTER_API_KEY` or the `.env` named by
+`$IMG_BUDGET_CAP` (USD) is reached; before every call they also read the live OpenRouter budget (key daily limit and account credits) and refuse below `$IMG_MIN_REMAINING` (default 0.25), because OpenRouter reserves a request's maximum cost against the daily limit up front (C285: a call was refused at $4.45 logged of $5). The key comes from `$OPENROUTER_API_KEY` or the `.env` named by
 `$OPENROUTER_ENV_FILE`; it is never printed or committed.
