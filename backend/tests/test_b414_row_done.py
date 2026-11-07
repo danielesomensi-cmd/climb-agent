@@ -396,3 +396,76 @@ def test_readers_never_write_the_past():
     st.finger_hard_days(state)
     bl.seed_levels(state, "2026-10-07")
     assert json.dumps(state, sort_keys=True) == before
+
+
+# ---------------------------------------------------------------------------
+# 5. Review: the same dose for every reader, and the persisted registry
+# ---------------------------------------------------------------------------
+
+
+def _session_with_twin(row, *, custom):
+    """A done session whose planned twin prescribes 4 sets; the logged row
+    carries no ``prescribed_sets`` (legacy / un-attached rows)."""
+    row = {k: v for k, v in row.items() if k != "prescribed_sets"}
+    if custom:
+        return {"session_id": "custom_cs_x", "is_custom": True, "status": "done",
+                "exercises": [{"exercise_id": row["exercise_id"], "sets": 4}], "actual_exercises": [row]}
+    return {"session_id": "strength_long", "status": "done",
+            "resolved": {"resolved_session": {"exercise_instances": [
+                {"exercise_id": row["exercise_id"], "prescription": {"sets": 4}}]}},
+            "actual_exercises": [row]}
+
+
+def test_stimulus_views_and_ladder_seed_read_the_same_dose():
+    """B414 review: a completed:false row without its own prescribed_sets takes
+    the dose from its planned twin in the stimulus views exactly as in the
+    ladder seed (``bw_ladders._planned_twin``) — before, the views read no dose
+    and dropped a fully counted row the seed counted."""
+    for player, row in MATRIX:
+        s = _session_with_twin(row, custom=player)
+        e = s["actual_exercises"][0]
+        seed = bl.ladder_row_done(e, player_session=player,
+                                  dose_sets=bl._sets_of({}, bl._planned_twin(s, e["exercise_id"])))
+        entries, _origin = st.counted_entries(s)
+        assert (entries == [e]) is seed, (player, e)
+        assert (st.session_stimuli(s) == [st.FAMILY_FINGER_MAX]) is seed, (player, e)
+
+
+def test_four_by_four_without_prescribed_sets_counts_on_the_twin():
+    s = _session_with_twin({"exercise_id": "four_by_four_bouldering", "completed": False,
+                            "completed_sets": 4}, custom=True)
+    assert st.session_stimuli(s) == [st.FAMILY_POWER_ENDURANCE]
+    s["actual_exercises"][0]["completed_sets"] = 3
+    assert st.session_stimuli(s) == []
+
+
+def _registry_after(log_entry):
+    from backend.engine.anchored_load import record_exposures
+    updated = {}
+    record_exposures(updated, log_entry)
+    return {fam: [(r["exercise_id"], r["sets_done"]) for r in rows]
+            for fam, rows in ((updated.get("progression_counters") or {}).get("stimulus_exposures") or {}).items()}
+
+
+def test_registry_records_a_catalog_row_done_without_sets():
+    """The persisted registry (progression_counters.stimulus_exposures, written
+    by apply_feedback) follows the one rule: a catalog row closed with Done
+    without the timer is an exposure; the library player's pre-fill is not."""
+    item = {"exercise_id": "max_hang_7s", "completed": True}
+    assert _registry_after({"date": "2026-11-04", "session_id": "strength_long",
+                            "actual": {"exercise_feedback_v1": [item]}}) == {
+        st.FAMILY_FINGER_MAX: [("max_hang_7s", None)]}
+    prefill = dict(item, used_external_load_kg=30)
+    assert _registry_after({"date": "2026-11-04", "session_id": "custom_cs_x",
+                            "actual": {"exercise_feedback_v1": [prefill]}}) == {}
+
+
+def test_registry_reads_the_planned_dose_of_a_completed_false_item():
+    item = {"exercise_id": "four_by_four_bouldering", "completed": False, "completed_sets": 4}
+    log = {"date": "2026-11-03", "session_id": "custom_cs_x",
+           "planned": [{"exercise_instances": [{"exercise_id": "four_by_four_bouldering",
+                                                "prescription": {"sets": 4}}]}],
+           "actual": {"exercise_feedback_v1": [item]}}
+    assert _registry_after(log) == {st.FAMILY_POWER_ENDURANCE: [("four_by_four_bouldering", 4)]}
+    log["actual"]["exercise_feedback_v1"] = [dict(item, completed_sets=3)]
+    assert _registry_after(log) == {}

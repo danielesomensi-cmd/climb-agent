@@ -388,21 +388,52 @@ def row_done(row: Mapping[str, Any], *, player_session: bool,
     return not player_session
 
 
-def logged_entry_counts(entry: Mapping[str, Any], *, player_session: bool) -> bool:
+def logged_entry_counts(entry: Mapping[str, Any], *, player_session: bool,
+                        dose_sets: Optional[int] = None) -> bool:
     """Whether a logged (``actual_exercises``) entry is real work: ``row_done``
-    with the row's own ``prescribed_sets`` as the dose (B414)."""
-    return row_done(entry, player_session=player_session)
+    (B414), with ``dose_sets`` (else the row's own ``prescribed_sets``) as the
+    dose of a ``completed: false`` row."""
+    return row_done(entry, player_session=player_session, dose_sets=dose_sets)
+
+
+def planned_sets_of(session: Mapping[str, Any], exercise_id: str) -> Optional[int]:
+    """The prescribed sets of ``exercise_id`` in the session's planned list
+    (custom / generated ``exercises``, else the resolved instances), or None.
+
+    B414 review: the dose of a logged ``completed: false`` row, looked up the
+    way the ladder seed does (``bw_ladders._planned_twin`` + ``_sets_of``), so
+    the stimulus views and the seed give the same verdict on the same row."""
+    lists = ([e for e in (session.get("exercises") or []) if isinstance(e, Mapping)],
+             _resolved_instances(session))
+    for planned in lists:
+        for e in planned:
+            if str(e.get("exercise_id") or "") != exercise_id:
+                continue
+            for src in (e, e.get("prescription") or {}):
+                n = _dose_int(src.get("sets")) if isinstance(src, Mapping) else None
+                if n is not None:
+                    return n
+            return None
+    return None
+
+
+def _session_entry_counts(session: Mapping[str, Any], entry: Mapping[str, Any], *, player_session: bool) -> bool:
+    """``logged_entry_counts`` for a logged row of *session*: the dose of a
+    ``completed: false`` row is its planned twin's sets (as the ladder seed)."""
+    dose = planned_sets_of(session, str(entry.get("exercise_id") or "")) if entry.get("completed") is False else None
+    return logged_entry_counts(entry, player_session=player_session, dose_sets=dose)
 
 
 def counted_entries(session: Mapping[str, Any]) -> Tuple[List[Dict[str, Any]], str]:
-    """``session_exercise_entries`` with the "was it done" rule applied: logged
-    entries that are not real work (skipped, not completed, player pre-fill
-    with 0 sets/reps) are dropped. Planned entries are returned as they are."""
+    """``session_exercise_entries`` with the "was it done" rule applied
+    (``row_done``): logged entries that are not real work (skipped,
+    ``completed: false`` short of the dose, player pre-fill with no counted
+    set) are dropped. Planned entries are returned as they are."""
     entries, origin = session_exercise_entries(session)
     if origin != "actual":
         return entries, origin
     player = _is_player_session(session)
-    return [e for e in entries if logged_entry_counts(e, player_session=player)], origin
+    return [e for e in entries if _session_entry_counts(session, e, player_session=player)], origin
 
 
 def session_stimuli(session: Mapping[str, Any]) -> List[str]:
@@ -414,7 +445,7 @@ def session_stimuli(session: Mapping[str, Any]) -> List[str]:
     else:
         player = _is_player_session(session)
         for e in entries:
-            if origin == "actual" and not logged_entry_counts(e, player_session=player):
+            if origin == "actual" and not _session_entry_counts(session, e, player_session=player):
                 continue
             fam = stimulus_of(e.get("exercise_id"))
             if fam:
@@ -720,7 +751,7 @@ def exposures(
             if not fam:
                 continue
             if origin == "actual":
-                if not logged_entry_counts(e, player_session=player):
+                if not _session_entry_counts(session, e, player_session=player):
                     continue
                 evidence = "measured"
                 sets_done = _num(e.get("completed_sets"))

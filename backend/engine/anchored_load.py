@@ -1246,7 +1246,8 @@ def record_exposures(updated: Dict[str, Any], log_entry: Mapping[str, Any]) -> N
     """Append the log's stimulus exposures to the persisted registry
     ``progression_counters.stimulus_exposures`` (the ONE registry, A288 view
     reads it). One row per (date, exercise_id); the "was it done" rule is
-    ``stimulus.logged_entry_counts``. Pruned to REGISTRY_KEEP_D days."""
+    ``stimulus.row_done`` (through ``logged_entry_counts``, B414). Pruned to
+    REGISTRY_KEEP_D days."""
     from backend.engine.progression_v1 import _is_test_log
 
     date_value = str(log_entry.get("date") or "")[:10]
@@ -1269,7 +1270,13 @@ def record_exposures(updated: Dict[str, Any], log_entry: Mapping[str, Any]) -> N
             continue
         eid = str(item.get("exercise_id") or "")
         fam = stimulus_of(eid)
-        if not fam or not logged_entry_counts(item, player_session=player):
+        # B414 review: the dose of a completed:false item is its planned twin
+        # (as the stimulus views and the ladder seed read it), else its own
+        # prescribed_sets — one verdict for the registry and the views.
+        planned_dose = _num(planned_sets.get(eid))
+        if not fam or not logged_entry_counts(
+                item, player_session=player,
+                dose_sets=int(planned_dose) if planned_dose and planned_dose > 0 else None):
             continue
         sets_done = _num(item.get("completed_sets"))
         sets_presc = _num(item.get("prescribed_sets")) or _num(planned_sets.get(eid))
