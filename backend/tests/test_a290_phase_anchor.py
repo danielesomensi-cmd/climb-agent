@@ -123,13 +123,33 @@ def test_no_rotation_context_without_a_tested_baseline():
     assert pa.plan_block(None, {"rotation": "phase_anchor"}, session_id="x", block_id="y") is None
 
 
-def test_test_after_target_or_older_than_90_days_is_not_tested():
+def test_test_after_target_is_not_tested_an_expired_one_still_is():
     st = _tested()
     # 22/09: the 24/09 tests do not exist yet.
     assert pa.build_rotation_context(st, date(2026, 9, 22), None) is None
     assert pa.build_rotation_context(st, date(2026, 9, 25), None) is not None
-    # 90 days after the test the gate closes again.
-    assert pa.build_rotation_context(st, date(2026, 9, 24) + timedelta(days=90), None) is None
+    # B414 (model A): 90 days after the test the gate stays open (the max is
+    # expired, nothing switches off). The cycle of _base_state ends on 06/12:
+    # the phase window still resolves on the last cycle's phase.
+    for days in (90, 200):
+        assert pa.build_rotation_context(st, date(2026, 9, 24) + timedelta(days=days), None) is not None
+        assert pa.is_tested_any(st, date(2026, 9, 24) + timedelta(days=days)) is True
+
+
+def test_expired_tests_are_a_tested_case_not_the_untested_golden():
+    """B414 (model A): the former ``stale_tests`` golden case (real tests of
+    19/05 and 22/05) is a TESTED athlete on every resolved date: the phase
+    anchor runs (no more legacy rotation) and the SP finger main is the tested
+    anchor, max_hang_7s (110 / 70 = 1.57 ≥ the tested-list ratio)."""
+    from backend.tests.a290_untested_cases import expired_tests_state
+
+    st = expired_tests_state()
+    for d, sid in (("2026-10-09", "strength_long"), ("2026-10-13", "finger_strength_home")):
+        assert pa.build_rotation_context(st, date.fromisoformat(d), "strength_power") is not None
+        r = _resolve(st, sid, d, week_plan=_plan([(d, sid, "home", None)]))
+        rot = _rot(r, "finger_max_strength.main")
+        assert (rot["rotation"], rot["anchor_list"]) == ("phase_anchor", "tested")
+        assert _pick(r, "finger_max_strength.main") == "max_hang_7s"
 
 
 # ---------------------------------------------------------------------------

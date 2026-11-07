@@ -189,10 +189,12 @@ class TestCoverage:
         }
         assert _decision(st, "2026-10-19") is None
 
-    def test_stale_test_is_not_covered(self):
+    def test_expired_test_still_covers_the_axis(self):
+        # B414 (model A): 2027-01-04 is > 90 days after 24/09 — the max is
+        # expired, the axis stays covered (before: untested → legacy PASS 3).
         st = _daniele()
-        # 2027-01-04 is > 90 days after 24/09 → untested → legacy PASS 3.
-        assert _decision(st, "2027-01-04") is None
+        dec = _decision(st, "2027-01-04")
+        assert dec is not None and dec["covered_axes"] == ["finger", "pulling"]
 
     def test_loading_pin_finger_axis_not_covered(self):
         st = _daniele()
@@ -646,13 +648,15 @@ class TestStatus:
         assert f_codes == {"recent_finger", "very_hard"}
         assert p_codes == {"heavy_pull", "very_hard"}
 
-    def test_uncovered_axis_reported_without_next_test(self):
+    def test_expired_axis_reported_without_next_test_after_the_cycle(self):
+        # B414 (model A): > 90 days → expired, still covered; after the end of
+        # the macrocycle nothing is due (before: uncovered, not_tested_recently).
         st = _daniele()
-        status = rp.retest_status(st, "2027-01-10")  # > 90 days
+        status = rp.retest_status(st, "2027-01-10")
         f = status["axes"]["finger"]
-        assert f["covered"] is False and f["next_test"] is None
-        assert f["next_test_reason"] == "not_tested_recently"
-        assert status["covered_axes"] == []
+        assert f["covered"] is True and f["expired"] is True and f["next_test"] is None
+        assert f["next_test_reason"] == "after_cycle_end"
+        assert status["covered_axes"] == ["finger", "pulling"]
 
     def test_no_tests_no_axes(self):
         assert rp.retest_status(_daniele(tests={}), "2026-10-04")["axes"] == {}
@@ -752,9 +756,10 @@ class TestReviewFixes:
         assert _compute_retest_status(st, None) is None
 
     def test_stale_real_test_still_reported(self):
-        # A real test older than 90 days is still a tested max (uncovered).
-        status = rp.retest_status(_daniele(), "2027-01-10")
-        assert status["axes"]["finger"]["covered"] is False
+        # A real test older than 90 days is still a tested max — B414 (model
+        # A): and it still covers the axis, flagged expired.
+        row = rp.retest_status(_daniele(), "2027-01-10")["axes"]["finger"]
+        assert (row["covered"], row["expired"], row["valid_until"]) == (True, True, "2026-12-22")
 
     def test_hang_block_is_inclusive_three_days(self):
         # Finger-hard Wed 21 evening → Sat 24 morning is ~60 h < 72 h: blocked.

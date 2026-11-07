@@ -423,7 +423,8 @@ def pullup_reference_2rm(user_state: Dict[str, Any]) -> Optional[float]:
     """The pull-up reference of the pre-B364 path, as a 2RM total load (kg).
 
     Read ONLY where anchored_load does not apply — an untested athlete: no
-    test, an onboarding self-report, or a test older than 90 days. There the
+    test or an onboarding self-report (B414: a test older than 90 days is still
+    tested, model A). There the
     B363 behaviour is kept bit for bit: the baseline 2RM, unless a training log
     written AFTER it re-based it (``e2rm_total_kg``, written only by
     ``_apply_weighted_pullup_feedback`` on the untested path). Without it the

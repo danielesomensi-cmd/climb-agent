@@ -1893,8 +1893,8 @@ def _maxima_lines_en(ctx: Mapping[str, Any]) -> List[str]:
         if not m:
             continue
         if not m.get("tested"):
-            # A297 review: a stale test (> TEST_FRESH_DAYS) or a baseline-only
-            # self-report stays visible — flagged as such — exactly like the
+            # A297 review: a baseline-only self-report stays visible — flagged
+            # as such (B414: a real test is tested at any age) — exactly like the
             # pre-A297 B364 line, so the coach never reads the leftover raw
             # baseline numbers as a current tested max.
             out.append(f"- {_PROTOCOL_EN.get(proto, proto)}: {_fmt_kg(m.get('total_kg'))} kg total, from "
@@ -2252,8 +2252,9 @@ def heavy_pull_pct(state: Mapping[str, Any], exercise_id: str, day: DateLike, *,
 
 
 def athlete_is_tested(ctx: Optional[Mapping[str, Any]]) -> bool:
-    """True when the athlete has at least one TESTED official max (source test
-    and < TEST_FRESH_DAYS old). DECISIONS (global): higher intensities and the
+    """True when the athlete has at least one TESTED official max (a real
+    test, at any age since B414 — model A: an expired test keeps the tested
+    regime). DECISIONS (global): higher intensities and the
     anchor rules apply only to tested athletes; an untested athlete's ad-hoc
     selection stays the pre-A297 one (guards still remove, never add)."""
     return any(bool(m and m.get("tested")) for m in ((ctx or {}).get("maxima") or {}).values())

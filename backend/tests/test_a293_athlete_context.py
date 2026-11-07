@@ -249,10 +249,13 @@ class TestPositionMaximaAnchors:
         assert all(v is None for v in ctx["anchors"]["exercises"].values())
         assert "carico non disponibile" in ac.render_text(ctx)
 
-    def test_stale_test_flags_max_not_tested(self):
+    def test_expired_test_is_still_the_tested_max(self):
+        # B414 (model A): a real test past its 90 days is still the tested max
+        # (anchors, ladders, rotation stay on) — no MAX_NOT_TESTED any more.
         ctx = ac.build_athlete_context(_state(), "2027-02-01")
         codes = {w["code"] for w in ctx["warnings"]}
-        assert "MAX_NOT_TESTED" in codes
+        assert "MAX_NOT_TESTED" not in codes
+        assert all(m["tested"] for m in ctx["maxima"].values() if m)
 
 
 # ---------------------------------------------------------------------------

@@ -871,23 +871,28 @@ class TestStatus:
             assert row["next_test"] is None
             assert row["next_test_reason"] == "no_placement_slot"  # was "not_tested_recently"
 
-    def test_expiry_without_a_real_skip_stays_not_tested_recently(self):
+    def test_after_the_cycle_end_without_a_real_skip(self):
+        # B414 (model A): the projection no longer stops at the 90-day expiry
+        # (``not_tested_recently``) — it stops at the end of the macrocycle.
         st = _status_state()
         st["week_plans"] = {}
         st["macrocycle"]["phases"] = st["macrocycle"]["phases"][:2]  # ends 25/10: nothing due after
         status = rp.retest_status(st, "2026-10-26", finger_device="hangboard")
         assert {a: r["next_test_reason"] for a, r in status["axes"].items()} == {
-            "finger": "not_tested_recently", "pulling": "not_tested_recently"}
+            "finger": "after_cycle_end", "pulling": "after_cycle_end"}
 
     def test_tested_until(self):
+        # B414 (model A): the axis stays covered after the expiry; tested_until
+        # (= valid_until) never goes back to None, ``expired`` says it.
         st = _due_state()
-        for on, covered, until in (("2026-10-19", True, "2026-12-08"), ("2026-12-08", True, "2026-12-08"),
-                                   ("2026-12-09", False, None)):
+        for on, expiring, expired in (("2026-10-19", False, False), ("2026-12-08", True, False),
+                                      ("2026-12-09", False, True)):
             for row in rp.retest_status(st, on, finger_device="hangboard")["axes"].values():
-                assert (row["covered"], row["tested_until"]) == (covered, until), on
-        # Uncovered axis: the reason is unchanged (A289 path).
+                assert (row["covered"], row["tested_until"], row["valid_until"], row["expiring"],
+                        row["expired"]) == (True, "2026-12-08", "2026-12-08", expiring, expired), on
+        # Expired in the deload week: the phase keeps the test out (a real skip).
         f = rp.retest_status(st, "2026-12-09", finger_device="hangboard")["axes"]["finger"]
-        assert f["next_test_reason"] == "not_tested_recently"
+        assert f["next_test_reason"] == "blocked:phase"
 
     def test_athlete_context_shows_tested_until(self):
         ctx = ac.build_athlete_context(_status_state(), WS, with_proposals=False, include_next_week=False)

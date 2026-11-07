@@ -166,13 +166,24 @@ def test_onboarding_self_report_as_persisted_is_not_tested():
     assert sug["suggested_total_load_kg"] == 108.5  # pre-B364 % policy memory (origin/main value)
 
 
+def _self_reported(state):
+    """B414: the expired-test state turned into an UNTESTED one — no
+    ``tests.*``, the same numbers as onboarding self-reports (a baseline
+    ``source='test'`` is never a test log)."""
+    st = deepcopy(state)
+    st.pop("tests", None)
+    st["baselines"]["pulling"]["source"] = "test"
+    return st
+
+
 def test_untested_pullup_keeps_progressing_from_feedback():
     """Review B364: the B363 e2rm re-base is the untested athlete's only pull-up
     progression — three easy-ish logs must move the prescription (main: 105.5
-    → 107.5 total on the stale-test case)."""
-    from backend.tests.b364_untested_cases import _day, _instances, cases
+    → 107.5 total). B414: the former stale-test case is tested now (model A);
+    the same numbers as self-reports keep the athlete untested."""
+    from backend.tests.b364_untested_cases import _day, _instances, expired_tests_state
 
-    state = deepcopy(next(c for c in cases() if c[0] == "stale_tests")[1])
+    state = _self_reported(expired_tests_state())
 
     def _pull(st):
         out = inject_targets(_day("2026-10-09"), deepcopy(st))
@@ -190,6 +201,24 @@ def test_untested_pullup_keeps_progressing_from_feedback():
     assert (before, _pull(state)) == (105.5, 107.5)
     assert _entry(state, "weighted_pullup")["e2rm_total_kg"] == 124.5
     assert state["baselines"]["pulling"]["weighted_pullup_2rm_total_kg"] == 122.0  # baseline untouched
+
+
+def test_expired_tests_are_anchored_not_untested():
+    """B414 (model A): real tests of 19/05 / 22/05 read on 09/10 (> 90 days)
+    keep the anchored regime — the former ``stale_tests`` golden case: the
+    official max is the old test, never the legacy % policy memory, and the
+    feedback goes to the anchored branch (working load + official date)."""
+    from backend.tests.b364_untested_cases import _day, expired_tests_state
+
+    state = expired_tests_state()
+    out = inject_targets(_day("2026-10-09"), deepcopy(state))
+    sug = {i["exercise_id"]: i["suggested"] for i in out["sessions"][0]["exercise_instances"]}
+    for ex in ("weighted_pullup", "weighted_chinup", "max_hang_7s", "max_hang_5s"):
+        assert sug[ex]["load_source"] == "anchored", ex
+    assert sug["max_hang_7s"]["anchored"]["official"]["date"] == "2026-05-19"
+    assert sug["weighted_pullup"]["anchored"]["official"]["date"] == "2026-05-22"
+    assert sug["max_hang_7s"]["suggested_total_load_kg"] == 110.0
+    assert sug["weighted_pullup"]["suggested_total_load_kg"] == 105.5
 
 
 # --- (2) pulling caps and working load -------------------------------------

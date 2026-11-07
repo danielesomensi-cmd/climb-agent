@@ -15,9 +15,14 @@ Cases:
 - ``no_tests_onboarding_baselines``: no ``tests.*``; baselines persisted by
   onboarding (``source='test'`` stamped by ``estimate_missing_baselines``).
   A self-report is not a test log → untested.
-- ``stale_tests``: real tests, but older than 90 days on every resolved date.
 
-Both carry a done history in the previous week (catalog session, custom
+B414 (model A) removed the second case, ``stale_tests`` (real tests older than
+90 days on every resolved date): a real test is the tested max at ANY age, so
+that athlete is no longer untested. Its 11 entries left the golden — the raw
+diff on the current code changed only those keys, every one into the tested
+phase-anchor output — and the same state is now an explicit tested case
+(``expired_tests_state``, test_a290_phase_anchor). The remaining case carries
+a done history in the previous week (catalog session, custom
 session with logged entries, a done test session) so that the tested-only
 recency rules (custom sessions, test instances, no cap) would show up in the
 output if the scope gate leaked.
@@ -218,6 +223,12 @@ def cases() -> Dict[str, Dict[str, Any]]:
                     "bodyweight_kg": 70.0},
     }
 
+    return {"no_tests_onboarding_baselines": onboarding}
+
+
+def expired_tests_state() -> Dict[str, Any]:
+    """B414: the former ``stale_tests`` case — real tests older than 90 days on
+    every resolved date. Model A: TESTED (expired), not in the untested golden."""
     stale = _base_state()
     stale["tests"] = {
         "max_strength": [{"test_id": "max_hang_7s_total_load", "date": "2026-05-19",
@@ -225,7 +236,7 @@ def cases() -> Dict[str, Dict[str, Any]]:
         "pulling_strength": [{"test_id": "weighted_pullup_2rm", "date": "2026-05-22",
                               "total_load_2rm_kg": 112.0, "estimated_1rm_kg": 117.0, "bodyweight_kg": 70.0}],
     }
-    return {"no_tests_onboarding_baselines": onboarding, "stale_tests": stale}
+    return stale
 
 
 _A295_KEYS = ("measure", "target_reps", "dp_range")

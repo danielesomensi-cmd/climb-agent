@@ -303,8 +303,9 @@ def archive_window_start(ref_date: DateLike, ladders: Optional[Mapping[str, Any]
 
 
 def tested_gate(state: Mapping[str, Any], ref_date: DateLike) -> bool:
-    """The BW "tested athlete" gate: an official max with a test log < 90 days
-    on the finger or the pulling protocol (``retest_policy.is_tested``)."""
+    """The BW "tested athlete" gate: an official max with a test log on the
+    finger or the pulling protocol (``retest_policy.is_tested``) — at any age
+    since B414 (model A: the 90-day expiry switches nothing off)."""
     for proto in (rp.PROTOCOL_HANG_7S, rp.PROTOCOL_HANG_5S, rp.PROTOCOL_PULLUP_2RM):
         try:
             if rp.is_tested(state, proto, ref_date):

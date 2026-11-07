@@ -18,9 +18,10 @@ coach composer, the deterministic ad-hoc builder, the coach prompt — calls thi
 one function, so the same date gives the same number on every screen.
 
 Scope (DECISIONS 2026-10-04): the anchor rules apply ONLY to a TESTED baseline
-(``retest_policy.is_tested``: source test/test_session, < 90 days). For anyone
-else ``anchored_load`` returns ``None`` and the caller keeps its pre-B364 path,
-bit for bit.
+(``retest_policy.is_tested``: source test/test_session — at any age since
+B414, model A: an expired test keeps the anchored loads and their closed loop).
+For anyone else ``anchored_load`` returns ``None`` and the caller keeps its
+pre-B364 path, bit for bit.
 
 Clamp order (one place, documented because R4's pain hook depends on it):
   starting point (working load normalised, or phase target)

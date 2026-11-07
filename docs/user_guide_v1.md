@@ -183,7 +183,7 @@ Dismissing **Plan your week** keeps it hidden until the next week, even if you c
 
 ### Same main exercise for the whole phase (once you have tested)
 
-Once you have a recent strength test (max hang or weighted pull-up, within the last 90 days), the main exercises stay **fixed for the whole phase**, so you can see your progress week on week:
+Once you have done a strength test (max hang or weighted pull-up), the main exercises stay **fixed for the whole phase**, so you can see your progress week on week. This stays on when your test gets older than 90 days: nothing switches off when a test expires.
 
 - **Finger strength** — max hangs on the 20 mm edge (half crimp) if your tested level is high enough, otherwise a submaximal variant. In Power Endurance the finger session becomes a short maintenance dose (3 sets).
 - **Weighted pull-ups** — in the first **two** pulling-strength sessions of the week during Strength & Power (one in the other phases). The other sessions, and the pulling block after a limit or power day, use pull-up variations without added weight.
@@ -424,7 +424,7 @@ exercise for that slot (the dumbbell row needs a bench too).
 ### Max hangs and weighted pull-ups: your max vs your training load
 
 For **max hangs (5" and 7") and weighted pull-ups / chin-ups** the app keeps two
-separate numbers once you have a **recent test** (less than 90 days old):
+separate numbers once you have done a **test** (at any age: when it gets older than 90 days the app proposes a new test, but nothing switches off and nothing is reset):
 
 - **Your max** — the number from your last test. It changes **only when you test
   again**. Feedback never moves it, and saying "Hard" never schedules a test.
@@ -479,8 +479,9 @@ exercise — the same weight a planned session would give you — so rating it
 logged the exercise once. Choose **Fixed kg** in the builder on any of them to keep
 your own weight every time; the card shows **Auto load** while it follows you.
 
-If you haven't tested yet (or your test is older than 90 days), nothing changes
-for you: loads are worked out exactly as before. A max you typed in during
+If you haven't tested yet, nothing changes for you: loads are worked out exactly
+as before. A test older than 90 days still counts: your loads, your bodyweight
+ladders and your phase exercises keep progressing from it. A max you typed in during
 onboarding counts as a starting point, not as a test.
 
 ### Limit bouldering grades
@@ -574,20 +575,22 @@ the week loads. Sessions you already did, skipped, or that are in the past stay 
 
 Tests re-measure your baseline numbers and update your 5-axis profile. Your max only ever changes with a test: feedback moves your working loads, not your max.
 
-**Once you have tested** (a max hang and/or a weighted pull-up test in the last 90 days), the plan schedules your next tests by itself:
+**Once you have tested** (a max hang and/or a weighted pull-up test), the plan schedules your next tests by itself:
 
 - at the **end of the Strength & Power phase**, to measure what the block built;
 - at the **start of a new cycle**;
-- **12 weeks** after your last test at the latest;
+- **12 weeks** after your last test at the latest — and, if that week cannot take it, in every later week that can (never in performance or deload, never after the end of your cycle: there the new cycle opens with the tests);
 - **earlier**, when two sessions in which you measured your effort show you are clearly above your tested max (labels alone never trigger a test).
 
 A test is never repeated within **6 weeks** of the last one, whatever its confidence — only an early retest, backed by two sessions in which you measured your effort, may come after **4 weeks** (also in the last week of the strength phase). If that gap keeps the end-of-strength test out of the phase's last week, that test is skipped: the next one comes at the start of the next cycle, or 12 weeks after your last test. A test you do on any day of the week it was due in closes that week: the plan does not put it back in the days left, also when you mark the test session done without entering the numbers (your max stays the old one until you enter them with the pencil). No tests in the performance and deload phases, in the 10 days before a trip, on a day with another sport, or within 3 days of a session you rated *very hard*. The finger test needs **72 hours** without hard finger work before it (limit bouldering, max hangs, a hard day outdoors — custom sessions count too) and the pull-up test **48 hours** without heavy pulling. When the plan rebuilds a week, the sessions you added or moved yourself — and the ones still planned for today when you rebuild "from tomorrow" — count for these 72-hour and 48-hour rules too, and a test you moved (or one already planned on a day the rebuild keeps) stays where it is instead of being scheduled a second time. When both are due they share a day: **max hang first, pull-up after**, in a later slot — also when you moved one of the two yourself, or when a rebuild keeps one where it was: the other one joins that day, or waits for its next turn if it cannot fit there. When no day can take them in two separate slots, they become **one combined session** on one day: the max hang first, then the 2RM pull-up after a 5-minute rest, then the secondary measurements — never two separate days. If even that does not fit (heavy pulling the day before, or no weights where you train that day), the max hang goes alone and the pull-up test waits for its next turn. The weighted pull-up test needs a place with weights (dumbbells, a kettlebell, a barbell or plates): the plan only puts it where they are.
+
+**When a test expires.** A test is valid for **90 days**. When it expires nothing switches off and nothing is reset: your training loads, your bodyweight ladders, your phase exercises and the coach keep working from your last test and keep progressing with your feedback. The expiry only means it is time to measure again.
 
 **Week** shows a **"Your tested maxes"** card: each max with its test date and confidence, how it moved since the previous test (under 5% counts as *stable*), and the next test with the reason. Only numbers from a real test appear there — an estimate made at onboarding is never shown as a tested max. If something lands too close to a planned test after the plan was made (a very hard session, a finger session you added), the card tells you — the test is not moved automatically; move it yourself if you are not fresh.
 
 **Not this week.** If you remove a test the plan scheduled, or put another session in its place (a different session for that slot, a rest day for the whole day), the plan takes it as *not this week*: when the week is rebuilt, the test does not come back on another day of that week. Moving the test to another day is different — it stays where you put it. The app has no way to put a removed test back into that week (removing a session cannot be undone), so remove a test only when you mean to skip it. It is only that week: in a later week the plan offers the test again whenever a reason to test applies — after the end-of-strength test, that is the next one (a new cycle, 12 weeks since your last test, two sessions in which you measured your effort above your max).
 
-**Until the plan schedules both tests itself** — you have not tested yet, only one of the two tests is recent, your last test is older than 90 days, or you train fingers on a loading pin — every **~6 weeks** a **"Time to retest"** card appears on **Today** with three choices:
+**Until the plan schedules both tests itself** — you have not tested yet, you have tested only one of the two, or you train fingers on a loading pin — every **~6 weeks** a **"Time to retest"** card appears on **Today** with three choices:
 
 - **Schedule test week** — a test session is added to next week's plan
 - **Next week** — you'll be asked again in 7 days

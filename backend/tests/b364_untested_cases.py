@@ -22,6 +22,14 @@ so the athlete stays untested.
 Regenerating the golden: copy this file into a checkout of origin/main @ 61ecfd4
 and dump ``json.dumps(compute(), sort_keys=True, indent=1)``.
 
+B414 (model A) removed the ``stale_tests`` case (real tests of 19/05 and
+22/05 read on 09/10): a real test is the tested max at ANY age, so that
+athlete is anchored, no longer untested. Its golden entry was dropped after
+checking the raw diff on the current code — only that key changed (inject,
+picker, propose, feedback and progression legs all moved to the anchored
+regime) — and the same state is now an explicit tested case
+(``expired_tests_state``, test_b364_official_max_vs_working_load).
+
 Pure data + one function, importable by the generator without pytest.
 """
 
@@ -62,6 +70,29 @@ def _day(day: str, intent: str = "strength") -> Dict[str, Any]:
     }]}
 
 
+def expired_tests_state() -> Dict[str, Any]:
+    """B414: the former ``stale_tests`` case — real tests of 19/05 and 22/05,
+    read on 09/10 (> 90 days). Model A: TESTED (expired), anchored."""
+    return {
+        "bodyweight_kg": 77.0,
+        "macrocycle": deepcopy(_MACRO),
+        "tests": {
+            "max_strength": [{"test_id": "max_hang_7s_total_load", "date": "2026-05-19", "total_load_kg": 122.0,
+                              "bodyweight_kg": 77.0}],
+            "pulling_strength": [{"test_id": "weighted_pullup_2rm", "date": "2026-05-22", "total_load_2rm_kg": 122.0,
+                                  "estimated_1rm_kg": 127.8, "bodyweight_kg": 77.0}],
+        },
+        "baselines": {
+            "pulling": {"weighted_pullup_2rm_total_kg": 122.0, "weighted_pullup_1rm_estimated_kg": 127.8,
+                        "weighted_pullup_1rm_total_kg": 127.8, "source": "test_session", "updated_at": "2026-05-22",
+                        "max_external_load_kg": 50.5, "bodyweight_kg": 77.0},
+            "hangboard": [{"max_total_load_kg": 122.0, "source": "test", "updated_at": "2026-05-19",
+                           "hang_seconds": 7, "edge_mm": 20, "grip": "half_crimp"}],
+        },
+        "working_loads": {"entries": [], "rules": {}},
+    }
+
+
 def cases() -> List[Tuple[str, Dict[str, Any], str]]:
     """(name, persisted state, date) — every state is UNTESTED on its date."""
     estimated = {
@@ -80,24 +111,6 @@ def cases() -> List[Tuple[str, Dict[str, Any], str]]:
             {"exercise_id": "weighted_chinup", "key": "weighted_chinup", "setup": {}, "next_external_load_kg": 20.0,
              "next_total_load_kg": 95.0, "updated_at": "2026-10-01"},
         ], "rules": {}},
-    }
-    stale = {
-        "bodyweight_kg": 77.0,
-        "macrocycle": deepcopy(_MACRO),
-        "tests": {
-            "max_strength": [{"test_id": "max_hang_7s_total_load", "date": "2026-05-19", "total_load_kg": 122.0,
-                              "bodyweight_kg": 77.0}],
-            "pulling_strength": [{"test_id": "weighted_pullup_2rm", "date": "2026-05-22", "total_load_2rm_kg": 122.0,
-                                  "estimated_1rm_kg": 127.8, "bodyweight_kg": 77.0}],
-        },
-        "baselines": {
-            "pulling": {"weighted_pullup_2rm_total_kg": 122.0, "weighted_pullup_1rm_estimated_kg": 127.8,
-                        "weighted_pullup_1rm_total_kg": 127.8, "source": "test_session", "updated_at": "2026-05-22",
-                        "max_external_load_kg": 50.5, "bodyweight_kg": 77.0},
-            "hangboard": [{"max_total_load_kg": 122.0, "source": "test", "updated_at": "2026-05-19",
-                           "hang_seconds": 7, "edge_mm": 20, "grip": "half_crimp"}],
-        },
-        "working_loads": {"entries": [], "rules": {}},
     }
     no_baselines = {
         "bodyweight_kg": 70.0,
@@ -126,7 +139,6 @@ def cases() -> List[Tuple[str, Dict[str, Any], str]]:
     return [
         ("estimated_baselines_sp", estimated, "2026-10-09"),
         ("estimated_baselines_pe", estimated, "2026-10-21"),
-        ("stale_tests", stale, "2026-10-09"),
         ("no_baselines", no_baselines, "2026-10-09"),
         ("onboarding_measured", onboarding_measured, "2026-10-09"),
         ("onboarding_measured_persisted", onboarding_persisted, "2026-10-09"),

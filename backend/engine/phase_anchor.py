@@ -34,7 +34,8 @@ exclusion of every max-load finger exercise.
 
 SCOPE (DECISIONS 2026-10-04): all of this applies ONLY to an athlete with a
 TESTED baseline (``retest_policy.is_tested`` on the finger or the pulling
-protocol: source test/test_session, < 90 days). For everyone else
+protocol: source test/test_session, at any age since B414 — model A). For
+everyone else
 ``build_rotation_context`` returns ``None`` and the resolver is bit-for-bit
 the pre-A290 one (regression test: ``test_a290_phase_anchor.py``).
 
@@ -210,7 +211,7 @@ def tested_ratio(state: Mapping[str, Any], axis: str, on: date) -> Optional[floa
     """Total load / bodyweight of the tested official max on ``on``, or ``None``.
 
     ``None`` when the axis has no TESTED official max (source test/test_session,
-    < 90 days — ``retest_policy``), when the hang test is on an edge other than
+    any age since B414 — ``retest_policy``), when the hang test is on an edge other than
     20 mm, or when no bodyweight is known. The test's own bodyweight wins.
     """
     protocol = rp.PROTOCOL_HANG_7S if axis == AXIS_FINGER else rp.PROTOCOL_PULLUP_2RM

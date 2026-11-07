@@ -13,8 +13,12 @@ Primitives (pure, deterministic, never write state, never ``date.today()``):
   freshest 7 s test, never from a > 90-day 5 s test). Official max =
   tests/baselines, which only test logs write; feedback never does.
 - ``is_tested(...)`` — the gate every "train harder" rule uses: source
-  test/test_session and younger than ``TEST_FRESH_DAYS``. Untested users keep
-  today's behaviour bit for bit.
+  test/test_session, at ANY age (B414 model A: the expiry switches nothing
+  off). Untested users keep today's behaviour bit for bit.
+- B414: ``official_max`` also says when the max expires — ``valid_until``
+  (the test day + ``TEST_FRESH_DAYS`` − 1), ``expired`` and ``expiring``
+  (``EXPIRY_WARNING_D`` days before). Informational: the Today card and the
+  coach propose "do the test" / "postpone the expiry"; nothing is reset.
 - ``test_confidence(state, test, archived_weeks=...)`` — computed, never read
   from the stored ``confidence`` field: low when the athlete had fewer than
   ``LOW_CONF_MIN_EXPOSURES`` exposure days of the same family in the
@@ -62,8 +66,16 @@ DateLike = Union[date, str]
 # ENGINEERING CONSTANTS and are labelled as such.
 # ---------------------------------------------------------------------------
 
-#: A test older than this is not a usable official max for intensity rules.
+#: B414 (model A): a real test stays the official max at ANY age — this is
+#: its validity, not a gate. ``official_max`` reads ``valid_until`` = the test
+#: day + TEST_FRESH_DAYS − 1 (``fresh`` = younger than this); past it the max is
+#: ``expired`` and the app proposes the test, nothing switches off. Before
+#: B414 a test older than this was "untested" (ladders, anchored loads, phase
+#: rotation and the tested coach all switched off on day 90).
 TEST_FRESH_DAYS = 90
+#: B414: the max is ``expiring`` from this many days before ``valid_until``
+#: (the Today card "Do the test / Postpone the expiry" shows from then on).
+EXPIRY_WARNING_D = 14
 
 #: Confidence of a test: fewer than LOW_CONF_MIN_EXPOSURES exposure days of the
 #: tested family in the LOW_CONF_WINDOW_D days before it → "low".
@@ -256,6 +268,19 @@ def _pull_candidates(state: Mapping[str, Any], as_of: date) -> List[Dict[str, An
     return cands
 
 
+def _validity(tested: bool, test_day: date, on: date) -> Dict[str, Any]:
+    """B414: ``valid_until`` / ``expired`` / ``expiring`` of an official max on
+    ``on`` (a non-test max has no validity: None / False / False)."""
+    if not tested:
+        return {"valid_until": None, "expired": False, "expiring": False}
+    until = test_day + timedelta(days=TEST_FRESH_DAYS - 1)
+    return {
+        "valid_until": until.isoformat(),
+        "expired": on > until,
+        "expiring": until - timedelta(days=EXPIRY_WARNING_D) <= on <= until,
+    }
+
+
 def official_max(state: Mapping[str, Any], protocol: str, as_of: DateLike) -> Optional[Dict[str, Any]]:
     """The official max for ``protocol`` on ``as_of``, or ``None``.
 
@@ -263,7 +288,13 @@ def official_max(state: Mapping[str, Any], protocol: str, as_of: DateLike) -> Op
 
         {protocol, family, total_kg, date, age_days, fresh, tested, source,
          test_id, seconds?, source_seconds?, converted?, one_rm_kg?,
-         bodyweight_kg, edge_mm?, grip?, stored_confidence}
+         bodyweight_kg, edge_mm?, grip?, stored_confidence,
+         valid_until, expired, expiring}
+
+    - B414 (model A): ``tested`` = the max comes from a real test (a
+      ``tests.*`` entry, or a baseline a test log wrote), at ANY age. ``fresh``
+      (younger than ``TEST_FRESH_DAYS``) is informational, and so are
+      ``valid_until`` / ``expired`` / ``expiring`` (``_validity``).
 
     - Freshest candidate ≤ ``as_of`` wins; on a date tie a same-duration hang
       test wins over a converted one.
@@ -293,7 +324,8 @@ def official_max(state: Mapping[str, Any], protocol: str, as_of: DateLike) -> Op
             "date": best["date"].isoformat(),
             "age_days": age,
             "fresh": age < TEST_FRESH_DAYS,
-            "tested": _cand_tested(best) and age < TEST_FRESH_DAYS,
+            "tested": _cand_tested(best),
+            **_validity(_cand_tested(best), best["date"], on),
             "from_baseline": bool(best.get("from_baseline")),
             "source": best["source"],
             "test_id": best["test_id"],
@@ -320,7 +352,8 @@ def official_max(state: Mapping[str, Any], protocol: str, as_of: DateLike) -> Op
             "date": best["date"].isoformat(),
             "age_days": age,
             "fresh": age < TEST_FRESH_DAYS,
-            "tested": _cand_tested(best) and age < TEST_FRESH_DAYS,
+            "tested": _cand_tested(best),
+            **_validity(_cand_tested(best), best["date"], on),
             "from_baseline": bool(best.get("from_baseline")),
             "source": best["source"],
             "test_id": best["test_id"],
@@ -331,7 +364,8 @@ def official_max(state: Mapping[str, Any], protocol: str, as_of: DateLike) -> Op
 
 
 def is_tested(state: Mapping[str, Any], protocol: str, as_of: DateLike) -> bool:
-    """The "tested baseline" gate: official max with source test/test_session, < 90 days."""
+    """The "tested baseline" gate: official max with source test/test_session,
+    at any age (B414 model A — before, < 90 days)."""
     om = official_max(state, protocol, as_of)
     return bool(om and om["tested"])
 
@@ -446,7 +480,9 @@ def is_heavy_pulling_session(
 #
 # Scope: an axis is COVERED only when the athlete has a tested official max
 # for it on the week start (``official_max(...)["tested"]``: source
-# test/test_session, < 90 days). Untested axes, stale tests and loading-pin
+# test/test_session, at any age since B414 — model A: an expired test still
+# covers the axis, and the maintenance trigger proposes the test in every
+# useful week from MAINTENANCE_RETEST_D on). Untested axes and loading-pin
 # finger users are not covered: the legacy PASS 3 keeps scheduling them bit
 # for bit. ``retest_decisions`` returns ``None`` when nothing is covered, and
 # the planner is byte-identical to the pre-A289 one with ``None``.
@@ -550,8 +586,9 @@ AXIS_SIGNAL_EXERCISES: Dict[str, Tuple[str, ...]] = {
 #: floor (LOW_CONF_RETEST_D).
 HIGH_CONF_RETEST_D = 42
 #: A tested axis is re-measured at the latest after 12 weeks (same as the
-#: planner's MAX_WEEKS_UNTESTED; after 90 days the axis is no longer "tested"
-#: and the legacy schedule takes over).
+#: planner's MAX_WEEKS_UNTESTED). B414: the axis stays covered after the
+#: 90-day expiry — the maintenance trigger keeps proposing the test in every
+#: week where the phase allows one (before B414 the legacy schedule took over).
 MAINTENANCE_RETEST_D = 84
 #: Measured sessions above the official max needed for an early retest.
 EARLY_RETEST_SIGNALS = 2
@@ -1558,7 +1595,8 @@ def retest_status(
     Per axis::
 
         {axis, covered, official_total_kg, test_date, age_days, protocol,
-         tested_until,           # B400: last day the max counts as tested
+         tested_until,           # B400; B414: = valid_until (kept for old clients)
+         valid_until, expired, expiring,   # B414 (model A): informational
          confidence, confidence_exposures, trend, delta_pct, previous_date,
          earliest_retest, signals: {count, needed}, fatigue,
          next_test: {date, session_id, source: planned|projected, trigger,
@@ -1568,14 +1606,19 @@ def retest_status(
          plan_edit_declines}     # A320 (covered axes): weeks the athlete took the test out of
 
     ``covered`` False → the axis is scheduled by the legacy planner rules
-    (untested, test older than 90 days, loading pin); ``tested_until`` None.
+    (no real test — a row is shown only for a real test, so in practice a
+    loading-pin finger axis never has one); ``tested_until`` None. B414 (model
+    A): a real test covers the axis at any age; ``valid_until`` (the test day
+    + 89, the same day as ``tested_until``), ``expired`` and ``expiring``
+    (from ``EXPIRY_WARNING_D`` days before) only say when to propose the test.
     ``earliest_retest`` (A319): the first day any test of the axis may come
     (test + HIGH_CONF_RETEST_D, or the early retest's first day when that comes
     sooner).
     ``next_test_reason`` is the last skip the projection met — else
-    ``not_tested_recently`` when it reaches the 90-day expiry (B400: a real
-    skip is no longer overwritten there), ``not_due_within_horizon`` when it
-    runs out of weeks. A320: a ``declined`` / ``postponed`` skip met before any
+    ``after_cycle_end`` when it reaches the end of the macrocycle (B414: no
+    test is ever due after it; before B414 the projection stopped at the
+    90-day expiry with ``not_tested_recently``, which a real test no longer
+    reaches), ``not_due_within_horizon`` when it runs out of weeks. A320: a ``declined`` / ``postponed`` skip met before any
     due week takes precedence over the others.
     ``declines`` (A320): ``decline_view`` of each active stored record (reason
     code, never the note). ``plan_edit_declines``: ``{week_start, declined_at,
@@ -1600,10 +1643,11 @@ def retest_status(
             "test_date": om.get("date"),
             "age_days": om.get("age_days"),
         }
-        # B400: the last day the official max still counts as tested (fresh
-        # for TEST_FRESH_DAYS days, the test day included); None once expired.
-        row["tested_until"] = ((_as_date(om["date"]) + timedelta(days=TEST_FRESH_DAYS - 1)).isoformat()
-                               if row["covered"] else None)
+        # B414 (model A): the max never stops counting; ``valid_until`` (the
+        # test day + TEST_FRESH_DAYS − 1) only says when to propose the test.
+        # ``tested_until`` (B400) is the same day, kept for the old clients.
+        row.update({k: om.get(k) for k in ("valid_until", "expired", "expiring")})
+        row["tested_until"] = om.get("valid_until") if row["covered"] else None
         conf = axis_confidence(state, om, archived_weeks=archived_weeks)
         row.update({"confidence": conf["confidence"], "confidence_exposures": conf["exposures"],
                     "confidence_min_exposures": conf["min_required"]})
@@ -1662,15 +1706,23 @@ def retest_status(
         ws = _monday(td)
         last_skip = None
         declined_skip = None  # A320: the first decline the projection meets
+        from backend.engine.macro_position import position_on
+
+        macrocycle = state.get("macrocycle") or {}
         for k in range(max(1, horizon_weeks)):
             wk = ws + timedelta(days=7 * k)
+            pos = position_on(dict(macrocycle), wk.isoformat()) if macrocycle else None
+            if pos and pos.get("after_end"):
+                # B414: no test is due after the end of the macrocycle (the
+                # athlete starts the next cycle, which opens with the tests).
+                # A real skip met on the way stays the reason (B400).
+                last_skip = last_skip or "after_cycle_end"
+                break
             dec = _axis_week_decision(state, axis, wk, today=td, finger_device=finger_device,
                                       archived_weeks=archived_weeks, check_already_scheduled=False)
             if dec is None:
-                # The official max reaches its 90-day expiry inside the horizon.
-                # B400: a real skip met on the way (no_placement_slot, a trip…)
-                # stays the reason — it used to be overwritten here, and the
-                # card said "not due yet" about a test the plan had dropped.
+                # Defensive (the axis is covered on ``td``, so on every later
+                # week too since B414). B400: a real skip met on the way stays.
                 last_skip = last_skip or "not_tested_recently"
                 break
             hot = _hot_plan(state, wk.isoformat())
@@ -1778,7 +1830,7 @@ def _planned_reason(state: Mapping[str, Any], axis: str, planned: Mapping[str, A
 
 
 __all__ = [
-    "TEST_FRESH_DAYS", "LOW_CONF_MIN_EXPOSURES", "LOW_CONF_WINDOW_D", "LOW_CONF_RETEST_D",
+    "TEST_FRESH_DAYS", "EXPIRY_WARNING_D", "LOW_CONF_MIN_EXPOSURES", "LOW_CONF_WINDOW_D", "LOW_CONF_RETEST_D",
     "HANG_PCT_PER_S",
     "FINGER_GAP_H", "RETEST_BLOCK_H", "PULL_TEST_BLOCK_H", "HEAVY_PULL_PCT_1RM",
     "VERY_HARD_BLOCK_D", "PRE_TRIP_BLOCK_D", "RETEST_BLOCKED_PHASES",

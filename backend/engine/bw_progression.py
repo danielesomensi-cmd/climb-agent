@@ -18,7 +18,8 @@ a deterministic closed loop (BW spec, ``engine_rules`` R0-R12):
 - **Seed** — when a family has no entry, the entry is derived at read time by
   the same pure function (``bw_ladders.seed_levels``) in the resolver, in the
   custom read path and in ``apply_feedback``: tested athletes only (official
-  max with a test log < 90 days). Untested athletes have no entry and every
+  max with a test log, at any age since B414 — model A: an expired test keeps
+  the ladders moving). Untested athletes have no entry and every
   consumer is a no-op for them (bit-for-bit unchanged).
 - **next_state** — label / measure steps (B413: very_easy +3, easy +2, ok
   +1, a done unrated row = ok), promotion after ``advance_sessions`` sessions
@@ -822,8 +823,10 @@ def apply_bw_item(
     athlete has an entry for, ``None`` otherwise (the caller falls through).
 
     Rules (BW spec "DOVE NEL CODICE" b):
-    - B413: the tested gate closed (untested, or the official test expired)
-      → no-op: the ladders are neither read nor written (no invisible climb);
+    - B413: the tested gate closed (untested) → no-op: the ladders are
+      neither read nor written (no invisible climb). B414 (model A): an
+      expired official test keeps the gate open — the feedback still moves
+      the ladders;
     - no entry (no persisted state, no seed) → no-op;
     - B413 (A1): a done row with no label counts as ok (``ladder_row_done``);
       a row not done with no label and no measure moves nothing;

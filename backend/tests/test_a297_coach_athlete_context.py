@@ -528,13 +528,24 @@ class TestReviewFixes:
     INTENT = {"equipment_set": "home", "focus": "pull", "minutes": 60, "energy": "high"}
 
     def test_stale_max_stays_in_the_chat_block_flagged(self):
+        # B414 (model A): a real test older than 90 days is still the tested
+        # max — the coach keeps the tested regime and reads it as tested.
         st = _st()
         st["tests"] = _stale_tests(st)
         ctx = _ctx(st)
-        assert any(m for m in ctx["maxima"].values()) and not ac.athlete_is_tested(ctx)
+        assert any(m for m in ctx["maxima"].values()) and ac.athlete_is_tested(ctx)
         text = ac.render_coach_block(ctx)
         assert "Official maxima" in text
-        assert "stale or not a test" in text and "changes ONLY with a test" in text
+        assert "tested 2026-05-01" in text and "stale or not a test" not in text
+
+    def test_a_self_report_stays_flagged_not_a_test(self):
+        # The A297 flag stays for a baseline-only self-report (never a test).
+        st = _untested(_st())
+        st["baselines"] = {"hangboard": [{"max_total_load_kg": 105.0, "source": "test",
+                                          "updated_at": "2026-09-07", "hang_seconds": 7}]}
+        ctx = _ctx(st)
+        assert not ac.athlete_is_tested(ctx)
+        assert "stale or not a test" in ac.render_coach_block(ctx)
 
     def test_pain_block_makes_the_day_no_max_and_is_named(self, catalog):
         st = _st(progression_counters={"pain_blocks": {

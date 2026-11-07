@@ -498,7 +498,8 @@ Every selection produces a `trace` dict with counts at each stage, enabling prod
 
 **Scope:** only athletes with a TESTED baseline on the finger or the pulling
 axis (`retest_policy.is_tested`: a `tests.*` entry, source test/test_session,
-< 90 days). Otherwise `build_rotation_context()` returns `None` and every new
+at any age since B414 — model A, the 90-day expiry switches nothing off).
+Otherwise `build_rotation_context()` returns `None` and every new
 P0 kwarg keeps its default: the resolver is bit-for-bit the pre-A290 one
 (golden `backend/tests/fixtures/a290_untested_golden.json`).
 
@@ -665,7 +666,7 @@ Two numbers, never mixed:
 
 `anchored_load(state, exercise_id, date=…)` is the ONE prescription of the four
 anchored exercises (weighted_pullup, weighted_chinup, max_hang_5s/7s) for a
-**tested** athlete (persisted state, test < 90 days); `None` otherwise and the
+**tested** athlete (persisted state, a real test at any age — B414 model A); `None` otherwise and the
 pre-B364 branches run unchanged (golden-tested, B363 `e2rm_total_kg` re-base
 included; "tested" = a `tests.*` entry or a `test_session` baseline — an
 onboarding self-report persisted as `source: test` does not count). Consumers: `inject_targets`,
@@ -704,8 +705,8 @@ longer touch `test_queue`) and the fatigue days (`hard_labels`).
 ### 8.2 Retest policy — who schedules a test (A289)
 
 Only `retest_policy.retest_decisions(state, week_start, ...)` schedules tests of
-a **covered** axis (finger with a hangboard, pulling; covered = a test < 90
-days). `GET /api/week` computes it when it GENERATES a week (archived weeks and
+a **covered** axis (finger with a hangboard, pulling; covered = a real test, at
+any age since B414). `GET /api/week` computes it when it GENERATES a week (archived weeks and
 outdoor rows read fail-soft) and passes it to `generate_phase_week(retest_decisions=...)`:
 
 ```
@@ -725,7 +726,8 @@ planner PASS 3a   → day-level against the week AS THE B369 MERGE WILL SAVE IT
                     hang alone + pull-up blocked:no_paired_slot
 planner PASS 3    → historical, only for the axes the policy does not cover
 retest_status     → live on every GET: official max, confidence, trend (±5 %),
-                    tested_until, next test (planned with reason | projected),
+                    valid_until / expired / expiring (B414; tested_until = the
+                    same day), next test (planned with reason | projected),
                     live blockers
 ```
 
@@ -733,6 +735,22 @@ retest_status     → live on every GET: official max, confidence, trend (±5 %)
 without `retest_status`. A cached week is never regenerated for the policy; the
 live status flags a planned test that became too close to a hard session
 instead of moving it.
+
+**The expiry switches nothing off (B414, model A — decision of 2026-11-07).**
+`official_max(...).tested` is "a real test" (a `tests.*` entry, or a baseline a
+test log wrote) at ANY age. Before B414 it also required an age < 90 days, and
+that one gate turned off, on day 90, the ladders (`bw_ladders.tested_gate`), the
+anchored loads and their closed loop (`anchored_load` → the legacy branch),
+the A290 rotation, the A292 PE anchor, the tested coach and the policy's
+coverage. Now the 90 days are the max's **validity**, informational only:
+`official_max` returns `valid_until` (test day + `TEST_FRESH_DAYS` − 1),
+`expired` and `expiring` (from `EXPIRY_WARNING_D` = 14 days before), and so does
+`retest_status` per axis. The axis stays covered: from `MAINTENANCE_RETEST_D`
+the maintenance trigger proposes the test in every week the phase allows (never
+in performance / deload, never after the end of the macrocycle — the projection
+stops there with `next_test_reason: after_cycle_end`). An onboarding
+self-report is still never a test. Nothing is written: the readings change, no
+stored field does.
 
 **A test done in its week closes it (B414, A289-TEST-DONE-IN-WEEK).** The
 decision reads the official max on the Monday of the week, so a test logged

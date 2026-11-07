@@ -86,13 +86,36 @@ def test_same_day_tie_prefers_same_duration():
 def test_as_of_excludes_later_tests_and_staleness():
     om = rp.official_max(_state(), rp.PROTOCOL_HANG_7S, "2026-09-23")
     assert om["date"] == "2026-05-19" and om["total_kg"] == 122.0
-    assert om["age_days"] == 127 and om["fresh"] is False and om["tested"] is False
+    # B414 (model A): a real test of 127 days is still the tested max — only
+    # expired (valid_until = 19/05 + 89), never "untested".
+    assert om["age_days"] == 127 and om["fresh"] is False and om["tested"] is True
+    assert (om["valid_until"], om["expired"], om["expiring"]) == ("2026-08-16", True, False)
     assert rp.official_max(_state(), rp.PROTOCOL_HANG_7S, "2026-03-01") is None
 
 
 def test_ninety_day_boundary():
-    assert rp.is_tested(_state(), rp.PROTOCOL_HANG_7S, "2026-12-22") is True   # 89 d
-    assert rp.is_tested(_state(), rp.PROTOCOL_HANG_7S, "2026-12-23") is False  # 90 d
+    """B414 (model A): the 90-day boundary is the validity, not a gate."""
+    for on in ("2026-12-22", "2026-12-23", "2027-09-24"):
+        assert rp.is_tested(_state(), rp.PROTOCOL_HANG_7S, on) is True
+    view = {on: {k: rp.official_max(_state(), rp.PROTOCOL_HANG_7S, on)[k]
+                 for k in ("valid_until", "expired", "expiring", "fresh")}
+            for on in ("2026-12-07", "2026-12-08", "2026-12-22", "2026-12-23")}
+    assert view == {
+        "2026-12-07": {"valid_until": "2026-12-22", "expired": False, "expiring": False, "fresh": True},
+        "2026-12-08": {"valid_until": "2026-12-22", "expired": False, "expiring": True, "fresh": True},  # − 14
+        "2026-12-22": {"valid_until": "2026-12-22", "expired": False, "expiring": True, "fresh": True},  # 89 d
+        "2026-12-23": {"valid_until": "2026-12-22", "expired": True, "expiring": False, "fresh": False},  # 90 d
+    }
+
+
+def test_a_baseline_self_report_has_no_validity():
+    """B414: an onboarding self-report (baseline ``source='test'``) is not a
+    test: still untested, and nothing expires."""
+    s = {"baselines": {"hangboard": [{"max_total_load_kg": 105.0, "source": "test", "updated_at": "2026-01-07",
+                                      "hang_seconds": 7}]}}
+    om = rp.official_max(s, rp.PROTOCOL_HANG_7S, "2026-10-13")
+    assert om["tested"] is False
+    assert (om["valid_until"], om["expired"], om["expiring"]) == (None, False, False)
 
 
 def test_pullup_2rm_and_saved_1rm():
