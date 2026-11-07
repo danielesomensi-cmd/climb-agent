@@ -176,6 +176,27 @@ def _default_gym_id_from_plan(plan: Dict[str, Any]) -> Optional[str]:
     return gym_id if isinstance(gym_id, str) and gym_id else None
 
 
+class SessionNotInPlan(ValueError):
+    """B414 (INBOX-2026-11-04-ORPHAN): a ``mark_done`` whose session is not on
+    that day of the plan (removed or replaced since the client loaded it — the
+    04/11 treadmill_hiit_4x4 played on a phone after the coach swapped it for
+    a custom). Before B414 the event did nothing in silence and the caller
+    still wrote a completion-log row for it: an orphan completion. A
+    ``ValueError`` like the "session not found" of mark_skipped and
+    remove_session, so ``/events`` answers 422 (dry run included) — and a
+    dedicated class, so ``/feedback`` can tell it from the B216 "date outside
+    the plan window" ValueError and never retry it on another week."""
+
+    def __init__(self, date: Optional[str], session_ref: Optional[str], slot: Optional[str]):
+        super().__init__(
+            f"Session not in the plan: day={date} session_ref={session_ref} slot={slot} "
+            "(removed or replaced since the plan was loaded)"
+        )
+        self.date = date
+        self.session_ref = session_ref
+        self.slot = slot
+
+
 def _session_matches(session: Dict[str, Any], *, session_ref: Optional[str], slot: Optional[str]) -> bool:
     if session_ref and session.get("session_id") != session_ref:
         return False
@@ -1271,6 +1292,10 @@ def apply_events(
                 if _session_matches(s, session_ref=event.get("session_ref"), slot=event.get("slot")):
                     s["status"] = "done"
                     break
+            else:
+                # B414 (ORPHAN): nothing on that day matches — refuse instead
+                # of logging a completion for a session that is not there.
+                raise SessionNotInPlan(event.get("date"), event.get("session_ref"), event.get("slot"))
             _recompute_day_status(day)
 
         elif event_type == "mark_planned":

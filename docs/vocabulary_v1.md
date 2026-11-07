@@ -1740,6 +1740,11 @@ Other A301 semantics:
   An outdoor override keeps the day's user-owned sessions and drops the engine's.
 - **`move_session`** onto a done/skipped session → `ValueError` → 422. A planned session there (engine or the
   user's) is replaced, as before.
+- **`SessionNotInPlan`** (B414, INBOX-2026-11-04-ORPHAN, `replanner_v1`): `mark_done` whose `session_ref` / `slot`
+  match nothing on that day of the plan (removed or replaced since the client loaded it). A `ValueError` subclass:
+  `/events` → 422, dry run included, nothing written (no completion-log row — before B414 an orphan row was
+  logged for a session that was not there). `/feedback` recognises it (never the B216 rollover retry) and still
+  answers 200 for now; a `mark_done` on a session already done is matched (idempotent), not an orphan.
 - **Quick-add `force`**: compatibility no-op (no `forced`, no `user_forced` stamp); every quick-add is applied.
 - **`change_gym`** losing a finger session: no compensation; the `change_gym` adaptation gets
   `lost_finger: true` + a warning string. A319: the catalog `required_equipment` of `test_max_weighted_pullup`

@@ -63,7 +63,7 @@ from backend.engine.measured_feedback import (
     sanitize_pain,
 )
 from backend.engine.progression_v1 import apply_feedback
-from backend.engine.replanner_v1 import apply_events
+from backend.engine.replanner_v1 import SessionNotInPlan, apply_events
 from backend.engine.resolve_session import normalize_limitations, _check_exercise_limitation
 
 router = APIRouter(prefix="/api/feedback", tags=["feedback"])
@@ -307,6 +307,17 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
             start_key = week_plan.get("start_date", "")
             if start_key:
                 state.setdefault("week_plans", {})[start_key] = week_plan
+        except SessionNotInPlan as e:
+            # B414 (ORPHAN): the day is in the plan but the session is not
+            # (removed / replaced since the client loaded it). Never the B216
+            # rollover case: no retry on another week. /feedback still answers
+            # 200 and records the feedback as before B414 — the 409
+            # session_not_in_plan before any write is a later step, released
+            # after the app learns to handle it.
+            logger.warning(
+                "B414 orphan feedback: session not in the plan, inline mark_done skipped: %s",
+                e,
+            )
         except ValueError as e:
             # B216 Defect B: _find_day raises ValueError when target_date is
             # outside the plan window — typically when current_week_plan is
@@ -345,6 +356,11 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
                     logger.info(
                         "B216: mark_done landed in week_plans[%s] (current_week_plan was stale)",
                         target_monday,
+                    )
+                except SessionNotInPlan as e2:
+                    logger.warning(
+                        "B414 orphan feedback: session not in week_plans[%s], inline mark_done skipped: %s",
+                        target_monday, e2,
                     )
                 except ValueError as e2:
                     logger.warning(
