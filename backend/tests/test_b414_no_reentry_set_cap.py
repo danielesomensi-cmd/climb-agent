@@ -119,3 +119,35 @@ class TestAthleteContextAndLegacy:
         b = ac.build_athlete_context(deepcopy(snapshot), GAP_DAY, with_proposals=False, include_next_week=False)
         assert st == snapshot  # byte for byte: the legacy fields stay as they were
         assert a == b  # deterministic
+
+
+class TestWeekReadOfCustoms:
+    def test_get_week_view_anchors_planned_customs_and_keeps_played_ones(self):
+        """Review B414 step 6: the GET /api/week read path
+        (``_with_custom_anchored_loads`` → ``resolve_custom_exercises``). A done
+        custom stored before B414 (5 sets, legacy ``stored_sets`` / ``ramp`` /
+        ``reentry_sets``) comes back byte for byte; a planned 6-set hang custom
+        on the gap day keeps its 6 sets, with no ``stored_sets`` (the old code
+        showed 5); the stored plan is never mutated."""
+        from backend.api.routers.week import _with_custom_anchored_loads
+
+        legacy = {"exercise_id": "max_hang_7s", "sets": 5, "stored_sets": 6, "work_seconds": 7, "load_kg": 20.0,
+                  "anchored": {"ramp": {"n": 1, "gap_days": 19, "in_reentry": True, "source": "exposures"},
+                               "guards": [{"guard": "reentry_sets", "sets": 5}]}}
+        planned = {"exercise_id": "max_hang_7s", "sets": 6, "work_seconds": 7, "load_kg": 20.0}
+        plan = {"start_date": "2026-10-12", "weeks": [{"days": [
+            {"date": "2026-10-12", "sessions": [{"session_id": "custom_cs_old", "is_custom": True,
+                                                 "slot": "evening", "status": "done", "exercises": [legacy]}]},
+            {"date": GAP_DAY, "sessions": [{"session_id": "custom_cs_new", "is_custom": True,
+                                           "slot": "evening", "status": "planned", "exercises": [planned]}]},
+        ]}]}
+        before = deepcopy(plan)
+        out = _with_custom_anchored_loads(plan, _daniele())
+        assert plan == before
+        played, upcoming = out["weeks"][0]["days"]
+        assert played == before["weeks"][0]["days"][0]  # byte for byte
+        row = upcoming["sessions"][0]["exercises"][0]
+        assert (row["sets"], row["load_source"]) == (6, "anchored")
+        assert "stored_sets" not in row and "ramp" not in row["anchored"]
+        assert all(g.get("guard") != "reentry_sets" for g in row["anchored"].get("guards") or [])
+        assert out == _with_custom_anchored_loads(deepcopy(before), _daniele())  # deterministic
