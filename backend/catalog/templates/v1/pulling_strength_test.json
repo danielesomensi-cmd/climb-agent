@@ -17,6 +17,7 @@
       "block_id": "main",
       "type": "main_set",
       "exercise_id": "weighted_pullup",
+      "pin_exhausted": "skip",
       "prescription": {
         "sets": 5,
         "reps": 2,

@@ -13612,7 +13612,7 @@
       "fatigue_cost": 6,
       "recency_group": "lower_body_quad",
       "equipment_required": [
-        "weight"
+        "barbell"
       ],
       "location_allowed": [
         "gym"

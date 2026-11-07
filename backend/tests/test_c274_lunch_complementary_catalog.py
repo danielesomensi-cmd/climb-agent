@@ -69,8 +69,10 @@ EXPECTED = {
     # by exercise_id), not a design choice. The session notes say so; breaking
     # ties by module priority would be an engine-wide change with its own
     # golden diff.
-    "legs_maintenance_lunch": ["general_pulse_raise", "core_hollow_hold", "side_plank", "bulgarian_split_squat",
-                               "edge_calf_raise_bigtoe", "goblet_squat", "romanian_deadlift",
+    # B414 (GOBLET): this gym has a barbell, so the squat pin chain takes
+    # back_squat (goblet_squat only without one); the id sort puts it first.
+    "legs_maintenance_lunch": ["general_pulse_raise", "core_hollow_hold", "side_plank", "back_squat",
+                               "bulgarian_split_squat", "edge_calf_raise_bigtoe", "romanian_deadlift",
                                "toe_flexor_isometric"],
 }
 

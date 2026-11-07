@@ -123,6 +123,14 @@ the only change is ``suggested.anchored.ramp`` removed from every anchored
 instance (10-07: n 3, not a re-entry; 10-21: n 1 after a 20-21 day gap, but
 the hangs there are 3 sets, under the old cap of 5 — no set count moves).
 Same ids, same order, same loads; pools and ad-hoc unchanged.
+
+B414 (step 13, GOBLET) changed no resolver key and the 36 composer-pool
+digests: ``back_squat`` needs a ``barbell`` now and no profile has one, so it
+leaves every pool (home and gym); at the gym the freed slot of the truncated
+pool takes ``wall_handstand_shrugs``. Checked by rebuilding the pools with the
+old ``equipment_required: [weight]`` in memory: the old digests come back.
+The legs lunch keeps ``goblet_squat`` here (the chain's fallback) — the
+barbell side is pinned by ``b413_lunch_golden_cases`` (Daniele at Work).
 """
 
 from __future__ import annotations

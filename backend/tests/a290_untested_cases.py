@@ -95,6 +95,15 @@ of 60" + 60"), with a new note and ``category`` ``power_endurance``. Raw
 resolver output diffed against origin/main @ bbe77a1 (both week_plan modes):
 same ids, same order, zero other differences.
 
+B414 (step 13, GOBLET: ``back_squat`` needs a ``barbell`` now) changed 6
+digests, all ``no_tests_onboarding_baselines`` (limit_boulder_gym 10-05 and
+10-15, pulling_strength_gym 10-06, power_contact_gym 10-07,
+boulder_circuit_gym 10-17, power_endurance_gym 10-22): with ``p0_trace`` /
+``filter_trace`` stripped the raw resolver output (both week_plan modes) is
+identical to the step-12 catalog — only the candidate counts moved, the
+barbell-less gym lost one squat candidate. Same ids, same order, same
+prescriptions.
+
 Pure data + one function, importable by the generator without pytest.
 """
 

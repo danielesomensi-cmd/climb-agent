@@ -984,7 +984,7 @@ Sessions live in `backend/catalog/sessions/v1/`. Each produces a full resolved s
 - `flexibility_full` *(flexibility, home)*
 - `handstand_practice` *(handstand_skill, home)*
 - `heavy_conditioning_gym` *(strength_general, gym)*
-- `legs_maintenance_lunch` *(strength_general, gym — C274 lunch: goblet squat, RDL, foot-strength block; C275: strength dose 4×6 / 3×6 at RIR 1-2 + A/B core block; B413: hollow block on the rollout ladder via `ladder_pin`, Bulgarian split squat rest 60 s)*
+- `legs_maintenance_lunch` *(strength_general, gym — C274 lunch: goblet squat, RDL, foot-strength block; C275: strength dose 4×6 / 3×6 at RIR 1-2 + A/B core block; B413: hollow block on the rollout ladder via `ladder_pin`, Bulgarian split squat rest 60 s; B414: `squat_main` is the pin chain back_squat → goblet_squat — back squat (`equipment_required: [barbell]`) where there is a barbell, goblet squat with dumbbells only, same dose 5×6, 4 sets in deload)*
 - `lead_tryhard_gym` *(technique_lead, gym — C276: falls 8-10' + 2 lead routes with a declared rule, pinned, needs `gym_routes`, not hard / not finger, in no phase pool)*
 - `legs_strength` *(strength_general, home)*
 - `limit_boulder_gym` *(limit_projecting, gym)*
@@ -1005,7 +1005,7 @@ Sessions live in `backend/catalog/sessions/v1/`. Each produces a full resolved s
 - `test_max_hang_5s` *(finger_max_strength, test — legacy 5s)*
 - `test_max_hang_7s` *(finger_max_strength, test — MVC-7, D85)*
 - `test_max_hang_pullup` *(finger_max_strength + pulling_strength, test — A319: both max tests in ONE session, placed by the retest policy's PASS 3a only when no day has two ordered slots: general warm-up, finger warm-up, max hang 7s, the weighted pullup 2RM after a 5' rest, then hang to failure, L-sit, hip flexibility, wrist curl, cool-down; inline blocks copied from `finger_max_strength_test` / `pulling_strength_test`; needs hangboard + pullup_bar + weight)*
-- `test_max_weighted_pullup` *(pulling_strength, test — A319: needs pullup_bar + weight)*
+- `test_max_weighted_pullup` *(pulling_strength, test — A319: needs pullup_bar + weight; B414: its 2RM block (`pulling_strength_test.main`) and the one of `test_max_hang_pullup` declare `pin_exhausted: skip` — without weights the 2RM is skipped, never replaced by another pull)*
 - `test_pullup_bw` *(pulling_strength, test)*
 - `test_repeater_7_3` *(finger_strength_endurance, test)*
 - `upper_body_weights` *(strength_general, home)*

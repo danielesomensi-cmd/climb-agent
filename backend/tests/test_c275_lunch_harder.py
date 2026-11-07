@@ -58,7 +58,9 @@ ACTIVATION_ONLY = {"plank", "dead_bug", "plank_shoulder_tap", "pallof_press", "k
 #: (block_id, exercise_id, sets, reps, rest) of every loaded pin.
 LOADED_PINS = {
     # C279 (2026-10-30): one more set on every lift to fill a 55' lunch.
-    "legs_maintenance_lunch": [("squat_main", "goblet_squat", 5, 6, 120),
+    # B414 (GOBLET): back squat with a barbell, goblet squat without — the
+    # chain's fallback keeps the same dose (test_b414_legs_lunch_squat.py).
+    "legs_maintenance_lunch": [("squat_main", "back_squat", 5, 6, 120),
                                ("hinge", "romanian_deadlift", 4, 6, 120),
                                # B413 (D4): 90 → 60 s — each leg rests while the other
                                # works; the ladder core keeps the lunch within 55'.

@@ -48,6 +48,17 @@ the C272 golden: ``advanced`` × ``finger_strength_home`` /
 stripped output against the step-5 tree @ d33cd9b (``git archive``): only
 ``suggested.anchored.ramp`` is removed from the anchored instances; no set
 count, load, id or order moves. Every other key identical.
+
+B414 (step 13, INBOX-2026-11-04-GOBLET) changed 6 keys: ``daniele`` ×
+``legs_maintenance_lunch`` × the six slots. Work has a barbell, so the
+``squat_main`` pin chain [back_squat → goblet_squat] takes ``back_squat``
+(now ``equipment_required: [barbell]``): same dose 5 x 6 at 120", 4 sets in
+deload, ``picked_by`` still ``explicit_exercise_id``; its load is the
+progression cold start (11.5 kg, the profile has no back-squat working load —
+the cold start is out of B414); the id sort puts it before the split squat.
+Diff of the stripped output against the step-12 tree, key by key: only those 6
+keys. ``advanced`` / ``intermediate`` (no barbell) identical, like every C272
+key and ``PRE_B413_LEGS_DIGESTS``.
 """
 
 from __future__ import annotations

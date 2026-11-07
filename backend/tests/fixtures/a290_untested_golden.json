@@ -1,6 +1,6 @@
 {
  "no_tests_onboarding_baselines|2026-10-05|limit_boulder_gym": {
-  "digest": "54e82cfbbe8d7d7af3a0c954edfab6c663d8d68ad0ae2a1d91dcfb2938c326d9",
+  "digest": "0300f64049416d8d0fec054c7f26b810eb40d9cebe07e21bdbc67b6b50d9386d",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
@@ -18,7 +18,7 @@
   ]
  },
  "no_tests_onboarding_baselines|2026-10-06|pulling_strength_gym": {
-  "digest": "9c54b93aa69f73020138569c8780abf9b77b3377cd79fa94fb2e5ba1f94f6a47",
+  "digest": "63c3331f501cb80e61b559eeaff72671aff5bf7fa27dc6c74eece3f9b2d39442",
   "exercise_ids": [
    "dynamic_mobility_flow",
    "general_pulse_raise",
@@ -35,7 +35,7 @@
   ]
  },
  "no_tests_onboarding_baselines|2026-10-07|power_contact_gym": {
-  "digest": "007ccfda6d42288edfd49a8d0e3b07a7886bc86859e438826e77d590602b0ab8",
+  "digest": "73c8a14564fa167758a1dec5d5fb2633e694517e8f50c6a895866f7f17ea1242",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
@@ -103,7 +103,7 @@
   ]
  },
  "no_tests_onboarding_baselines|2026-10-15|limit_boulder_gym": {
-  "digest": "1675527aef7e69155298ca2e059ec571728eea3c13923ebfafe727668a1b3b4f",
+  "digest": "bc8f5d83e848bcf1a675cb8a4d46aee44eb80bdc3368346474b28d11b2900cf5",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
@@ -121,7 +121,7 @@
   ]
  },
  "no_tests_onboarding_baselines|2026-10-17|boulder_circuit_gym": {
-  "digest": "88d56381d48474a2c0f6ba4e852cde535916dbda975924a6bd3c02476660d702",
+  "digest": "aae8f62ba739e947b6d26a77e0c24bad3702d09a16ca36d5e467f9d05f4a7d09",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
@@ -154,7 +154,7 @@
   ]
  },
  "no_tests_onboarding_baselines|2026-10-22|power_endurance_gym": {
-  "digest": "95f5db7facd8669a43257cea998794a125e11c0952b91290ff77248a97ef589b",
+  "digest": "09e4903a0853dcaea664eb56862b2c46a8f96a0d15ffe830cc47a45184efa883",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",

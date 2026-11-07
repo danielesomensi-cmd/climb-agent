@@ -1032,14 +1032,14 @@
   ]
  },
  "daniele|2026-10-13|base|legs_maintenance_lunch": {
-  "digest": "a7e0a4d5ff5d90ba25245e39707b39b4dc69cea4d14ca7352a07ba807e955618",
+  "digest": "d99f71fc3dd45d69295f49b8ee5a7610e8a57d44c0a941218c32ad474f3ce7e0",
   "exercise_ids": [
    "general_pulse_raise",
    "ab_wheel_rollout",
    "core_l_sit",
+   "back_squat",
    "bulgarian_split_squat",
    "edge_calf_raise_bigtoe",
-   "goblet_squat",
    "romanian_deadlift",
    "toe_flexor_isometric"
   ]
@@ -1083,14 +1083,14 @@
   ]
  },
  "daniele|2026-10-13|strength_power|legs_maintenance_lunch": {
-  "digest": "a7e0a4d5ff5d90ba25245e39707b39b4dc69cea4d14ca7352a07ba807e955618",
+  "digest": "d99f71fc3dd45d69295f49b8ee5a7610e8a57d44c0a941218c32ad474f3ce7e0",
   "exercise_ids": [
    "general_pulse_raise",
    "ab_wheel_rollout",
    "core_l_sit",
+   "back_squat",
    "bulgarian_split_squat",
    "edge_calf_raise_bigtoe",
-   "goblet_squat",
    "romanian_deadlift",
    "toe_flexor_isometric"
   ]
@@ -1134,14 +1134,14 @@
   ]
  },
  "daniele|2026-10-27|power_endurance|legs_maintenance_lunch": {
-  "digest": "a7e0a4d5ff5d90ba25245e39707b39b4dc69cea4d14ca7352a07ba807e955618",
+  "digest": "d99f71fc3dd45d69295f49b8ee5a7610e8a57d44c0a941218c32ad474f3ce7e0",
   "exercise_ids": [
    "general_pulse_raise",
    "ab_wheel_rollout",
    "core_l_sit",
+   "back_squat",
    "bulgarian_split_squat",
    "edge_calf_raise_bigtoe",
-   "goblet_squat",
    "romanian_deadlift",
    "toe_flexor_isometric"
   ]
@@ -1185,14 +1185,14 @@
   ]
  },
  "daniele|2026-11-10|performance|legs_maintenance_lunch": {
-  "digest": "a7e0a4d5ff5d90ba25245e39707b39b4dc69cea4d14ca7352a07ba807e955618",
+  "digest": "d99f71fc3dd45d69295f49b8ee5a7610e8a57d44c0a941218c32ad474f3ce7e0",
   "exercise_ids": [
    "general_pulse_raise",
    "ab_wheel_rollout",
    "core_l_sit",
+   "back_squat",
    "bulgarian_split_squat",
    "edge_calf_raise_bigtoe",
-   "goblet_squat",
    "romanian_deadlift",
    "toe_flexor_isometric"
   ]
@@ -1236,14 +1236,14 @@
   ]
  },
  "daniele|2026-11-17|performance|legs_maintenance_lunch": {
-  "digest": "e0f75451afd2b20d18e6f5375718e8c7680bbd04cea147a5b8494b258a7b898c",
+  "digest": "a83ffdf01bcf3ef60c6f40f4e4e44c330b000cea99514a57df4f11b500688887",
   "exercise_ids": [
    "general_pulse_raise",
    "ab_wheel_rollout",
    "copenhagen_dynamic",
+   "back_squat",
    "bulgarian_split_squat",
    "edge_calf_raise_bigtoe",
-   "goblet_squat",
    "romanian_deadlift",
    "toe_flexor_isometric"
   ]
@@ -1287,14 +1287,14 @@
   ]
  },
  "daniele|2026-12-01|deload|legs_maintenance_lunch": {
-  "digest": "c577ec2e1d60d7e5d8cfc6166264bb1322109a1cf973dc94cff0f45fdff85244",
+  "digest": "5040f933113988be90cf90b6b48a3d5620998889d9d1a57fe26be7e22710514c",
   "exercise_ids": [
    "general_pulse_raise",
    "ab_wheel_rollout",
    "copenhagen_plank",
+   "back_squat",
    "bulgarian_split_squat",
    "edge_calf_raise_bigtoe",
-   "goblet_squat",
    "romanian_deadlift",
    "toe_flexor_isometric"
   ]

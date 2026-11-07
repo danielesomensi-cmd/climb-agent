@@ -9,7 +9,7 @@
       "joint_health",
       "core"
     ],
-    "notes": "Lunch-break leg strength at a weights gym, about 55 min: goblet squat 5x6 and Romanian deadlift 4x6, both at RIR 1-2 (one or two clean reps left in the tank), Bulgarian split squat 3x8 per leg, two floor core exercises (one rotating, one hollow hold) and two short foot-strength exercises (toe flexors and big-toe calf raises) for edging. The loads come from your working loads and move with your feedback. The engine orders the exercises with the generic phase sort, so they are not necessarily contiguous. Keep heavy legs out of the 48 h before a limit or outdoor day. In a deload week the app already drops one set from each lift (goblet squat 4 sets, Romanian deadlift 3, split squat 2): stop every set at RIR 3."
+    "notes": "Lunch-break leg strength at a weights gym, about 55 min: squat 5x6 (back squat with a barbell, goblet squat without) and Romanian deadlift 4x6, both at RIR 1-2 (one or two clean reps left in the tank), Bulgarian split squat 3x8 per leg, two floor core exercises (one rotating, one hollow hold) and two short foot-strength exercises (toe flexors and big-toe calf raises) for edging. The loads come from your working loads and move with your feedback. The engine orders the exercises with the generic phase sort, so they are not necessarily contiguous. Keep heavy legs out of the 48 h before a limit or outdoor day. In a deload week the app already drops one set from each lift (squat 4 sets, Romanian deadlift 3, split squat 2): stop every set at RIR 3."
   },
   "compatibility": {
     "slot": [
@@ -58,10 +58,13 @@
       "required": true,
       "priority": 100,
       "module_role": "primary",
-      "notes": "Knee-dominant squat for strength: goblet squat, the same movement every time so the load can progress from feedback.",
+      "notes": "Knee-dominant squat for strength: back squat where there is a barbell, goblet squat where there is not (equipment, never the place) - the same movement every time at a given gym so the load can progress from feedback.",
       "selection": {
         "primary": {
-          "exercise_id": "goblet_squat",
+          "exercise_id": "back_squat",
+          "fallback_exercise_ids": [
+            "goblet_squat"
+          ],
           "prescription_overrides": {
             "sets": 5,
             "deload_sets": 4,
