@@ -36,8 +36,8 @@ the first draft of this module got it wrong:
   ``regeneration_easy``, ``prehab_maintenance`` — derive True where the
   catalog says False, the conservative direction; ``route_projecting_gym``
   derives False where the catalog says True, since route climbing is not a
-  finger pattern). ``power_endurance_gym`` matches when its finger block
-  picks a sub-max hang (E2 rule below).
+  finger pattern). ``power_endurance_gym`` matches everywhere: E2 rule below,
+  and its finger block never goes above medium (no 7/3, B414 step 16).
 * HEURISTIC: ``_HIGH_COUNT_FOR_HARD``. A session's intensity is **not** the max
   of its exercises' intensities — that was the first draft's mistake, and it
   marked a 15-minute core session "hard" on the strength of one

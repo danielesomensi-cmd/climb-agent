@@ -990,7 +990,7 @@ Sessions live in `backend/catalog/sessions/v1/`. Each produces a full resolved s
 - `limit_boulder_gym` *(limit_projecting, gym)*
 - `lower_body_gym` *(strength_general, gym)*
 - `power_contact_gym` *(contact_strength, gym)*
-- `power_endurance_gym` *(power_endurance, gym)*
+- `power_endurance_gym` *(power_endurance, gym — B414: ONE PE block, `pe_boulder` (id kept for the phase-anchor history) with the `gym_routes` preference: route intervals where there are routes, otherwise one PE boulder drill from the phase rotation; `finger_endurance` with `intensity_max: medium` (sub-max hangs, never the 7/3); the PE drills carry a one-technique-rule-per-set cue)*
 - `prehab_maintenance` *(prehab_shoulder, home)*
 - `pulling_strength_gym` *(pulling_strength, gym)*
 - `regeneration_easy` *(regeneration, gym)*

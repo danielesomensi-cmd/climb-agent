@@ -121,7 +121,7 @@ profile without an account — nothing entered there is stored.
 
 ### Power Endurance (2–3 weeks)
 
-**What you'll do**: 4×4 intervals, linked boulders, route intervals, PE circuits. The pump is back. Every week holds **two power-endurance sessions** and **one short limit session** — limit boulders one week, power / contact the next — so the strength of the previous phase does not fade. With a low hard-day cap the plan keeps within it and tells you what did not fit.
+**What you'll do**: 4×4 intervals, linked boulders, route intervals, PE circuits. The pump is back. Every week holds **two power-endurance sessions** and **one short limit session** — limit boulders one week, power / contact the next — so the strength of the previous phase does not fade. With a low hard-day cap the plan keeps within it and tells you what did not fit. The gym power-endurance session holds **one** interval drill: route intervals where your gym has routes, otherwise one boulder drill (4×4, linked boulders…) that stays the same for the phase. In every set keep one technique rule under pump — silent feet, or no readjusting a hand once it is on the hold. The light finger repeaters after it stay light (never the 7/3).
 
 **What it feels like**: The hardest phase. High intensity AND high volume. You'll feel tired. That's the point — this phase teaches your body to perform while fatigued.
 

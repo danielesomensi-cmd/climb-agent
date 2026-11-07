@@ -144,6 +144,19 @@ in power_endurance finger endurance comes right after the PE intervals).
 Re-resolved with the old category monkeypatched in: with the instances sorted
 by ``instance_id`` the stripped outputs are identical. Pools and ad-hoc
 unchanged.
+
+B414 (step 16, one PE block in ``power_endurance_gym``; ``intensity_max:
+medium`` on its finger block; a technique cue on the PE drills) changed the 6
+``power_endurance_gym`` keys. Per-block diff against the step-15 session file
+(ladder off and on): 10-07 at the board gym (routes) keeps ``route_intervals``
+and loses the second PE drill (``linked_boulders_circuit`` /
+``otm_bouldering``); 10-21 at home (no wall) the PE filters are soft, so the
+single block takes what ``pe_routes`` used to take and the second, unrelated
+pick of ``pe_boulder`` disappears (``rfd_explosive_pulls`` /
+``one_arm_pullup_assisted`` — the untested pulling block then gets
+``one_arm_pullup_assisted`` instead of ``pullup``). Finger blocks unchanged
+here (already ≤ medium); the cue is free text (stripped). Every other key and
+the pools unchanged.
 """
 
 from __future__ import annotations

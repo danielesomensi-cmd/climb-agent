@@ -208,7 +208,7 @@ class TestPowerEnduranceRoutes(unittest.TestCase):
         return us
 
     def test_pe_gym_with_routes_selects_route_intervals(self):
-        """When gym has gym_routes, pe_routes block should select route_intervals."""
+        """When gym has gym_routes, the single PE block (B414) selects route_intervals."""
         us = self._make_route_gym()
         result = _resolve("power_endurance_gym", us)
         self.assertEqual(result["resolution_status"], "success")
@@ -217,7 +217,7 @@ class TestPowerEnduranceRoutes(unittest.TestCase):
                        f"Expected route_intervals with gym_routes, got: {ex_ids}")
 
     def test_pe_gym_without_routes_still_resolves(self):
-        """Without gym_routes, fallback pe_boulder block resolves boulder intervals."""
+        """Without gym_routes, the single PE block (B414) resolves a boulder interval drill."""
         base_us = _load_user_state()
         result = _resolve("power_endurance_gym", _make_user_state(base_us, "gym", "blocx"))
         self.assertEqual(result["resolution_status"], "success")

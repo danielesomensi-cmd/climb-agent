@@ -9,7 +9,7 @@
       "finger_endurance",
       "core"
     ],
-    "notes": "4x4 bouldering, linked boulders, or route intervals. Lead-climber focused. Submaximal finger repeaters post-climbing."
+    "notes": "One PE drill: route intervals where the gym has routes, otherwise 4x4 bouldering or linked boulders. Lead-climber focused. One technique rule per set under pump. Submaximal finger repeaters post-climbing."
   },
   "compatibility": {
     "slot": [
@@ -35,12 +35,12 @@
       "module_role": "general_warmup"
     },
     {
-      "block_id": "pe_routes",
+      "block_id": "pe_boulder",
       "rotation": "phase_anchor",
-      "required": false,
-      "priority": 85,
+      "required": true,
+      "priority": 90,
       "module_role": "primary",
-      "notes": "Route intervals preferred when gym_routes available. High pump tolerance on rope.",
+      "notes": "One PE block: route intervals where the gym has routes (the gym_routes equipment preference), otherwise one boulder PE drill (4x4, linked boulders) from the phase rotation. The block keeps the id pe_boulder (phase-anchor history). In every set hold one technique rule under pump (see the exercise cues).",
       "selection": {
         "primary": {
           "filters": {
@@ -62,36 +62,12 @@
       }
     },
     {
-      "block_id": "pe_boulder",
-      "rotation": "phase_anchor",
-      "required": true,
-      "priority": 90,
-      "module_role": "primary",
-      "notes": "Boulder intervals fallback: 4x4, linked boulders when routes unavailable.",
-      "selection": {
-        "primary": {
-          "filters": {
-            "role": [
-              "main"
-            ],
-            "domain": [
-              "power_endurance",
-              "anaerobic_capacity"
-            ],
-            "pattern": [
-              "climbing_intervals"
-            ]
-          }
-        }
-      }
-    },
-    {
       "block_id": "finger_endurance",
       "rotation": "phase_anchor",
       "required": false,
       "priority": 80,
       "module_role": "secondary",
-      "notes": "Submaximal repeaters post-climbing. Finger endurance stimulus, not max strength.",
+      "notes": "Submaximal repeaters post-climbing. Finger endurance stimulus, not max strength: never above medium intensity (no 7/3 after the PE work).",
       "selection": {
         "primary": {
           "filters": {
@@ -104,7 +80,8 @@
             ],
             "pattern": [
               "repeater_hang"
-            ]
+            ],
+            "intensity_max": "medium"
           }
         }
       }

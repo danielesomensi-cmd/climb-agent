@@ -104,6 +104,12 @@ identical to the step-12 catalog — only the candidate counts moved, the
 barbell-less gym lost one squat candidate. Same ids, same order, same
 prescriptions.
 
+B414 (step 16, one PE block) changed 1 digest:
+``no_tests_onboarding_baselines`` 10-22 ``power_endurance_gym`` — at a gym
+with routes the second PE drill (``linked_boulders``) is gone, only
+``route_intervals`` (which also gains the technique-rule cue). Per-block
+diff against the step-15 session file: no other block moved.
+
 Pure data + one function, importable by the generator without pytest.
 """
 

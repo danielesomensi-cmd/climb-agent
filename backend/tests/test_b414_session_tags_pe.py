@@ -119,12 +119,6 @@ def _states():
                 yield f"{name}|{gym}|{ph}", st, ph
 
 
-def _pe_above_medium(insts) -> bool:
-    """Until B414 step 16 the catalog PE may pick the 7/3 in its finger block."""
-    return any(i["source"]["block_id"] == "finger_endurance" and i["exercise_id"] == "repeater_hang_7_3"
-               for i in insts)
-
-
 @pytest.fixture(scope="module")
 def mismatches():
     logging.disable(logging.WARNING)
@@ -154,14 +148,12 @@ def test_resolved_catalog_sessions_match_the_catalog_finger_flag(mismatches):
         for key, derived, insts in rows:
             if sid in KNOWN and derived is KNOWN[sid]:
                 continue
-            if sid == "power_endurance_gym" and _pe_above_medium(insts):
-                continue
             unexpected.setdefault(sid, []).append((key, derived, [i["exercise_id"] for i in insts]))
     assert unexpected == {}
 
 
-def test_power_endurance_gym_with_a_sub_max_hang_matches(mismatches):
-    """The E2 case on the catalog itself: the PE session's sub-max hangs no
-    longer make its derived tag disagree with ``finger: False``."""
-    for key, derived, insts in mismatches.get("power_endurance_gym", []):
-        assert _pe_above_medium(insts), key
+def test_power_endurance_gym_matches_everywhere(mismatches):
+    """The E2 rule plus the step-16 ``intensity_max: medium`` on its finger
+    block (never the 7/3): the catalog PE derives ``finger: False`` in every
+    profile, gym and phase, like ``_SESSION_META``."""
+    assert "power_endurance_gym" not in mismatches

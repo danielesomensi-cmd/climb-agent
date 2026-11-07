@@ -329,7 +329,7 @@
   ]
  },
  "advanced|2026-10-07|power_endurance_gym": {
-  "digest": "a3f68fc0cdc2c6b4f4c09d99e36730cbb14992f6ca4d9d31be470881001d68ca",
+  "digest": "0242b538ca1edbea201b9992a2671fcc76899fd9d2f7db938d48289d68c5a38d",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
@@ -337,7 +337,6 @@
    "warmup_easy_boulders",
    "power_pullups_explosive",
    "hangboard_moving_hangs",
-   "linked_boulders_circuit",
    "route_intervals",
    "ab_wheel_rollout",
    "dumbbell_external_rotation",
@@ -838,14 +837,13 @@
   ]
  },
  "advanced|2026-10-21|power_endurance_gym": {
-  "digest": "120a23b2bfecd7382931c98768865f5e3f5b60a0575b28bdc29cf68ab6ec86b4",
+  "digest": "88b468074d5a50b7b77be8a6bd246336fc659e86dfe98436068a497d4a3d6e55",
   "exercise_ids": [
    "active_hip_mobility",
    "bear_crawl",
    "dynamic_mobility_flow",
    "general_pulse_raise",
    "intermittent_dead_hangs",
-   "rfd_explosive_pulls",
    "archer_pullup",
    "one_arm_pullup_assisted",
    "front_lever_one_leg",
@@ -1652,7 +1650,7 @@
   ]
  },
  "intermediate|2026-10-07|power_endurance_gym": {
-  "digest": "21c8703c4496d5e2ea71769f72ef16e6de9bd0632f8ff4c4da15f085b042cf8f",
+  "digest": "c6d7e92c55298639769a64c55bfb2751bd068cf95d41f641b2015fdbb6d00de3",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
@@ -1660,7 +1658,6 @@
    "warmup_easy_boulders",
    "power_pullups_explosive",
    "hangboard_moving_hangs",
-   "linked_boulders_circuit",
    "route_intervals",
    "plank_shoulder_tap",
    "dumbbell_external_rotation",
@@ -2161,14 +2158,13 @@
   ]
  },
  "intermediate|2026-10-21|power_endurance_gym": {
-  "digest": "0e32b3f500a3258eb68e6e98c18e428a402487a991bddc843375e778ae1e6d51",
+  "digest": "bc5cf21907db757d99a18f62be83d4b3532945a4ef6bbd1ff259d34431456300",
   "exercise_ids": [
    "active_hip_mobility",
    "bear_crawl",
    "dynamic_mobility_flow",
    "general_pulse_raise",
    "intermittent_dead_hangs",
-   "rfd_explosive_pulls",
    "archer_pullup",
    "one_arm_pullup_assisted",
    "front_lever_one_leg",

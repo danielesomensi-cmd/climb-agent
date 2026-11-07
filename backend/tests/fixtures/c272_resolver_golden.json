@@ -644,7 +644,7 @@
    ]
   },
   "advanced|2026-10-07|power_endurance_gym": {
-   "digest": "a3f68fc0cdc2c6b4f4c09d99e36730cbb14992f6ca4d9d31be470881001d68ca",
+   "digest": "0242b538ca1edbea201b9992a2671fcc76899fd9d2f7db938d48289d68c5a38d",
    "exercise_ids": [
     "active_hip_mobility",
     "dynamic_mobility_flow",
@@ -652,7 +652,6 @@
     "warmup_easy_boulders",
     "power_pullups_explosive",
     "hangboard_moving_hangs",
-    "linked_boulders_circuit",
     "route_intervals",
     "ab_wheel_rollout",
     "dumbbell_external_rotation",
@@ -1153,14 +1152,13 @@
    ]
   },
   "advanced|2026-10-21|power_endurance_gym": {
-   "digest": "ac12c779341fc83e0118593487980f8d15aade1518a3c7e89c284b01181c460b",
+   "digest": "6d8fa0372c3a7cce55ac9d2349d346cbd9cffc299d1ec596d93dbc32a34057f5",
    "exercise_ids": [
     "active_hip_mobility",
     "bear_crawl",
     "dynamic_mobility_flow",
     "general_pulse_raise",
     "intermittent_dead_hangs",
-    "rfd_explosive_pulls",
     "archer_pullup",
     "one_arm_pullup_assisted",
     "front_lever_straddle",
@@ -1661,7 +1659,7 @@
    ]
   },
   "intermediate|2026-10-07|power_endurance_gym": {
-   "digest": "21c8703c4496d5e2ea71769f72ef16e6de9bd0632f8ff4c4da15f085b042cf8f",
+   "digest": "c6d7e92c55298639769a64c55bfb2751bd068cf95d41f641b2015fdbb6d00de3",
    "exercise_ids": [
     "active_hip_mobility",
     "dynamic_mobility_flow",
@@ -1669,7 +1667,6 @@
     "warmup_easy_boulders",
     "power_pullups_explosive",
     "hangboard_moving_hangs",
-    "linked_boulders_circuit",
     "route_intervals",
     "plank_shoulder_tap",
     "dumbbell_external_rotation",
@@ -2170,14 +2167,13 @@
    ]
   },
   "intermediate|2026-10-21|power_endurance_gym": {
-   "digest": "e4a0a91ae9029ea54c0d1cadf576dcb1a2599931536338d0299785def70aafbc",
+   "digest": "fd43ab7abf7136b154a60383468618a1442ec13173f14bcc31172fb8aa0db000",
    "exercise_ids": [
     "active_hip_mobility",
     "bear_crawl",
     "dynamic_mobility_flow",
     "general_pulse_raise",
     "intermittent_dead_hangs",
-    "rfd_explosive_pulls",
     "archer_pullup",
     "one_arm_pullup_assisted",
     "front_lever_straddle",
@@ -2678,7 +2674,7 @@
    ]
   },
   "untested|2026-10-07|power_endurance_gym": {
-   "digest": "a5e12179e835b6679b38a1410da05dfd0795326feface0f2b9ad4a3ce2197f5e",
+   "digest": "fe758457a35c3fc3d31b78e38c8ffe9713c143e233a05315f5a11461625a8f57",
    "exercise_ids": [
     "active_hip_mobility",
     "dynamic_mobility_flow",
@@ -2686,7 +2682,6 @@
     "warmup_easy_boulders",
     "weighted_chinup",
     "hangboard_moving_hangs",
-    "otm_bouldering",
     "route_intervals",
     "side_plank",
     "pushup",
@@ -3187,7 +3182,7 @@
    ]
   },
   "untested|2026-10-21|power_endurance_gym": {
-   "digest": "186f782b954f7fc35d8de59a00ccb027545bac50232ed83b54c16af9cbb977f0",
+   "digest": "00a997f3b8aafae2e5690bb124430ad4303c2327c2685dc23cde47eea9a0f566",
    "exercise_ids": [
     "active_hip_mobility",
     "bear_crawl",
@@ -3195,7 +3190,6 @@
     "general_pulse_raise",
     "repeater_15_15",
     "one_arm_pullup_assisted",
-    "pullup",
     "plank",
     "pushup",
     "reverse_barbell_curl",

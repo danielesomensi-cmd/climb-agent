@@ -154,13 +154,12 @@
   ]
  },
  "no_tests_onboarding_baselines|2026-10-22|power_endurance_gym": {
-  "digest": "09e4903a0853dcaea664eb56862b2c46a8f96a0d15ffe830cc47a45184efa883",
+  "digest": "6aca40598d5586f29c2e503ee40b4e8d64a5ddfc687f6b8ad4b112ee5c0e0fa0",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
    "general_pulse_raise",
    "warmup_easy_boulders",
-   "linked_boulders",
    "route_intervals",
    "repeater_15_15",
    "pullup",

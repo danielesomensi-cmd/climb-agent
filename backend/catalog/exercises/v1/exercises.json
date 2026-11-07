@@ -2619,7 +2619,8 @@
         "Rest 3-4 min between rounds, no rest between problems in set",
         "Maintain consistent movement quality across all 4 rounds",
         "Deep pump expected by round 3-4 — breathe through it",
-        "Reduce grade if unable to finish all 4 problems in a round"
+        "Reduce grade if unable to finish all 4 problems in a round",
+        "Technique under pump: pick ONE rule per set and hold it to the last move: silent feet (every foot placed once, no noise) or no readjusting a hand once it is on the hold"
       ],
       "video_url": null,
       "load_model": "grade_relative",
@@ -2675,7 +2676,8 @@
         "Move directly from top of one to base of next",
         "Aim for 8-12 total hard moves per link",
         "Log grade sequence to repeat and progress",
-        "Rest 4-5 min between full link circuits"
+        "Rest 4-5 min between full link circuits",
+        "Technique under pump: pick ONE rule per set and hold it to the last move: silent feet (every foot placed once, no noise) or no readjusting a hand once it is on the hold"
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
@@ -2728,7 +2730,8 @@
         "Rest equal to or less than climb time between reps",
         "Focus on efficient movement and resting on route",
         "Log time per ascent to track improvement",
-        "3-5 intervals per session, progressive overload via rest reduction"
+        "3-5 intervals per session, progressive overload via rest reduction",
+        "Technique under pump: pick ONE rule per set and hold it to the last move: silent feet (every foot placed once, no noise) or no readjusting a hand once it is on the hold"
       ],
       "video_url": null,
       "load_model": "grade_relative",
@@ -7406,7 +7409,8 @@
         "No rest between problems in a circuit: step off one and onto the next immediately",
         "Grade target: 2-3 below individual flash. By problem 4-5 you should feel significant pump",
         "5 min rest between circuits: this is a minimum. Take more if needed to restore quality",
-        "Sets 2-3 will feel much harder than set 1 — that metabolic accumulation is the point"
+        "Sets 2-3 will feel much harder than set 1 — that metabolic accumulation is the point",
+        "Technique under pump: pick ONE rule per set and hold it to the last move: silent feet (every foot placed once, no noise) or no readjusting a hand once it is on the hold"
       ],
       "video_url": "https://trainingforclimbing.com/power-endurance-training-protocols-for-climbers/",
       "phase_affinity": [

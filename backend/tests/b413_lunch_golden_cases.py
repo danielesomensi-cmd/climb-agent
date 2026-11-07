@@ -66,6 +66,10 @@ profiles: ``endurance_aerobic_gym`` 10-07, ``finger_maintenance_gym`` 10-21,
 ``power_endurance_gym`` 10-21 × ``advanced`` / ``intermediate`` (same check:
 instances sorted by ``instance_id``, stripped output identical). The lunches
 (``daniele`` keys) have no sub-max hang: unchanged.
+
+B414 (step 16, one PE block) changed 4 keys: ``power_endurance_gym`` × the
+two slots × ``advanced`` / ``intermediate`` — the same PE-block change as in
+the C272 golden (one PE drill instead of two). Lunches unchanged.
 """
 
 from __future__ import annotations
