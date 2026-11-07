@@ -19,6 +19,8 @@ from __future__ import annotations
 from copy import deepcopy
 from datetime import date, timedelta
 
+import pytest
+
 from backend.engine import retest_policy as rp
 from backend.engine.planner_v2 import generate_phase_week
 from backend.engine.replanner_v1 import regenerate_preserving_completed
@@ -171,34 +173,40 @@ class TestInvariants:
         st = _logged()
         assert _dec(st, "2026-10-24") == _dec(deepcopy(st), "2026-10-24")
 
-    def test_mid_week_regeneration_adds_no_test_and_keeps_the_done_one(self):
-        kw = _kwargs("power_endurance", WS)
+    @pytest.mark.parametrize("logged", [True, False], ids=["values_logged", "done_without_values"])
+    def test_mid_week_regeneration_adds_no_test_and_keeps_the_done_one(self, logged):
+        """Review B414 step 5: the test is done on WEDNESDAY 22/10 (the policy
+        alone puts the pair on Sunday 25/10, the last day of the week, which
+        left no day to regenerate and made this test pass on the old code too).
+        Regenerating on Thursday must not place the test again in 23-25/10 nor
+        record a placement failure, and every past day stays byte for byte."""
         st = _due_1019()
-        old = generate_phase_week(**kw, retest_decisions=_dec(st, "2026-10-19"))
-        tests = _test_days(old)
+        old = generate_phase_week(**_kwargs("power_endurance", WS), retest_decisions=_dec(st, "2026-10-19"))
+        tests = [s for d in old["weeks"][0]["days"] for s in d["sessions"] if s["session_id"] in _TEST_IDS]
         assert tests, "the policy placed the test in the original week"
-        test_day = min(d for d, _slot in tests.values())
-        done_sessions = []
+        test_day, today = "2026-10-22", "2026-10-23"
         for day in old["weeks"][0]["days"]:
-            if day["date"] != test_day:
-                continue
-            for s in day["sessions"]:
-                if s["session_id"] in _TEST_IDS:
-                    s["status"] = "done"
-                    s["actual_exercises"] = [{"exercise_id": "max_hang_7s", "used_total_load_kg": 118.0}]
-                    s["feedback_summary"] = {"difficulty": "hard"}
-            done_sessions = deepcopy(day["sessions"])
+            day["sessions"] = [s for s in day["sessions"] if s["session_id"] not in _TEST_IDS]
+            if day["date"] == test_day:
+                day["sessions"] = [{**deepcopy(s), "status": "done"} for s in tests]
         st["week_plans"] = {WS: old}
-        _log_hang(st, test_day)
-        _log_pull(st, test_day)
-        today = (date.fromisoformat(test_day) + timedelta(days=1)).isoformat()
+        if logged:
+            _log_hang(st, test_day)
+            _log_pull(st, test_day)
         dec = _dec(st, today)
-        assert dec["required_sessions"] == []
+        assert {a: (d["status"], d["done_in_week"]) for a, d in dec["axes"].items()} == \
+            {"finger": ("not_due", test_day), "pulling": ("not_due", test_day)}
+        assert dec["required_sessions"] == [] and dec["skipped"] == []
         fresh = generate_phase_week(**_kwargs("power_endurance", WS, today=today), retest_decisions=dec)
         assert not set(_test_days(fresh)) & _TEST_IDS
+        assert not (fresh.get("skipped_tests") or [])
+        before = deepcopy(old)
         merged = regenerate_preserving_completed(old, fresh, preserve_before=today)
-        after = {d["date"]: d for d in merged["weeks"][0]["days"]}
-        assert after[test_day]["sessions"] == done_sessions  # byte for byte
-        later = [s["session_id"] for d in merged["weeks"][0]["days"] if d["date"] > test_day
+        assert old == before
+        days_before = {d["date"]: d for d in before["weeks"][0]["days"]}
+        for day in merged["weeks"][0]["days"]:
+            if day["date"] < today:
+                assert day == days_before[day["date"]], day["date"]  # byte for byte
+        later = [s["session_id"] for d in merged["weeks"][0]["days"] if d["date"] >= today
                  for s in d["sessions"]]
         assert not set(later) & _TEST_IDS
