@@ -171,9 +171,13 @@ class TestA139ActualExercises:
         assert "actual_exercises" in session
         assert session["actual_exercises"][0]["used_external_load_kg"] == 26.0
 
-    def test_session_not_found_no_crash(self):
-        """Feedback for a session_id not in week plan → no crash, no actual_exercises."""
+    def test_session_not_found_no_crash(self, isolate_state):
+        """Feedback for a session_id not in week plan → no crash, no actual_exercises.
+
+        B414 step 27: refused with 409 ``session_not_in_plan`` before any
+        write (it used to answer 200 and log an orphan completion)."""
         _seed()
+        raw_before = isolate_state.read_bytes()
         log_entry = {
             "date": "2026-03-16",
             "session_id": "nonexistent_session",
@@ -184,9 +188,13 @@ class TestA139ActualExercises:
             },
         }
 
-        state = _post_feedback(log_entry)
+        r = client.post("/api/feedback", json={"log_entry": log_entry})
+        assert r.status_code == 409, r.text
+        assert r.json()["detail"]["code"] == "session_not_in_plan"
+        assert isolate_state.read_bytes() == raw_before
 
         # Original session should be untouched
+        state = deps.load_state(None)
         session = state["current_week_plan"]["weeks"][0]["days"][0]["sessions"][0]
         assert "actual_exercises" not in session
 

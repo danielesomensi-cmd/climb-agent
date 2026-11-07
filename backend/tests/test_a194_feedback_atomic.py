@@ -173,10 +173,14 @@ class TestA194FeedbackAtomic:
         assert log[0]["session_id"] == "strength_long"
         assert log[0]["status"] == "done"
 
-    def test_feedback_with_unknown_session_graceful(self):
-        """A194: unknown session_id in log_entry does not crash — mark_done skipped, feedback still applies."""
+    def test_feedback_with_unknown_session_is_refused_409(self, isolate_state):
+        """A194 → B414 step 27: an unknown session_id on a planned day does not
+        crash — it is refused with 409 ``session_not_in_plan`` before any
+        write (it used to answer 200 and log an orphan completion). Covered in
+        depth by test_b414_feedback_session_not_in_plan."""
         wp = _seed_week_plan()
         _seed_state_with_week_plan(wp)
+        raw_before = isolate_state.read_bytes()
 
         r = client.post("/api/feedback", json={
             "log_entry": {
@@ -185,12 +189,14 @@ class TestA194FeedbackAtomic:
                 "actual": {"exercise_feedback_v1": []},
             },
         })
-        # Should not crash — response is still 200
-        assert r.status_code == 200
-        data = r.json()
-        assert data["status"] == "ok"
+        assert r.status_code == 409, r.text
+        detail = r.json()["detail"]
+        assert detail["code"] == "session_not_in_plan"
+        assert detail["day_sessions"] == [
+            {"session_id": "strength_long", "slot": "evening", "status": None, "name": None}]
 
-        # Original session remains untouched (not marked done)
+        # Nothing written: the original session is untouched (not marked done).
+        assert isolate_state.read_bytes() == raw_before
         state = deps.load_state(None)
         sess = state["current_week_plan"]["weeks"][0]["days"][0]["sessions"][0]
         assert sess.get("status") != "done"

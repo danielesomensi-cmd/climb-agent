@@ -13,9 +13,9 @@ the "session not found" of mark_skipped / remove_session):
 - ``/api/replanner/events`` answers **422** (dry run included) and writes
   nothing — no completion-log row, no plan save, no revision bump;
 - ``/api/feedback`` recognises it (it is NOT the B216 "date outside the plan
-  window" ValueError: no retry on another week) and keeps answering 200 as
-  before — the 409 ``session_not_in_plan`` before any write is a later step,
-  released after the app learns to handle it.
+  window" ValueError: no retry on another week). Since B414 step 27 it never
+  gets that far: ``session_not_in_plan`` answers 409 before any write (the
+  full coverage is in test_b414_feedback_session_not_in_plan).
 """
 
 from __future__ import annotations
@@ -170,7 +170,7 @@ def test_events_on_a_real_session_still_logs_it(isolate_state):
 
 
 # ---------------------------------------------------------------------------
-# /api/feedback — recognised, not retried, behaviour unchanged (200)
+# /api/feedback — refused before any write (409, B414 step 27), never retried
 # ---------------------------------------------------------------------------
 
 def _orphan_feedback() -> dict:
@@ -180,7 +180,7 @@ def _orphan_feedback() -> dict:
             "status": "done"}
 
 
-def test_feedback_on_a_missing_session_is_not_retried_and_still_answers_200(monkeypatch):
+def test_feedback_on_a_missing_session_answers_409_before_any_mark_done(monkeypatch, isolate_state):
     calls: list = []
     real = feedback_router.apply_events
 
@@ -189,23 +189,21 @@ def test_feedback_on_a_missing_session_is_not_retried_and_still_answers_200(monk
         return real(plan, events, **kw)
 
     monkeypatch.setattr(feedback_router, "apply_events", spy)
+    raw_before = isolate_state.read_bytes()
     r = client.post("/api/feedback", json=_orphan_feedback())
-    assert r.status_code == 200, r.text
-    # One inline mark_done, no B216 retry on week_plans[monday].
-    assert calls == [MON]
-    after = deps.load_state(None)
+    assert r.status_code == 409, r.text
+    assert r.json()["detail"]["code"] == "session_not_in_plan"
+    # Refused before the inline mark_done (and before any B216 retry).
+    assert calls == []
     # The week is not changed: no phantom mark_done adaptation, no revision
-    # bump (a client holding it would get a 409 for nothing), sessions intact.
-    for plan in (after["current_week_plan"], after["week_plans"][MON]):
-        assert plan["plan_revision"] == 4
-        assert not any(a.get("event_type") == "mark_done" for a in plan.get("adaptations") or [])
-        assert plan["weeks"] == _plan()["weeks"]
+    # bump, sessions intact — the whole state file is byte-identical.
+    assert isolate_state.read_bytes() == raw_before
 
 
-def test_feedback_b216_retry_on_a_week_without_the_session_is_recognised(monkeypatch):
+def test_feedback_b216_rollover_on_a_week_without_the_session_answers_409(isolate_state):
     """Rollover: current_week_plan is the previous week (the date is outside
-    it → the B216 ValueError → retry on week_plans[monday]); the session is
-    not there either → SessionNotInPlan, logged, 200, nothing marked."""
+    it — the B216 case, the plan that counts is week_plans[monday]); the
+    session is not there either → 409, nothing written."""
     state = deps.load_state(None)
     prev = deepcopy(_plan())
     prev["start_date"] = "2026-03-09"
@@ -214,11 +212,11 @@ def test_feedback_b216_retry_on_a_week_without_the_session_is_recognised(monkeyp
     state["current_week_plan"] = prev
     state["week_plans"]["2026-03-09"] = deepcopy(prev)
     deps.save_state(state, None)
+    raw_before = isolate_state.read_bytes()
     r = client.post("/api/feedback", json=_orphan_feedback())
-    assert r.status_code == 200, r.text
-    after = deps.load_state(None)
-    assert after["week_plans"][MON]["weeks"] == _plan()["weeks"]
-    assert after["week_plans"][MON]["plan_revision"] == 4
+    assert r.status_code == 409, r.text
+    assert r.json()["detail"]["day_sessions"][0]["session_id"] == "custom_cs_320de282"
+    assert isolate_state.read_bytes() == raw_before
 
 
 def test_feedback_b216_retry_still_lands_a_real_session():

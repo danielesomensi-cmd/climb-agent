@@ -1752,9 +1752,14 @@ Other A301 semantics:
 - **`SessionNotInPlan`** (B414, INBOX-2026-11-04-ORPHAN, `replanner_v1`): `mark_done` whose `session_ref` / `slot`
   match nothing on that day of the plan (removed or replaced since the client loaded it). A `ValueError` subclass:
   `/events` → 422, dry run included, nothing written (no completion-log row — before B414 an orphan row was
-  logged for a session that was not there). `/feedback` recognises it (never the B216 rollover retry) and still
-  answers 200 for now; a `mark_done` on a session already done is matched (idempotent), not an orphan.
-  **Client (B414 step 24):** `request()` turns the `/events` 422 (the sentence above) and the future `/feedback`
+  logged for a session that was not there). A `mark_done` on a session already done is matched (idempotent), not an
+  orphan. **`/feedback` (B414 step 27):** **409** `session_not_in_plan` before any write —
+  `detail: {code, message, date, session_id, day_sessions: [{session_id, slot, status, name}]}`, never a
+  `current_revision` — when the day is in the stored plan (`current_week_plan` if it covers the date, else
+  `week_plans[monday]`, the B216 rollover) and no session there matches with the same `_session_matches` (a skip
+  stub with `skipped_session_id` is not the session); the inline mark_done's `SessionNotInPlan` is the same 409
+  (backstop, never the B216 retry). A date no stored plan covers and a session already done stay 200.
+  **Client (B414 step 24):** `request()` turns the `/events` 422 (the sentence above) and the `/feedback`
   409 (`detail.code: "session_not_in_plan"`, step 27) into `SessionNotInPlanError` (`lib/session-not-in-plan.ts`,
   never a `StalePlanError`). The guided player keeps the exact body on the phone with an **`orphan`** mark
   (`{detectedAt, daySessions?}`, localStorage only) and shows the choices: *in place of X* (`remove_session` X +

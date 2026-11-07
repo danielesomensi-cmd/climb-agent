@@ -2,6 +2,8 @@
 
 A194: This endpoint is atomic. In a single round-trip, the frontend can submit
 feedback and have the backend:
+  0. refuse with 409 ``session_not_in_plan`` — before any write — a session
+     no longer on that day of the stored plan (B414, the 04/11 orphan)
   1. mark_done on current_week_plan (via apply_events)
   2. append to session_completion_log (with dedup guard)
   3. progression feedback update
@@ -63,7 +65,7 @@ from backend.engine.measured_feedback import (
     sanitize_pain,
 )
 from backend.engine.progression_v1 import apply_feedback
-from backend.engine.replanner_v1 import SessionNotInPlan, apply_events
+from backend.engine.replanner_v1 import SessionNotInPlan, _find_day, _session_matches, apply_events
 from backend.engine.resolve_session import normalize_limitations, _check_exercise_limitation
 
 router = APIRouter(prefix="/api/feedback", tags=["feedback"])
@@ -227,6 +229,93 @@ def _snapshot_weeks(state: dict, target_date) -> dict:
     return snap
 
 
+SESSION_NOT_IN_PLAN = "session_not_in_plan"
+SESSION_NOT_IN_PLAN_MESSAGE = "This session is no longer in your plan for that day — nothing was saved."
+
+
+def _plan_day(plan, target_date) -> Optional[dict]:
+    """Day *target_date* of *plan* — searched like apply_events does
+    (``_find_day``: every week of the plan) — or None when *plan* does not
+    cover it."""
+    if not isinstance(plan, dict) or not target_date:
+        return None
+    try:
+        return _find_day(plan, target_date)
+    except ValueError:
+        return None
+
+
+def _done_in(plan, target_date, target_sid) -> bool:
+    """True when *plan* holds session *target_sid* already done on *target_date*."""
+    for _w in (plan or {}).get("weeks") or []:
+        for _d in _w.get("days") or []:
+            if _d.get("date") != target_date:
+                continue
+            for _s in _d.get("sessions") or []:
+                if _s.get("session_id") == target_sid and _s.get("status") == "done":
+                    return True
+    return False
+
+
+def _not_in_plan_detail(day: dict, target_date, target_sid) -> dict:
+    """Body of the 409: the day as the server sees it. Never a
+    ``current_revision`` — the client would read it as a stale plan (B371)."""
+    return {
+        "code": SESSION_NOT_IN_PLAN,
+        "message": SESSION_NOT_IN_PLAN_MESSAGE,
+        "date": target_date,
+        "session_id": target_sid,
+        "day_sessions": [
+            {"session_id": s.get("session_id"), "slot": s.get("slot"),
+             "status": s.get("status"), "name": s.get("name")}
+            for s in day.get("sessions") or [] if isinstance(s, dict)
+        ],
+    }
+
+
+def session_not_in_plan(state: dict, target_date, target_sid) -> Optional[dict]:
+    """B414 (INBOX-2026-11-04-ORPHAN, step 27): the 409 detail when the day of
+    *target_date* is in a stored plan and *target_sid* is not on it, else None.
+
+    The plan read is the one the inline mark_done below writes:
+    ``current_week_plan`` when it covers the date, else ``week_plans[monday]``
+    (the B216 rollover) — and the session is found with the same
+    ``_session_matches`` apply_events uses, so the check and the mark_done
+    never disagree (a pass here that apply_events then refused would write the
+    orphan anyway). Unchanged, answered as before: no stored plan covering the
+    date (an archived week), a session already done in either copy (the
+    /today flow marked it through /events first). A skip stub standing for
+    *target_sid* (``skipped_session_id``) is not the session: a skipped
+    session is not in the plan."""
+    if not target_date or not target_sid:
+        return None
+    cwp = state.get("current_week_plan")
+    monday = _monday_for_date(target_date)
+    alt = (state.get("week_plans") or {}).get(monday) if monday else None
+    if _done_in(cwp, target_date, target_sid) or _done_in(alt, target_date, target_sid):
+        return None
+    day = _plan_day(cwp, target_date)
+    if day is None:
+        day = _plan_day(alt, target_date)
+    if day is None:
+        return None
+    for s in day.get("sessions") or []:
+        if not isinstance(s, dict):
+            continue
+        if s.get("status") == "skipped" and s.get("skipped_session_id") == target_sid:
+            continue
+        if _session_matches(s, session_ref=target_sid, slot=None):
+            return None
+    return _not_in_plan_detail(day, target_date, target_sid)
+
+
+def _raise_not_in_plan(plan, target_date, target_sid) -> None:
+    """The 409 when apply_events refuses the inline mark_done (backstop of
+    :func:`session_not_in_plan` — nothing is written yet at that point)."""
+    day = _plan_day(plan, target_date) or {"sessions": []}
+    raise HTTPException(status_code=409, detail=_not_in_plan_detail(day, target_date, target_sid))
+
+
 @router.post("", dependencies=[Depends(require_active_subscription)])
 @limiter.limit("30/minute")
 @serialized_by_user
@@ -237,6 +326,14 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
     target_date = req.log_entry.get("date")
     target_sid = req.log_entry.get("session_id")
     _week_snap = _snapshot_weeks(state, target_date)
+    # B414 (ORPHAN, step 27): a session no longer on that day of the plan
+    # (removed or replaced since the phone loaded it) is refused before any
+    # write — no completion-log row, feedback_log entry, working_loads move,
+    # plan save or revision bump. The player asks the athlete what to do.
+    _orphan = session_not_in_plan(state, target_date, target_sid)
+    if _orphan is not None:
+        logger.warning("B414 orphan feedback refused (409): date=%r sid=%r", target_date, target_sid)
+        raise HTTPException(status_code=409, detail=_orphan)
     # B413 (D1): the archived weeks the ladders read — the frozen custom
     # prescription, the feedback base and the response view all step from the
     # same history. A failed read answers 503 before anything is written.
@@ -264,14 +361,7 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
         # already done (the /today flow marks it through /events first) —
         # apply_events would still log an adaptation and move the revision of
         # a week nobody changed.
-        for _w in (plan or {}).get("weeks") or []:
-            for _d in _w.get("days") or []:
-                if _d.get("date") != target_date:
-                    continue
-                for _s in _d.get("sessions") or []:
-                    if _s.get("session_id") == target_sid and _s.get("status") == "done":
-                        return True
-        return False
+        return _done_in(plan, target_date, target_sid)
 
     if week_plan and target_date and target_sid and (
         _already_done(week_plan)
@@ -310,14 +400,11 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
         except SessionNotInPlan as e:
             # B414 (ORPHAN): the day is in the plan but the session is not
             # (removed / replaced since the client loaded it). Never the B216
-            # rollover case: no retry on another week. /feedback still answers
-            # 200 and records the feedback as before B414 — the 409
-            # session_not_in_plan before any write is a later step, released
-            # after the app learns to handle it.
-            logger.warning(
-                "B414 orphan feedback: session not in the plan, inline mark_done skipped: %s",
-                e,
-            )
+            # rollover case: no retry on another week. session_not_in_plan
+            # above already refused it; this is the backstop — the same 409,
+            # and still nothing written.
+            logger.warning("B414 orphan feedback (backstop): %s", e)
+            _raise_not_in_plan(week_plan, target_date, target_sid)
         except ValueError as e:
             # B216 Defect B: _find_day raises ValueError when target_date is
             # outside the plan window — typically when current_week_plan is
@@ -359,9 +446,10 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
                     )
                 except SessionNotInPlan as e2:
                     logger.warning(
-                        "B414 orphan feedback: session not in week_plans[%s], inline mark_done skipped: %s",
+                        "B414 orphan feedback (backstop): session not in week_plans[%s]: %s",
                         target_monday, e2,
                     )
+                    _raise_not_in_plan(alt_plan, target_date, target_sid)
                 except ValueError as e2:
                     logger.warning(
                         "B216: mark_done skipped — date not in primary or alt plan: %s (date=%r, sid=%r)",

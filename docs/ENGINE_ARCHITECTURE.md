@@ -1027,7 +1027,8 @@ Resolves intent to session_id, finds the target day (B157: searches all weeks, n
 Processes event lists. Supported event types:
 - `mark_done` / `mark_skipped` / `mark_planned` — status transitions (B414: a `mark_done` whose `session_ref` / `slot`
   match nothing on that day raises `SessionNotInPlan`, a `ValueError` → 422 at `/events`, like the "session not found"
-  of `mark_skipped`; `/feedback` recognises it and never retries it on another week)
+  of `mark_skipped`; `/feedback` refuses the same case first — 409 `session_not_in_plan` before any write, same
+  `_session_matches` on the plan the inline mark_done writes — and never retries it on another week)
 - `move_session` — relocate within the week
 - `remove_session` — delete from day
 - `complete_other_activity` / `add_other_activity` — non-climbing activities

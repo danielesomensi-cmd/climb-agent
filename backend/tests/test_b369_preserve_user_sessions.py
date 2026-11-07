@@ -500,16 +500,37 @@ def _path_onboarding_start_week():
     _regen_both()
 
 
+#: B414 step 27: /feedback refuses (409 session_not_in_plan) a session that
+#: is not on that day of the plan — the very_hard feedback of these paths goes
+#: to a real session of today (it used to target "nonexistent_session").
+FEEDBACK_SID = "regeneration_easy"
+
+
+def _plant_today_session(state) -> str:
+    """Put a planned ``FEEDBACK_SID`` in this week's morning of today, in both
+    stored copies of the current week."""
+    today = date.today().isoformat()
+    planted = {"slot": "morning", "session_id": FEEDBACK_SID, "location": "home",
+               "intensity": "low", "tags": _tags()}
+    for plan in (state["week_plans"].get(_monday(0)), state.get("current_week_plan")):
+        if not isinstance(plan, dict) or plan.get("start_date") != _monday(0):
+            continue
+        day = next(d for d in plan["weeks"][0]["days"] if d["date"] == today)
+        day["sessions"] = [x for x in day["sessions"] if x.get("slot") != "morning"] + [deepcopy(planted)]
+    return FEEDBACK_SID
+
+
 def _path_feedback_very_hard():
     state = deps.load_state(None)
     today = date.today().isoformat()
     yday = (date.today() - timedelta(days=1)).isoformat()
     state["feedback_log"] = [{"date": today, "session_id": "x", "difficulty": "very_hard"},
                              {"date": yday, "session_id": "y", "difficulty": "fail"}]
+    sid = _plant_today_session(state)
     deps.save_state(state, None)
     for _ in range(2):
         r = client.post("/api/feedback", json={"log_entry": {
-            "date": today, "session_id": "nonexistent_session", "actual": {"exercise_feedback_v1": []}}})
+            "date": today, "session_id": sid, "actual": {"exercise_feedback_v1": []}}})
         assert r.status_code == 200, r.text
     st = deps.load_state(None)
     for plan in st["week_plans"].values():
@@ -649,12 +670,13 @@ def test_feedback_very_hard_changes_nothing_and_suggests():
     plan = state["week_plans"][target_key]
     tday = next(d for d in plan["weeks"][0]["days"] if d["date"] == tomorrow.isoformat())
     tday["sessions"] = [s for s in tday["sessions"] if s.get("slot") != "evening"] + [custom_hard]
+    sid = _plant_today_session(state)
     if target_key == _monday(0):
         state["current_week_plan"] = deepcopy(plan)
     state["feedback_log"] = [{"date": today.isoformat(), "session_id": "x", "difficulty": "very_hard"}]
     deps.save_state(state, None)
     r = client.post("/api/feedback", json={"log_entry": {
-        "date": today.isoformat(), "session_id": "nonexistent_session",
+        "date": today.isoformat(), "session_id": sid,
         "actual": {"exercise_feedback_v1": []}}})
     assert r.status_code == 200, r.text
     after = deps.load_state(None)["week_plans"]
