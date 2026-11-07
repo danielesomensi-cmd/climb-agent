@@ -777,6 +777,22 @@ export default function GuidedSessionPage() {
       router.replace(`/today?date=${date}`);
       return;
     }
+    // B414 review (ORPHAN): the replay was refused because the session left
+    // the plan — the entry is now «to decide» and is never re-sent on its own.
+    // Show the choices, not "it will go out when the connection is back".
+    const refused = (() => {
+      if (!scope) return null;
+      try {
+        const raw = localStorage.getItem(scope.key);
+        return raw ? (JSON.parse(raw) as PendingGuidedState) : null;
+      } catch {
+        return null;
+      }
+    })();
+    if (refused?.orphan) {
+      setState(refused);
+      return;
+    }
     setSyncError("Not sent yet — it stays saved on this device and will go out when the connection is back.");
   }, [qc, router, date]);
   const { run: runSendPending, busy: sendingPending } = useSubmitLock(sendPendingNow);

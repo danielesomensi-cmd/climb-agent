@@ -222,6 +222,36 @@ describe("B414 — the player and a session no longer in the plan", () => {
     expect(sync).toHaveBeenCalledTimes(1);
     expect(router.replace).toHaveBeenCalledWith("/today?date=2026-11-04");
   });
+
+  // B414 review: «Send now» in the plain pending view (an offline submit) whose
+  // replay is refused because the session left the plan in the meantime. The
+  // replay marks the entry «to decide» and never re-sends it on its own, so
+  // «it will go out when the connection is back» would be false: the choices
+  // come up instead.
+  it("«Send now» refused as an orphan → the choices, never «it will go out later»", async () => {
+    storage.setItem(KEY, JSON.stringify({ ...stored(), submitStatus: "feedback_pending" }));
+    orphan.loadDayFromServer.mockResolvedValue(dayWith([CUSTOM]));
+    sync.mockImplementation(async () => {
+      // what the replay's markOrphan leaves behind
+      storage.setItem(KEY, JSON.stringify({ ...stored(), orphan: { detectedAt: "2026-11-04T12:30:00Z" } }));
+      return { sent: 0, alreadySaved: 0, rejected: 0, failed: 0, undecided: 1 };
+    });
+    renderPage();
+    await flush();
+    expect(screen.getByText("Session saved on this device")).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /send now/i }));
+    });
+    await flush();
+
+    expect(sync).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/will go out when the connection is back/i)).toBeNull();
+    expect(screen.getByText("This session is no longer in your plan")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /log it in place of vo2 max · lunch/i })).toBeTruthy();
+    expect(stored().orphan).toBeTruthy();
+    expect(router.replace).not.toHaveBeenCalled();
+  });
 });
 
 describe("B414 — OrphanSessionBox", () => {
