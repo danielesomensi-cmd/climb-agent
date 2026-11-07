@@ -44,6 +44,10 @@ describe("SkippedTestsCard", () => {
     expect(screen.getByText(/Couldn.t schedule a test this week/)).toBeTruthy();
   });
 
+  // A319-FE (B414): since A319 `blocked:no_paired_slot` means the pull-up
+  // could not go on the hang test's day (with weights there) and waits for its
+  // next turn — not "couldn't fit your available days" (that is
+  // no_placement_slot, and it asked to free a day for nothing).
   it("shows a pull-up the paired test day could not fit", () => {
     render(
       <SkippedTestsCard
@@ -51,7 +55,22 @@ describe("SkippedTestsCard", () => {
         weekKey="2026-10-19"
       />,
     );
-    expect(screen.getByText(/Pulling strength test/)).toBeTruthy();
+    expect(screen.getByText(/The pull-up test needs the hang test.s day, with weights there: it waits for its next turn/)).toBeTruthy();
+    expect(screen.queryByText(/couldn.t fit your available days/)).toBeNull();
+  });
+
+  it("both kinds together: each says its own thing", () => {
+    render(
+      <SkippedTestsCard
+        skipped={[
+          skipped({ reason: "blocked:no_paired_slot" }),
+          skipped({ reason: "no_placement_slot", axis: "finger", test_id: "test_max_hang_7s" }),
+        ]}
+        weekKey="2026-10-19"
+      />,
+    );
+    expect(screen.getByText(/Finger strength test couldn.t fit your available days/)).toBeTruthy();
+    expect(screen.getByText(/waits for its next turn/)).toBeTruthy();
   });
 
   it("hides the policy's decisions", () => {

@@ -26,8 +26,12 @@ const AXIS_LABEL: Record<string, string> = {
 };
 
 /**
- * Placement failures only. A289 adds `blocked:no_paired_slot`: the retest
- * policy's hang test found a day but no later day could take the pull-up.
+ * Placement failures only. `blocked:no_paired_slot` (A289; A319-FE: the
+ * meaning A319 gave it): the pull-up test goes on the hang test's day — in
+ * the pair's second slot, inside the combined test, or on the day of a test
+ * that was kept (a change of gym without weights, B414) — and that day could
+ * not take it there, with weights: it waits for its next turn. It is no
+ * longer "no later day" (A319 removed the split over two days).
  * The policy's other `blocked:*` / `slipped:*` reasons (phase, minimum gap,
  * trip, very hard feedback) are decisions, not failures — the retest-status
  * card explains them.
@@ -87,7 +91,9 @@ export function SkippedTestsCard({
     onDismiss?.();
   }
 
-  const axes = Array.from(new Set(placement.map((s) => axisLabel(s.axis))));
+  const noSlot = placement.filter((s) => s.reason === "no_placement_slot");
+  const noPair = placement.some((s) => s.reason === "blocked:no_paired_slot");
+  const axes = Array.from(new Set(noSlot.map((s) => axisLabel(s.axis))));
 
   return (
     <Card className="border-warning/30 bg-warning/10">
@@ -97,11 +103,18 @@ export function SkippedTestsCard({
         </div>
         <div className="min-w-0 flex-1 space-y-1">
           <p className="text-sm font-semibold">Couldn&apos;t schedule a test this week</p>
-          <p className="text-sm text-muted-foreground">
-            {axes.join(", ")} {axes.length > 1 ? "tests" : "test"} couldn&apos;t fit your
-            available days without breaking rest spacing. Free up a day or move a session,
-            then use Replan to fit it in.
-          </p>
+          {axes.length > 0 && (
+            <p className="text-sm text-muted-foreground">
+              {axes.join(", ")} {axes.length > 1 ? "tests" : "test"} couldn&apos;t fit your
+              available days without breaking rest spacing. Free up a day or move a session,
+              then use Replan to fit it in.
+            </p>
+          )}
+          {noPair && (
+            <p className="text-sm text-muted-foreground">
+              The pull-up test needs the hang test&apos;s day, with weights there: it waits for its next turn.
+            </p>
+          )}
         </div>
         <Button
           variant="ghost"

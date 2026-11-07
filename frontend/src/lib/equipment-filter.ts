@@ -29,6 +29,18 @@ export function expandEquipment(raw: string[], location: string): Set<string> {
 }
 
 /**
+ * A319-FE — does a catalog session's `required_equipment` fit a gym? On the
+ * gym's EXPANDED equipment (`expandEquipment(raw, "gym")`), the planner's own
+ * reading: the raw list hid the tests that need `weight` at a gym listing
+ * dumbbells but not the word "weight" (the quick-add at the Bkl).
+ */
+export function sessionFitsGym(gymEquipment: string[], required: string[] | null | undefined): boolean {
+  if (!required || required.length === 0) return true;
+  const equip = expandEquipment(gymEquipment, "gym");
+  return required.every((eq) => equip.has(eq.trim().toLowerCase()));
+}
+
+/**
  * Check whether an exercise is compatible with the available equipment.
  * Mirrors pick_best_exercise_p0() Stage 2 in resolve_session.py.
  */

@@ -20,8 +20,8 @@ Next.js 16 App Router (Turbopack) + Tailwind CSS + shadcn/ui. Mobile-first dark-
 
 Answers typed before signing up live in `localStorage` under `climb_onboarding_draft_anon` and are **adopted** by `loadDraft()` at sign-in. That key must be cleared on submit alongside the user-scoped one, or the next anonymous visitor on a shared device inherits it (regression guard: `onboarding-draft-scope.test.ts`).
 
-- `/today` — Today's sessions, mark done/skipped, post-session feedback
-- `/week` — 7-day grid, day detail cards, replan dialog, multi-week navigation
+- `/today` — Today's sessions, mark done/skipped, post-session feedback. B414: `TestExpiryCard` (from `retest_status`: a covered axis `expiring` / `expired`, no request, no planned test; not dismissable; «Do the test» / «Postpone the expiry» through `RetestActions`, dry run → summary → confirm; `cycle_ended` opens Start new cycle)
+- `/week` — 7-day grid, day detail cards, replan dialog, multi-week navigation. B414: `RetestStatusCard` shows `valid_until` (valid / extended / expired), the new no-test reasons, the request, `RetestActions` and «Undo postpone» (DELETE, dry run first); no «Not now» (A320-FE superseded)
 - `/plan` — Assessment radar chart + macrocycle timeline + phase details
 - `/session/[id]` — Resolved exercises with prescription details, load score
 - `/reports/weekly` — Adherence, load, difficulty distribution, progression table

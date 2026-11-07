@@ -41,6 +41,7 @@ import type {
   Weather,
   TestReminder,
   TestReminderOption,
+  RetestAxis,
   RetestStatus,
   KeyStatus,
   KeyConflict,
@@ -488,6 +489,66 @@ export const getWeek = (weekNum: number, force?: boolean, preserveBefore?: strin
     guard_warnings?: GuardWarning[];
   }>(`/api/week/${weekNum}${qs ? `?${qs}` : ""}`);
 };
+
+/** B414 — the per-axis outcome of "Do the test". */
+export interface RetestRequestAxis {
+  action: "planned" | "requested" | "cycle_ended";
+  date: string | null;
+  session_id: string | null;
+  next_test_reason?: string | null;
+}
+
+export interface RetestRequestResponse {
+  dry_run: boolean;
+  action: "requested" | "already_planned" | "cycle_ended";
+  axes: Partial<Record<RetestAxis, RetestRequestAxis>>;
+  go_to: string | null;
+  weeks_marked_stale: string[];
+  retest_status: RetestStatus | null;
+}
+
+export interface RetestExtendResponse {
+  dry_run: boolean;
+  weeks: number;
+  until: string;
+  extensions: Array<{ axis: RetestAxis; previous_until?: string | null }>;
+  tests_removed: Array<{ date: string; session_id: string }>;
+  kept_user_owned_tests: Array<{ date: string; session_id: string }>;
+  weeks_marked_stale: string[];
+  retest_status: RetestStatus | null;
+}
+
+export interface RetestUndoResponse {
+  dry_run: boolean;
+  removed: unknown[];
+  tests_removed: Array<{ date: string; session_id: string }>;
+  weeks_marked_stale: string[];
+  retest_status: RetestStatus | null;
+}
+
+/**
+ * B414 — «Fai il test» (POST /api/retest/request): the covered axes' test as
+ * the athlete's request through the policy. A dry run says where it lands.
+ */
+export const requestRetest = (data: { axes?: RetestAxis[]; dry_run?: boolean } = {}) =>
+  request<RetestRequestResponse>("/api/retest/request", {
+    method: "POST",
+    body: JSON.stringify({ ...data, source: "app", today: localToday() }),
+  });
+
+/** B414 — «Posticipa la scadenza» (POST /api/retest/extend): 2, 4 or 6 weeks, both axes. */
+export const extendRetest = (data: { weeks: number; dry_run?: boolean }) =>
+  request<RetestExtendResponse>("/api/retest/extend", {
+    method: "POST",
+    body: JSON.stringify({ ...data, source: "app", today: localToday() }),
+  });
+
+/** B414 / A320 — undo the postpone (or decline) of one axis (DELETE /api/retest/decline/{axis}). */
+export const undoRetestDecline = (axis: RetestAxis, dryRun = false) =>
+  request<RetestUndoResponse>(
+    `/api/retest/decline/${axis}?dry_run=${dryRun ? "true" : "false"}&today=${localToday()}`,
+    { method: "DELETE" },
+  );
 
 /**
  * A246 — answer the periodic retest reminder.

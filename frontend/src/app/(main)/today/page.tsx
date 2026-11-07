@@ -43,6 +43,7 @@ const StartNewMacrocycleDialog = dynamic(() => loadStartNewMacrocycleDialog().th
  */
 import { WeeklyCheckinCard } from "@/components/training/weekly-checkin-card";
 import { TestReminderCard } from "@/components/training/test-reminder-card";
+import { TestExpiryCard } from "@/components/training/test-expiry-card";
 import { WeekProgressBar } from "@/components/training/week-progress-bar";
 import { TodaySkeleton } from "@/components/training/today-skeleton";
 import { ApiError, apiErrorDetail, applyEvents, checkKeyConflicts, postFeedback, applyOverride, quickAddSession,
@@ -1409,6 +1410,20 @@ function TodayContent() {
             above the check-in because it decides what NEXT week contains. */}
         {!loading && !error && isViewingToday && testReminder && (
           <TestReminderCard reminder={testReminder} onResponded={refetchAll} />
+        )}
+
+        {/* B414 (B414-4) — a tested max that expires: from 14 days before its
+            validity ends, «Do the test» or «Postpone the expiry». Not
+            dismissable; nothing switches off at the expiry. */}
+        {!loading && !error && isViewingToday && (
+          <TestExpiryCard
+            status={weekData?.retest_status}
+            onChanged={refetchAll}
+            onCycleEnded={() => {
+              setNewCycleMounted(true);
+              setNewCycleDialogOpen(true);
+            }}
+          />
         )}
 
         {/* Weekly check-in card (Sunday / Monday morning grace).

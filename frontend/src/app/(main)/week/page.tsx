@@ -1122,7 +1122,15 @@ export default function WeekPage() {
                 ) : null}
 
                 {/* A289 — massimali testati, confidenza, trend e prossimo test (dal vivo). */}
-                <RetestStatusCard status={weekQuery.data?.retest_status} />
+                <RetestStatusCard
+                  status={weekQuery.data?.retest_status}
+                  onChanged={() => {
+                    // B414: a request / postpone / undo marks weeks stale
+                    // (this one and the week the test now belongs to).
+                    qc.invalidateQueries({ queryKey: queryKeys.weekAll });
+                    qc.invalidateQueries({ queryKey: queryKeys.state });
+                  }}
+                />
 
                 {/* B361 — accanto ai test non collocati, gli stimoli non collocati:
                     il planner li segnalava solo nei log di Railway. */}

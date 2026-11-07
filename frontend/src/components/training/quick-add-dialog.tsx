@@ -17,6 +17,7 @@ import { getSuggestedSessions, getSessions, getOutdoorSpots, addOutdoorSpot, get
 import { queryKeys } from "@/lib/query-keys";
 import type { SessionMeta, OutdoorSpot, CustomSessionSummary } from "@/lib/types";
 import { formatDateShort } from "@/lib/format";
+import { sessionFitsGym } from "@/lib/equipment-filter";
 
 interface Gym {
   gym_id?: string;
@@ -253,44 +254,22 @@ export function QuickAddDialog({
 
   const resolvedLocation = location === "home" ? "home" : "gym";
 
-  // Filter suggestions by equipment compatibility
-  // Every gym implicitly has a pullup_bar.
-  const filteredSuggestions = (() => {
-    if (location === "home" || location === "gym") return suggestions;
-    const gym = gyms.find((g) => g.name === location);
-    if (!gym?.equipment) return suggestions;
-    const gymEquip = [...gym.equipment];
-    if (!gymEquip.includes("pullup_bar")) gymEquip.push("pullup_bar");
-    return suggestions.filter((s) => {
-      const req = s.required_equipment;
-      if (!req || req.length === 0) return true;
-      return req.every((eq) => gymEquip.includes(eq));
-    });
-  })();
-
-  // Filter supplementary sessions by equipment compatibility (same logic)
-  const filteredSupplementary = (() => {
-    if (location === "home" || location === "gym") return supplementary;
-    const gym = gyms.find((g) => g.name === location);
-    if (!gym?.equipment) return supplementary;
-    const gymEquip = [...gym.equipment];
-    if (!gymEquip.includes("pullup_bar")) gymEquip.push("pullup_bar");
-    return supplementary.filter((s) => {
-      if (!s.required_equipment || s.required_equipment.length === 0) return true;
-      return s.required_equipment.every((eq) => gymEquip.includes(eq));
-    });
-  })();
-
-  // Equipment available at the selected location
-  // Every gym implicitly has a pullup_bar (same logic as resolver/planner).
+  // Equipment available at the selected gym, EXPANDED like the planner's
+  // (A319-FE): every gym has a pull-up bar, a dumbbell / kettlebell / barbell
+  // means "weight", a loading pin is a hangboard. The raw list hid the tests
+  // that need `weight` (test_max_weighted_pullup, test_max_hang_pullup) at a
+  // gym that lists dumbbells but not the word "weight" — the Bkl.
   const selectedGymEquipment: string[] | null = (() => {
     if (location === "home" || location === "gym") return null;
     const gym = gyms.find((g) => g.name === location);
-    if (!gym?.equipment) return null;
-    const equip = [...gym.equipment];
-    if (!equip.includes("pullup_bar")) equip.push("pullup_bar");
-    return equip;
+    return gym?.equipment ?? null;
   })();
+  const fitsGym = (req: string[] | undefined) =>
+    !selectedGymEquipment || sessionFitsGym(selectedGymEquipment, req);
+
+  // Filter suggestions / supplementary sessions by equipment compatibility.
+  const filteredSuggestions = suggestions.filter((s) => fitsGym(s.required_equipment));
+  const filteredSupplementary = supplementary.filter((s) => fitsGym(s.required_equipment));
 
   // Filter all sessions by location + equipment compatibility
   const filteredAll = allSessions?.filter((s) => {
@@ -299,11 +278,7 @@ export function QuickAddDialog({
       if (resolvedLocation === "home" && !loc.includes("home")) return false;
       if (resolvedLocation === "gym" && !loc.includes("gym")) return false;
     }
-    const reqEquip = s.required_equipment;
-    if (reqEquip && reqEquip.length > 0 && selectedGymEquipment) {
-      return reqEquip.every((eq) => selectedGymEquipment.includes(eq));
-    }
-    return true;
+    return fitsGym(s.required_equipment);
   });
 
   return (

@@ -1462,10 +1462,43 @@ export interface RetestNextTest {
   blockers: RetestBlocker[];
 }
 
+/** A320 — what retest_status shows of a stored decline / postpone (codes and dates only). */
+export interface RetestDeclineView {
+  axis: RetestAxis | null;
+  kind: "decline" | "postpone" | null;
+  trigger: string | null;
+  reason: string;
+  declined_at: string | null;
+  until: string | null;
+  source: "app" | "coach" | "cli" | null;
+  /** B414: a repeated postpone — the day it replaced. */
+  previous_until?: string | null;
+}
+
 export interface RetestAxisStatus {
   axis: RetestAxis;
-  /** false → test missing/older than 90 days: the legacy planner rules schedule it. */
+  /**
+   * B414 (model A): true for a real test at any age — its max keeps counting
+   * after `valid_until`. false only for an axis the policy does not schedule
+   * (a loading pin): the legacy planner rules / the 6-week reminder do.
+   */
   covered: boolean;
+  /** B414: last day of validity (test + 89; a postpone moves it — `extended`). Informational. */
+  valid_until?: string | null;
+  /** B414: today is after `valid_until` (nothing switches off). */
+  expired?: boolean;
+  /** B414: within 14 days of `valid_until` (the Today card proposes the test). */
+  expiring?: boolean;
+  /** B414-2: `valid_until` moved by a postpone of the expiry. */
+  extended?: boolean;
+  /** B400: = `valid_until` for a covered axis (kept for old clients). */
+  tested_until?: string | null;
+  /** A320 (covered axes): the active stored declines / postpones. */
+  declines?: RetestDeclineView[];
+  /** B414-3 (covered axes): the active "Do the test" request. */
+  request?: { requested_at: string | null; source: string | null } | null;
+  /** A320 (covered axes): weeks the athlete took the policy's test out of. */
+  plan_edit_declines?: Array<{ week_start: string; declined_at?: string | null; session_id?: string | null; source?: string }>;
   protocol: string;
   official_total_kg: number;
   test_date: string;
