@@ -93,7 +93,7 @@
 | PUT | `/api/custom-session/{session_id}` | Update custom session |
 | DELETE | `/api/custom-session/{session_id}` | Delete custom session |
 | GET | `/api/body-part-picker/options` | Available body parts + equipment options for picker UI |
-| POST | `/api/body-part-picker/preview` | Generate body-part session preview (no persistence) |
+| POST | `/api/body-part-picker/preview` | Generate body-part session preview (no persistence). Without `seed` the pick is seeded from `target_date` (server date if absent) + body parts + equipment mode + gym (B414): same request, same day → same session as `/start` |
 | POST | `/api/body-part-picker/start` | Generate body-part session + insert into week plan |
 | GET | `/api/body-part-picker/estimate` | Lightweight duration estimate for live counter |
 | GET | `/api/mobility/pool` | Mobility/stretching pool by body region (GATE-2 soft warnings) |

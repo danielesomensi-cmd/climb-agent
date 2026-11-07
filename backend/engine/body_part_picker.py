@@ -14,6 +14,7 @@ Design notes:
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import random
@@ -334,6 +335,10 @@ def build_body_part_index(
         # never picked by the generator — and never counted in the options.
         if is_library_only(ex):
             continue
+        # B414: an inactive exercise (``active: false``) is never picked and
+        # never counted — the same filter adhoc_builder applies on this index.
+        if ex.get("active") is False:
+            continue
         ex_id = ex.get("id")
         if not ex_id:
             continue
@@ -462,7 +467,7 @@ def get_available_body_parts(
 # ── Selection ─────────────────────────────────────────────────────────────
 
 
-def _recent_exercise_ids(user_state: Dict[str, Any]) -> List[str]:
+def _recent_exercise_ids(user_state: Dict[str, Any], today: Optional[str] = None) -> List[str]:
     """Exercise ids from recently completed sessions.
 
     B346: used to read ``user_state["recent_sessions"]``, a field that was
@@ -473,7 +478,9 @@ def _recent_exercise_ids(user_state: Dict[str, Any]) -> List[str]:
     """
     from backend.engine.resolve_session import load_recent_exercise_ids
 
-    return load_recent_exercise_ids(user_state=user_state)
+    # B414: the recency window ends at the session day the router passes
+    # (``None`` keeps the old server-date default).
+    return load_recent_exercise_ids(user_state=user_state, reference_date=today)
 
 
 def _recent_recency_groups(user_state: Dict[str, Any]) -> Set[str]:
@@ -491,6 +498,7 @@ def select_exercises_for_part(
     user_state: Dict[str, Any],
     n: int = N_PER_BODY_PART,
     seed: Optional[int] = None,
+    today: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """Pick up to ``n`` exercises for ``body_part`` from ``exercises_pool``.
 
@@ -502,7 +510,10 @@ def select_exercises_for_part(
     by_id = {e["id"]: e for e in exercises_pool if "id" in e}
     index = build_body_part_index(exercises_pool)
     candidate_ids = index.get(body_part, set()) - already_selected
-    candidates = [by_id[i] for i in candidate_ids if i in by_id]
+    # B414: the index holds sets of string ids, whose iteration order changes
+    # with PYTHONHASHSEED; the seeded jitter below is drawn in this order, so
+    # an unsorted walk gave a different pick in every process.
+    candidates = [by_id[i] for i in sorted(candidate_ids) if i in by_id]
     candidates = [c for c in candidates if _exercise_fits_equipment(c, equipment)]
     if not candidates:
         return []
@@ -532,7 +543,7 @@ def select_exercises_for_part(
     ]
 
     prefs = (user_state.get("preferences") or {})
-    recent_ids = _recent_exercise_ids(user_state)
+    recent_ids = _recent_exercise_ids(user_state, today)
     recent_groups = _recent_recency_groups(user_state)
 
     rng = random.Random(seed)
@@ -735,6 +746,29 @@ def _estimate_exercise_minutes(
 # ── Main entry point ──────────────────────────────────────────────────────
 
 
+def request_seed(
+    today: Optional[str],
+    body_parts: Sequence[str],
+    equipment_mode: str,
+    gym_id: Optional[str],
+) -> int:
+    """B414: the stable seed of a request that carries none.
+
+    Same day + same body parts (in the order asked) + same equipment mode and
+    gym → same seed, so preview and start give the same session and repeating
+    the preview no longer reshuffles it. Variety across days comes from the
+    date (and from recency). ``today`` is the session day the router passes —
+    never read from a clock here.
+    """
+    key = "|".join([
+        str(today or ""),
+        ",".join(str(p) for p in body_parts),
+        str(equipment_mode or ""),
+        str(gym_id or ""),
+    ])
+    return int(hashlib.sha256(key.encode("utf-8")).hexdigest()[:16], 16)
+
+
 def generate_body_part_session(
     body_parts: Sequence[str],
     equipment_mode: str,
@@ -753,6 +787,10 @@ def generate_body_part_session(
       body_parts_selected=[...], equipment_mode, gym_id.
     """
     equipment = resolve_equipment_mode(equipment_mode, user_state, gym_id)
+    if seed is None:
+        # B414: no seed from the client (the app never sends one) → derived from
+        # the request and its day, not from system entropy.
+        seed = request_seed(today, body_parts, equipment_mode, gym_id)
 
     # 1. Select exercises
     already: Set[str] = set()
@@ -760,7 +798,7 @@ def generate_body_part_session(
     for part in body_parts:
         picks = select_exercises_for_part(
             part, exercises_catalog, equipment, already, user_state,
-            n=N_PER_BODY_PART, seed=seed,
+            n=N_PER_BODY_PART, seed=seed, today=today,
         )
         if not picks:
             continue

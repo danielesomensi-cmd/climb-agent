@@ -135,6 +135,11 @@ def preview(req: PreviewRequest, user_id: Optional[str] = Depends(get_user_id)):
         _validate_target_date(req.target_date)
     state = load_state(user_id)
     catalog = _load_catalog()
+    # B414: the day comes from here, never from a clock inside the engine. It
+    # seeds the pick when the client sends no seed (the app never does), so it
+    # must be the same day /start receives: the client's target_date, the
+    # server date only for a client that omits it (as the resolver did).
+    day = req.target_date or date_type.today().isoformat()
     session = generate_body_part_session(
         body_parts=req.body_parts,
         equipment_mode=req.equipment_mode,
@@ -143,7 +148,7 @@ def preview(req: PreviewRequest, user_id: Optional[str] = Depends(get_user_id)):
         exercises_catalog=catalog,
         include_cooldown=req.include_cooldown,
         seed=req.seed,
-        today=req.target_date,
+        today=day,
     )
     if not session.get("exercises"):
         raise HTTPException(

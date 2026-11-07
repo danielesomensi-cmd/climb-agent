@@ -289,13 +289,13 @@ def compute_other_engines(exercises_path: str = EXERCISES, *, body_parts: bool =
     path), the composer's pool and — only when ``body_parts`` — the body-part
     picker.
 
-    The body-part picker is NOT in the static golden: its candidate list comes
-    from a ``set`` of string ids, so its order (and with the seeded jitter, the
-    pick) changes with ``PYTHONHASHSEED`` from one process to the next — a
-    pre-existing non-determinism C272 found and reported, not one it caused.
-    Inside one process the order is stable, so the in-process differential
-    test (full catalog vs catalog without the library-only entries) still
-    covers it."""
+    The body-part picker is NOT in the static golden: C272 found its candidate
+    list walked a ``set`` of string ids, so the pick changed with
+    ``PYTHONHASHSEED`` from one process to the next. B414 sorted it (and seeds
+    a request without seed from its day); cross-process determinism is pinned
+    by ``test_b414_body_part_picker_determinism.py``, and the in-process
+    differential test (full catalog vs catalog without the library-only
+    entries) keeps covering the library filter."""
     from backend.coach.session_composer import build_pool
     from backend.engine.adhoc_builder import compose_adhoc_session
     from backend.engine.body_part_picker import BODY_PART_ORDER, generate_body_part_session

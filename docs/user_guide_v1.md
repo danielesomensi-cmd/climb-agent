@@ -859,7 +859,7 @@ When you need a strength workout instead of climbing, the **Body Part Training**
 
 1. **Equipment** — Bodyweight, Home (uses your configured gear), a specific Gym, or Show All.
 2. **Body parts** — Tap the parts you want to train: fingers, forearms, biceps, triceps, shoulders, back, chest, core, legs, glutes, hips. Parts with no matching exercises for your equipment are greyed out. The live counter updates the estimated duration as you select.
-3. **Preview & Start** — Review the generated exercises grouped by body part (two exercises per part, with warmup and optional mobility cooldown). "Start now" inserts the session into today's plan and opens the guided runner.
+3. **Preview & Start** — Review the generated exercises grouped by body part (two exercises per part, with warmup and optional mobility cooldown). "Start now" inserts the session into today's plan and opens the guided runner. The session you start is exactly the one in the preview: the same choices on the same day always give the same exercises (opening the preview again does not reshuffle them); another day can pick different ones.
 
 The session uses resolver-light prescriptions (sets, reps, rest, loads from your working loads / hangboard baseline when available). Completion updates your working loads but doesn't drive closed-loop progression — this keeps ad-hoc strength days from skewing the long-term plan.
 
