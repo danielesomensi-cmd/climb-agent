@@ -145,7 +145,7 @@ def test_strip_derived_restores_custom_rows_and_drops_read_fields():
     row = client_plan["weeks"][0]["days"][0]["sessions"][0]["exercises"][0]
     row.update({"load_kg": 32.5, "stored_load_kg": 10.0, "load_source": "anchored", "anchored": {"x": 1}})
     client_plan["weeks"][0]["days"][0]["sessions"][0]["process_cue"] = "breathe"
-    client_plan["weeks"][0]["days"][1]["sessions"][0]["process_cue"] = "kept on a done session"
+    client_plan["weeks"][0]["days"][1]["sessions"][0]["process_cue"] = "read-time copy on a done session"
     client_plan["weeks"][0]["days"][1]["sessions"][0]["exercises"][0]["load_kg"] = 21.0
     client_plan.update({"guard_warnings": [{"x": 1}], "key_status": {}, "_stale": True})
 
@@ -155,8 +155,10 @@ def test_strip_derived_restores_custom_rows_and_drops_read_fields():
     assert pending["exercises"] == stored["weeks"][0]["days"][0]["sessions"][0]["exercises"]
     assert "process_cue" not in pending
     done = client_plan["weeks"][0]["days"][1]["sessions"][0]
-    # Played sessions are never touched (immutability).
-    assert done["process_cue"] == "kept on a done session"
+    # B414 (PLAYED-SESSION-READ-KEYS): on a played session the read-time keys
+    # take the stored twin's value — the stored one has no cue, so it goes …
+    assert "process_cue" not in done
+    # … every other field of a played session is kept as sent (immutability).
     assert done["exercises"][0]["load_kg"] == 21.0
     for k in ("guard_warnings", "key_status", "_stale"):
         assert k not in client_plan

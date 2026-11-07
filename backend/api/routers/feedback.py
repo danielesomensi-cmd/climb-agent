@@ -689,7 +689,7 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
     response: dict = {"status": "ok"}
     if final_plan:
         # Same read-time view GET serves (the stored plan stays raw).
-        response["week_plan"] = read_view(final_plan, state, _ladder.weeks)
+        response["week_plan"] = read_view(final_plan, state, _ladder.weeks, user_id=user_id)
     # A296: what the limit log made of this session (target step, the
     # hard-attempts warning, a send above the boulder RP to confirm).
     _limit_summary = _limit_summary_for(state, target_date, target_sid)

@@ -1824,10 +1824,18 @@ is_preservable(session)   = status ∈ {done, skipped} | is_user_owned(session)
   client from before B371) → accepted and logged. A dry run is never refused.
 - **Read-time fields** (B371, `plan_revision.strip_derived`): response siblings (`guard_warnings`, `key_status`, …),
   `_stale`, `process_cue` on unplayed sessions and the `exercises` of unplayed custom sessions (anchored loads, B364)
-  are replaced by / dropped in favour of the stored plan before a client plan is applied. Played sessions untouched.
+  are replaced by / dropped in favour of the stored plan before a client plan is applied. On a **played** session
+  (B414, PLAYED-SESSION-READ-KEYS) the four keys GET attaches at read — `process_cue`, `feedback_summary`,
+  `exercise_feedback`, `session_duration_seconds` — take the value of the stored played twin (same
+  `(date, slot, session_id)`, matched in order) and are removed when the twin has none: the stored
+  `session_duration_seconds` (written by `/feedback`, max of every resubmit) always wins over the client's copy and is
+  never dropped. No stored twin (a client from before B371) → only `process_cue` goes. Every other field of a played
+  session is kept as sent.
 - **Write responses = read view** (B371 review, `plan_revision.read_view`): every write endpoint that returns a
   `week_plan` (events, override, quick-add, session/*, feedback) returns the same view GET serves (custom rows with
-  anchored loads, ladder doses, measures, limit targets, rest default); the stored plan stays raw.
+  anchored loads, ladder doses, measures, limit targets, rest default; B414: also the feedback pills of done sessions
+  from `feedback_log` and the A141 `process_cue` of every session, seeded on the user like GET); the stored plan stays
+  raw.
 - **Played custom = what was shown** (B371 review, `plan_revision.freeze_played_customs`): a custom session marked
   done/skipped (`/events` or `/feedback`) stores the read-time view of that moment, never re-derived afterwards.
 - **Feedback revision** (B371 review): `/feedback` saves (and bumps) only a week whose content it changed; the inline

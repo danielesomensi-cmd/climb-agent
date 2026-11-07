@@ -81,6 +81,15 @@ _SIBLING_KEYS = (
 #: Session fields computed at read (A141). Re-attached on every GET.
 _SESSION_READ_KEYS = ("process_cue",)
 
+#: B414 (PLAYED-SESSION-READ-KEYS): what GET attaches at read to a PLAYED
+#: session — the A141 cue on every session, the B32/B35 feedback pills and the
+#: measured duration (from ``feedback_log``) on a done one. On a played session
+#: of a client plan they take the value of the stored twin (removed when the
+#: twin has none): ``session_duration_seconds`` is ALSO a real field of the
+#: record (``/feedback`` step 4b, max of every resubmit), so the stored value
+#: always wins over the client's copy and is never dropped.
+_PLAYED_READ_KEYS = ("process_cue", "feedback_summary", "exercise_feedback", "session_duration_seconds")
+
 _PLAYED = ("done", "skipped")
 
 
@@ -204,9 +213,17 @@ def strip_derived(client_plan: Optional[Dict[str, Any]], stored: Optional[Mappin
       session are replaced by the stored ones (the anchored loads, ladder
       doses, measures and limit targets of the day are a read-time view —
       saving them froze a load the athlete never set). A custom with no
-      stored twin (an old client whose plan diverged) is left as sent.
+      stored twin (an old client whose plan diverged) is left as sent;
+    - B414 (PLAYED-SESSION-READ-KEYS): on a done / skipped session the four
+      :data:`_PLAYED_READ_KEYS` take the value of its stored played twin
+      (same ``(date, slot, session_id)``, matched in order like the customs)
+      and are removed when the twin has none — the stored
+      ``session_duration_seconds`` wins over the client's. A played session
+      with no stored twin (a client from before B371) only loses
+      ``process_cue``.
 
-    Done / skipped sessions are never touched (immutability). Returns the plan.
+    Every other field of a done / skipped session is kept as sent
+    (immutability). Returns the plan.
     """
     if not isinstance(client_plan, dict):
         return client_plan
@@ -215,17 +232,35 @@ def strip_derived(client_plan: Optional[Dict[str, Any]], stored: Optional[Mappin
     client_plan.pop("_stale", None)
 
     stored_customs: Dict[tuple, list] = {}
+    stored_played: Dict[tuple, list] = {}
     if isinstance(stored, Mapping):
         for wb in stored.get("weeks") or []:
             for d in wb.get("days") or []:
                 for s in d.get("sessions") or []:
-                    if isinstance(s, Mapping) and _is_custom(s) and s.get("status") not in _PLAYED:
+                    if not isinstance(s, Mapping):
+                        continue
+                    if s.get("status") in _PLAYED:
+                        stored_played.setdefault(_session_key(d.get("date"), s), []).append(s)
+                    elif _is_custom(s):
                         stored_customs.setdefault(_session_key(d.get("date"), s), []).append(s)
 
     for wb in client_plan.get("weeks") or []:
         for d in wb.get("days") or []:
             for s in d.get("sessions") or []:
-                if not isinstance(s, dict) or s.get("status") in _PLAYED:
+                if not isinstance(s, dict):
+                    continue
+                if s.get("status") in _PLAYED:
+                    played_twins = stored_played.get(_session_key(d.get("date"), s))
+                    if not played_twins:
+                        for k in _SESSION_READ_KEYS:
+                            s.pop(k, None)
+                        continue
+                    played_twin = played_twins.pop(0)
+                    for k in _PLAYED_READ_KEYS:
+                        if k in played_twin:
+                            s[k] = deepcopy(played_twin[k])
+                        else:
+                            s.pop(k, None)
                     continue
                 for k in _SESSION_READ_KEYS:
                     s.pop(k, None)
@@ -264,13 +299,20 @@ def guard_client_plan(
 # --------------------------------------------------------------------------- #
 
 def read_view(plan: Optional[Dict[str, Any]], state: Mapping[str, Any],
-              archived_weeks: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
+              archived_weeks: Optional[Dict[str, Any]] = None, *,
+              user_id: Optional[str] = None,
+              session_reads: bool = True) -> Optional[Dict[str, Any]]:
     """The plan as ``GET /api/week`` serves it: a COPY where every not-yet-played
     custom session carries the read-time values of its day (B364 anchored
     loads, A298 ladder doses, A295 measures, A299 limit targets, B370 rest
     default), plus a ``plan_revision`` the client can send back. The stored
-    plan is untouched. Done/skipped sessions are returned as stored.
-    ``archived_weeks``: the ladders' cold-store weeks (B413, D1 —
+    plan is untouched. Done/skipped sessions are returned as stored, plus —
+    B414 (PLAYED-SESSION-READ-KEYS), ``session_reads`` — the keys GET
+    attaches at read: the feedback pills of a done session (``feedback_log``)
+    and the A141 process cue of every session, seeded on *user_id* exactly as
+    GET seeds it (``None`` → ``"default"``, GET's own fallback). Without them a
+    tap on /today wiped the pills and the cue from the screen until the next
+    GET. ``archived_weeks``: the ladders' cold-store weeks (B413, D1 —
     ``backend.api.ladder_archive``), so the view shows the dose GET shows."""
     if not isinstance(plan, dict):
         return plan
@@ -282,6 +324,14 @@ def read_view(plan: Optional[Dict[str, Any]], state: Mapping[str, Any],
         # A read-time view must never fail a write that already succeeded.
         logger.warning("B371: read_view failed — returning the stored plan", exc_info=True)
         out = deepcopy(plan)
+    if session_reads:
+        from backend.api.routers.week import _attach_feedback, _attach_process_cues
+
+        try:
+            _attach_feedback(out, list(state.get("feedback_log") or []))
+            _attach_process_cues(out, user_id or "default")
+        except Exception:
+            logger.warning("B414: read_view session reads failed — served without them", exc_info=True)
     out.setdefault(REVISION_KEY, 1)
     return out
 
@@ -321,7 +371,7 @@ def freeze_played_customs(
                     targets.append((k, s))
     if not targets:
         return 0
-    view = read_view(dict(before), state, archived_weeks) or {}
+    view = read_view(dict(before), state, archived_weeks, session_reads=False) or {}
     shown: Dict[tuple, list] = {}
     for wb in view.get("weeks") or []:
         for d in wb.get("days") or []:

@@ -242,11 +242,20 @@ class TestApi:
         r = _post(before, SKIP)
         after = r.json()["week_plan"]
 
-        def strip(sessions):  # ``resolved`` is the read-time prescription every write attaches
-            return [{k: v for k, v in s.items() if k != "resolved"} for s in sessions]
+        # ``resolved`` is the read-time prescription every write attaches;
+        # B414: the response is GET's view, so it also carries the A141 cue
+        # and the feedback pills of a done session (never stored).
+        read_time = {"resolved", "process_cue", "feedback_summary", "exercise_feedback"}
 
+        def strip(sessions):
+            return [{k: v for k, v in s.items() if k not in read_time} for s in sessions]
+
+        saved = deps.load_state(None)["week_plans"][WS]
         for d in ("2026-10-05",):  # before TODAY
             assert strip(_day(after, d)["sessions"]) == _day(before, d)["sessions"]
+            # The stored record itself, byte for byte.
+            assert json.dumps(_day(saved, d)["sessions"], sort_keys=True) == \
+                json.dumps(_day(before, d)["sessions"], sort_keys=True)
 
     def test_undo_restores_and_is_not_reapplied(self, api_state):
         r = _post(api_state["week_plans"][WS], SKIP)

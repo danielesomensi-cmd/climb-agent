@@ -440,7 +440,7 @@ def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)
 
     # B371 review: the response is the same read-time view GET serves (the
     # stored plan stays raw).
-    return {"week_plan": read_view(updated, state, _ladder.weeks), "adjustments": adjustments,
+    return {"week_plan": read_view(updated, state, _ladder.weeks, user_id=user_id), "adjustments": adjustments,
             "warnings": warnings, "guard_warnings": guard_warnings,
             # A294: sibling, never inside week_plan (nothing can persist it).
             "key_status": build_key_status(state, user_id, week_start=updated.get("start_date"),
@@ -547,7 +547,7 @@ def quick_add(req: QuickAddRequest, user_id: Optional[str] = Depends(get_user_id
 
     # A301: nothing is rewritten after a quick-add — `adjustments` is always
     # empty (kept for the contract); `guard_warnings` are the week's alerts.
-    return {"week_plan": read_view(updated, state, _ladder.weeks), "warnings": warnings, "adjustments": adjustments,
+    return {"week_plan": read_view(updated, state, _ladder.weeks, user_id=user_id), "warnings": warnings, "adjustments": adjustments,
             "guard_warnings": build_guard_warnings(state, updated, req.today, user_id=user_id),
             "key_status": build_key_status(state, user_id, week_start=updated.get("start_date"),
                                            today=req.today)}
@@ -878,7 +878,7 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
         elif a.get("type") == "change_gym":
             warnings.extend(a.get("warnings") or [])
     return {
-        "week_plan": read_view(updated, state, _ladder.weeks),
+        "week_plan": read_view(updated, state, _ladder.weeks, user_id=user_id),
         "adjustments": adjustments,
         "warnings": warnings,
         "guard_warnings": build_guard_warnings(state, updated, req.today, user_id=user_id),

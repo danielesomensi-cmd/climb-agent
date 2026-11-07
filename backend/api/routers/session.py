@@ -54,7 +54,8 @@ def _load_exercises_catalog() -> dict:
 def _view(week_plan: dict, state: dict, user_id) -> dict:
     """B413 (D1): ``read_view`` with the ladders' archived weeks of the plan's
     week (a failed read falls back to the recent weeks: a view stores nothing)."""
-    return read_view(week_plan, state, _ladder_archive.for_plan(state, user_id, week_plan).weeks)
+    return read_view(week_plan, state, _ladder_archive.for_plan(state, user_id, week_plan).weeks,
+                     user_id=user_id)
 
 
 def _persist_week_plan(updated: dict, state: dict, user_id) -> None:
