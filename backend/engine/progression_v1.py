@@ -2148,7 +2148,10 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
     2. ``updated["tests"]`` (top-level) — append-only HISTORY LOG keyed by
        category (``max_strength``, ``repeater_strength_endurance``,
        ``pulling_strength``). Each entry carries metadata: date, bodyweight,
-       freshness_policy, confidence, setup. Used for progression tracking
+       confidence, setup (B414: no ``freshness_policy`` any more — nothing
+       read it; the 90-day validity is ``retest_policy.official_max``'s
+       ``valid_until``, and the entries stored before B414 keep the field,
+       harmless). Used for progression tracking
        over time (e.g. ``week.py`` reads ``repeater_strength_endurance``
        history for hangboard protocol decisions).
 
@@ -2239,7 +2242,6 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
                 "total_load_kg": total,
                 "external_load_kg": external,
                 "setup": {"hang_seconds": 7},
-                "freshness_policy": {"stale_after_days": 90},
                 **_confidence("max_hang_7s_total_load"),
                 **_trend(max_strength, "max_hang_7s_total_load", "total_load_kg", total),
             }
@@ -2280,7 +2282,6 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
                 "total_load_kg": total,
                 "external_load_kg": external,
                 "setup": {"hang_seconds": 5},
-                "freshness_policy": {"stale_after_days": 90},
                 **_confidence("max_hang_5s_total_load"),
                 **_trend(max_strength, "max_hang_5s_total_load", "total_load_kg", total),
             }
@@ -2318,7 +2319,6 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
                 "exercise_id": exercise_id,
                 "bodyweight_kg": bodyweight,
                 "completed_reps": completed,
-                "freshness_policy": {"stale_after_days": 90},
                 "confidence": "high",
             })
             rep_history.sort(key=lambda x: (str(x.get("date") or ""), str(x.get("test_id") or "")))
@@ -2374,7 +2374,6 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
                 "external_load_2rm_kg": external_2rm,
                 "estimated_1rm_kg": estimated_1rm,
                 "pulling_ratio_pct": pulling_ratio,
-                "freshness_policy": {"stale_after_days": 90},
                 **pull_conf,
                 **_trend(pull_history, "weighted_pullup_2rm", "total_load_2rm_kg", total_2rm),
             })

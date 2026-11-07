@@ -1,7 +1,8 @@
 """B346 — the closed loop's dead channels: connected or removed.
 
 D280 found five state fields that were written and never read. Four are handled
-here (`freshness_policy` stays open on purpose, tracked in the roadmap):
+here (the fifth, `freshness_policy`, lost its writes in B414:
+`test_b414_freshness_policy_removed`):
 
 1. `test_queue` — written by `progression_v1._enqueue_test` after two
    concordant feedbacks on a max hang, read ONLY by `planner_v1`, which no
