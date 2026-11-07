@@ -52,7 +52,7 @@ Un'etichetta di feedback non tocca mai il massimale e non programma mai un test.
   Il 100% compare solo nei test.
 - **Tetto da misura (A302):** i tetti si calcolano sul più alto fra il massimale ufficiale e quello implicito nell'ultima misura pulita. Sospensione: tenuta L con margine m secondi → L × (1 + 1,5% × m), con «>5» letto come 5", «3-5» come 3" e un tempo cronometrato fino a +6". Trazione: ultima serie lasciando una ripetizione → e1RM = L × f(ripetizioni + 1). La misura conta 28 giorni, solo contro il test in vigore, con tutte le serie fatte, senza dolore e senza etichetta hard. Il solo voto non alza mai il tetto. Il massimale ufficiale non si muove.
 
-**Rientro dopo uno stacco (B413, 2026-11-04):** la rampa 0,90 / 0,95 sul tetto **non c'è più**, per tutti: dopo uno stacco di 14 giorni o più il tetto è già quello pieno di fase. Resta solo il limite di serie: nelle prime 2 esposizioni dopo lo stacco, max hang al massimo 5 serie (il test conta come esposizione). Anche il limit non toglie più mezzo grado dopo uno stacco: il target è il grado in memoria.
+**Rientro dopo uno stacco (B413, 2026-11-04):** la rampa 0,90 / 0,95 sul tetto **non c'è più**, per tutti: dopo uno stacco di 14 giorni o più il tetto è già quello pieno di fase. Dal 07/11 (B414) non c'è più nemmeno il limite di 5 serie di max hang nelle prime 2 esposizioni: valgono le serie della seduta. Anche il limit non toglie più mezzo grado dopo uno stacco: il target è il grado in memoria.
 
 Un esercizio fatto e **senza voto vale «ok»** e non abbassa mai la memoria: se il carico scritto è sotto quello che la memoria avrebbe proposto per quella seduta (senza i tagli temporanei), la voce resta com'era e si aggiorna solo la data.
 

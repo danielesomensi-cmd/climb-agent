@@ -58,10 +58,11 @@ from backend.engine.stimulus import (
 ANCHORED_EXERCISES: Tuple[str, ...] = ("weighted_pullup", "weighted_chinup", "max_hang_5s", "max_hang_7s")
 PULL_EXERCISES: Tuple[str, ...] = ("weighted_pullup", "weighted_chinup")
 HANG_SECONDS: Dict[str, int] = {"max_hang_7s": 7, "max_hang_5s": 5}
-# R3: max hang sets during the re-entry (``retest_policy.reentry_step``:
-# the first REENTRY_EXPOSURES exposures after a gap). ENGINEERING CONSTANT.
-# B413 removed the re-entry factor on the load cap; this set cap stays.
-REENTRY_MAX_HANG_SETS = 5
+# B414 (Daniele, 2026-11-07 «togli il tetto»): no re-entry set cap on max
+# hangs any more (it was 5 sets in the first 2 exposures after a 14-day gap) —
+# B413 had already removed the re-entry factor on the load cap. The sets are
+# the prescribed ones. Stored prescriptions keep their legacy
+# ``anchored.ramp`` / ``reentry_sets`` guard; nothing writes them again.
 #: Catalog rep scheme each pull is calibrated on (prescription_defaults.reps).
 CATALOG_REPS: Dict[str, int] = {"weighted_pullup": 3, "weighted_chinup": 5}
 #: Catalog intensity of the cold-start hang target (attributes.intensity_pct).
@@ -299,7 +300,7 @@ def _hang_pct(phase: str, intensity: str) -> float:
 
 
 # ---------------------------------------------------------------------------
-# Official max, tested gate, ramp
+# Official max, tested gate
 # ---------------------------------------------------------------------------
 
 def official_for(state: Mapping[str, Any], exercise_id: str, on: Optional[date]) -> Optional[Dict[str, Any]]:
@@ -357,44 +358,6 @@ def _test_dates(state: Mapping[str, Any], family: str) -> List[str]:
         if isinstance(pb, Mapping) and pb.get("source") in rp._BASELINE_TESTED_SOURCES and pb.get("updated_at"):
             out.append(str(pb["updated_at"])[:10])
     return sorted(set(out))
-
-
-def _family_exercises(family: str) -> Tuple[str, ...]:
-    return PULL_EXERCISES if family == FAMILY_PULLING_MAX else tuple(HANG_SECONDS)
-
-
-def ramp_for(
-    state: Mapping[str, Any], family: str, on: Optional[date], official_date: Optional[str] = None,
-) -> Dict[str, Any]:
-    """The re-entry count (``retest_policy.reentry_step``) + B364's deploy rule.
-
-    B413: it only says whether the session is a re-entry (``in_reentry``, the
-    max-hang set cap); it no longer scales the load cap, so it carries no
-    ``factor``. The key stays ``ramp`` in the payload (``anchored.ramp``) so
-    stored prescriptions and the coach read the same shape.
-
-    Deploy rule (B364 §2c): with an EMPTY registry for the family (existing
-    users before the migration seeds it), a working entry of the family updated
-    less than ``REENTRY_GAP_D`` days ago means the athlete is training it: n = 3.
-    Only an entry FRESHER than the official test counts (an entry dated on the
-    test day is the pre-B363 copy of the test itself, not training).
-    """
-    if on is None:
-        return {"family": family, "n": 1, "gap_days": None, "in_reentry": True, "source": "no_date"}
-    info = dict(rp.reentry_step(state, family, on, extra_dates=_test_dates(state, family)))
-    info["source"] = "exposures"
-    registry = ((state.get("progression_counters") or {}).get("stimulus_exposures") or {})
-    if info["n"] < 3 and not (isinstance(registry, Mapping) and registry.get(family)):
-        for e in ((state.get("working_loads") or {}).get("entries") or []):
-            if not isinstance(e, Mapping) or e.get("exercise_id") not in _family_exercises(family):
-                continue
-            upd = _parse(e.get("updated_at"))
-            if official_date and str(e.get("updated_at") or "")[:10] <= str(official_date)[:10]:
-                continue
-            if upd is not None and 0 <= (on - upd).days < rp.REENTRY_GAP_D:
-                info.update({"n": 3, "in_reentry": False, "source": "fresh_working_entry"})
-                break
-    return info
 
 
 # ---------------------------------------------------------------------------
@@ -568,7 +531,7 @@ def anchored_load(
          phase_id, intensity, sets, reps | work_seconds, rep_scheme,
          official: {protocol, total, one_rm?, date, source, age_days,
                     confidence, converted},
-         floor, cap, ramp: {n, gap_days, in_reentry, source}, clamped,
+         floor, cap, clamped,
          pct_of_official, guards: [...], pain?, fatigue?, ceiling_note?,
          no_date: bool}
     """
@@ -584,8 +547,6 @@ def anchored_load(
     if intensity not in ("easy", "medium", "hard"):
         intensity = CUSTOM_INTENSITY
     axis = axis_of(exercise_id)
-    family = family_of(exercise_id)
-    ramp = ramp_for(state, family, on, om.get("date"))
     entry = working_entry(state, exercise_id, on, om.get("date"), setup)
     guards: List[Dict[str, Any]] = []
     n_sets = int(sets or CATALOG_SETS[exercise_id])
@@ -660,10 +621,6 @@ def anchored_load(
             intensity_pct = catalog_intensity or CATALOG_HANG_INTENSITY[exercise_id]
             total0 = float(intensity_pct) * float(om7["total_kg"])
             source = "phase_target"
-        # R3: 5 sets in re-entry, never more.
-        if ramp["in_reentry"] and n_sets > REENTRY_MAX_HANG_SETS:
-            n_sets = REENTRY_MAX_HANG_SETS
-            guards.append({"guard": "reentry_sets", "sets": REENTRY_MAX_HANG_SETS})
         rep_scheme = f"{n_sets}x{int(t) if float(t).is_integer() else t}s"
         dose = {"work_seconds": t}
 
@@ -736,8 +693,6 @@ def anchored_load(
         "official": official_out,
         "floor": floor_r,
         "cap": cap_r,
-        "ramp": {"n": int(ramp["n"]), "gap_days": ramp.get("gap_days"),
-                 "in_reentry": bool(ramp.get("in_reentry")), "source": ramp.get("source")},
         "clamped": clamped,
         "pct_of_official": round(total / ref, 3) if ref else None,
         "guards": guards,
@@ -783,7 +738,7 @@ def anchored_suggested_fields(anch: Mapping[str, Any]) -> Dict[str, Any]:
 def anchor_summary(anch: Mapping[str, Any]) -> Dict[str, Any]:
     """Compact, UI/coach-safe description of an anchored prescription."""
     keys = ("source", "phase_id", "intensity", "floor", "cap", "clamped", "pct_of_official",
-            "ramp", "official", "evidence", "guards", "pain", "fatigue", "no_date")
+            "official", "evidence", "guards", "pain", "fatigue", "no_date")
     return {k: anch[k] for k in keys if k in anch}
 
 
@@ -857,8 +812,8 @@ def resolve_custom_exercises(
     - anchored exercise, mode 'anchored', tested athlete → ``load_kg`` is the
       external load of ``anchored_load`` on that date (≥ 0; an assisted hang
       shows 0 + ``suggested_external_load_kg`` < 0), the stored kg moves to
-      ``stored_load_kg``; when the re-entry caps the sets (max hangs, 5),
-      ``sets`` is lowered too and the stored count moves to ``stored_sets``;
+      ``stored_load_kg``; the stored ``sets`` are kept (B414: no re-entry
+      set cap any more);
     - mode 'fixed' → the user's kg, untouched, ``load_source: 'user_fixed'``;
     - untested athlete → stored kg untouched (pre-B364 behaviour);
     - A302: any other loaded row (curl, RDL, wrist curl…) carries the working
@@ -905,13 +860,6 @@ def resolve_custom_exercises(
             copy["anchored"] = anchor_summary(anch)
             if anch.get("ceiling_note"):
                 copy["ceiling_note"] = anch["ceiling_note"]
-            # Re-entry: anchored_load caps max hangs at 5 sets (guard
-            # reentry_sets) — the set count is part of the prescription, not
-            # only the load (B364 review: a 6-set ad-hoc hang kept 6 sets).
-            stored_sets = _int(copy.get("sets"))
-            if stored_sets is not None and int(anch["sets"]) < stored_sets:
-                copy["stored_sets"] = stored_sets
-                copy["sets"] = int(anch["sets"])
         out.append(copy)
     return out
 
@@ -1316,9 +1264,9 @@ def record_exposures(updated: Dict[str, Any], log_entry: Mapping[str, Any]) -> N
 
 __all__ = [
     "ANCHORED_EXERCISES", "PULL_EXERCISES", "CHINUP_TO_PULLUP_RATIO", "PRILEPIN_BANDS",
-    "RESERVE_S", "REENTRY_MAX_HANG_SETS", "HANG_PHASE_CAP", "HANG_PHASE_FLOOR", "HANG_PHASE_PCT", "CUSTOM_INTENSITY",
+    "RESERVE_S", "HANG_PHASE_CAP", "HANG_PHASE_FLOOR", "HANG_PHASE_PCT", "CUSTOM_INTENSITY",
     "rep_factor", "prilepin_cap", "phase_on", "official_for", "is_anchored_and_tested",
-    "ramp_for", "working_entry", "anchored_load", "anchored_suggested_fields", "anchor_summary",
+    "working_entry", "anchored_load", "anchored_suggested_fields", "anchor_summary",
     "effective_load_mode", "resolve_custom_exercises", "apply_anchored_feedback",
     "record_exposures", "fatigue_for", "pain_for", "hang_write_cap",
 ]

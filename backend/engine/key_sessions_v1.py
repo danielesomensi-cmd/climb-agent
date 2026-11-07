@@ -419,7 +419,7 @@ def session_dose(state: Mapping[str, Any], session: Mapping[str, Any], d_iso: st
     are measured; everything else is full on presence. For the anchored ones,
     every main exercise of the family is compared with the anchored FLOOR of
     the phase on that day (``anchored_load(...)["floor"]``: the effective floor,
-    re-entry ramp and pain already applied) and needs ≥ ``MIN_FULL_SETS`` sets:
+    pain already applied; B414: no re-entry cut) and needs ≥ ``MIN_FULL_SETS`` sets:
 
     - a catalog session done or planned → full (the engine prescribed it);
     - a test → full;

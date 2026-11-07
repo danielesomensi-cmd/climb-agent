@@ -21,10 +21,9 @@ Primitives (pure, deterministic, never write state, never ``date.today()``):
   ``LOW_CONF_WINDOW_D`` days before the test. Needs the archived weeks
   (A221 moves past weeks to ``week_archive``): pass them, or the count is an
   under-estimate.
-- ``reentry_step(state, family, as_of, archived_weeks=...)`` — the single
-  re-entry count: n exposures since the last gap ≥ ``REENTRY_GAP_D`` days,
-  counting the session being prescribed. B413: it no longer scales any load
-  (the 0.90 / 0.95 cap factors are gone); only the max-hang set cap reads it.
+- B414: no re-entry count any more (``reentry_step``, ``REENTRY_GAP_D``,
+  ``REENTRY_EXPOSURES`` are gone). B413 removed the 0.90 / 0.95 cap factors,
+  B414 the last reader, the 5-set cap on max hangs after a gap.
 - ``is_heavy_pulling_session(state, session, as_of)`` — the "heavy pulling"
   blocker definition.
 - Shared constants for the scheduling briefs (A289 / A293 / A294).
@@ -37,7 +36,8 @@ A289 adds the scheduling half: ``retest_decisions`` (what planner PASS 3 must
 place, week by week) and ``retest_status`` (the live payload for the UI).
 
 Production callers since B364: ``anchored_load`` (official max, tested gate,
-re-entry count) and ``progression_v1._update_test_from_log`` (confidence).
+B414: no re-entry count) and ``progression_v1._update_test_from_log``
+(confidence).
 """
 
 from __future__ import annotations
@@ -50,7 +50,6 @@ from backend.engine.stimulus import (
     FAMILY_PULLING_MAX,
     count_exposures,
     counted_entries,
-    exposure_dates,
     is_pulling_hard_session,
     session_flag,
     stimulus_of,
@@ -75,16 +74,6 @@ LOW_CONF_WINDOW_D = 21
 #: test. A319: no longer the gap after a low-confidence test — every other test
 #: waits HIGH_CONF_RETEST_D, whatever its confidence. Name and value kept.
 LOW_CONF_RETEST_D = 28
-
-#: Re-entry. ENGINEERING CONSTANTS. A gap of at least REENTRY_GAP_D days
-#: without an exposure re-opens the re-entry; the test counts as an exposure.
-REENTRY_GAP_D = 14
-#: The first REENTRY_EXPOSURES exposures after a gap (the session being
-#: prescribed included) are the re-entry: ``in_reentry`` (anchored_load caps
-#: max hangs at 5 sets there). B413 (Daniele, 2026-11-02 «togliamo il cap
-#: rientro, era veramente troppo facile»): the re-entry no longer scales the
-#: load cap — the 0.90 / 0.95 factors (REENTRY_FACTORS) are gone, for everyone.
-REENTRY_EXPOSURES = 2
 
 #: ENGINEERING CONSTANT: relative load change per second of hang duration
 #: (official_t = official_src × (1 + HANG_PCT_PER_S × (t_src − t))).
@@ -389,70 +378,6 @@ def test_confidence(
 
 # Not a pytest test, despite the name (tests import it).
 test_confidence.__test__ = False  # type: ignore[attr-defined]
-
-
-# ---------------------------------------------------------------------------
-# reentry_step
-# ---------------------------------------------------------------------------
-
-def reentry_step(
-    state: Mapping[str, Any],
-    family: str,
-    as_of: DateLike,
-    *,
-    archived_weeks: Optional[Union[Mapping[str, Any], Sequence[Mapping[str, Any]]]] = None,
-    include_current: bool = True,
-    extra_dates: Optional[Sequence[DateLike]] = None,
-) -> Dict[str, Any]:
-    """Where the athlete is on the re-entry ramp for ``family`` on ``as_of``.
-
-    ``extra_dates`` (B364): exposure days the view cannot see — the dates of
-    the ``tests.*`` entries of the family (a test counts as an exposure even
-    when its week was archived or the test was logged outside a plan session).
-    Only dates strictly before ``as_of`` are used; duplicates collapse.
-
-    n = distinct exposure days strictly before ``as_of`` after the last gap of
-    at least ``REENTRY_GAP_D`` days (tests included), plus 1 for the session
-    being prescribed when ``include_current``. A gap between the last exposure
-    and ``as_of`` itself also re-opens the ramp. No history → n = 1.
-
-    Returns ``{family, as_of, n, gap_days, run_start, last_exposure,
-    run_dates, in_reentry}``:
-    - ``gap_days``: length of the gap that opened the current run (``None``
-      when the history holds no such gap).
-    - ``in_reentry``: ``n ≤ REENTRY_EXPOSURES``. B413: no load factor any more.
-    """
-    on = _as_date(as_of)
-    day_set = {
-        _as_date(d) for d in exposure_dates(
-            state, family, until=on - timedelta(days=1), archived_weeks=archived_weeks
-        )
-    }
-    for extra in extra_dates or ():
-        d = _parse_date(extra)
-        if d is not None and d < on:
-            day_set.add(d)
-    dates = sorted(day_set)
-    run: List[date] = []
-    prev = on
-    gap_days: Optional[int] = None
-    for d in reversed(dates):
-        if (prev - d).days >= REENTRY_GAP_D:
-            gap_days = (prev - d).days
-            break
-        run.insert(0, d)
-        prev = d
-    n = len(run) + (1 if include_current else 0)
-    return {
-        "family": family,
-        "as_of": on.isoformat(),
-        "n": n,
-        "gap_days": gap_days,
-        "run_start": run[0].isoformat() if run else None,
-        "last_exposure": dates[-1].isoformat() if dates else None,
-        "run_dates": [d.isoformat() for d in run],
-        "in_reentry": n <= REENTRY_EXPOSURES,
-    }
 
 
 # ---------------------------------------------------------------------------
@@ -1854,12 +1779,12 @@ def _planned_reason(state: Mapping[str, Any], axis: str, planned: Mapping[str, A
 
 __all__ = [
     "TEST_FRESH_DAYS", "LOW_CONF_MIN_EXPOSURES", "LOW_CONF_WINDOW_D", "LOW_CONF_RETEST_D",
-    "REENTRY_GAP_D", "REENTRY_EXPOSURES", "HANG_PCT_PER_S",
+    "HANG_PCT_PER_S",
     "FINGER_GAP_H", "RETEST_BLOCK_H", "PULL_TEST_BLOCK_H", "HEAVY_PULL_PCT_1RM",
     "VERY_HARD_BLOCK_D", "PRE_TRIP_BLOCK_D", "RETEST_BLOCKED_PHASES",
     "PROTOCOL_HANG_7S", "PROTOCOL_HANG_5S", "PROTOCOL_PULLUP_2RM", "PROTOCOL_FAMILY",
     "EXERCISE_PROTOCOL", "convert_hang_seconds", "official_max", "is_tested",
-    "test_confidence", "reentry_step", "is_heavy_pulling_session",
+    "test_confidence", "is_heavy_pulling_session",
     "is_pulling_hard_session",
     # A289
     "AXIS_FINGER", "AXIS_PULLING", "RETEST_AXES", "AXIS_TEST_SESSION", "AXIS_PROTOCOL",

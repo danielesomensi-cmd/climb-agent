@@ -172,7 +172,7 @@
   ]
  },
  "advanced|2026-10-07|finger_strength_home": {
-  "digest": "fb998ef42b452daab1a42fd8286e425832c183307750c0b8a9edd6307201f333",
+  "digest": "d66bbb0690c6dce9be81fc2e1c400f4e8e13432fe218585dfec23d43552dcdf0",
   "exercise_ids": [
    "finger_recruitment_pulls",
    "hang_rampup_progressive",
@@ -358,7 +358,7 @@
   ]
  },
  "advanced|2026-10-07|pulling_strength_gym": {
-  "digest": "77ff0cd063896ab5962a2c55035b29404a38cff9af050a3e95bd271a47ce5e15",
+  "digest": "683b865df7d5ca8505e0c8ee0423402b828f0f1365d7b1b9ff1c24834a7ffcad",
   "exercise_ids": [
    "dynamic_mobility_flow",
    "general_pulse_raise",
@@ -422,7 +422,7 @@
   ]
  },
  "advanced|2026-10-07|strength_long": {
-  "digest": "37964b9da7daafbf16f04a873dd98c9217393b5db3348d0a3ff5c705b43fcdcb",
+  "digest": "b8fa8d99213d1c03653233ea56b473dac083244b344ca98887a075fef231af0b",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
@@ -684,7 +684,7 @@
   ]
  },
  "advanced|2026-10-21|finger_strength_home": {
-  "digest": "2353dba2057209cf54f739da7a58f4044c5e95b145e9b3cd1967e4c694567e72",
+  "digest": "4d49b21ff1f9c3b9c3879702d29909e49f17624a204ae6a5dc5822d51c1656bd",
   "exercise_ids": [
    "finger_recruitment_pulls",
    "warmup_repeaters_large",
@@ -867,7 +867,7 @@
   ]
  },
  "advanced|2026-10-21|pulling_strength_gym": {
-  "digest": "63834191827891c7da31c0a021b1a7d208c607169b1b1a5fbbe3b716b29d166a",
+  "digest": "f3b1c8072ad6108de0a5afbb12b337ab17876cb6e566f4df5b54e9e753439b1b",
   "exercise_ids": [
    "dynamic_mobility_flow",
    "general_pulse_raise",
@@ -930,7 +930,7 @@
   ]
  },
  "advanced|2026-10-21|strength_long": {
-  "digest": "8e9731ea4e332c2635033da1dd9b811a2271ab4aabd85ddabcac3f67c10c0611",
+  "digest": "d019853e4b8206e007d3a17e71019f034e21d2cfd6431ce32071933a06519b02",
   "exercise_ids": [
    "active_hip_mobility",
    "bear_crawl",

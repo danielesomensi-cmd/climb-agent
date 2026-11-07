@@ -15,7 +15,7 @@ What it changes, per user (all deterministic, all idempotent):
 (b) progression_counters.stimulus_exposures: the ONE exposure registry is
     seeded from the hot week plans + ``week_archive`` (A221 moved past weeks
     there) + the ``tests.*`` dates, last 120 days, families finger_max and
-    pulling_max (the ones the re-entry ramp reads).
+    pulling_max (the ones the re-entry ramp read until B414 removed it).
 (c) tests.* (hang + pull-up 2RM): ``confidence`` recomputed with the archived
     weeks (low = < 2 exposure days in the 21 days before the test), plus
     ``confidence_basis``, ``delta_pct`` and ``trend`` (stable when |Δ| < 5 %);

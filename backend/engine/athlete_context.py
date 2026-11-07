@@ -94,7 +94,7 @@ from backend.engine.stimulus import (
 DateLike = Union[date, str]
 ArchivedWeeks = Optional[Union[Mapping[str, Any], Sequence[Mapping[str, Any]]]]
 
-VERSION = "a324.1"
+VERSION = "b414.1"
 
 # ---------------------------------------------------------------------------
 # Constants. Shared with the engine, never copied: the command and the docs
@@ -321,7 +321,6 @@ def _anchors(state: Mapping[str, Any], today: date) -> Dict[str, Any]:
             "source": anch.get("source"),
             "phase_id": anch.get("phase_id"),
             "intensity": anch.get("intensity"),
-            "ramp": anch.get("ramp"),
             "guards": [g.get("guard") for g in anch.get("guards") or []],
             "pain": bool(anch.get("pain")),
             "fatigue": bool(anch.get("fatigue")),
@@ -1237,7 +1236,7 @@ def _anchor_line(ex: str, a: Mapping[str, Any]) -> str:
     ref = a.get("official_one_rm") or a.get("official_total")
     ref_lbl = "1RM" if a.get("official_one_rm") else "massimale"
     # B413: no re-entry factor on the cap any more (no «rientro n ×0.95» to
-    # print); a re-entry only caps max hangs at 5 sets — guard reentry_sets.
+    # print); B414: no re-entry set cap either (the reentry_sets guard is gone).
     parts = [f"  {ex}: {a.get('rep_scheme')} a {ext_s} kg (totale {_fmt_kg(a.get('total'))})",
              f"= {round(pct * 100) if pct else '—'}% di {_fmt_kg(ref)} kg {ref_lbl} (test {a.get('official_date')})",
              f"| tetto {_fmt_kg(a.get('cap'))} / pavimento {_fmt_kg(a.get('floor'))}"]
@@ -1925,8 +1924,8 @@ def _anchor_line_en(ex: str, a: Mapping[str, Any]) -> str:
     line = (f"- {ex}: {a.get('rep_scheme')} at {ext_s} ({_fmt_kg(a.get('total'))} kg total"
             + (f", {round(pct * 100)}% of the {_fmt_kg(ref)} kg {ref_lbl}" if pct else "") + ")")
     # B413: the re-entry no longer lowers the cap, so no "re-entry after a
-    # break, capped lower" line (D283 COACH-REENTRY-FRAMING); the max-hang set
-    # cap still shows as the reentry_sets guard.
+    # break, capped lower" line (D283 COACH-REENTRY-FRAMING); B414: nor the
+    # max-hang set count.
     if a.get("guards"):
         line += f"; capped by {', '.join(str(g) for g in a['guards'])}"
     if a.get("pain"):

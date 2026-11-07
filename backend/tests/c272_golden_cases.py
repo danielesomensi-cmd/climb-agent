@@ -113,6 +113,16 @@ Checked by running this golden on the step-5 tree with that one value set
 back to 90: every key identical, so the ``ladder_pin`` keys and the widened
 core filters change nothing with the ladder stage off. The ladder-on side is
 pinned by ``b413_lunch_golden_cases``.
+
+B414 (step 6, REENTRY-MAX-HANG-SETS option B: the re-entry count and its
+5-set max-hang cap are gone) changed the same 6 resolver keys as B413 step 4:
+``finger_strength_home``, ``pulling_strength_gym`` and ``strength_long`` ×
+10-07 / 10-21 on the tested ``advanced`` profile. Raw diff of the stripped
+resolver output (ladder stage off) against the B414 step-5 tree @ d33cd9b:
+the only change is ``suggested.anchored.ramp`` removed from every anchored
+instance (10-07: n 3, not a re-entry; 10-21: n 1 after a 20-21 day gap, but
+the hangs there are 3 sets, under the old cap of 5 — no set count moves).
+Same ids, same order, same loads; pools and ad-hoc unchanged.
 """
 
 from __future__ import annotations

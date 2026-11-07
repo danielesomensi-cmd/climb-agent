@@ -115,16 +115,16 @@ def test_no_reentry_ramp_after_gap():
     st = _daniele(registry={"finger_max": [{"date": "2026-10-15", "exercise_id": "max_hang_7s"}]})
     anch = anchored_load(st, "max_hang_7s", date="2026-11-02", intensity="hard", sets=6)
     assert anch["phase_id"] == "power_endurance"
-    assert (anch["ramp"]["n"], anch["ramp"]["gap_days"], anch["ramp"]["in_reentry"]) == (1, 18, True)
-    assert "factor" not in anch["ramp"]
+    assert "ramp" not in anch  # B414: no re-entry reading at all
     assert (anch["total"], anch["cap"], anch["clamped"], anch["external"]) == (104.0, 104.0, "cap", 26.0)
-    # The re-entry still caps max hangs at 5 sets (a set rule, not a load cut).
-    assert anch["sets"] == 5 and {"guard": "reentry_sets", "sets": 5} in anch["guards"]
-    # The same day with a trained run (n ≥ 3) prescribes the same load.
+    # B414 (Daniele, 2026-11-07 «togli il tetto»): no 5-set cap after a gap.
+    assert (anch["sets"], anch["rep_scheme"], anch["guards"]) == (6, "6x7s", [])
+    # The same day with a trained run prescribes the same load and sets.
     run = _daniele(registry={"finger_max": [{"date": d, "exercise_id": "max_hang_7s"}
                                             for d in ("2026-10-27", "2026-10-29", "2026-10-31")]})
-    full = anchored_load(run, "max_hang_7s", date="2026-11-02", intensity="hard")
-    assert full["ramp"]["n"] >= 3 and full["total"] == anch["total"] and full["cap"] == anch["cap"]
+    full = anchored_load(run, "max_hang_7s", date="2026-11-02", intensity="hard", sets=6)
+    assert {k: full[k] for k in ("total", "cap", "sets", "rep_scheme", "guards")} == \
+        {k: anch[k] for k in ("total", "cap", "sets", "rep_scheme", "guards")}
 
 
 def test_no_reentry_ramp_on_the_memory_after_the_02_11_session():
@@ -133,7 +133,7 @@ def test_no_reentry_ramp_on_the_memory_after_the_02_11_session():
     st = _daniele(entries=[_hang_memory()],
                   registry={"finger_max": [{"date": "2026-11-02", "exercise_id": "max_hang_7s"}]})
     anch = anchored_load(st, "max_hang_7s", date="2026-11-04", intensity="hard")
-    assert anch["ramp"]["n"] == 2 and anch["ramp"]["in_reentry"] is True
+    assert "ramp" not in anch
     assert (anch["source"], anch["total"], anch["cap"]) == ("working_load", 104.0, 104.0)
 
 

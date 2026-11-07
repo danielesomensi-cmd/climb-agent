@@ -1,5 +1,5 @@
 """A288 (F0) — read-only retest-policy primitives: official max, computed test
-confidence, the single re-entry ramp, heavy pulling."""
+confidence, heavy pulling (B414: the re-entry ramp is gone)."""
 
 from __future__ import annotations
 
@@ -195,67 +195,17 @@ def test_confidence_from_official_max_result_and_unknown_protocol():
 
 
 # ---------------------------------------------------------------------------
-# reentry_step
+# Re-entry (B414: gone)
 # ---------------------------------------------------------------------------
 
-def _hang_state(dates):
-    days = [(d, [_done("max_hang_7s")]) for d in dates]
-    return _state(week_plans={"w": _week("w", days)})
-
-
-def test_no_load_factor_any_more():
-    # B413 (Daniele, 2026-11-02): the re-entry no longer scales the load cap —
-    # the 0.90 / 0.95 factor table is gone; only the count and in_reentry stay.
+def test_no_reentry_count_any_more():
+    # B413 (Daniele, 2026-11-02) removed the 0.90 / 0.95 load factors; B414
+    # (2026-11-07, «togli il tetto») the last reader, the 5-set cap on max
+    # hangs after a gap — so the count itself is gone.
     assert not hasattr(rp, "REENTRY_FACTORS") and not hasattr(rp, "reentry_factor")
-    r = rp.reentry_step(_hang_state(["2026-09-24"]), "finger_max", "2026-10-13")
-    assert "factor" not in r
-    assert rp.REENTRY_EXPOSURES == 2
-
-
-def test_no_history_is_first_exposure():
-    r = rp.reentry_step(_state(), "finger_max", "2026-10-13")
-    assert (r["n"], r["gap_days"], r["in_reentry"]) == (1, None, True)
-
-
-def test_daniele_like_finger_gap_reopens_ramp():
-    # test 24/09, next hang 13/10: 19 days → gap → n=1 (B364 example)
-    r = rp.reentry_step(_hang_state(["2026-09-24"]), "finger_max", "2026-10-13")
-    assert (r["n"], r["in_reentry"], r["gap_days"], r["last_exposure"]) == (1, True, 19, "2026-09-24")
-
-
-def test_run_counts_and_current_session():
-    s = _hang_state(["2026-09-24", "2026-10-04"])
-    r = rp.reentry_step(s, "finger_max", "2026-10-09")
-    assert (r["n"], r["run_dates"]) == (3, ["2026-09-24", "2026-10-04"])
-    assert r["in_reentry"] is False
-    r2 = rp.reentry_step(s, "finger_max", "2026-10-09", include_current=False)
-    # n=2 is still a re-entry (it used to read factor 0.95).
-    assert (r2["n"], r2["in_reentry"]) == (2, True)
-
-
-def test_gap_boundary_thirteen_vs_fourteen_days():
-    assert rp.reentry_step(_hang_state(["2026-10-01"]), "finger_max", "2026-10-14")["n"] == 2
-    assert rp.reentry_step(_hang_state(["2026-10-01"]), "finger_max", "2026-10-15")["n"] == 1
-    # an old run before a gap is not counted
-    s = _hang_state(["2026-08-01", "2026-08-05", "2026-08-09", "2026-09-01", "2026-09-05"])
-    r = rp.reentry_step(s, "finger_max", "2026-09-08")
-    assert (r["n"], r["gap_days"], r["run_start"]) == (3, 23, "2026-09-01")
-
-
-def test_same_day_exposure_not_double_counted_and_today_excluded():
-    s = _hang_state(["2026-10-04"])
-    s["week_plans"]["w"]["weeks"][0]["days"][0]["sessions"].append(_done("horst_7_53"))
-    s["week_plans"]["w"]["weeks"][0]["days"].append({"date": "2026-10-09", "sessions": [_done("max_hang_7s")]})
-    r = rp.reentry_step(s, "finger_max", "2026-10-09")
-    assert (r["n"], r["run_dates"]) == (2, ["2026-10-04"])
-
-
-def test_test_counts_as_exposure():
-    s = _state(week_plans={"w": _week("w", [("2026-09-24", [
-        {"session_id": "test_max_weighted_pullup", "status": "done",
-         "actual_exercises": [{"exercise_id": "weighted_pullup", "completed_sets": 4,
-                               "used_total_load_kg": 123}]}])])})
-    assert rp.reentry_step(s, "pulling_max", "2026-10-04")["n"] == 2
+    for name in ("reentry_step", "REENTRY_GAP_D", "REENTRY_EXPOSURES"):
+        assert not hasattr(rp, name), name
+        assert name not in rp.__all__, name
 
 
 # ---------------------------------------------------------------------------
@@ -306,7 +256,6 @@ def test_constants_pinned():
     assert rp.PULL_TEST_BLOCK_H == 48
     assert rp.TEST_FRESH_DAYS == 90
     assert (rp.LOW_CONF_MIN_EXPOSURES, rp.LOW_CONF_WINDOW_D, rp.LOW_CONF_RETEST_D) == (2, 21, 28)
-    assert rp.REENTRY_GAP_D == 14
     assert rp.HANG_PCT_PER_S == 0.015
     assert rp.HEAVY_PULL_PCT_1RM == 0.85
     assert (rp.VERY_HARD_BLOCK_D, rp.PRE_TRIP_BLOCK_D) == (3, 10)

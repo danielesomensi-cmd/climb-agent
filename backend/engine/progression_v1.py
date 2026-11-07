@@ -1670,7 +1670,7 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
 
             # B364: the four anchored exercises of a TESTED athlete get their
             # load from the single anchored_load (official max + working load,
-            # caps, re-entry ramp, guards). None → the pre-B364 branches below,
+            # caps, guards; B414: no re-entry). None → the pre-B364 branches below,
             # bit for bit (untested athletes).
             anch: Optional[Dict[str, Any]] = None
             if ex_id in ANCHORED_EXERCISES:

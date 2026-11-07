@@ -469,7 +469,8 @@ recalculated **on the day you play it**, from your max and your training load â€
 the same weight a planned session would give you that day (the session view
 shows today's numbers). Choose **Fixed kg** in the builder when you want your own
 weight every time; on Auto, the kg you type is used only if you have no recent
-test. During a comeback, max hangs are also capped at 5 sets.
+test. After a break the sets stay the ones of the session: there is no comeback
+cap on max hangs any more.
 
 **Every other weighted exercise of a custom session follows your feedback too**
 (curls, RDL, wrist curlsâ€¦): it carries your current training load for that

@@ -204,8 +204,8 @@ def test_pullup_caps_by_volume_with_daniele_1rm():
 def test_working_load_108_at_3_prescribes_108():
     anch = _al(_daniele(), "weighted_pullup", "2026-10-09", sets=4, reps=3)
     assert (anch["total"], anch["external"], anch["source"], anch["clamped"]) == (108.0, 30.0, "working_load", None)
-    # B413: the re-entry carries no load factor any more.
-    assert anch["ramp"]["n"] >= 3 and "factor" not in anch["ramp"] and anch["ramp"]["in_reentry"] is False
+    # B413: no re-entry load factor; B414: no re-entry at all (no ``ramp``).
+    assert "ramp" not in anch
 
 
 def test_working_load_108_at_4_is_held_by_the_4x3_cap():
@@ -227,7 +227,6 @@ def test_hang_7s_cap_in_strength_power_is_110():
     registry = {"finger_max": [{"date": "2026-10-06", "exercise_id": "max_hang_7s"},
                                {"date": "2026-10-09", "exercise_id": "max_hang_7s"}]}
     anch = _al(_daniele(registry=registry), "max_hang_7s", "2026-10-13")
-    assert anch["ramp"]["n"] >= 3
     assert anch["cap"] == 110.0
     assert anch["floor"] == 93.0
 
@@ -241,57 +240,49 @@ def test_hang_never_reaches_the_official_max_outside_tests(day, ex, secs):
     assert anch["total"] < anch["official"]["total_at_duration"]
 
 
-# --- (4) re-entry (B413: no load factor) -------------------------------------
+# --- (4) after a gap (B413: no load factor; B414: no re-entry at all) -------
 
 def test_daniele_hang_13_10_is_the_first_exposure_after_a_gap():
     # B413 (Daniele, 2026-11-02): the re-entry no longer scales the cap. It
     # was 110.2 × 0.90 = 99.0; now the phase target 0.90 × 116 = 104.4 → 104.5,
     # under the full strength_power cap (110.0).
     anch = _al(_daniele(), "max_hang_7s", "2026-10-13")
-    assert anch["ramp"]["n"] == 1 and anch["ramp"]["in_reentry"] is True and "factor" not in anch["ramp"]
+    assert "ramp" not in anch and anch["guards"] == []
     assert (anch["total"], anch["cap"], anch["clamped"]) == (104.5, 110.0, None)
     assert anch["external"] == 26.5
 
 
-def test_second_hang_session_is_n2():
+def test_second_hang_session_after_a_gap():
     state = _daniele()
     state["progression_counters"]["stimulus_exposures"]["finger_max"].append(
         {"date": "2026-10-13", "exercise_id": "max_hang_7s"})
     anch = _al(state, "max_hang_7s", "2026-10-16")
-    assert anch["ramp"]["n"] == 2
     assert anch["total"] == 104.5
-
-
-def test_pulling_n3_has_no_reduction():
-    anch = _al(_daniele(), "weighted_pullup", "2026-10-09")
-    assert anch["ramp"]["in_reentry"] is False
 
 
 def test_pulling_after_a_gap_has_no_reduction_either():
     # B413: a re-entry (n=1) prescribes exactly what n≥3 prescribes.
     gap = _daniele(registry={"finger_max": [], "pulling_max": [
         {"date": "2026-09-24", "exercise_id": "weighted_pullup", "total_kg": 123.0, "is_test": True}]})
-    assert _al(gap, "weighted_pullup", "2026-10-21")["ramp"]["n"] == 1
     full = _daniele(registry={"finger_max": [], "pulling_max": [
         {"date": d, "exercise_id": "weighted_pullup"} for d in ("2026-10-14", "2026-10-16", "2026-10-18")]})
-    assert _al(full, "weighted_pullup", "2026-10-21")["ramp"]["n"] >= 3
-    keys = ("total", "cap", "floor", "clamped")
+    keys = ("total", "cap", "floor", "clamped", "sets", "rep_scheme", "guards")
     assert {k: _al(gap, "weighted_pullup", "2026-10-21")[k] for k in keys} == \
         {k: _al(full, "weighted_pullup", "2026-10-21")[k] for k in keys}
 
 
-def test_empty_registry_and_fresh_entry_means_n3():
+def test_empty_registry_and_fresh_entry_reads_the_working_load():
     state = _daniele(registry={})
     anch = _al(state, "weighted_pullup", "2026-10-09")
-    assert anch["ramp"]["n"] == 3 and anch["ramp"]["source"] == "fresh_working_entry"
+    assert anch["source"] == "working_load" and "ramp" not in anch
 
 
-def test_no_history_at_all_means_n1():
+def test_no_history_at_all_still_prescribes():
     state = _daniele(entries=[], registry={})
     state["tests"] = {}
     state["baselines"]["pulling"]["updated_at"] = "2026-09-24"
     anch = _al(state, "weighted_pullup", "2026-12-01")  # 68 days after the test
-    assert anch is not None and anch["ramp"]["n"] == 1
+    assert anch is not None and anch["source"] == "phase_target" and "ramp" not in anch
 
 
 # --- (5) the 5 s cold target is unchanged ----------------------------------
@@ -322,9 +313,9 @@ def test_empty_date_is_conservative():
     anch = _al(_daniele(), "max_hang_7s", "")
     assert anch["no_date"] is True
     assert anch["phase_id"] == "base"
-    # B413: no date is still read as a re-entry (5 max-hang sets), but the
-    # load cap is no longer scaled by 0.90.
-    assert anch["ramp"]["in_reentry"] is True and "factor" not in anch["ramp"]
+    # B413: the load cap is no longer scaled by 0.90; B414: no re-entry set
+    # cap either (no ``ramp``).
+    assert "ramp" not in anch
     assert anch["source"] == "phase_target"
 
 
@@ -557,16 +548,18 @@ def test_pain_cut_is_not_undone_by_the_phase_floor():
         assert anch["clamped"] != "floor", score
 
 
-def test_custom_reentry_caps_max_hang_sets():
-    """Review B364: during re-entry max hangs are capped at 5 sets — in custom /
-    ad-hoc sessions too, not only in the returned dict."""
+def test_custom_max_hang_keeps_its_sets_after_a_gap():
+    """B414 (Daniele, 2026-11-07 «togli il tetto»): the B364 review capped max
+    hangs at 5 sets in the first 2 exposures after a gap — custom / ad-hoc too.
+    The cap is gone: a 6-set custom hang keeps 6 sets, with no ``stored_sets``."""
     ex = [{"exercise_id": "max_hang_7s", "sets": 6, "work_seconds": 7, "load_kg": 20.0}]
-    out = resolve_custom_exercises(_daniele(), ex, "2026-10-13")[0]  # n=1 after the gap
-    assert out["sets"] == 5 and out["stored_sets"] == 6
-    assert ex[0]["sets"] == 6
+    out = resolve_custom_exercises(_daniele(), ex, "2026-10-13")[0]  # first hang after the gap
+    assert out["sets"] == 6 and "stored_sets" not in out
+    assert "ramp" not in out["anchored"]
+    assert ex[0]["sets"] == 6 and "stored_sets" not in ex[0]
     full = _daniele(registry={"finger_max": [{"date": d, "exercise_id": "max_hang_7s"} for d in
                                              ("2026-10-06", "2026-10-08", "2026-10-10")], "pulling_max": []})
-    assert resolve_custom_exercises(full, ex, "2026-10-13")[0]["sets"] == 6  # n≥3: no cap
+    assert resolve_custom_exercises(full, ex, "2026-10-13")[0] == out  # same with a trained run
 
 
 # --- (14) determinism, untested regression ---------------------------------

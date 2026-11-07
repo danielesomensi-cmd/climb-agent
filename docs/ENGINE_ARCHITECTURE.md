@@ -678,9 +678,11 @@ coach prompt.
 Clamp order: start (working load converted by NON-rounded rep factor, seconds,
 phase/intensity; else phase target) → structural cap (pull: min(Prilepin band,
 (r+2)RM); hang: 3 s of reserve, phase cap) — B413 (A4): no re-entry factor any
-more, after a gap the cap is the full phase cap; `retest_policy.reentry_step`
-(tests counted via `extra_dates`) only caps max hangs at 5 sets in the first
-2 exposures after a ≥ 14-day gap → pain
+more, after a gap the cap is the full phase cap; B414 (2026-11-07): no re-entry
+at all — the 5-set max-hang cap after a ≥ 14-day gap is gone with
+`retest_policy.reentry_step`, `anchored_load.ramp_for` and the `ramp` key (the
+sets are the prescribed ones; legacy `anchored.ramp` / `reentry_sets` in stored
+prescriptions are read as stored) → pain
 (`pain_blocks`, R4; the phase floor is cut by the same 0.90) → guards (2 heavy pulls / 7 days, same-session finger,
 finger-hard day in the 2 days before) → `floor_eff = min(floor, cap_eff)` →
 fatigue (3 hard / 14 days → floor). All engineering constants are labelled in
@@ -1330,7 +1332,7 @@ stimulus.py                           (A288 — family table + exposure views, r
   ├── assessment_v1.GRADE_ORDER, free_session.FONT_GRADES
   └── planner_v2._SESSION_META  (lazy import)
 
-retest_policy.py                      (A288 — official_max / test_confidence / reentry_step;
+retest_policy.py                      (A288 — official_max / test_confidence;
                                        A289 — retest_decisions / retest_status)
   ├── stimulus.{exposure_dates, count_exposures, session_flag, ...}
   └── progression_v1.estimate_1rm_from_2rm  (lazy import)

@@ -41,6 +41,13 @@ output, key by key):
   level below at the top of its band (HIIT, A2); the split-squat rest on the
   legs lunch. In deload one set fewer (ladder dose), the athlete's level kept
   (the pin level is exempt from the phase affinity).
+
+B414 (step 6, REENTRY-MAX-HANG-SETS option B) changed 6 keys, the same as in
+the C272 golden: ``advanced`` × ``finger_strength_home`` /
+``pulling_strength_gym`` / ``strength_long`` × the two slots. Raw diff of the
+stripped output against the step-5 tree @ d33cd9b (``git archive``): only
+``suggested.anchored.ramp`` is removed from the anchored instances; no set
+count, load, id or order moves. Every other key identical.
 """
 
 from __future__ import annotations

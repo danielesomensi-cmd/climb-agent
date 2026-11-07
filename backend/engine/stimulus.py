@@ -24,8 +24,8 @@ state, nothing calls ``date.today()``):
   loaded the fingers hard", shared by the retest blockers (A289), the
   key-session validator (A294) and the custom-session guards (A293).
 
-Since B364 ``anchored_load`` reads the exposure view (re-entry ramp, heavy-pull
-guard, finger-hard days) and ``apply_feedback`` writes the registry.
+Since B364 ``anchored_load`` reads the exposure view (heavy-pull guard,
+finger-hard days; B414 removed the re-entry ramp) and ``apply_feedback`` writes the registry.
 
 Session exercise rule (one rule, from R3/R7):
 - ``actual_exercises`` when present and non-empty (what was logged), else
