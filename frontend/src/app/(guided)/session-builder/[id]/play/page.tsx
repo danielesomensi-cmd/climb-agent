@@ -110,7 +110,11 @@ function ExerciseFeedbackCard({
       {/* A298: ladder level + promotion proposal (custom 'ladder' rows) */}
       <LadderBadge ladder={exercise.ladder} customSessionId={customSessionId} date={date} compact />
       {/* A307: same 44px pills as the guided player */}
-      <FeedbackPills value={feedbackLabel} onChange={(v) => onFeedbackChange(v ?? undefined)} />
+      {/* B414: a skipped exercise is not rated — a rating with nothing done
+          reads as a failed session and lowers its BW ladder. */}
+      {!skipped && (
+        <FeedbackPills value={feedbackLabel} onChange={(v) => onFeedbackChange(v ?? undefined)} />
+      )}
       {/* A295: optional measure (last-set reps / hang margin) */}
       {exercise.measure && !skipped && (
         <MeasureInput
@@ -456,12 +460,14 @@ export default function SessionPlayPage() {
           completed: internal >= totalSetsWithSides(ex.sets, altSides),
           completed_sets: realSetsFromInternal(internal, altSides),
         };
-        // A295: the label only when picked — untouched = not rated. B414: a
-        // rating on a skipped exercise goes along with completed:false.
-        if (feedbackByIndex[i]) item.feedback_label = feedbackByIndex[i];
-        // B414: nothing done → no load, no measure, no grade: the pre-filled
-        // values would read as work that never happened.
+        // B414: nothing done → no rating, no load, no measure, no grade: the
+        // pre-filled values would read as work that never happened, and a
+        // rating on a not-done row is a failed session (bw_progression R1)
+        // that lowers the ladder. Skipped = no signal.
         if (internal === 0) return item;
+        // A295: the label only when picked — untouched = not rated. Stopped
+        // before the last set, the rating goes along with completed:false.
+        if (feedbackByIndex[i]) item.feedback_label = feedbackByIndex[i];
         Object.assign(
           item,
           measureFields(ex.measure, { targetReps: ex.target_reps, ...(measuresByIndex[i] ?? {}) }),

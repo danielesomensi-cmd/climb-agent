@@ -9,7 +9,9 @@
  * Now: done = the exercise ran to its last set; stopped earlier with «Skip
  * exercise» it is not done and keeps its sets (real sets: complete
  * RIGHT+LEFT pairs); skipped with nothing done it goes out `completed: false`,
- * `completed_sets: 0`, with no load or measure — a rating on it still travels.
+ * `completed_sets: 0`, with no rating, load or measure — a rating on a
+ * not-done row is a failed session for bw_progression (R1) and would lower its
+ * ladder, so a skipped row carries no signal at all (review of step 23).
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createElement } from "react";
@@ -149,15 +151,17 @@ describe("B414 — the custom-session player tells the truth", () => {
     await click(/skip rest/i);
     await click(/skip exercise/i);
 
-    // Plank: skipped straight away, then rated on the completion screen.
+    // Plank: skipped straight away — nothing to rate or fill on the completion screen.
     await click(/skip exercise/i);
     expect(screen.getByText("Session complete")).toBeTruthy();
     expect(screen.getByText("Skipped")).toBeTruthy();
-    // Nothing to fill on a skipped row: two load fields (pull-ups, split squat), not three.
+    // Nothing to fill on a skipped row: two load fields (pull-ups, split squat), not three,
+    // and two rating rows, not three.
     expect(screen.getAllByText("Used load")).toHaveLength(2);
     const hardPills = screen.getAllByRole("button", { name: /^hard$/i });
+    expect(hardPills).toHaveLength(2);
     await act(async () => {
-      fireEvent.click(hardPills[2]);
+      fireEvent.click(hardPills[1]);
     });
 
     await click(/^done$/i);
@@ -175,14 +179,19 @@ describe("B414 — the custom-session player tells the truth", () => {
       used_external_load_kg: 10,
     });
     // 3 internal sets = one complete pair: not done, 1 real set, the load it used.
-    expect(split).toMatchObject({ exercise_id: "bulgarian_split_squat", completed: false, completed_sets: 1 });
+    // Stopped before the last set: the rating goes along with completed:false.
+    expect(split).toMatchObject({
+      exercise_id: "bulgarian_split_squat",
+      completed: false,
+      completed_sets: 1,
+      feedback_label: "hard",
+    });
     expect(split.used_external_load_kg).toBe(12);
-    // Skipped: not done, 0 sets, no pre-filled load or measure; the rating stays.
+    // Skipped: not done, 0 sets, no rating, no pre-filled load or measure.
     expect(plank).toEqual({
       exercise_id: "plank",
       completed: false,
       completed_sets: 0,
-      feedback_label: "hard",
     });
   });
 
