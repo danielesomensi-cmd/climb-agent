@@ -1114,6 +1114,8 @@ export interface GuidedSessionState {
   currentIndex: number;
   exercises: GuidedExercise[];
   isTestSession?: boolean;
+  /** B414: built from a flat custom / generated exercises[] (is_custom slot). */
+  isCustom?: boolean;
   bodyweightKg?: number;
   submitStatus?: "in_progress" | "feedback_pending" | "completed";
   processCue?: { id: string; text: string };

@@ -430,6 +430,8 @@ export function buildGuidedStateFromExercises(
     startedAt: new Date().toISOString(),
     currentIndex: 0,
     exercises,
+    // B414: every caller plays a custom / ad-hoc / body-part session.
+    isCustom: true,
   };
 }
 

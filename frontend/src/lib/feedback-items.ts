@@ -18,6 +18,7 @@ import { asMeasure, measureFields, type MeasureValues } from "@/lib/measured-fee
 import { displayPrescribedGrade } from "@/lib/gradeUtils";
 import { limitFeedbackFields } from "@/lib/limit-problems";
 import { pickLoadUnit, type LoadUnit } from "@/lib/load-units";
+import { realSetsFromInternal, totalSetsWithSides } from "@/lib/alt-sides";
 
 /** An exercise as the post-session FeedbackDialog needs to know it. */
 export interface FeedbackDialogExercise {
@@ -218,6 +219,50 @@ export function buildDialogFeedbackItems(
 }
 
 /**
+ * B414 — custom / generated sessions: the session-builder player pre-fills
+ * completion, so the engine wants a counted set on them. Same test as the
+ * server's `stimulus._is_player_session`.
+ */
+export function isPlayerSession(sessionId: string | null | undefined, isCustom?: boolean): boolean {
+  const sid = sessionId ?? "";
+  return !!isCustom || sid.startsWith("custom_") || sid.startsWith("generated_");
+}
+
+/**
+ * B414 — was this guided row done? Done (or «Mark done» in the summary), OR
+ * every set of the prescription counted by the timer, however the row was
+ * closed: Skip after the last set, left pending by the dots, «Finish session
+ * early». The 4x4 of 03/11 had 4/4 sets and was saved `completed: false`.
+ * The comparison is in the timer's internal sets (alt_sides: one per side).
+ * Repeater tests are excluded: their counter is the reps to failure, not sets.
+ * A row with only some sets counted stays not done (its sets still travel).
+ */
+export function guidedRowDone(ex: GuidedExercise): boolean {
+  if (ex.status === "done") return true;
+  if (ex.isInstructionOnly || REPEATER_TEST_IDS.has(ex.exerciseId)) return false;
+  const counted = ex.completedSets ?? 0;
+  return counted > 0 && counted >= totalSetsWithSides(ex.prescription.sets, ex.altSides ?? false);
+}
+
+/**
+ * B414 (B-ALTSIDES-SETS) — the `completed_sets` the server reads, in REAL
+ * sets: the prescription is per side, so an alt_sides exercise counts only
+ * complete RIGHT+LEFT pairs (6 internal → 3; R-L-R → 1). The UI keeps the
+ * internal count (timer, resume, Undo). Repeater tests are never halved: the
+ * counter is their reps to failure.
+ */
+export function guidedSentSets(ex: GuidedExercise): number | undefined {
+  if (ex.completedSets == null) return undefined;
+  if (REPEATER_TEST_IDS.has(ex.exerciseId)) return ex.completedSets;
+  return realSetsFromInternal(ex.completedSets, ex.altSides ?? false);
+}
+
+export interface GuidedFeedbackOptions {
+  /** B414: a custom / generated session (`isPlayerSession`). */
+  playerSession?: boolean;
+}
+
+/**
  * Build feedback items from a guided-player state.
  *
  * Extracted verbatim from the guided page's handleSubmit so the localStorage
@@ -225,14 +270,19 @@ export function buildDialogFeedbackItems(
  * it (pre-B288 the retry dropped used_total_load_kg, the per-hand `hand` split,
  * completed_sets/reps, surface_selected, notes and test measurements — a failed
  * POST silently degraded into a lossy one, then deleted the richer local copy).
+ *
+ * B414: `completed` is `guidedRowDone` (Done, or every set counted) and
+ * `completed_sets` is in real sets (`guidedSentSets`).
  */
 export function buildGuidedFeedbackItems(
   exercises: GuidedExercise[],
+  options: GuidedFeedbackOptions = {},
 ): Array<Record<string, unknown>> {
   const items: Array<Record<string, unknown>> = [];
 
   for (const ex of exercises) {
     if (ex.isInstructionOnly) continue;
+    const done = guidedRowDone(ex);
 
     // B128: unilateral test measurement (e.g. lp_duration_test — seconds per hand)
     if (ex.unilateral && ex.testField && (ex.testMeasurementRight != null || ex.testMeasurementLeft != null)) {
@@ -244,7 +294,7 @@ export function buildGuidedFeedbackItems(
         items.push({
           exercise_id: ex.exerciseId,
           ...labelField(ex),
-          completed: ex.status === "done",
+          completed: done,
           hand,
           [ex.testField]: measurement,
           used_external_load_kg: suggestedLoad,
@@ -261,7 +311,7 @@ export function buildGuidedFeedbackItems(
         const entry: Record<string, unknown> = {
           exercise_id: ex.exerciseId,
           ...labelField(ex),
-          completed: ex.status === "done",
+          completed: done,
           hand,
           used_external_load_kg: load,
         };
@@ -275,7 +325,7 @@ export function buildGuidedFeedbackItems(
     const item: Record<string, unknown> = {
       exercise_id: ex.exerciseId,
       ...labelField(ex),
-      completed: ex.status === "done",
+      completed: done,
     };
     // A298: tell the server the dose came from the bodyweight ladder.
     if (ex.suggested.ladderSource) item.bw_ladder = ex.suggested.ladderSource;
@@ -304,17 +354,22 @@ export function buildGuidedFeedbackItems(
       item.surface_selected = surface;
     }
     if (ex.completedSets != null) {
-      item.completed_sets = ex.completedSets;
+      item.completed_sets = guidedSentSets(ex);
       // B133: the repeater test reads completed_reps (reps to failure). A295:
       // ONLY there — elsewhere it was a copy of completed_sets that the
-      // engine could mistake for real reps.
+      // engine could mistake for real reps. B414: never halved.
       if (REPEATER_TEST_IDS.has(ex.exerciseId)) item.completed_reps = ex.completedSets;
-    } else if (ex.status === "done" && ex.suggested.ladderSource && ex.prescription.sets) {
+    } else if (
+      ex.status === "done" &&
+      ex.prescription.sets &&
+      (ex.suggested.ladderSource || options.playerSession)
+    ) {
       // B413: a ladder row marked done without counting sets ("Mark remaining
       // as done", or Done without the set timer) is a done row — no rating
-      // counts as "ok" on the ladder. On a custom / generated session the
-      // server needs a counted set to tell it from the session-builder
-      // player's default completed:true, so the prescribed sets go along.
+      // counts as "ok" on the ladder. B414: the same for EVERY row of a
+      // custom / generated session — the server needs a counted set to tell
+      // a real Done from the session-builder player's pre-fill, so the
+      // prescribed sets go along. A catalog row needs nothing: Done is done.
       item.completed_sets = ex.prescription.sets;
     }
     Object.assign(item, guidedMeasureFields(ex));

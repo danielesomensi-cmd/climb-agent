@@ -9,6 +9,7 @@ import { formatDuration } from "@/components/guided/session-timer";
 import type { GuidedExercise, SessionPain } from "@/lib/types";
 import { PainPicker } from "@/components/training/measured-feedback-inputs";
 import { tapFeedback } from "@/lib/haptics";
+import { guidedRowDone } from "@/lib/feedback-items";
 
 interface GuidedSummaryProps {
   exercises: GuidedExercise[];
@@ -50,12 +51,15 @@ export function GuidedSummary({
   onBackToExercises,
   onEditExercise,
 }: GuidedSummaryProps) {
-  const pendingExercises = exercises.filter((ex) => ex.status === "pending");
+  // B414: a row with every set counted is done however it was closed (Skip,
+  // left pending, Finish early) — the same rule the payload follows
+  // (`guidedRowDone`), so the summary never says "not completed" about it.
+  const pendingExercises = exercises.filter((ex) => ex.status === "pending" && !guidedRowDone(ex));
   const nonWarmupPending = pendingExercises.filter(
     (ex) => !WARMUP_CATEGORIES.includes(ex.category)
   );
-  const doneCount = exercises.filter((ex) => ex.status === "done").length;
-  const skippedCount = exercises.filter((ex) => ex.status === "skipped").length;
+  const doneCount = exercises.filter((ex) => guidedRowDone(ex)).length;
+  const skippedCount = exercises.filter((ex) => ex.status === "skipped" && !guidedRowDone(ex)).length;
   // A307: the session is over — show how long it took, frozen on arrival,
   // instead of a clock that keeps running while you fill the summary.
   const [duration] = useState(() =>
@@ -113,7 +117,11 @@ export function GuidedSummary({
             <p className="mb-1 text-xs text-muted-foreground">Tap an exercise to change it.</p>
           )}
           <div className="space-y-1.5">
-            {exercises.map((ex, i) => (
+            {exercises.map((ex, i) => {
+              const done = guidedRowDone(ex);
+              // B414: done by its counted sets, not by a Done tap.
+              const doneBySets = done && ex.status !== "done";
+              return (
               <div
                 key={i}
                 role={canEdit ? "button" : undefined}
@@ -136,21 +144,24 @@ export function GuidedSummary({
                 }`}
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  {ex.status === "done" && (
+                  {done && (
                     <Check className="size-4 text-success shrink-0" />
                   )}
-                  {ex.status === "skipped" && (
+                  {!done && ex.status === "skipped" && (
                     <SkipForward className="size-4 text-muted-foreground shrink-0" />
                   )}
-                  {ex.status === "pending" && (
+                  {!done && ex.status === "pending" && (
                     <div className="size-4 rounded-full border border-muted-foreground/30 shrink-0" />
                   )}
                   <span className="text-sm truncate">
                     {ex.name || ex.exerciseId.replace(/_/g, " ")}
                   </span>
+                  {doneBySets && (
+                    <span className="shrink-0 text-[11px] text-muted-foreground">all sets counted</span>
+                  )}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  {ex.status !== "pending" && !ex.isInstructionOnly && (
+                  {(ex.status !== "pending" || done) && !ex.isInstructionOnly && (
                     <Badge
                       variant="outline"
                       className={`text-[10px] shrink-0 ${ex.feedbackLabel ? FEEDBACK_STYLE[ex.feedbackLabel] ?? "" : "text-muted-foreground"}`}
@@ -163,7 +174,8 @@ export function GuidedSummary({
                   {canEdit && <Pencil className="size-3.5 text-muted-foreground/60" aria-hidden />}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </CardContent>
       </Card>

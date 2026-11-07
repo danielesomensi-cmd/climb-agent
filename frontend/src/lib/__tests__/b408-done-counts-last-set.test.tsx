@@ -218,6 +218,11 @@ describe("B408 — what Done does NOT count", () => {
   });
 });
 
+// B414 (B-ALTSIDES-SETS): the step and the page still count INTERNAL sets
+// (one per side, `latest.completedSets`), but the payload carries REAL sets
+// — the prescription is per side, so only complete RIGHT+LEFT pairs count
+// (4 internal → 2, 3 internal → 1). Before B414 the server compared 4 and 3
+// with a prescription of 2, and R-L-R passed as "every set done".
 describe("B408 — alt_sides counts internal sets, like the timer", () => {
   it("2 sets per side: Done on LEFT of set 2 → 4 internal sets (2 × 2 sides)", async () => {
     render(
@@ -236,7 +241,8 @@ describe("B408 — alt_sides counts internal sets, like the timer", () => {
 
     await exerciseDone(); // set 2 LEFT done, «Done set» skipped
 
-    expect(sentSets()).toBe(4);
+    expect(latest.completedSets).toBe(4);
+    expect(sentSets()).toBe(2); // B414: 2 complete sets per side
   });
 
   it("Done on RIGHT of set 2 counts that side only → 3", async () => {
@@ -253,7 +259,8 @@ describe("B408 — alt_sides counts internal sets, like the timer", () => {
 
     await exerciseDone();
 
-    expect(sentSets()).toBe(3);
+    expect(latest.completedSets).toBe(3);
+    expect(sentSets()).toBe(1); // B414: set 2 has only its RIGHT side
   });
 });
 

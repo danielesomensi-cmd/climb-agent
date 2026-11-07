@@ -14,7 +14,14 @@ import { applyEvents, postFeedback } from "@/lib/api";
 import type { WeekPlan, CustomSessionExercise } from "@/lib/types";
 import { CustomExerciseStep, hasRepRest } from "@/components/session-play/custom-exercise-step";
 import { CustomRestTimer } from "@/components/session-play/custom-rest-timer";
-import { displaySetNumber, isSideSwitch, restAfterSet, sideForSet, totalSetsWithSides } from "@/lib/alt-sides";
+import {
+  displaySetNumber,
+  isSideSwitch,
+  realSetsFromInternal,
+  restAfterSet,
+  sideForSet,
+  totalSetsWithSides,
+} from "@/lib/alt-sides";
 import { unlockAudio } from "@/lib/audio-unlock";
 import { FeedbackPills } from "@/components/guided/feedback-pills";
 import { measureFields, withFeedbackContract, type MeasureValues } from "@/lib/measured-feedback";
@@ -85,12 +92,16 @@ function ExerciseFeedbackCard({
   date?: string;
 }) {
   const limit = limitTargetFor(exercise, surface);
+  // B414: an exercise with no set done is logged as skipped — the rating stays
+  // (it goes as not done), the load / measure / problem fields would only
+  // invent work, so they are not shown.
+  const skipped = setsCompleted === 0;
   return (
     <div className="rounded-lg border bg-muted/20 p-3 space-y-3 text-left">
       <div className="flex items-baseline justify-between gap-2">
         <p className="text-sm font-medium truncate">{name}</p>
         <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">
-          {setsCompleted}/{totalSets} sets{altSides ? " (R+L)" : ""}
+          {skipped ? "Skipped" : `${setsCompleted}/${totalSets} sets${altSides ? " (R+L)" : ""}`}
         </span>
       </div>
       {prescriptionSummary && (
@@ -101,7 +112,7 @@ function ExerciseFeedbackCard({
       {/* A307: same 44px pills as the guided player */}
       <FeedbackPills value={feedbackLabel} onChange={(v) => onFeedbackChange(v ?? undefined)} />
       {/* A295: optional measure (last-set reps / hang margin) */}
-      {exercise.measure && (
+      {exercise.measure && !skipped && (
         <MeasureInput
           id={`${exercise.exercise_id}-measure`}
           measure={exercise.measure}
@@ -113,7 +124,7 @@ function ExerciseFeedbackCard({
           onHangMargin={(v) => onMeasuresChange({ hangMargin: v })}
         />
       )}
-      {exercise.log_problems && (
+      {exercise.log_problems && !skipped && (
         <LimitProblemLogger
           idPrefix={exercise.exercise_id}
           target={limit.target}
@@ -125,7 +136,7 @@ function ExerciseFeedbackCard({
           onSurfaceChange={onSurfaceChange}
         />
       )}
-      {showLoadInput && !exercise.log_problems && (
+      {showLoadInput && !exercise.log_problems && !skipped && (
         <label className="flex items-center gap-2 text-sm text-muted-foreground">
           <span className="shrink-0">Used load</span>
           <input
@@ -433,12 +444,24 @@ export default function SessionPlayPage() {
             ? Math.max(0, Math.floor((Date.now() - startedAtRef.current) / 1000))
             : 0;
       const exerciseFeedback = exercises.map((ex, i) => {
-        // A295: the label only when picked — untouched = not rated.
+        // B414 — the player tells the truth. Done = the exercise ran to its
+        // last set; stopped earlier with "Skip exercise" it is not done but
+        // keeps the sets it got (a skipped one: 0). The sets travel in REAL
+        // sets (alt_sides: complete RIGHT+LEFT pairs). Before, every row went
+        // out `completed: true` with the saved load, skipped ones included.
+        const altSides = ex.alt_sides === true;
+        const internal = setsByIndex[i] ?? 0;
         const item: Record<string, unknown> = {
           exercise_id: ex.exercise_id,
-          completed: true,
+          completed: internal >= totalSetsWithSides(ex.sets, altSides),
+          completed_sets: realSetsFromInternal(internal, altSides),
         };
+        // A295: the label only when picked — untouched = not rated. B414: a
+        // rating on a skipped exercise goes along with completed:false.
         if (feedbackByIndex[i]) item.feedback_label = feedbackByIndex[i];
+        // B414: nothing done → no load, no measure, no grade: the pre-filled
+        // values would read as work that never happened.
+        if (internal === 0) return item;
         Object.assign(
           item,
           measureFields(ex.measure, { targetReps: ex.target_reps, ...(measuresByIndex[i] ?? {}) }),
@@ -446,8 +469,6 @@ export default function SessionPlayPage() {
         const rawKg = kgByIndex[i] ?? (ex.load_kg > 0 ? String(ex.load_kg) : "");
         const kg = parseFloat(rawKg);
         if (!Number.isNaN(kg) && kg > 0) item.used_external_load_kg = kg;
-        const sets = setsByIndex[i];
-        if (sets != null) item.completed_sets = sets;
         if (ex.log_problems) {
           // A296: the limit is logged problem by problem; without problems the
           // day's target travels as the grade used (same as the guided player).
@@ -747,6 +768,8 @@ export default function SessionPlayPage() {
               ))}
               <p className="text-[11px] text-muted-foreground text-left">
                 An exercise you did but didn&apos;t rate counts as &quot;ok&quot;: your progression moves on and nothing goes down.
+                One you skipped is saved as not done, with no load; one stopped before its last set keeps the
+                sets you did but does not count as done.
               </p>
               <div className="rounded-lg border bg-muted/20 p-3 text-left">
                 <PainPicker value={pain} onChange={setPain} />

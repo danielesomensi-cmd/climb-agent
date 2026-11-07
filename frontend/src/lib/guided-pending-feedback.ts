@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ApiError, postFeedback } from "@/lib/api";
-import { buildGuidedFeedbackItems } from "@/lib/feedback-items";
+import { buildGuidedFeedbackItems, isPlayerSession } from "@/lib/feedback-items";
 import { getKeyPrefix } from "@/lib/guided-session-utils";
 import { notifyGuidedProgress } from "@/lib/guided-resume";
 import { withFeedbackContract } from "@/lib/measured-feedback";
@@ -58,7 +58,7 @@ const REFRESH_TIMEOUT_MS = 6000;
  * the replay go through it, so a replay is never poorer than the original.
  */
 export function buildGuidedFeedbackBody(
-  session: Pick<GuidedSessionState, "date" | "sessionId" | "startedAt" | "pain" | "isTestSession">,
+  session: Pick<GuidedSessionState, "date" | "sessionId" | "startedAt" | "pain" | "isTestSession" | "isCustom">,
   exercises: GuidedExercise[],
   durationSeconds?: number,
 ): GuidedFeedbackBody {
@@ -70,7 +70,13 @@ export function buildGuidedFeedbackBody(
       // Real wall-clock start the timer already runs on (health-vault export).
       ...(session.startedAt ? { started_at: session.startedAt } : {}),
       ...(durationSeconds != null ? { session_duration_seconds: durationSeconds } : {}),
-      actual: { exercise_feedback_v1: buildGuidedFeedbackItems(exercises) },
+      // B414: on a custom / generated session a Done without counted sets
+      // carries the prescribed sets (the engine wants a counted set there).
+      actual: {
+        exercise_feedback_v1: buildGuidedFeedbackItems(exercises, {
+          playerSession: isPlayerSession(session.sessionId, session.isCustom),
+        }),
+      },
     },
     session.pain ?? null,
   );

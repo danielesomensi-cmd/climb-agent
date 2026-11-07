@@ -30,6 +30,17 @@ export function totalSetsWithSides(sets: number | null | undefined, altSides: bo
   return altSides ? base * 2 : base;
 }
 
+/**
+ * B414 (B-ALTSIDES-SETS) — internal sets → prescribed sets actually done. The
+ * prescription is per side, so only complete RIGHT+LEFT pairs count: 6 → 3,
+ * R-L-R (3) → 1, RIGHT alone → 0. What the players SEND (`completed_sets`);
+ * the timer, resume and Undo keep the internal count.
+ */
+export function realSetsFromInternal(internal: number, altSides: boolean): number {
+  const n = Math.max(0, Math.floor(internal));
+  return altSides ? Math.floor(n / 2) : n;
+}
+
 /** Side for a 1-based internal set number. Null when the exercise has no sides. */
 export function sideForSet(currentSet: number, altSides: boolean): Side | null {
   if (!altSides) return null;

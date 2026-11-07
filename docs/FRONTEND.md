@@ -28,7 +28,7 @@ Answers typed before signing up live in `localStorage` under `climb_onboarding_d
 - `/outdoor` — Outdoor history, stats, per-spot breakdown, grade histogram. A324: an attempt's outcome is read only through `src/lib/outdoor-result.ts` (a send = `sent` on lead; clean on second / top-rope is blue, A0 amber), the route styles through `src/lib/outdoor-routes.ts`; the trash deletes one crag of the day (`?spot_name=`)
 - `/whats-next` — Votable roadmap + feedback form
 - `/settings` — Profile, goals, equipment, spots, regenerate assessment/macrocycle
-- `/guided/[date]/[sessionId]` — Step-by-step guided session with timer
+- `/guided/[date]/[sessionId]` — Step-by-step guided session with timer. B414: a row is done on Done or with every set counted (`guidedRowDone`), `completed_sets` goes out in real sets (`realSetsFromInternal`), the summary marks fully counted rows «all sets counted»
 - `/free-session` — Log free climbing sessions (lead/boulder/outdoor)
 - `/mobility` — Stretching & Mobility guided flow (multi-region setup → auto-advancing timer, Core Circuit UX)
 - `/tabata` — Standalone interval timer (documented in `docs/user_guide_v1.md` §16)
@@ -36,7 +36,7 @@ Answers typed before signing up live in `localStorage` under `climb_onboarding_d
 - `/assessment` — **Public** 5-axis assessment (A262/A263). No account, nothing stored: six questions → radar + weakest axis. Scale selezionabile (French/YDS, Font/V-scale — conversione client-side prima dell'invio, l'engine riceve sempre la sua convenzione); blocco opzionale max hang + weighted pull-up che rende misurati gli assi dita/tirata. **A268**: chi compila quei numeri vede anche il toggle `[ Goal | Elite ]` di A267 (solo render, niente di persistito); chi li salta vede la pagina identica a prima. The acquisition landing meant to be posted publicly; the CTA seeds the answers into the wizard's anonymous draft (`seedDraftFromAssessment`) so nothing is retyped.
 - `/guide` — User guide
 - `/subscribe` — Subscription plans and checkout
-- `/session-builder`, `/session-builder/[id]`, `/session-builder/[id]/view`, `/session-builder/[id]/play` — Custom session builder: list, edit, read-only view, guided playback (`/api/custom-session/*`)
+- `/session-builder`, `/session-builder/[id]`, `/session-builder/[id]/view`, `/session-builder/[id]/play` — Custom session builder: list, edit, read-only view, guided playback (`/api/custom-session/*`; B414: `completed` = ran to its last set, a skipped row goes out with 0 sets and no load)
 - `/body-part-picker` — Body-part session generator (preview → insert into the week plan)
 - `/demo` — Zero-context acquisition landing (no Clerk needed by the page itself — see `A-CLERK-PROVIDER-SCOPE`)
 - `/offline` — Service-worker offline fallback
