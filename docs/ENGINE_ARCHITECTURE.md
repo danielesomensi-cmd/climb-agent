@@ -1023,6 +1023,14 @@ Processes event lists. Supported event types:
 - `change_gym` — equipment-aware session replacement via `_find_gym_change_replacement()` (A319: a 2RM or combined test moved to a gym without weights is replaced too — see the A319 notes of §8.2)
 - `set_availability` — **retired in B367**: `ValueError` in the engine, 422 at `/events`. It regenerated the week with a fraction of the `GET /api/week` inputs (no tests, retest decisions, taper, finger device) and overwrote the snapshot; availability changes go through settings / `PUT /api/weekly-override/{week_start}`
 
+**Tags of a user-authored session (B345, B392, B405, B414).** `add_custom_session` stores the tags
+`session_tags.derive_session_tags` computes once from the exercises (`add_generated_session` merges them with the
+declared ones, only escalating). `finger` comes from the finger-loading patterns / domains (not a light warm-up);
+B414 (rule E2): a sub-max hang (pattern `repeater_hang` / `isometric_hang` / `hang`, intensity ≤ medium, not
+finger-hard by itself) does **not** make the session `finger` when it has PE intervals (role main,
+`climbing_intervals`, PE / anaerobic domain) and no other finger load — the custom then equals `power_endurance_gym`
+(`finger: False`). Stored tags are never rewritten; a rule change surfaces as `STALE_CUSTOM_TAGS` (B395).
+
 **`apply_day_add(plan, *, session_id, target_date, slot, location, phase_id, gym_id) → tuple`**
 
 Quick-add flow: places a session in a specific slot. Used by the quick-add UI.

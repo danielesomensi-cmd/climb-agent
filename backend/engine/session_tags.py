@@ -26,9 +26,18 @@ the first draft of this module got it wrong:
   The allowlist is pinned by ``test_b345_custom_session_tags.py``. So whatever
   rule decides ``hard`` for user-authored sessions must keep the invariant, and
   this module does.
-* VERIFIED: ``_FINGER_LOAD_PATTERNS`` reproduces the catalog's ``finger`` flag —
-  true for hangboard, campus and limit-boulder work; false for circuits, route
-  endurance, power endurance and technique.
+* ``_FINGER_LOAD_PATTERNS`` reproduces the catalog's ``finger`` flag on the
+  exercises that define a session — true for hangboard, campus and
+  limit-boulder work; false for circuits, route endurance, power endurance and
+  technique. B414 checked it on the RESOLVED catalog sessions
+  (``test_b414_session_tags_pe.py``): the derived tag matches
+  ``_SESSION_META.finger`` except for an explicit allowlist (sessions whose
+  secondary block can pick a sub-max hang — ``endurance_aerobic_gym``,
+  ``regeneration_easy``, ``prehab_maintenance`` — derive True where the
+  catalog says False, the conservative direction; ``route_projecting_gym``
+  derives False where the catalog says True, since route climbing is not a
+  finger pattern). ``power_endurance_gym`` matches when its finger block
+  picks a sub-max hang (E2 rule below).
 * HEURISTIC: ``_HIGH_COUNT_FOR_HARD``. A session's intensity is **not** the max
   of its exercises' intensities — that was the first draft's mistake, and it
   marked a 15-minute core session "hard" on the strength of one
@@ -91,6 +100,40 @@ _FINGER_LOAD_DOMAINS = frozenset({
     "finger_strength_endurance",
     "finger_aerobic_endurance",
 })
+
+
+# B414 (INBOX-2026-11-02-e, E2): the sub-max hangs after PE intervals. A hang
+# pattern at intensity ≤ medium that is not finger-hard by itself is the
+# "submaximal repeaters post-climbing" of power_endurance_gym — a session the
+# catalog rates ``finger: False``. Inside a session with PE intervals (role
+# main, pattern climbing_intervals, PE / anaerobic domain) and no other finger
+# load they no longer make it ``finger``: the custom equals the catalog
+# session. Alone (B392's case) or next to max hangs / limit boulders they
+# still do.
+_SUB_MAX_HANG_PATTERNS = frozenset({"repeater_hang", "isometric_hang", "hang"})
+_SUB_MAX_LEVELS = frozenset({"low", "medium"})
+_PE_DOMAINS = frozenset({"power_endurance", "anaerobic_capacity"})
+
+
+def _is_sub_max_hang(eid: str, entry: Dict[str, Any]) -> bool:
+    """B414: a hang at intensity ≤ medium that is not finger-hard by itself."""
+    return (
+        eid not in _FINGER_HARD_IDS
+        and str(entry.get("intensity_level") or "low") in _SUB_MAX_LEVELS
+        and any(p in _SUB_MAX_HANG_PATTERNS for p in _patterns_of(entry))
+    )
+
+
+def _is_pe_interval(entry: Dict[str, Any]) -> bool:
+    """B414: a PE interval drill (4x4, linked boulders, route intervals…)."""
+    roles = entry.get("role") or []
+    if isinstance(roles, str):
+        roles = [roles]
+    return (
+        "main" in [str(r) for r in roles]
+        and "climbing_intervals" in _patterns_of(entry)
+        and any(str(d) in _PE_DOMAINS for d in (entry.get("domain") or []))
+    )
 
 
 # B392: catalog roles that only prepare the session. A warm-up the catalog rates
@@ -159,7 +202,9 @@ def derive_session_tags(
     the tendons are loaded by the max hang regardless of what surrounds it.
     """
     cat = catalog if catalog is not None else _catalog()
-    finger = False
+    finger = False  # finger load other than a sub-max hang (B414)
+    finger_sub_max = False
+    has_pe_intervals = False
     finger_hard = False
     n_max = 0
     n_high = 0
@@ -176,11 +221,16 @@ def derive_session_tags(
             finger = finger_hard = True
         patterns = _patterns_of(entry)
         domains = [str(d) for d in (entry.get("domain") or [])]
+        if _is_pe_interval(entry):
+            has_pe_intervals = True
         if not _is_light_warmup(entry) and (
             any(p in _FINGER_LOAD_PATTERNS for p in patterns)
             or any(d in _FINGER_LOAD_DOMAINS for d in domains)
         ):
-            finger = True
+            if _is_sub_max_hang(eid, entry):
+                finger_sub_max = True
+            else:
+                finger = True
         level = str(entry.get("intensity_level") or "low")
         if level == "max":
             n_max += 1
@@ -189,6 +239,9 @@ def derive_session_tags(
         elif level == "medium":
             n_medium += 1
 
+    # B414 (E2): sub-max hangs count as finger load unless they follow PE
+    # intervals in a session with no other finger load.
+    finger = finger or (finger_sub_max and not has_pe_intervals)
     hard = finger_hard or n_max > 0 or n_high >= _HIGH_COUNT_FOR_HARD
 
     # Keep the catalog's invariant: hard ⇔ intensity in {high, max}. Reporting a
