@@ -256,6 +256,8 @@ class TestPositionMaximaAnchors:
         codes = {w["code"] for w in ctx["warnings"]}
         assert "MAX_NOT_TESTED" not in codes
         assert all(m["tested"] for m in ctx["maxima"].values() if m)
+        # B414 (B414-6): the expiry is said instead, per axis.
+        assert "TEST_EXPIRED" in codes
 
 
 # ---------------------------------------------------------------------------

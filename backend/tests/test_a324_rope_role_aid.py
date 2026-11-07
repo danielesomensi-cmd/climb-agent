@@ -394,7 +394,7 @@ def _section(text: str, title: str) -> str:
 
 class TestAthleteContext:
     def test_version(self):
-        assert ac.VERSION == "b414.1"
+        assert ac.VERSION == "b414.2"
 
     def test_recent_outdoor_counts(self):
         cancer = cancer_rewritten()

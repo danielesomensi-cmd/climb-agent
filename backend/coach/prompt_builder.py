@@ -328,7 +328,15 @@ def _official_max_lines(state: Dict[str, Any]) -> List[str]:
             "max_strength" if protocol != rp.PROTOCOL_PULLUP_2RM else "pulling_strength") or [])
         last = next((t for t in sorted(history, key=lambda t: str(t.get("date") or ""), reverse=True)
                      if isinstance(t, dict) and str(t.get("date") or "") == om["date"]), {})
-        bits = [f"{om['total_kg']} kg total", f"tested {om['date']}" if om.get("tested") else f"from {om['date']} (stale or not a test)"]
+        # B414 (model A): a real test is tested at any age; its expiry is a
+        # proposal (do the test / postpone the expiry), never a switch.
+        if not om.get("tested"):
+            when = f"from {om['date']} (not a test)"
+        elif om.get("expired"):
+            when = f"tested {om['date']}, expired {om.get('valid_until')} (still the max until a new test)"
+        else:
+            when = f"tested {om['date']}"
+        bits = [f"{om['total_kg']} kg total", when]
         if last.get("confidence"):
             bits.append(f"confidence {last['confidence']}")
         if last.get("trend"):

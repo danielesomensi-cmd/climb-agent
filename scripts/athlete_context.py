@@ -371,7 +371,13 @@ def simulate(state: Dict[str, Any], draft: Dict[str, Any], target_date: str, slo
             refs = [(w.get("date"), w.get("slot"))] + [(x.get("date"), x.get("slot")) for x in w.get("with") or []]
             keys = sorted({k for r in refs if r != (target_date, slot)
                            for k in ac.key_matches(after.get(r) or {}, phase_id)})
-            alerts.append({**w, "key": keys})
+            # B414 (INBOX-2026-11-02-d): WHICH session holds each key — the
+            # flagged one or one of the «with» (the line used to print the
+            # other session's key right after the draft's id).
+            key_refs = [{"date": r[0], "slot": r[1], "session_id": (after.get(r) or {}).get("session_id"), "key": k}
+                        for r in dict.fromkeys(refs) if r != (target_date, slot)
+                        for k in ac.key_matches(after.get(r) or {}, phase_id)]
+            alerts.append({**w, "key": keys, "key_refs": key_refs})
         result["guard_alerts"] = alerts
     except Exception as exc:  # pragma: no cover - the simulation must still print
         result["key_conflicts"] = []
@@ -418,6 +424,21 @@ def _play_line(e: Dict[str, Any]) -> str:
     return line
 
 
+def _alert_keys(a: Dict[str, Any]) -> str:
+    """B414 (INBOX-2026-11-02-d): the keys of an ALERT line, each one attributed.
+    A key of the flagged session reads «— CHIAVE x» (A293, unchanged); a key of
+    a session of the «with» reads «— tocca CHIAVE x (data session_id)»."""
+    refs = a.get("key_refs")
+    if refs is None:  # an alert built before B414
+        return f" — CHIAVE {','.join(a['key'])}" if a.get("key") else ""
+    own = sorted({r["key"] for r in refs if (r["date"], r["slot"]) == (a.get("date"), a.get("slot"))})
+    out = f" — CHIAVE {','.join(own)}" if own else ""
+    for r in refs:
+        if (r["date"], r["slot"]) != (a.get("date"), a.get("slot")):
+            out += f" — tocca CHIAVE {r['key']} ({r['date']} {r['session_id']})"
+    return out
+
+
 def render_simulation(sim: Dict[str, Any]) -> str:
     L = [f"=== Simulazione: custom il {sim['target_date']} ({sim['slot']}) — nessuna scrittura ==="]
     if sim.get("error"):
@@ -439,8 +460,7 @@ def render_simulation(sim: Dict[str, Any]) -> str:
             L.append(f"  CHIAVE [{c.get('code')}] {c.get('message')}")
         for a in sim.get("guard_alerts") or []:
             L.append(f"  ALERT [{a.get('code')}] {a.get('date')} {a.get('slot')}: {a.get('session_id')}"
-                     + (f" — CHIAVE {','.join(a['key'])}" if a.get("key") else "")
-                     + f" — {a.get('message')}")
+                     + _alert_keys(a) + f" — {a.get('message')}")
         for e in sim.get("resolved_exercises") or []:
             if e.get("load_source"):
                 L.append(_play_line(e))

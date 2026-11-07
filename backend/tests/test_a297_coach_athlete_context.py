@@ -536,7 +536,10 @@ class TestReviewFixes:
         assert any(m for m in ctx["maxima"].values()) and ac.athlete_is_tested(ctx)
         text = ac.render_coach_block(ctx)
         assert "Official maxima" in text
-        assert "tested 2026-05-01" in text and "stale or not a test" not in text
+        assert "tested 2026-05-01" in text and "not a test" not in text
+        # B414 (B414-6): flagged expired, the proposal said — nothing reset.
+        assert "expired 2026-07-29 (still the max until a new test)" in text
+        assert "EXPIRED on 2026-07-29" in text and "propose 'do the test' or 'postpone the expiry'" in text
 
     def test_a_self_report_stays_flagged_not_a_test(self):
         # The A297 flag stays for a baseline-only self-report (never a test).
@@ -545,7 +548,7 @@ class TestReviewFixes:
                                           "updated_at": "2026-09-07", "hang_seconds": 7}]}
         ctx = _ctx(st)
         assert not ac.athlete_is_tested(ctx)
-        assert "stale or not a test" in ac.render_coach_block(ctx)
+        assert "not a test — a self-report or an estimate" in ac.render_coach_block(ctx)
 
     def test_pain_block_makes_the_day_no_max_and_is_named(self, catalog):
         st = _st(progression_counters={"pain_blocks": {

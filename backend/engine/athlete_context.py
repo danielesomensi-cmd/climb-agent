@@ -94,7 +94,7 @@ from backend.engine.stimulus import (
 DateLike = Union[date, str]
 ArchivedWeeks = Optional[Union[Mapping[str, Any], Sequence[Mapping[str, Any]]]]
 
-VERSION = "b414.1"
+VERSION = "b414.2"
 
 # ---------------------------------------------------------------------------
 # Constants. Shared with the engine, never copied: the command and the docs
@@ -279,6 +279,10 @@ def _maxima(state: Mapping[str, Any], today: date, archived_weeks: ArchivedWeeks
             "age_days": om.get("age_days"),
             "tested": bool(om.get("tested")),
             "fresh": bool(om.get("fresh")),
+            # B414 (model A): when the test expires — informational only.
+            "valid_until": om.get("valid_until"),
+            "expired": bool(om.get("expired")),
+            "expiring": bool(om.get("expiring")),
             "source": om.get("source"),
             "converted": bool(om.get("converted")),
             "source_seconds": om.get("source_seconds"),
@@ -1122,8 +1126,23 @@ def _warnings(ctx: Mapping[str, Any]) -> List[Dict[str, Any]]:
                         "message": f"test {proto} del {m['date']} a bassa confidenza "
                                    f"({m.get('confidence_exposures')} esposizioni nei 21 gg prima)"})
         if m and not m.get("tested"):
+            # B414 (model A): a real test is tested at any age — this is a
+            # self-report / estimate only.
             out.append({"code": "MAX_NOT_TESTED", "protocol": proto,
-                        "message": f"{proto}: massimale non testato di recente (anchor non disponibile)"})
+                        "message": f"{proto}: massimale non da test (stima o autodichiarazione: anchor non "
+                                   "disponibile)"})
+    # B414 (B414-6): the expiry of a real test, per axis — codes and dates only.
+    for axis, row in ((ctx.get("retest") or {}).get("axes") or {}).items():
+        if not row.get("covered") or not row.get("valid_until"):
+            continue
+        if row.get("expired"):
+            out.append({"code": "TEST_EXPIRED", "axis": axis, "valid_until": row["valid_until"],
+                        "message": f"test {axis} del {row.get('test_date')} SCADUTO il {row['valid_until']}: "
+                                   "proponi «fai il test» o «posticipa la scadenza»; non si azzera niente"})
+        elif row.get("expiring"):
+            out.append({"code": "TEST_EXPIRING", "axis": axis, "valid_until": row["valid_until"],
+                        "message": f"test {axis} del {row.get('test_date')} SCADE il {row['valid_until']}: "
+                                   "proponi «fai il test» o «posticipa la scadenza»"})
     for ex, a in ((ctx.get("anchors") or {}).get("exercises") or {}).items():
         if a and a.get("ceiling_note"):
             out.append({"code": "AT_CEILING", "exercise_id": ex, "message": a["ceiling_note"]})
@@ -1664,8 +1683,8 @@ def render_text(ctx: Mapping[str, Any], *, plan_notes: Optional[str] = None,
         nxt = (f"prossimo {nt['date']} ({nt.get('source')}, {nt.get('trigger')})"
                + (f" BLOCCHI: {', '.join(b.get('code', '') for b in nt.get('blockers') or [])}" if nt and nt.get("blockers") else "")
                if nt else f"nessun test in vista ({row.get('next_test_reason')})")
-        # B400: the last day the official max counts as tested (then the axis leaves the policy).
-        valid = f", massimale valido fino al {row['tested_until']}" if row.get("tested_until") else ""
+        # B414 (model A): the max never stops counting — the expiry is a proposal.
+        valid = _validity_it(row)
         L.append(f"  {axis}: ufficiale {_fmt_kg(row.get('official_total_kg'))} kg ({row.get('test_date')}){valid}, "
                  f"confidenza {row.get('confidence')}, non prima del {row.get('earliest_retest')}; {nxt}; "
                  f"segnali {row.get('signals', {}).get('count')}/{row.get('signals', {}).get('needed')}")
@@ -1677,6 +1696,9 @@ def render_text(ctx: Mapping[str, Any], *, plan_notes: Optional[str] = None,
                 L.append(f"    RIFIUTATO il {_iso_day(d.get('declined_at'))} ({_decline_reason(d)})")
         for d in row.get("plan_edit_declines") or []:
             L.append(f"    rifiutato in settimana {_iso_day(d.get('week_start'))} (modifica del piano)")
+        req = row.get("request") or {}
+        if req.get("requested_at"):
+            L.append(f"    RICHIESTO il {_iso_day(req['requested_at'])} («fai il test» dell'atleta)")
 
     L.append("")
     g = ctx.get("guards") or {}
@@ -1898,14 +1920,17 @@ def _maxima_lines_en(ctx: Mapping[str, Any]) -> List[str]:
             # pre-A297 B364 line, so the coach never reads the leftover raw
             # baseline numbers as a current tested max.
             out.append(f"- {_PROTOCOL_EN.get(proto, proto)}: {_fmt_kg(m.get('total_kg'))} kg total, from "
-                       f"{m.get('date')} (stale or not a test — not a current tested max; it changes ONLY "
-                       "with a test)")
+                       f"{m.get('date')} (not a test — a self-report or an estimate, not a tested max; it "
+                       "changes ONLY with a test)")
             continue
         bits = [f"{_fmt_kg(m.get('total_kg'))} kg total"]
         if m.get("one_rm_kg"):
             bits.append(f"1RM {_fmt_kg(m.get('one_rm_kg'))} kg")
         bits.append(f"tested {m.get('date')} ({m.get('age_days')} d ago"
                     + (f", converted from the {m.get('source_seconds')}s test" if m.get("converted") else "") + ")")
+        if m.get("expired"):
+            # B414 (model A): still the tested max — the expiry is a proposal.
+            bits.append(f"expired {m.get('valid_until')} (still the max until a new test)")
         if m.get("confidence"):
             bits.append(f"confidence {m['confidence']} ({m.get('confidence_exposures')} exposures "
                         f"in the {rp.LOW_CONF_WINDOW_D} days before the test)")
@@ -1987,12 +2012,46 @@ def _retest_lines_en(ctx: Mapping[str, Any]) -> List[str]:
         else:
             nxt = f"no test due yet ({str(row.get('next_test_reason') or '').replace('_', ' ')})"
         sig = row.get("signals") or {}
-        # B400: the day the tested max stops counting (the axis then leaves the policy).
-        valid = f"; tested max valid until {row['tested_until']}" if row.get("tested_until") else ""
+        # B414 (model A): the expiry is a proposal, never a switch.
+        valid = _validity_en(row)
         out.append(f"- {_AXIS_EN.get(axis, axis)}: {nxt}; not before {row.get('earliest_retest')}{valid}; "
                    f"measured retest signals {sig.get('count')}/{sig.get('needed')}")
         out.extend(_decline_lines_en(axis, row))
+        req = row.get("request") or {}
+        if _iso_day(req.get("requested_at")):
+            out.append(f"- {_AXIS_EN.get(axis, axis)}: the athlete asked for the test on "
+                       f"{_iso_day(req['requested_at'])} (do the test)")
     return out
+
+
+def _validity_it(row: Mapping[str, Any]) -> str:
+    """B414 (B414-6): the validity of an axis' tested max in the CLI — SCADE /
+    SCADUTO / PROROGATO, dates only (model A: nothing switches off)."""
+    until = _iso_day(row.get("valid_until") or row.get("tested_until"))
+    if not until:
+        return ""
+    if row.get("expired"):
+        return (f", SCADUTO il {until} — proponi: fai il test o posticipa la scadenza; "
+                "non si azzera niente")
+    head = f", PROROGATO al {until}" if row.get("extended") else f", massimale valido fino al {until}"
+    if row.get("expiring"):
+        return f"{head}, SCADE il {until} — proponi: fai il test o posticipa la scadenza"
+    return head
+
+
+def _validity_en(row: Mapping[str, Any]) -> str:
+    """B414 (B414-6): the same for the coach — codes and dates only."""
+    until = _iso_day(row.get("valid_until") or row.get("tested_until"))
+    if not until:
+        return ""
+    if row.get("expired"):
+        return (f"; the tested max EXPIRED on {until} — nothing is reset (loads, ladders and the phase "
+                "exercises keep working from it): propose 'do the test' or 'postpone the expiry'")
+    head = (f"; tested max valid until {until} (expiry postponed by the athlete)" if row.get("extended")
+            else f"; tested max valid until {until}")
+    if row.get("expiring"):
+        return head + ": it EXPIRES soon — propose 'do the test' or 'postpone the expiry'"
+    return head
 
 
 def _iso_day(value: Any) -> Optional[str]:
@@ -2011,8 +2070,13 @@ def _decline_reason(d: Mapping[str, Any]) -> str:
 
 def _retest_has_declines(ctx: Mapping[str, Any]) -> bool:
     """A320: a covered axis carries a decline of the athlete (stored, or a
-    plan edit the policy reads as one)."""
-    return any(row.get("covered") and (row.get("declines") or row.get("plan_edit_declines"))
+    plan edit the policy reads as one). B414: or something the coach must
+    say — an expiring / expired / postponed max, a "Do the test" request —
+    so the retest section goes before the guards and the budget cut never
+    loses it."""
+    return any(row.get("covered") and (row.get("declines") or row.get("plan_edit_declines")
+                                       or row.get("expired") or row.get("expiring") or row.get("extended")
+                                       or row.get("request"))
                for row in ((ctx.get("retest") or {}).get("axes") or {}).values())
 
 
