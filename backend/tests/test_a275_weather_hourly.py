@@ -45,8 +45,8 @@ def _step(dt: int, temp: float, humidity: float = 55.0,
           wind_ms: float = 3.8, deg: int = 348, clouds: int = 0):
     return {
         "dt": dt,
-        # UTC, exactly as OWM labels it — the day summary reads this field and
-        # the hourly strip deliberately does not.
+        # UTC, exactly as OWM labels it — neither the hourly strip nor (since
+        # B414) the day summary reads it while ``dt`` is there.
         "dt_txt": time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(dt)),
         "main": {"temp": temp, "feels_like": temp + 2, "humidity": humidity},
         "wind": {"speed": wind_ms, "deg": deg},

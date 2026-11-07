@@ -202,10 +202,10 @@ def execute_get_weather(
         return f"Weather for {label} is unavailable right now."
 
     # A275: the leading numbers are still one representative step (now, or the
-    # forecast's midday step). Say which, so the model quotes the hourly strip
+    # forecast's step nearest local noon, B414). Say which, so the model quotes the hourly strip
     # rather than the headline when the user asked about a specific hour.
     when = (
         "now, plus the rest of today hour by hour" if days == 0
-        else f"in {days} day(s) — summary from the midday step, plus that day hour by hour"
+        else f"in {days} day(s) — summary from the local-midday step, plus that day hour by hour"
     )
     return f"Weather at {label} ({when}): {_fmt_conditions(w)}"

@@ -16,6 +16,7 @@ rest of the product surface (``body_part_picker`` / ``custom_session``).
 
 from __future__ import annotations
 
+import calendar
 import math
 import os
 import time
@@ -256,35 +257,50 @@ def _normalize_current(raw: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _step_unix(step: Dict[str, Any]) -> Optional[int]:
+    """B414: a forecast step's UTC unix time — ``dt``, or OWM's ``dt_txt``
+    (always UTC) when ``dt`` is missing; ``None`` when neither parses."""
+    try:
+        return int(step["dt"])
+    except (KeyError, TypeError, ValueError):
+        pass
+    try:
+        return calendar.timegm(time.strptime(str(step["dt_txt"])[:19], "%Y-%m-%d %H:%M:%S"))
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
 def _normalize_forecast(raw: Dict[str, Any], date: str) -> Dict[str, Any]:
     """Map OWM /forecast (5d/3h) → normalized dict for the midday step of *date*.
 
-    Picks the 3-hour step on *date* closest to 12:00 as representative of the
-    climbing day. Raises if *date* is outside the returned window.
+    Picks the 3-hour step of *date* closest to 12:00 **crag-local** time as
+    representative of the climbing day. Raises if *date* is outside the
+    returned window.
 
-    Two known flaws, both tracked as ``B-FORECAST-MIDDAY-STEP`` and deliberately
-    NOT changed by A275, because moving this step moves ``condition_band`` for
-    the /today card and for the subscription-gated outdoor strategy patches:
-      1. midday is, in summer, the one hour nobody climbs;
-      2. the day filter and the "distance to noon" both read OWM's ``dt_txt``,
-         which is UTC — at UTC+3 the step picked is 15:00 local, at UTC+12 it is
-         the middle of the night.
-    A275's answer is not to re-pick this step but to stop depending on it: the
-    ``hourly`` strip beside it is bucketed in true local time and carries every
-    step of the day, so a caller that needs the truth can read the hour it
-    actually cares about.
+    B414 (``B-FORECAST-MIDDAY-STEP``): the day filter and the distance to noon
+    used to read OWM's ``dt_txt``, which is UTC — in an Italian summer (UTC+2)
+    the step picked was 14:00 local, at UTC+3 15:00, at UTC+12 the middle of
+    the night. Both now read the local clock (``dt`` + ``city.timezone``), the
+    same bucketing as ``hourly_steps``; a step without ``dt`` falls back to its
+    ``dt_txt`` read as UTC. Which hour represents a climbing day stays midday:
+    the ``hourly`` strip beside it carries every step of the day.
     """
-    steps = raw.get("list", [])
-    on_date = [s for s in steps if str(s.get("dt_txt", "")).startswith(date)]
+    tz_offset = int((raw.get("city") or {}).get("timezone", 0) or 0)
+
+    on_date = []
+    for step in raw.get("list", []):
+        unix = _step_unix(step)
+        if unix is None:
+            continue
+        local = time.gmtime(unix + tz_offset)
+        if time.strftime("%Y-%m-%d", local) != date:
+            continue
+        # Minutes from local noon; ties keep the provider's (chronological) order.
+        on_date.append((abs(local.tm_hour * 60 + local.tm_min - 12 * 60), step))
     if not on_date:
         raise WeatherUnavailable(f"No forecast available for {date}")
 
-    def _dist_to_noon(step: Dict[str, Any]) -> int:
-        hh = int(str(step["dt_txt"])[11:13])
-        return abs(hh - 12)
-
-    step = min(on_date, key=_dist_to_noon)
-    tz_offset = int((raw.get("city") or {}).get("timezone", 0))
+    step = min(on_date, key=lambda t: t[0])[1]
 
     return {
         **_step_metrics(step),
