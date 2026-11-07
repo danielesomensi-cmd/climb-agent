@@ -131,6 +131,19 @@ pool takes ``wall_handstand_shrugs``. Checked by rebuilding the pools with the
 old ``equipment_required: [weight]`` in memory: the old digests come back.
 The legs lunch keeps ``goblet_squat`` here (the chain's fallback) — the
 barbell side is pinned by ``b413_lunch_golden_cases`` (Daniele at Work).
+
+B414 (step 14, INBOX-2026-11-02-b: the six sub-max hangs of domain
+``finger_aerobic_endurance`` sort as ``finger_endurance``, no longer as
+``aerobic_pure``) changed 8 resolver keys, order only:
+``endurance_aerobic_gym`` 10-07 × the 3 profiles (``long_interval_repeaters``
+before ``arc_training``: in strength_power finger endurance sorts before the
+ARC), ``finger_maintenance_gym`` 10-21 × the 3 profiles (``bar_dead_hang``
+before ``lopez_subhangs``) and ``power_endurance_gym`` 10-21 × advanced /
+intermediate (home, no wall: ``intermittent_dead_hangs`` before the pulls —
+in power_endurance finger endurance comes right after the PE intervals).
+Re-resolved with the old category monkeypatched in: with the instances sorted
+by ``instance_id`` the stripped outputs are identical. Pools and ad-hoc
+unchanged.
 """
 
 from __future__ import annotations

@@ -1939,7 +1939,7 @@ Used to reorder exercises within a resolved session based on macrocycle phase.
 - `strength_neural` — max hangs, contact strength, finger max strength
 - `power` — limit bouldering, explosive pulling
 - `pe_intervals` — 4×4, linked boulders, route intervals
-- `finger_endurance` — repeaters, density hangs, Lopez subhangs
+- `finger_endurance` — repeaters, density hangs, Lopez subhangs; B414: also the sub-max hangs of domain `finger_aerobic_endurance` (`sub_max_capacity_hang`, `intermittent_dead_hangs`, `bar_dead_hang`…), which were `aerobic_pure`
 - `pulling_supplementary` — weighted pull-ups, rows, lock-offs
 - `technique` — drills (footwork, body position, constraints)
 - `core` — hollow hold, L-sit, front lever, handstand

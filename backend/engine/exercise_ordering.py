@@ -107,7 +107,16 @@ def infer_sort_category(
     # --- Priority 3: domain-based ---
 
     # Aerobic pure
-    if domain in ("aerobic_capacity", "regeneration", "finger_aerobic_endurance"):
+    if domain in ("aerobic_capacity", "regeneration"):
+        return "aerobic_pure"
+    if domain == "finger_aerobic_endurance":
+        # B414 (INBOX-2026-11-02-b): a sub-max hang (sub_max_capacity_hang,
+        # intermittent_dead_hangs, bar_dead_hang…) is finger endurance work,
+        # not an ARC: as "aerobic_pure" constraint 3 ("ARC before pump") put
+        # it before the PE intervals, against the catalog's "post-climbing".
+        # The ARC on the wall (aerobic_capacity) stays aerobic_pure.
+        if pattern in ("repeater_hang", "isometric_hang", "hang"):
+            return "finger_endurance"
         return "aerobic_pure"
 
     # Strength neural

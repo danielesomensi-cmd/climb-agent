@@ -66,6 +66,9 @@ def infer_sort_category(exercise: dict) -> str:
     if domain in ("aerobic_capacity", "regeneration"):
         return "aerobic_pure"
     if domain == "finger_aerobic_endurance":
+        # B414: the sub-max hangs are finger endurance (engine aligned).
+        if pattern in ("repeater_hang", "isometric_hang", "hang"):
+            return "finger_endurance"
         return "aerobic_pure"
 
     # Strength neural

@@ -1087,7 +1087,7 @@ core → antagonist_prehab → cooldown    [+ main_unclassified fallback]
 1. `role: "prehab"` (and not "main") → `antagonist_prehab`
 2. `role: "warmup"` → `warmup`; `role: "cooldown"` → `cooldown`; `role: "activation"` → `activation`
 3. `role: "technique"` or `domain: "technique_*"` → `technique`
-4. Domain-based mapping (see `exercise_ordering.py:lines 108-173`)
+4. Domain-based mapping (see `exercise_ordering.py:lines 108-173`). B414: a sub-max hang whose first domain is `finger_aerobic_endurance` (pattern `repeater_hang` / `isometric_hang` / `hang`: `sub_max_capacity_hang`, `intermittent_dead_hangs`, `bar_dead_hang`…) is `finger_endurance`, not `aerobic_pure` — so constraint 3 no longer puts it before the PE intervals; the ARC on the wall (`aerobic_capacity`) stays `aerobic_pure`
 5. Fallback: `main_unclassified`
 
 ### Phase sort order

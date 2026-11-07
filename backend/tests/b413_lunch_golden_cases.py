@@ -59,6 +59,13 @@ the cold start is out of B414); the id sort puts it before the split squat.
 Diff of the stripped output against the step-12 tree, key by key: only those 6
 keys. ``advanced`` / ``intermediate`` (no barbell) identical, like every C272
 key and ``PRE_B413_LEGS_DIGESTS``.
+
+B414 (step 14, sub-max hangs sort as ``finger_endurance``) changed 6 keys,
+order only — the same sessions as in the C272 golden on the two tested
+profiles: ``endurance_aerobic_gym`` 10-07, ``finger_maintenance_gym`` 10-21,
+``power_endurance_gym`` 10-21 × ``advanced`` / ``intermediate`` (same check:
+instances sorted by ``instance_id``, stripped output identical). The lunches
+(``daniele`` keys) have no sub-max hang: unchanged.
 """
 
 from __future__ import annotations

@@ -88,14 +88,14 @@
   ]
  },
  "advanced|2026-10-07|endurance_aerobic_gym": {
-  "digest": "2f9040b0e7bb1742e68653491c9dacbaa5503c904d734d4eda9f2a69ed923c0d",
+  "digest": "efd36c808895e0872f692e28c428d6fec354da28a12788c97371e2c3a65213f4",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
    "general_pulse_raise",
    "warmup_easy_boulders",
-   "arc_training",
    "long_interval_repeaters",
+   "arc_training",
    "side_plank",
    "face_pull",
    "pushup",
@@ -648,15 +648,15 @@
   ]
  },
  "advanced|2026-10-21|finger_maintenance_gym": {
-  "digest": "41d00b1b3a0dfa08751142829a3ebc313c769713af9f6e3064945eacb9ca5d2f",
+  "digest": "0fb2e9e5185c206c6f544007b619f0ff840150f6e0f27b920b57af6c9420bd56",
   "exercise_ids": [
    "active_hip_mobility",
    "bear_crawl",
    "dynamic_mobility_flow",
    "finger_recruitment_pulls",
    "general_pulse_raise",
-   "lopez_subhangs",
    "bar_dead_hang",
+   "lopez_subhangs",
    "hanging_leg_raise",
    "band_external_rotation",
    "pushup",
@@ -838,16 +838,16 @@
   ]
  },
  "advanced|2026-10-21|power_endurance_gym": {
-  "digest": "961e0bb834bfb66139809640e210cf8aa4cd02622eeb4001f647dbd7f8765d9e",
+  "digest": "120a23b2bfecd7382931c98768865f5e3f5b60a0575b28bdc29cf68ab6ec86b4",
   "exercise_ids": [
    "active_hip_mobility",
    "bear_crawl",
    "dynamic_mobility_flow",
    "general_pulse_raise",
+   "intermittent_dead_hangs",
    "rfd_explosive_pulls",
    "archer_pullup",
    "one_arm_pullup_assisted",
-   "intermittent_dead_hangs",
    "front_lever_one_leg",
    "band_pull_apart",
    "pushup",
@@ -1411,14 +1411,14 @@
   ]
  },
  "intermediate|2026-10-07|endurance_aerobic_gym": {
-  "digest": "e6eb365285ea63baf14e7bf39321745122de67947d51465f479c828dcc864781",
+  "digest": "5a18d3eb768eef7f01f502ffadab67d0078ba627cc027c12d12f9da6081f4c5e",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
    "general_pulse_raise",
    "warmup_easy_boulders",
-   "arc_training",
    "long_interval_repeaters",
+   "arc_training",
    "side_plank",
    "face_pull",
    "pushup",
@@ -1971,15 +1971,15 @@
   ]
  },
  "intermediate|2026-10-21|finger_maintenance_gym": {
-  "digest": "6be74501f3088627cef45be049056e0a6f5691a152b3a38b57242fce7aa5ef97",
+  "digest": "2b786223de5a5077cb4ce17ada6b03303c5ff1a97869f926c9fdd73a6621e124",
   "exercise_ids": [
    "active_hip_mobility",
    "bear_crawl",
    "dynamic_mobility_flow",
    "finger_recruitment_pulls",
    "general_pulse_raise",
-   "lopez_subhangs",
    "bar_dead_hang",
+   "lopez_subhangs",
    "hanging_leg_raise",
    "band_external_rotation",
    "pushup",
@@ -2161,16 +2161,16 @@
   ]
  },
  "intermediate|2026-10-21|power_endurance_gym": {
-  "digest": "c4be5508be2751e1172c5cfa25e95d275911cf7d8fe6115f188c2ccd7be1f84f",
+  "digest": "0e32b3f500a3258eb68e6e98c18e428a402487a991bddc843375e778ae1e6d51",
   "exercise_ids": [
    "active_hip_mobility",
    "bear_crawl",
    "dynamic_mobility_flow",
    "general_pulse_raise",
+   "intermittent_dead_hangs",
    "rfd_explosive_pulls",
    "archer_pullup",
    "one_arm_pullup_assisted",
-   "intermittent_dead_hangs",
    "front_lever_one_leg",
    "band_pull_apart",
    "pushup",
