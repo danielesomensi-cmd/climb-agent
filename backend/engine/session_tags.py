@@ -116,9 +116,19 @@ _PE_DOMAINS = frozenset({"power_endurance", "anaerobic_capacity"})
 
 
 def _is_sub_max_hang(eid: str, entry: Dict[str, Any]) -> bool:
-    """B414: a hang at intensity ≤ medium that is not finger-hard by itself."""
+    """B414: a hang at intensity ≤ medium that is not finger-hard by itself.
+
+    B414 review: never a test (``test_repeater_7_3_to_failure`` is rated
+    ``medium`` but is 7/3 repeaters to failure) and never a hang the catalog
+    rates ``stress_tags.fingers: high`` — those are not sub-max work."""
+    roles = entry.get("role") or []
+    if isinstance(roles, str):
+        roles = [roles]
+    fingers = str((entry.get("stress_tags") or {}).get("fingers") or "low")
     return (
         eid not in _FINGER_HARD_IDS
+        and "test" not in [str(r) for r in roles]
+        and fingers != "high"
         and str(entry.get("intensity_level") or "low") in _SUB_MAX_LEVELS
         and any(p in _SUB_MAX_HANG_PATTERNS for p in _patterns_of(entry))
     )

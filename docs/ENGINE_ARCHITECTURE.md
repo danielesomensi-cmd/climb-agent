@@ -1027,7 +1027,7 @@ Processes event lists. Supported event types:
 `session_tags.derive_session_tags` computes once from the exercises (`add_generated_session` merges them with the
 declared ones, only escalating). `finger` comes from the finger-loading patterns / domains (not a light warm-up);
 B414 (rule E2): a sub-max hang (pattern `repeater_hang` / `isometric_hang` / `hang`, intensity ≤ medium, not
-finger-hard by itself) does **not** make the session `finger` when it has PE intervals (role main,
+finger-hard by itself, not a test, catalog finger stress not `high` — so `test_repeater_7_3_to_failure` is not one) does **not** make the session `finger` when it has PE intervals (role main,
 `climbing_intervals`, PE / anaerobic domain) and no other finger load — the custom then equals `power_endurance_gym`
 (`finger: False`). Stored tags are never rewritten; a rule change surfaces as `STALE_CUSTOM_TAGS` (B395).
 

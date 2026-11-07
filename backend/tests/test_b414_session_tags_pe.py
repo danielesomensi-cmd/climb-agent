@@ -60,6 +60,15 @@ class TestRule:
         assert _tags(*PE, "intermittent_dead_hangs", other)[0]["finger"] is True
         assert _tags(*PE, other)[0]["finger"] is True
 
+    def test_a_hang_test_to_failure_is_not_sub_max(self):
+        """Review: ``test_repeater_7_3_to_failure`` is rated ``medium`` but is a
+        7/3 test to failure (role test, finger stress high): it keeps the tag
+        after PE intervals."""
+        from backend.engine.session_tags import _catalog
+        ex = _catalog()["test_repeater_7_3_to_failure"]
+        assert ex["intensity_level"] == "medium" and ex["stress_tags"]["fingers"] == "high"
+        assert _tags(*PE, "test_repeater_7_3_to_failure")[0]["finger"] is True
+
     def test_without_pe_intervals_the_arc_does_not_clear_it(self):
         """E3 rejected: finger_maintenance_gym (ARC + moving hangs) stays finger."""
         assert _tags("arc_easy_traverse", "hangboard_moving_hangs")[0]["finger"] is True
