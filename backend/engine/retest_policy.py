@@ -711,9 +711,11 @@ _DECLINE_SKIPS = (SKIP_DECLINED, SKIP_POSTPONED)
 #: Triggers tied to one week of one macrocycle: a decline matches them only in
 #: the macrocycle it was declined in.
 _WEEK_BOUND_TRIGGERS = (TRIGGER_END_OF_PHASE, TRIGGER_CYCLE_START)
-#: The triggers a record can carry (the pending test's, normalized).
+#: The triggers a record can carry (the pending test's, normalized). B414
+#: review: a pending test can be the athlete's ``requested`` one — declining or
+#: postponing it stores that trigger, and the view must not blank it.
 _DECLINE_TRIGGERS = (TRIGGER_END_OF_PHASE, TRIGGER_CYCLE_START, TRIGGER_MAINTENANCE, TRIGGER_EARLY,
-                     TRIGGER_POSTPONED, TRIGGER_EXPIRY)
+                     TRIGGER_POSTPONED, TRIGGER_EXPIRY, TRIGGER_REQUESTED)
 #: B369's flag on a cached week the next GET /api/week regenerates
 #: (``deps.STALE_KEY``; the engine never imports the API layer).
 _STALE_KEY = "_stale"

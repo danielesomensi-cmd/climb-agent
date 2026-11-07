@@ -185,6 +185,22 @@ class TestReaders:
         assert rd.upsert(st, dec, today="2026-11-10") == req
         assert st[rp.DECLINES_KEY] == [dec]
 
+    def test_postponing_the_requested_test_keeps_its_trigger_in_the_view(self):
+        """B414 review: the pending test is the requested one, so a postpone
+        (or a decline) of it stores the trigger ``requested`` — the
+        decline_view used to blank it (None: not in the closed set)."""
+        st = _daniele(_req("2026-11-09"))
+        row = rp.retest_status(st, "2026-11-09", finger_device="hangboard")["axes"]["finger"]
+        assert row["next_test"]["trigger"] == rp.TRIGGER_REQUESTED
+        rec = rd.build_record(st, "finger", status_row=row, today="2026-11-09", kind="postpone",
+                              until="2026-11-20", reason="schedule")
+        assert rec["trigger"] == rp.TRIGGER_REQUESTED
+        rd.upsert(st, rec, today="2026-11-09")
+        row = rp.retest_status(st, "2026-11-09", finger_device="hangboard")["axes"]["finger"]
+        assert row["request"] is None  # the postpone ended the request
+        assert [(d["kind"], d["trigger"], d["until"]) for d in row["declines"]] == [
+            ("postpone", rp.TRIGGER_REQUESTED, "2026-11-20")]
+
     def test_axis_request_yields_to_a_later_decline_kept_by_an_import(self):
         dec = {"axis": "finger", "kind": "decline", "trigger": "maintenance", "official_date": OFFICIAL,
                "declined_at": "2026-11-12", "reason": "fatigue"}
@@ -288,6 +304,31 @@ def _past() -> str:
     return json.dumps({k: v for k, v in (st.get("week_plans") or {}).items() if k < mon}, sort_keys=True)
 
 
+def _current_week_past() -> str:
+    """B414 review: the stored days of the current week before today."""
+    mon, today = _mon(date.today()).isoformat(), date.today().isoformat()
+    plan = (deps.load_state(None).get("week_plans") or {}).get(mon) or {}
+    days = [d for w in plan.get("weeks") or [] for d in w.get("days") or [] if str(d.get("date")) < today]
+    return json.dumps(days, sort_keys=True)
+
+
+def _played_yesterday() -> None:
+    """A session played yesterday in the cached current week (when today is
+    not Monday; not finger-hard, so the 72 h rule does not move the test):
+    the regeneration the request triggers must leave it alone."""
+    today = date.today()
+    if today.weekday() == 0:
+        return
+    st = deps.load_state(None)
+    plan = st["week_plans"][_mon(today).isoformat()]
+    day = next(d for d in plan["weeks"][0]["days"] if d["date"] == (today - timedelta(days=1)).isoformat())
+    day["sessions"].append({
+        "session_id": "core_training", "slot": "morning", "location": "home", "status": "done",
+        "resolved": {"exercise_instances": [{"exercise_id": "ab_wheel_rollout", "sets": 3}]},
+        "actual_exercises": [{"exercise_id": "ab_wheel_rollout", "completed": True, "completed_sets": 3}]})
+    deps.save_state(st, None)
+
+
 #: A 20-week cycle of one strength_power phase: no phase block, nothing natural
 #: due while the test is fresh (end of SP / maintenance fall outside).
 _LONG_SP = [{"phase_id": "strength_power", "duration_weeks": 20}]
@@ -298,7 +339,9 @@ class TestApi:
         # Test 50 days ago (gap passed, maintenance at 84 d not reached).
         _seed(test_age=50, start_weeks_ago=4, phases=_LONG_SP)
         client.get("/api/week/0")  # the current week cached
+        _played_yesterday()
         past = _past()
+        cur_past = _current_week_past()
         r = client.post("/api/retest/request", json={})
         assert r.status_code == 200, r.text
         body = r.json()
@@ -314,6 +357,10 @@ class TestApi:
         reasons = {a: row.get("next_test_reason") for a, row in week["retest_status"]["axes"].items()}
         assert tests or set(reasons.values()) <= {"no_placement_slot", "blocked:no_paired_slot"}, (tests, reasons)
         assert _past() == past
+        # B414 review: the days of the CURRENT week before today (the stale
+        # week was regenerated) stay byte for byte too — a played session
+        # there included.
+        assert _current_week_past() == cur_past
         # Asked again with the test in the plan: nothing written, the day named.
         if tests:
             raw = api.read_bytes()
@@ -386,3 +433,23 @@ class TestA246:
         state = deps.load_state(None)
         assert "test_reminder_skipped_until" not in state and "test_reminder_postponed_to" not in state
         assert state["initial_tests_requested"] is True
+
+    def test_a_restart_drops_the_old_deferrals_an_incremental_regen_keeps_them(self, api):
+        """B414 review: "Restart macrocycle" (full regen, week 1 again) is a new
+        cycle too — "reset at every new cycle"; an incremental regen keeps the
+        start date and the week numbering, so the deferrals stay."""
+        def _deferred() -> None:
+            state = deps.load_state(None)
+            state["test_reminder_skipped_until"] = 18
+            state["test_reminder_postponed_to"] = 12
+            deps.save_state(state, None)
+
+        _deferred()
+        r = client.post("/api/macrocycle/generate", json={"total_weeks": 12, "from_phase": "current"})
+        assert r.status_code == 200, r.text
+        state = deps.load_state(None)
+        assert (state["test_reminder_skipped_until"], state["test_reminder_postponed_to"]) == (18, 12)
+        r = client.post("/api/macrocycle/generate", json={"total_weeks": 12})
+        assert r.status_code == 200, r.text
+        state = deps.load_state(None)
+        assert "test_reminder_skipped_until" not in state and "test_reminder_postponed_to" not in state

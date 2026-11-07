@@ -119,6 +119,14 @@ def generate(req: MacrocycleRequest, user_id: Optional[str] = Depends(get_user_i
     if from_phase and old_mc and old_mc.get("pause"):
         macrocycle["pause"] = old_mc["pause"]
     state.pop("initial_tests_requested", None)
+    if not from_phase:
+        # B414 review (A246): a full regen ("Restart macrocycle") starts the
+        # week numbering again from week 1, like start-new-cycle — the 6-week
+        # reminder's deferrals (absolute week numbers of the old cycle) would
+        # hide it for the whole new cycle. An incremental regen keeps the
+        # start date and the numbering: they stay.
+        state.pop("test_reminder_postponed_to", None)
+        state.pop("test_reminder_skipped_until", None)
     invalidate_week_cache(state)
     save_state(state, user_id)
 
