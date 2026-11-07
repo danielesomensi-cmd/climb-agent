@@ -1603,6 +1603,40 @@ def generate_phase_week(
             normalized[_wd] = dict(normalized[_wd])
             normalized[_wd][_slot] = {**normalized[_wd][_slot], "available": False}
 
+    # B414 (B369-P6 point 2, Option B): the place the user chose with "change
+    # location" on a day of this week (``user_owned.gym_changes``, the last
+    # record of a date wins; a record with a slot sets that slot only) — from
+    # today on. Each available slot of that day takes that place
+    # (``locations``, ``preferred_location``, ``gym_id``; None at home), so the
+    # passes choose a session for ITS equipment; the session stays the
+    # engine's. Before B414 a regeneration put the default gym back. A place
+    # outside the allowed locations (home with ``home_enabled`` false) or a gym
+    # no longer in the list is not applied. Weeks without a record: untouched.
+    if _same_week:
+        from backend.engine.user_owned import gym_changes as _gym_changes
+        _changes = _gym_changes(existing_week_plan)
+        _gym_ids = {g.get("gym_id") for g in gyms or []}
+        _week_set = {(start + timedelta(days=i)).isoformat() for i in range(7)}
+        _views = [normalized] if normalized is normalized_full else [normalized, normalized_full]
+        for _d_iso in sorted(_changes):
+            if _d_iso not in _week_set:
+                continue
+            if today_date is not None and _parse_date(_d_iso) < today_date:
+                continue
+            _wd = _weekday_key(_parse_date(_d_iso))
+            for _slot in SLOTS:
+                _rec = _changes[_d_iso].get(_slot) or _changes[_d_iso].get(None)
+                if not _rec or _rec["location"] not in locations:
+                    continue
+                if _rec["location"] == "gym" and _rec["gym_id"] and gyms and _rec["gym_id"] not in _gym_ids:
+                    continue
+                for _view in _views:
+                    if not _view[_wd][_slot].get("available"):
+                        continue
+                    _view[_wd] = dict(_view[_wd])
+                    _view[_wd][_slot] = {**_view[_wd][_slot], "locations": [_rec["location"]],
+                                         "preferred_location": _rec["location"], "gym_id": _rec["gym_id"]}
+
     # Build day structures
     day_dates: List[date] = [start + timedelta(days=i) for i in range(7)]
     day_keys: List[str] = [_weekday_key(d) for d in day_dates]

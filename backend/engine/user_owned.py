@@ -175,6 +175,34 @@ def removed_refs(plan: Mapping[str, Any]) -> List[Tuple[str, Optional[str], Opti
     return [(r["date"], r["ref"], r["slot"]) for r in removal_records(plan)]
 
 
+def gym_changes(plan: Mapping[str, Any]) -> dict:
+    """B414 (B369-P6 point 2, Option B): the place the user chose for each date
+    of *plan* with "change location" — ``{date: {slot | None: {"location",
+    "gym_id"}}}``, read from the plan's own ``change_gym`` adaptations, in log
+    order: the last record of a date wins. A record that names a ``slot``
+    (the coach can send one) sets that slot only; one without (the app, and
+    every record before B414) sets the whole day and replaces what earlier
+    records of that date said. ``gym_id`` is None at home. The planner reads it
+    on a regeneration of the same week (a change of gym is not a user marker:
+    the session stays the engine's, chosen again for that place's equipment).
+    """
+    out: dict = {}
+    for a in (plan or {}).get("adaptations") or []:
+        if not isinstance(a, Mapping) or a.get("type") != "change_gym" or not a.get("date"):
+            continue
+        loc = a.get("new_location") or "gym"
+        if loc not in ("gym", "home"):
+            continue
+        rec = {"location": loc, "gym_id": a.get("new_gym_id") if loc == "gym" else None}
+        d = str(a["date"])[:10]
+        slot = a.get("slot")
+        if slot:
+            out.setdefault(d, {})[str(slot)] = rec
+        else:
+            out[d] = {None: rec}
+    return out
+
+
 def whole_day_override_dates(plan: Mapping[str, Any]) -> List[str]:
     """Dates the user replaced wholesale, every slot included: an outdoor
     override, or a whole-day indoor override recorded before the B369 review

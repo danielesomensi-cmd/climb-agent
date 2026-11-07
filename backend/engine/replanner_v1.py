@@ -1531,6 +1531,9 @@ def apply_events(
             day = _find_day(updated, event["date"])
             new_location = event.get("location", "gym")
             new_gym_id = event.get("gym_id")
+            # B414 (B369-P6): a named slot changes that slot only (the coach
+            # sends one); without it the whole day moves, as the app does.
+            only_slot = event.get("slot") or None
 
             gym_equipment: set = set()
             if new_location == "gym" and gyms and new_gym_id:
@@ -1555,6 +1558,8 @@ def apply_events(
 
             for s in day.get("sessions", []):
                 if s.get("status") in ("done", "skipped"):
+                    continue
+                if only_slot and s.get("slot") != only_slot:
                     continue
 
                 sid = s.get("session_id", "")
@@ -1626,11 +1631,14 @@ def apply_events(
                     "for it) — nothing else in the week was changed"
                 )
 
+            # B414: the record is what the planner re-reads on a regeneration
+            # of this week (``user_owned.gym_changes``, Option B).
             updated.setdefault("adaptations", []).append({
                 "type": "change_gym",
                 "date": event["date"],
                 "new_location": new_location,
                 "new_gym_id": new_gym_id,
+                **({"slot": only_slot} if only_slot else {}),
                 "warnings": change_warnings,
                 **({"lost_finger": True} if lost_finger else {}),
             })

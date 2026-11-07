@@ -1798,6 +1798,11 @@ is_preservable(session)   = status ∈ {done, skipped} | is_user_owned(session)
   id only). `user_owned.slot_emptied` → the `(date, slot)` pairs the user emptied: the planner leaves them empty
   and the merge drops any engine session there. A `remove_outdoor` cancels that day's removals logged before its
   `add_outdoor` (D2).
+- **`change_gym` adaptation** `{type: "change_gym", date, new_location, new_gym_id, slot?, warnings, lost_finger?}`
+  — B414: `slot` (optional, the event's) = only that slot changed; absent = the whole day (the app; every record
+  before B414). `user_owned.gym_changes(plan)` → `{date: {slot | None: {location, gym_id}}}` (last record of a
+  date wins; a whole-day record resets the slots named before it): the place the planner re-reads on a
+  regeneration of the same week (B369-P6 Option B, not a user marker).
 - **User removals** = `adaptations[]` events `remove_session` (`date`, `session_ref`/`slot`), the source side of
   `move_session` (`from_date`, `session_ref` or `moved_session_id`, `from_slot`) and its `replaced_session_id` at
   `to_date`/`to_slot`, `day_override` `replaced_session_id`/`replaced_slot` and `replaced_slots`, and the whole
