@@ -207,6 +207,19 @@ class TestReaders:
         assert "RINVIATO" not in text and "RIFIUTATO" not in text
         assert "retest declined" not in ac.render_coach_block(ctx)
 
+    def test_the_import_keeps_a_request_and_the_policy_reads_it_as_one(self, api):
+        """The import only checks that the list is a list: a request record
+        rides along and is read as a request, never as a decline."""
+        state = deps.load_state(None)
+        state.update(deepcopy(_daniele(_req("2026-11-09"))))
+        r = client.post("/api/user/import", json=state)
+        assert r.status_code == 200, r.text
+        stored = deps.load_state(None)
+        assert stored[rp.DECLINES_KEY] == [_req("2026-11-09")]
+        row = rp.retest_status(stored, "2026-11-09", finger_device="hangboard")["axes"]["finger"]
+        assert row["declines"] == [] and row["request"] == {"requested_at": "2026-11-09", "source": "app"}
+        assert row["next_test"]["trigger"] == rp.TRIGGER_REQUESTED
+
     def test_build_request_errors(self):
         for kw, code in (({"axis": "toes"}, "unknown_axis"), ({"source": "web"}, "invalid_source"),
                          ({"status_row": {"covered": False}}, "not_covered"), ({"status_row": None}, "not_covered")):
