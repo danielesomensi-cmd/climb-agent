@@ -375,7 +375,7 @@ resolve_session(
    - **Inline block** (has `block_id` + `selection`, no `template_id`): → `_resolve_inline_block()` → `pick_best_exercise_p0()`.
    - **Template reference** (has `template_id`): Load template JSON → iterate its `blocks[]`.
 6. **Per block resolution:**
-   - **Explicit exercise** (`exercise_id` in block): Direct lookup, bypass P0 filters.
+   - **Explicit exercise** (`exercise_id` in block): Direct lookup, bypass P0 filters. B414: the pin is a chain — `_resolve_pin_chain` (both branches) takes the first of `exercise_id` + `fallback_exercise_ids` whose equipment is available (equipment only); when none passes, `pin_exhausted` decides: `p0` (default: P0 with the block's filters, B261), `skip` or `fail` (`pin_strict` = `fail`); a test pin that cannot run is always skipped. Without the new keys the output is the pre-B414 one.
    - **Instruction-only** (`mode: "instruction_only"`): No exercise selection, pass through.
    - **P0 selection** (has `role`): → `pick_best_exercise_p0()` with block's `role`, `domain`, `pattern`.
 7. **Cooldown fallback:** For main/primary blocks, if the selected exercise is in cooldown (via `_cooldown_until_date()`), swap to a cluster fallback or apply 0.9 multiplier downshift.

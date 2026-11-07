@@ -152,14 +152,16 @@ def test_the_sweep_actually_ran(reachable_ids):
 def _session_pinned_ids() -> set:
     """C274: exercise ids a catalog session names explicitly
     (``selection.primary.exercise_id``). A pin is composition by hand, written
-    in the catalog — the only way a library-only entry may reach a session."""
+    in the catalog — the only way a library-only entry may reach a session.
+    B414: the ``fallback_exercise_ids`` of a pin chain are pins too."""
     pinned: set = set()
     for path in glob.glob(os.path.join(REPO_ROOT, "backend/catalog/sessions/v1/*.json")):
         doc = json.loads(open(path, encoding="utf-8").read())
         for mod in doc.get("modules") or []:
-            eid = ((mod.get("selection") or {}).get("primary") or {}).get("exercise_id")
-            if eid:
-                pinned.add(str(eid))
+            primary = (mod.get("selection") or {}).get("primary") or {}
+            for eid in [primary.get("exercise_id")] + list(primary.get("fallback_exercise_ids") or []):
+                if eid:
+                    pinned.add(str(eid))
     return pinned
 
 

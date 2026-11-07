@@ -301,6 +301,156 @@ def _is_test_exercise(ex: Dict[str, Any]) -> bool:
     different test would silently measure the wrong axis."""
     return "test" in [norm_str(r) for r in (ex.get("role") or [])]
 
+
+# B414 (B381-FALLBACK): a pinned block may list ordered fallbacks after its pin
+# and declare what happens when none of them has its equipment.
+PIN_EXHAUSTED_VALUES = ("p0", "skip", "fail")
+
+
+def _pin_exhausted_mode(spec: Dict[str, Any]) -> str:
+    """B414: the declared outcome of a pin chain with no usable candidate.
+
+    ``pin_exhausted`` (``p0`` | ``skip`` | ``fail``) wins; without it
+    ``pin_strict: true`` (C274) is the alias of ``fail``; neither = ``p0``,
+    the B261 behaviour. An unknown value reads as ``p0`` (the catalog lint
+    rejects it)."""
+    mode = norm_str(spec.get("pin_exhausted") or "")
+    if mode in PIN_EXHAUSTED_VALUES:
+        return mode
+    return "fail" if spec.get("pin_strict") is True else "p0"
+
+
+def _pin_candidate_ids(spec: Dict[str, Any]) -> List[str]:
+    """B414: ``[exercise_id] + fallback_exercise_ids``, catalog order, no repeats."""
+    out: List[str] = []
+    seen: set = set()
+    for raw in [spec.get("exercise_id")] + list(spec.get("fallback_exercise_ids") or []):
+        if not raw:  # norm_str(None) is "none"
+            continue
+        eid = norm_str(raw)
+        if eid and eid not in seen:
+            seen.add(eid)
+            out.append(eid)
+    return out
+
+
+def _resolve_pin_chain(
+    spec: Dict[str, Any],
+    exercises: List[Dict[str, Any]],
+    available_equipment: List[str],
+    *,
+    block_id: str,
+    session_id: Optional[str] = None,
+) -> Tuple[Optional[str], Optional[Dict[str, Any]], Dict[str, Any]]:
+    """B414 (B381-FALLBACK): one pin chain for the inline and the template branch.
+
+    ``spec`` is where the block declares its pin: ``selection.primary`` of an
+    inline block, the block itself in a template. Candidates are the pin then
+    ``fallback_exercise_ids``, in catalog order; the first whose equipment is
+    available wins (``_pin_equipment_ok`` — the gate checks equipment only, as
+    a pin always has: no recency, no weekly seed, no rotation, no location, so
+    "the same movement every time"). A candidate missing from the catalog is
+    logged and skipped.
+
+    Returns ``(outcome, exercise, trace)``:
+
+    - ``(None, None, {})``: the block declares no pin — P0 as before;
+    - ``("explicit_exercise_id", ex, trace)``: a candidate passed;
+    - ``("pin_test_incompatible_skip", None, trace)``: the first pin is a test
+      that cannot run — block skipped whatever the catalog says (B261: a
+      measurement is never substituted);
+    - ``("pin_strict_incompatible_failed", None, trace)``: ``fail`` (or
+      ``pin_strict``, C274) — block failed;
+    - ``("pin_exhausted_skip", None, trace)``: ``skip`` — block skipped;
+    - ``("p0", None, extra)``: ``p0`` — the caller runs P0 with the block's
+      own filters (never bypassed); ``extra`` is merged into the P0 trace.
+
+    Pure: same catalog and equipment → same answer. Without
+    ``fallback_exercise_ids`` / ``pin_exhausted`` the outcome and the trace are
+    exactly the pre-B414 ones, so no existing output moves.
+    """
+    cand_ids = _pin_candidate_ids(spec)
+    if not cand_ids:
+        return None, None, {}
+    has_chain = bool(spec.get("fallback_exercise_ids"))
+    by_id = {norm_str(get_ex_id(e)): e for e in exercises}
+    rejects: List[Dict[str, str]] = []
+    first = by_id.get(cand_ids[0])
+    for idx, eid in enumerate(cand_ids):
+        ex = by_id.get(eid)
+        if ex is None:
+            logger.warning(
+                "resolve_session: pinned exercise_id '%s' not found in catalog for block '%s' (session=%s) — skipped",
+                eid, block_id, session_id,
+            )
+            rejects.append({"exercise_id": eid, "reason": "not_in_catalog"})
+            continue
+        if _pin_equipment_ok(ex, available_equipment):
+            trace: Dict[str, Any] = {"counts": {}, "domain_filter_applied": None,
+                                     "note": "explicit_exercise_id: bypassed P0 filters"}
+            if has_chain:
+                trace["pin_index"] = idx
+                trace["pin_rejects"] = rejects
+            return "explicit_exercise_id", ex, trace
+        rejects.append({"exercise_id": eid, "reason": "equipment"})
+
+    chain_extra: Dict[str, Any] = {"pin_rejects": rejects} if has_chain else {}
+    if first is not None and _is_test_exercise(first):
+        logger.warning(
+            "resolve_session: pinned test exercise '%s' incompatible with available equipment for block '%s' — skipping block",
+            cand_ids[0], block_id,
+        )
+        return "pin_test_incompatible_skip", None, {
+            "counts": {}, "domain_filter_applied": None,
+            "note": "pinned test exercise incompatible with equipment — block skipped (B261)",
+            **chain_extra,
+        }
+    mode = _pin_exhausted_mode(spec)
+    if mode == "fail":
+        # C274: the pin IS the block (e.g. the 4x4 treadmill intervals of
+        # treadmill_hiit_4x4). Without its equipment no substitute keeps the
+        # session's meaning — P0 would land on an easy incline walk and call
+        # it a HIIT session. Fail the block loudly: never a silent downgrade.
+        logger.warning(
+            "resolve_session: strict pin '%s' incompatible with available equipment for block '%s' — block failed",
+            cand_ids[0], block_id,
+        )
+        return "pin_strict_incompatible_failed", None, {
+            "counts": {}, "domain_filter_applied": None,
+            "note": "strict pin incompatible with equipment — block failed (C274)",
+            **chain_extra,
+        }
+    if mode == "skip":
+        # B414 (B261-TEST-FALLBACK): e.g. the 2RM of a pulling test without
+        # weights — the measurement is skipped, never replaced by another pull.
+        logger.warning(
+            "resolve_session: no pinned candidate of block '%s' has its equipment (session=%s) — block skipped",
+            block_id, session_id,
+        )
+        return "pin_exhausted_skip", None, {
+            "counts": {}, "domain_filter_applied": None,
+            "note": "no pinned candidate has its equipment — block skipped (pin_exhausted: skip)",
+            **chain_extra,
+        }
+    if first is not None:
+        logger.info(
+            "resolve_session: pinned exercise '%s' incompatible with available equipment for block '%s' — delegating to P0",
+            cand_ids[0], block_id,
+        )
+    return "p0", None, chain_extra
+
+
+def _pin_failed_message(explicit_ex_id: Any) -> str:
+    """C274 / B414: message of a block failed by its pin chain (``fail``)."""
+    return (f"Pinned exercise '{explicit_ex_id}' needs equipment that is not available; "
+            "the block has no equivalent substitute (C274 pin_strict).")
+
+
+def _pin_skipped_message(explicit_ex_id: Any) -> str:
+    """B414: message of a block skipped by its pin chain (``skip``)."""
+    return (f"Pinned exercise '{explicit_ex_id}' needs equipment that is not available; "
+            "the block is skipped, never substituted (pin_exhausted: skip).")
+
 # B263: device-anchored block prescriptions (hangboard / loading-pin) must not
 # bleed their device-specific notes/fields onto a NON-device exercise that was
 # substituted into the block (e.g. archer_pullup filling a finger_max_strength
@@ -1191,60 +1341,28 @@ def _resolve_inline_block(
 
     _finger_dev = ((user_state or {}).get("preferences") or {}).get("finger_training_device")
 
-    # B174: explicit exercise_id in selection.primary bypasses P0 filters entirely
-    # (mirrors template block behavior at resolve_session.py:1359-1365)
+    # B174: explicit exercise_id in selection.primary bypasses P0 filters entirely.
+    # B414 (B381-FALLBACK): the pin is a chain (`fallback_exercise_ids`) with a
+    # declared outcome when exhausted (`pin_exhausted`, `pin_strict` = fail),
+    # resolved by the same helper as the template branch.
     explicit_ex_id = primary.get("exercise_id")
     selected_ex = None
     chosen_by: str = "p0_inline_block"
     trace: Dict[str, Any] = {}
 
     run_p0 = True
-    if explicit_ex_id:
-        pinned = next(
-            (e for e in exercises if norm_str(get_ex_id(e)) == norm_str(explicit_ex_id)),
-            None,
-        )
-        if pinned is None:
-            logger.warning(
-                "resolve_session: explicit exercise_id '%s' not found in catalog for block '%s' — falling back to P0",
-                explicit_ex_id, block_id,
-            )
-        elif _pin_equipment_ok(pinned, available_equipment):
-            selected_ex = pinned
-            chosen_by = "explicit_exercise_id"
-            trace = {"counts": {}, "domain_filter_applied": None, "note": "explicit_exercise_id: bypassed P0 filters"}
-            run_p0 = False
-        elif _is_test_exercise(pinned):
-            # B261: incompatible test pin — skip the block; never substitute a
-            # different measurement via P0 (would measure the wrong axis).
-            logger.warning(
-                "resolve_session: pinned test exercise '%s' incompatible with available equipment for block '%s' — skipping block",
-                explicit_ex_id, block_id,
-            )
-            chosen_by = "pin_test_incompatible_skip"
-            trace = {"counts": {}, "domain_filter_applied": None, "note": "pinned test exercise incompatible with equipment — block skipped (B261)"}
-            run_p0 = False
-        elif primary.get("pin_strict") is True:
-            # C274: the pin IS the block (e.g. the 4x4 treadmill intervals of
-            # treadmill_hiit_4x4). Without its equipment no substitute keeps
-            # the session's meaning — P0 would land on an easy incline walk and
-            # call it a HIIT session. Fail the block loudly instead: the
-            # resolution becomes "failed", never a silent downgrade.
-            logger.warning(
-                "resolve_session: strict pin '%s' incompatible with available equipment for block '%s' — block failed",
-                explicit_ex_id, block_id,
-            )
-            chosen_by = "pin_strict_incompatible_failed"
-            trace = {"counts": {}, "domain_filter_applied": None,
-                     "note": "strict pin incompatible with equipment — block failed (C274)"}
-            run_p0 = False
-        else:
-            # B261: incompatible non-test pin — delegate to P0 with the block's
-            # role/domain so the equipment filter applies.
-            logger.info(
-                "resolve_session: pinned exercise '%s' incompatible with available equipment for block '%s' — delegating to P0",
-                explicit_ex_id, block_id,
-            )
+    _pin_outcome, _pin_ex, _pin_trace = _resolve_pin_chain(
+        primary, exercises, available_equipment, block_id=block_id, session_id=session_id,
+    )
+    _pin_p0_extra: Dict[str, Any] = {}
+    if _pin_outcome == "p0":
+        # B261: incompatible non-test pin — P0 with the block's own filters.
+        _pin_p0_extra = _pin_trace
+    elif _pin_outcome is not None:
+        selected_ex = _pin_ex
+        chosen_by = _pin_outcome
+        trace = _pin_trace
+        run_p0 = False
 
     # A290: rotation plan from the module's TOP-LEVEL keys (never selection).
     from backend.engine.phase_anchor import plan_block as _plan_block
@@ -1327,6 +1445,8 @@ def _resolve_inline_block(
                 logger.info("resolver.cascade", extra=log_extra)
 
         chosen_by = "p0_inline_block"
+        if _pin_p0_extra:  # B414: the chain's rejected candidates, for the trace
+            trace = {**(trace or {}), **_pin_p0_extra}
 
     # A298: bodyweight ladder stage (tested athletes; None → unchanged).
     _bw_plan = _bw_lvl = None
@@ -1347,7 +1467,7 @@ def _resolve_inline_block(
     _pin_catalog_rx: Optional[Dict[str, Any]] = None
     _ladder_pin = mod.get("ladder_pin")
     if (bw_ctx and isinstance(_ladder_pin, dict) and selected_ex is not None
-            and chosen_by == "explicit_exercise_id" and primary.get("pin_strict") is not True
+            and chosen_by == "explicit_exercise_id" and _pin_exhausted_mode(primary) != "fail"
             and not _is_test_exercise(selected_ex)):
         _picked = _bw_ladder_pin_stage(
             bw_ctx, _ladder_pin, selected_ex, exercises,
@@ -1463,8 +1583,9 @@ def _resolve_inline_block(
     message = None if selected_list else "No candidates after hard filters (P0 inline)."
     if chosen_by == "pin_strict_incompatible_failed":
         status = "failed"
-        message = (f"Pinned exercise '{explicit_ex_id}' needs equipment that is not available; "
-                   "the block has no equivalent substitute (C274 pin_strict).")
+        message = _pin_failed_message(explicit_ex_id)
+    elif chosen_by == "pin_exhausted_skip":
+        message = _pin_skipped_message(explicit_ex_id)
 
     blocks_out.append({
         "block_uid": block_uid,
@@ -2081,38 +2202,23 @@ def resolve_session(
             # A290: rotation plan from the block's top-level keys
             rot_plan = plan_block(rot_ctx, b, session_id=str(session_id or ""), block_id=str(block_id))
 
-            pinned = None
-            if explicit_ex_id:
-                pinned = next(
-                    (e for e in exercises if norm_str(get_ex_id(e)) == norm_str(explicit_ex_id)),
-                    None
-                )
+            # B414 (B381-FALLBACK): the same pin chain as the inline branch —
+            # the block itself carries `exercise_id`, `fallback_exercise_ids`,
+            # `pin_exhausted` (and `pin_strict`, now honoured here too).
+            _pin_outcome, _pin_ex, _pin_trace = _resolve_pin_chain(
+                b, exercises, available_equipment, block_id=str(block_id), session_id=session_id,
+            )
+            _pin_p0_extra = _pin_trace if _pin_outcome == "p0" else {}
 
-            if pinned is not None and _pin_equipment_ok(pinned, available_equipment):
-                selected_ex = pinned
-                chosen_by = "explicit_exercise_id"
-                trace = {"counts": {}, "domain_filter_applied": None, "note": "explicit_exercise_id: bypassed P0 filters"}
-
-            elif pinned is not None and _is_test_exercise(pinned):
-                # B261: incompatible test pin — skip the block; never substitute a
-                # different measurement via P0 (would measure the wrong axis).
-                logger.warning(
-                    "resolve_session: pinned test exercise '%s' incompatible with available equipment (session=%s) — skipping block",
-                    explicit_ex_id, session_id,
-                )
-                selected_ex = None
-                chosen_by = "pin_test_incompatible_skip"
-                trace = {"counts": {}, "domain_filter_applied": None, "note": "pinned test exercise incompatible with equipment — block skipped (B261)"}
+            if _pin_outcome not in (None, "p0"):
+                selected_ex = _pin_ex
+                chosen_by = _pin_outcome
+                trace = _pin_trace
 
             else:
                 # B261: no pin / pin missing in catalog / incompatible non-test pin
                 # → P0 with the block's role/domain/pattern so the equipment filter
                 # applies (an incompatible pin must NOT bypass the filter).
-                if explicit_ex_id and pinned is not None:
-                    logger.info(
-                        "resolve_session: pinned exercise '%s' incompatible with available equipment (session=%s) — delegating to P0",
-                        explicit_ex_id, session_id,
-                    )
                 # P0: hard-filter only selection based on v1 schema (role/domain/pattern)
                 role_req = b.get("role")   # P0 requires explicit block.role; block.type is NOT a selector input
                 domain_req = b.get("domain")
@@ -2155,6 +2261,8 @@ def resolve_session(
                         dedup_after_filters=_tested,
                     )
                     chosen_by = "p0_hard_filters"
+                    if _pin_p0_extra:  # B414: the chain's rejected candidates
+                        trace = {**(trace or {}), **_pin_p0_extra}
 
             # A298: bodyweight ladder stage (tested athletes; None → unchanged).
             _bw_plan = _bw_lvl = None
@@ -2240,6 +2348,11 @@ def resolve_session(
 
             status = "selected" if selected_list else "skipped"
             message = None if selected_list else "No candidates after hard filters (P0)."
+            if chosen_by == "pin_strict_incompatible_failed":  # B414: fail on a template block
+                status = "failed"
+                message = _pin_failed_message(explicit_ex_id)
+            elif chosen_by == "pin_exhausted_skip":
+                message = _pin_skipped_message(explicit_ex_id)
 
             blocks_out.append({
                 "block_uid": block_uid,
