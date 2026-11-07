@@ -250,6 +250,14 @@ export function GoalEditor({
                 min={minWeeks}
                 max={MAX_WEEKS}
               />
+              {/* B-GOAL-DEADLINE-DERIVED (B414): the regeneration after a goal
+                  edit keeps the cycle's own length (macrocycle.py reads
+                  old_mc.total_weeks); only a new cycle (or a full restart)
+                  takes the new duration. Say it before the athlete counts on it. */}
+              <p className="text-xs text-muted-foreground">
+                The cycle you are in keeps its length: a new duration applies from your next cycle
+                (Start new macrocycle in Settings).
+              </p>
 
               {/* Warnings */}
               {isAmbitious && (

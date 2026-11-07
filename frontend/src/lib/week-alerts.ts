@@ -58,7 +58,10 @@ const GUARD_TITLES: Record<string, string> = {
   hiit_near_max: "HIIT next to a max day",
   hard_cap: "Above your weekly hard-day cap",
   pre_trip: "Hard session before a trip",
-  post_outdoor: "Right after a big outdoor day",
+  // B372-FE-COPY (B414): since B372 post_outdoor follows EVERY outdoor day
+  // that counts (planned, logged hard, big load, no route log) — the reason
+  // is in the message, so the title no longer says "big".
+  post_outdoor: "After an outdoor day",
   hard_back_to_back: "Back-to-back hard days",
 };
 

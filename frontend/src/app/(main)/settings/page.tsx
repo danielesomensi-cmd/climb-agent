@@ -9,6 +9,7 @@ import { TopBar } from "@/components/layout/top-bar";
 import { ChunkErrorBoundary } from "@/components/chunk-error-boundary";
 import { LazyWhenOpen } from "@/components/lazy-when-open";
 import { useOnline } from "@/lib/hooks/use-auth-wait";
+import { planEndLabel } from "@/lib/plan-end";
 import { useUserState } from "@/lib/hooks/use-state";
 import { hrMaxFromState } from "@/lib/hr-zones";
 import { scheduleIdle, useWeekPlan } from "@/lib/hooks/queries/use-week-plan";
@@ -656,16 +657,12 @@ export default function SettingsPage() {
                       value={String(goal.target_boulder_grade)}
                     />
                   )}
+                {/* B-GOAL-DEADLINE-DERIVED (B414): `goal.deadline` is derived
+                    (today + N weeks when the goal was saved), not the end of
+                    the plan — the real end is the macrocycle's own end_date. */}
                 <InfoRow
-                  label="Deadline"
-                  value={
-                    goal.deadline
-                      ? new Date(goal.deadline as string).toLocaleDateString(
-                          "en-US",
-                          { day: "numeric", month: "long", year: "numeric" }
-                        )
-                      : "—"
-                  }
+                  label="Plan ends"
+                  value={planEndLabel(state?.macrocycle?.end_date)}
                 />
                 <InfoRow
                   label="Current grade"

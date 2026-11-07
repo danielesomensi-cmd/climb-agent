@@ -405,7 +405,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
         <H3>Primary and complementary slots</H3>
         <P>In <B>Settings &rarr; Availability</B> every slot can have a <B>role</B>. <B>Primary</B> slots get the climbing sessions of your phase; <B>complementary</B> slots (typically a lunch break at a weights gym) get a short session from your <B>rotation</B>: legs, HIIT, zone 2 cardio, push + arms. <B>Any</B> (the default) works as before. A <B>max minutes</B> limit keeps longer sessions off a slot.</P>
         <Ul>
-          <Li><B>Legs</B> &mdash; goblet squat + Romanian deadlift (loads progress from your feedback) and a short foot block (toe-flexor isometric, calf raise on an edge)</Li>
+          <Li><B>Legs</B> &mdash; squat 5&times;6 (<B>back squat</B> where the gym has a barbell, <B>goblet squat</B> where it has only dumbbells: the equipment decides, so at a given gym it is always the same lift) + Romanian deadlift (loads progress from your feedback) and a short foot block (toe-flexor isometric, calf raise on an edge)</Li>
           <Li><B>HIIT</B> &mdash; treadmill 4&times;4 (8&prime; warm-up, 4 &times; 4&prime; at 85&ndash;95% max heart rate, 3&prime; walks); needs a treadmill</Li>
           <Li><B>Zone 2</B> &mdash; 25&prime; incline walk on the treadmill, optional hip opener flow</Li>
           <Li><B>Push + arms</B> &mdash; bench press, cable triceps, biceps curls</Li>

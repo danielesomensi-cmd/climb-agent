@@ -631,7 +631,7 @@ If you only have a couple of training days a week, a test week can run out of ro
 
 You can regenerate your plan from **Settings**:
 
-- **Edit Profile or Goal**: When you save changes to your profile or goal, the system automatically recomputes your 5-axis assessment and offers to regenerate the macrocycle.
+- **Edit Profile or Goal**: When you save changes to your profile or goal, the system automatically recomputes your 5-axis assessment and offers to regenerate the macrocycle. The cycle you are in keeps its length: a new **plan duration** applies from your next cycle (**Plan Next Cycle**), as the goal editor says under the slider. The goal card shows **Plan ends** — the last day of your current cycle.
 - **Plan Next Cycle**: When your macrocycle is ending or finished, use this to start a fresh cycle. You'll review your goal and deadline, and week 1 will include test sessions to recalibrate. Your training history is preserved — all past sessions, feedback, working loads, and outdoor logs stay intact. The previous macrocycle is archived (visible to support, used for analytics).
 - **Restart Macrocycle** (Danger Zone): Creates a new macrocycle from week 1 keeping the existing goal. Use this only if you want to discard the current plan without re-reviewing your goal.
 
