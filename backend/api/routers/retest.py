@@ -29,6 +29,18 @@
   ones), one save for both axes. Repeatable with no total cap. Undo: the
   DELETE below, per axis.
 
+- ``POST /api/retest/request`` — B414 (B414-3) "Do the test", per covered
+  axis (default: every covered axis): a test already in the plan → nothing
+  written, the answer names its day (``planned``) — a test only projected by
+  the policy is not enough (it may be weeks away: the request brings it to
+  the first day the guards allow); the
+  macrocycle is over → nothing written, ``cycle_ended`` (the app opens "Start
+  a new cycle", whose week 1 has the tests); otherwise a ``kind: request``
+  record (``rd.build_request``) — the policy then schedules the test from the
+  athlete's today, in every phase but the deload, on the first day the guards
+  allow — and the cached week it now belongs to is flagged stale. A request
+  ends the axis' declines and postpones (the athlete's latest word).
+
 Every real write of a postpone appends a ``retest_postponed`` event (axis,
 until, previous_until, trigger, source) to the user's event log (fail-soft:
 the state is already saved).
@@ -87,6 +99,14 @@ class ExtendRequest(BaseModel):
     weeks: int = rp.EXTENSION_DEFAULT_WEEKS
     reason: Literal["fatigue", "injury", "illness", "travel", "schedule", "not_needed", "other"] = "other"
     note: Optional[str] = Field(default=None, max_length=rd.NOTE_MAX_CHARS)
+    source: Literal["app", "coach", "cli"] = "app"
+    dry_run: bool = False
+    today: Optional[str] = None
+
+
+class RequestTestRequest(BaseModel):
+    """B414: "Do the test" — the covered axes in ``axes`` (default: all)."""
+    axes: Optional[list[Literal["finger", "pulling"]]] = None
     source: Literal["app", "coach", "cli"] = "app"
     dry_run: bool = False
     today: Optional[str] = None
@@ -292,3 +312,76 @@ def undecline(axis: str, dry_run: bool = False, today: Optional[str] = None,
         "weeks_marked_stale": sorted(set(stale)),
         "retest_status": _compute_retest_status(work, user_id),
     }
+
+
+@router.post("/request", dependencies=[Depends(require_active_subscription)])
+@serialized_by_user
+def request_test(req: RequestTestRequest, user_id: Optional[str] = Depends(get_user_id)):
+    """B414 (B414-3): "Do the test" — the athlete asks for the test of the
+    covered axes now (see the module docstring)."""
+    from backend.engine.macro_position import position_on
+
+    state = load_state(user_id)
+    if not req.dry_run:
+        assert_plan_not_paused(state)  # A223
+    work = deepcopy(state) if req.dry_run else state
+    server_today = datetime.now().date()
+    local_today = date.fromisoformat(_client_today(req.today))
+    status = _compute_retest_status(work, user_id) or {}
+    rows = status.get("axes") or {}
+    wanted = list(dict.fromkeys(req.axes or [a for a in rp.RETEST_AXES if (rows.get(a) or {}).get("covered")]))
+    if not wanted:
+        raise _error(422, "not_covered", "No tested axis: the retest policy cannot schedule the test.")
+    for axis in wanted:
+        if not (rows.get(axis) or {}).get("covered"):
+            raise _error(422, "not_covered", f"The {axis} axis is not scheduled by the retest policy "
+                                             "(no test of that axis, or a loading pin).")
+    axes_out: dict = {}
+    for axis in wanted:
+        nt = rows[axis].get("next_test")
+        if nt and nt.get("date") and nt.get("source") == "planned":
+            axes_out[axis] = {"action": "planned", "date": nt["date"], "session_id": nt.get("session_id")}
+    if len(axes_out) == len(wanted):
+        return {"dry_run": req.dry_run, "action": "already_planned", "axes": axes_out, "requests": [],
+                "replaced": [], "weeks_marked_stale": [],
+                "go_to": min(a["date"] for a in axes_out.values()), "retest_status": status}
+    pos = position_on(dict(work.get("macrocycle") or {}), local_today.isoformat()) \
+        if work.get("macrocycle") else None
+    if not pos or pos.get("after_end"):
+        # Nothing to place a test in: the next cycle opens with the tests.
+        for axis in wanted:
+            axes_out.setdefault(axis, {"action": "cycle_ended", "date": None, "session_id": None})
+        return {"dry_run": req.dry_run, "action": "cycle_ended", "axes": axes_out, "requests": [],
+                "replaced": [], "weeks_marked_stale": [], "go_to": None, "retest_status": status}
+    finger_device = (work.get("preferences") or {}).get("finger_training_device")
+    recs: list = []
+    replaced: list = []
+    stale: list = []
+    for axis in wanted:
+        if axis in axes_out:
+            continue
+        try:
+            rec = rd.build_request(work, axis, status_row=rows[axis], today=local_today, source=req.source)
+        except rd.DeclineError as e:
+            raise _error(409 if e.code in rd.CONFLICT_CODES else 422, e.code, e.message)
+        old = rd.upsert(work, rec, today=server_today, finger_device=finger_device)
+        if old is not None:
+            replaced.append(old)
+        recs.append(rec)
+    for rec in recs:
+        # The cached week the test now belongs to was generated without it.
+        reopen = rd.week_to_reopen(work, rec["axis"], today=server_today, finger_device=finger_device)
+        if reopen is not None:
+            stale.extend(_mark_stale(work, reopen))
+    if not req.dry_run:
+        save_state(work, user_id)
+    after = _compute_retest_status(work, user_id) or {}
+    for rec in recs:
+        nt = ((after.get("axes") or {}).get(rec["axis"]) or {}).get("next_test") or {}
+        axes_out[rec["axis"]] = {"action": "requested", "date": nt.get("date"), "session_id": nt.get("session_id"),
+                                 "next_test_reason": None if nt else
+                                 ((after.get("axes") or {}).get(rec["axis"]) or {}).get("next_test_reason")}
+    dates = [a["date"] for a in axes_out.values() if a.get("date")]
+    return {"dry_run": req.dry_run, "action": "requested", "axes": axes_out, "requests": recs,
+            "replaced": replaced, "weeks_marked_stale": sorted(set(stale)),
+            "go_to": min(dates) if dates else None, "retest_status": after}

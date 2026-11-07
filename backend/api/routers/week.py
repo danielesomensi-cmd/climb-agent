@@ -783,11 +783,15 @@ def get_week(
             # B95: pass today so the planner skips past days on regen
             # Inject initial tests into week 1 of base phase (not if already last week)
             is_last = ctx.get("is_last_week_of_phase", False)
-            want_tests = (
-                state.get("initial_tests_requested")
-                and ctx.get("is_first_week_of_phase")
-                and ctx["phase_id"] == "base"
-                and not is_last
+            # B414 (A246): the "Schedule test week" confirm names the week the
+            # tests go in (its Monday, ISO) — before, it set True and only the
+            # first week of the base phase read it, so a confirm mid-cycle
+            # placed nothing. Inert once that week is past; True (onboarding,
+            # start-new-cycle) keeps the week-1 reading.
+            _itr = state.get("initial_tests_requested")
+            want_tests = bool(_itr) and (
+                (ctx.get("is_first_week_of_phase") and ctx["phase_id"] == "base" and not is_last)
+                or (isinstance(_itr, str) and _itr[:10] == ctx["start_date"])
             )
             finger_device = (state.get("preferences") or {}).get("finger_training_device")
             # D81: extract user age for youth training cap
@@ -1060,8 +1064,12 @@ def test_reminder_response(body: TestReminderResponse, user_id: Optional[str] = 
 
     if body.option == "confirm":
         from backend.api.deps import invalidate_week_cache
-        # Set flag so next week generation injects tests via Pass 3
-        state["initial_tests_requested"] = True
+        # B414 (A246): the flag names NEXT week (its Monday): that week's
+        # generation injects the tests via Pass 3, also mid-cycle. Before, True
+        # was read only in the first week of the base phase — the card promised
+        # "next week's plan" and nothing was placed.
+        _today = datetime.now().date()
+        state["initial_tests_requested"] = (_today - timedelta(days=_today.weekday()) + timedelta(days=7)).isoformat()
         state.pop("test_reminder_postponed_to", None)
         state.pop("test_reminder_skipped_until", None)
         invalidate_week_cache(state)

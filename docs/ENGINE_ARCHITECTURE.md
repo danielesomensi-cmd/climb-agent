@@ -752,6 +752,18 @@ stops there with `next_test_reason: after_cycle_end`). An onboarding
 self-report is still never a test. Nothing is written: the readings change, no
 stored field does.
 
+**"Postpone the expiry" and "Do the test" (B414-2, B414-3).** Both are records
+of `retest_declines`. A postpone's `until` also extends `valid_until` (trigger
+`expiry` when nothing was pending; at most 42 days past the validity per
+postpone; a new one replaces the axis' active ones). A `kind: request` record
+(the athlete's "Do the test") gives the trigger `requested` from its day, ahead
+of every natural trigger and in every phase but the deload (hard cap 0); the
+gap and the day guards still apply, and PASS 3a places it like any policy
+test (stamp `retest:requested`, so A294/A315 never replace it). Every reader
+of the list filters by kind. A246: the reminder's confirm names next week
+(`initial_tests_requested` = its Monday), so `week.py` injects the tests there
+also mid-cycle.
+
 **A test done in its week closes it (B414, A289-TEST-DONE-IN-WEEK).** The
 decision reads the official max on the Monday of the week, so a test logged
 from Tuesday on did not move `last`: the week stayed `due`, a mid-week

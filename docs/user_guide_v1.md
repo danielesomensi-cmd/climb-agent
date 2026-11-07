@@ -586,17 +586,19 @@ A test is never repeated within **6 weeks** of the last one, whatever its confid
 
 **When a test expires.** A test is valid for **90 days**. When it expires nothing switches off and nothing is reset: your training loads, your bodyweight ladders, your phase exercises and the coach keep working from your last test and keep progressing with your feedback. The expiry only means it is time to measure again — or, if now is not the moment, to **postpone the expiry** by 2, 4 or 6 weeks (4 by default; fingers and pulling move together, and you can postpone again as many times as you like). A postponed expiry also means *no test before that day*: the plan proposes the test again from the new date. Undoing the postpone brings the date back to 90 days after your test.
 
+**Do the test.** You can ask for your test at any time. If it is already in your plan, you are taken to its day. Otherwise the plan puts it on the first day that respects the usual rules — never within 72 hours of hard finger work (48 hours of heavy pulling for the pull-up test), never on a day after a *very hard* session or in the 10 days before a trip, and not within 6 weeks of your last test — in any phase except the deload (a deload has no hard days at all). The rest of the week is rebuilt around it; your past and finished sessions are never touched. When your cycle has ended, the app sends you to **Start a new cycle** instead: its first week opens with the tests. Asking for the test cancels a postponed expiry; postponing it again cancels the request.
+
 **Week** shows a **"Your tested maxes"** card: each max with its test date and confidence, how it moved since the previous test (under 5% counts as *stable*), and the next test with the reason. Only numbers from a real test appear there — an estimate made at onboarding is never shown as a tested max. If something lands too close to a planned test after the plan was made (a very hard session, a finger session you added), the card tells you — the test is not moved automatically; move it yourself if you are not fresh.
 
 **Not this week.** If you remove a test the plan scheduled, or put another session in its place (a different session for that slot, a rest day for the whole day), the plan takes it as *not this week*: when the week is rebuilt, the test does not come back on another day of that week. Moving the test to another day is different — it stays where you put it. The app has no way to put a removed test back into that week (removing a session cannot be undone), so remove a test only when you mean to skip it. It is only that week: in a later week the plan offers the test again whenever a reason to test applies — after the end-of-strength test, that is the next one (a new cycle, 12 weeks since your last test, two sessions in which you measured your effort above your max).
 
 **Until the plan schedules both tests itself** — you have not tested yet, you have tested only one of the two, or you train fingers on a loading pin — every **~6 weeks** a **"Time to retest"** card appears on **Today** with three choices:
 
-- **Schedule test week** — a test session is added to next week's plan
+- **Schedule test week** — the tests are added to next week's plan (also in the middle of a cycle)
 - **Next week** — you'll be asked again in 7 days
 - **Not this cycle** — you'll be asked again in about 6 weeks
 
-There's no way to dismiss the card without choosing: each option tells the engine something different, and skipping the decision entirely is how baselines quietly go stale. If you keep postponing, your prescriptions stay anchored to numbers that no longer describe you.
+Starting a new cycle forgets the old "Next week" / "Not this cycle" answers: the card can come back in the new cycle. There's no way to dismiss the card without choosing: each option tells the engine something different, and skipping the decision entirely is how baselines quietly go stale. If you keep postponing, your prescriptions stay anchored to numbers that no longer describe you.
 
 **The tests:**
 

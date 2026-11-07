@@ -300,6 +300,11 @@ def start_new_cycle(
 
     # ── 8. Set initial_tests_requested=True (AFTER generate — see D232 §11) ─
     new_state["initial_tests_requested"] = True
+    # B414 (A246): the 6-week reminder's deferrals are absolute week numbers of
+    # the cycle they were set in — a new cycle starts again from week 1, so they
+    # would hide the reminder for the whole new cycle (Daniele: skipped_until 18).
+    new_state.pop("test_reminder_postponed_to", None)
+    new_state.pop("test_reminder_skipped_until", None)
 
     # ── 9. Invalidate week cache for the new cycle ────────────────────────
     _clear_week_cache_for_new_cycle(new_state, new_start_str)

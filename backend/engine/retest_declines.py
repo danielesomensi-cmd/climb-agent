@@ -25,6 +25,14 @@ migration, ``schema_version`` unchanged). Record::
      declined_at,       # server ISO date
      source}            # app | coach | cli
 
+B414 (B414-3, "Do the test"): the same list holds the athlete's REQUEST of a
+test — ``{axis, kind: request, trigger: requested, official_date,
+macrocycle_start, requested_at, source}`` (``build_request``). Not a decline:
+every reader filters by ``kind`` (``rp.axis_declines`` / ``rp.axis_request`` /
+``rp._postponed_until``; ``remove`` leaves requests alone). The latest word of
+the athlete wins: a request ends the axis' declines and postpones, a decline or
+a postpone ends its request (``upsert``). The requested test makes it inert.
+
 B414 (B414-2, "Postpone the expiry"): a postpone extends the max's validity to
 its ``until`` (``retest_policy.official_max``), it is allowed with no pending
 test (trigger ``expiry``), one postpone reaches at most
@@ -234,6 +242,39 @@ def build_record(
     return rec
 
 
+def build_request(
+    state: Mapping[str, Any],
+    axis: str,
+    *,
+    status_row: Optional[Mapping[str, Any]],
+    today: DateLike,
+    source: str = "app",
+) -> Dict[str, Any]:
+    """B414 (B414-3): the athlete's "Do the test" request of ``axis``.
+
+    ``status_row`` is the axis' ``retest_status`` row; ``today`` (the athlete's
+    day, clamped by the caller) is ``requested_at`` — the first day the test
+    may come. Raises :class:`DeclineError` ``unknown_axis`` |
+    ``invalid_source`` | ``not_covered`` (no test of that axis, or a loading
+    pin: the policy cannot schedule it — the 6-week reminder covers it)."""
+    if axis not in rp.RETEST_AXES:
+        raise DeclineError("unknown_axis", f"Unknown axis {axis!r}: expected finger or pulling.")
+    if source not in SOURCES:
+        raise DeclineError("invalid_source", f"Unknown source {source!r}: expected one of {', '.join(SOURCES)}.")
+    if not status_row or not status_row.get("covered"):
+        raise DeclineError("not_covered", f"The {axis} axis is not scheduled by the retest policy "
+                                          "(no test of that axis, or a loading pin).")
+    return {
+        "axis": axis,
+        "kind": rp.DECLINE_KIND_REQUEST,
+        "trigger": rp.TRIGGER_REQUESTED,
+        "official_date": str(status_row.get("test_date") or "")[:10],
+        "macrocycle_start": (state.get("macrocycle") or {}).get("start_date"),
+        "requested_at": _as_date(today).isoformat(),
+        "source": source,
+    }
+
+
 def upsert(
     state: Dict[str, Any],
     rec: Mapping[str, Any],
@@ -253,7 +294,9 @@ def upsert(
     ``postponed`` the moment the decline suppressed the natural trigger.
     B414 (B414-2): a ``postpone`` ends them too — "Postpone the expiry" is
     repeatable and the last ``until`` is the one that counts (``previous_until``
-    in the new record keeps the audit).
+    in the new record keeps the audit). B414 (B414-3): a ``decline`` or a
+    ``postpone`` ends the axis' "Do the test" request, and a ``request`` ends
+    the axis' declines and postpones — the athlete's latest word wins.
 
     Returns the record *rec* replaced — the one with the same key, else the
     postpone it ended — or None."""
@@ -262,7 +305,11 @@ def upsert(
         om = rp.axis_official(state, axis, today, finger_device=finger_device)
         current[axis] = om["date"] if om else None
     key = _record_key(rec)
-    ends_postpones = rec.get("kind") in (rp.DECLINE_KIND_DECLINE, rp.DECLINE_KIND_POSTPONE)
+    kind = rec.get("kind")
+    if kind == rp.DECLINE_KIND_REQUEST:
+        ends = (rp.DECLINE_KIND_DECLINE, rp.DECLINE_KIND_POSTPONE, rp.DECLINE_KIND_REQUEST)
+    else:
+        ends = (rp.DECLINE_KIND_POSTPONE, rp.DECLINE_KIND_REQUEST)
     kept: List[Any] = []
     replaced: Optional[Dict[str, Any]] = None
     ended: Optional[Dict[str, Any]] = None
@@ -272,8 +319,8 @@ def upsert(
         if _record_key(old) == key:
             replaced = dict(old)
             continue
-        if ends_postpones and old.get("axis") == rec.get("axis") and old.get("kind") == rp.DECLINE_KIND_POSTPONE:
-            ended = dict(old)
+        if old.get("axis") == rec.get("axis") and old.get("kind") in ends:
+            ended = ended or dict(old)
             continue
         kept.append(old)
     kept.append(dict(rec))
@@ -282,12 +329,18 @@ def upsert(
 
 
 def remove(state: Dict[str, Any], axis: str) -> List[Dict[str, Any]]:
-    """Remove every stored record of ``axis``; returns them. The key goes away
-    with the last record (the state is then the one before any decline)."""
+    """Remove every stored decline / postpone of ``axis``; returns them. The key
+    goes away with the last record (the state is then the one before any
+    decline). B414: a "Do the test" request is not a decline — it stays (a
+    decline or a postpone ends it)."""
     recs = state.get(rp.DECLINES_KEY) or []
-    removed = [dict(r) for r in recs if isinstance(r, Mapping) and r.get("axis") == axis]
+
+    def _undone(r: Any) -> bool:
+        return isinstance(r, Mapping) and r.get("axis") == axis and r.get("kind") != rp.DECLINE_KIND_REQUEST
+
+    removed = [dict(r) for r in recs if _undone(r)]
     if removed:
-        kept = [r for r in recs if not (isinstance(r, Mapping) and r.get("axis") == axis)]
+        kept = [r for r in recs if not _undone(r)]
         if kept:
             state[rp.DECLINES_KEY] = kept
         else:
@@ -482,6 +535,6 @@ def week_to_reopen(
 
 __all__ = [
     "REASONS", "SOURCES", "NOTE_MAX_CHARS", "CONFLICT_CODES", "DeclineError", "active_postpone",
-    "build_record", "upsert", "remove", "planned_tests", "drop_engine_tests", "tests_placed_under_postpone",
+    "build_record", "build_request", "upsert", "remove", "planned_tests", "drop_engine_tests", "tests_placed_under_postpone",
     "weeks_generated_under_decline", "week_to_reopen",
 ]

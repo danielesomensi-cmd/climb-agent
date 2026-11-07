@@ -117,7 +117,13 @@ class TestResponseEndpoint:
 
         state = self._state(client)
         # This flag is what makes next week's Pass 3 inject the test session.
-        assert state.get("initial_tests_requested") is True
+        # B414: it names that week (its Monday) — True was read only in the
+        # first week of the base phase, so a confirm mid-cycle placed nothing.
+        from datetime import date, timedelta
+
+        today = date.today()
+        assert state.get("initial_tests_requested") == (
+            today - timedelta(days=today.weekday()) + timedelta(days=7)).isoformat()
         assert "test_reminder_postponed_to" not in state
         assert "test_reminder_skipped_until" not in state
 
