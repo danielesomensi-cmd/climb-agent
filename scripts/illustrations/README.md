@@ -21,7 +21,7 @@ Text prompts and 2D stick sketches fail on depth rotations: every model drew the
 3. **Coach check** — an adversarial review of the mannequin render against the spec before spending money.
 4. **Composite** — mannequin on navy `#1F2633` with a soft spotlight and the grey wall panel (`composite.py`).
 5. **Generate** — `gen_images.py --model openai/gpt-image-2` in EDIT framing: IMAGE 1 = the composite,
-   IMAGE 2 = a style swatch from `style/`. The style swatch must not show legs or a full pose: the model
+   IMAGE 2 = a style swatch from `style/` (WebP: the repo ignores PNG). The style swatch must not show legs or a full pose: the model
    copies the pose of a full reference. Prompts in `prompts/` (mannequin colour legend, the pose from this
    viewpoint, known mistakes, outfit). Medium ≈ $0.065, high ≈ $0.19 per image (OpenRouter, Nov 2026).
    Gemini 3 Pro Image copies the reference pose; Gemini Flash and Recraft vector were unusable.
