@@ -12,14 +12,24 @@ State: top-level ``retest_declines`` (list), endpoint-owned like
 migration, ``schema_version`` unchanged). Record::
 
     {axis: finger|pulling, kind: decline|postpone,
-     trigger,           # the pending trigger (legacy end_of_phase_slipped → end_of_phase)
+     trigger,           # the pending trigger (legacy end_of_phase_slipped → end_of_phase);
+                        # B414: ``expiry`` on a postpone made with no pending test
      official_date,     # the official max the record applies to (a new test makes it inert)
      macrocycle_start,  # end_of_phase / cycle_start match only in this macrocycle
-     until,             # postpone only: no test before this date (else None)
+     until,             # postpone only: no test before this date (else None);
+                        # B414: also the max's extended validity (``valid_until``)
+     previous_until,    # B414, postpone only: the ``until`` of the postpone it
+                        # replaced (None for the first) — absent on older records
      reason,            # fatigue | injury | illness | travel | schedule | not_needed | other
      note,              # optional free text, ≤ 200 chars — stored only, never shown to the coach LLM
      declined_at,       # server ISO date
      source}            # app | coach | cli
+
+B414 (B414-2, "Postpone the expiry"): a postpone extends the max's validity to
+its ``until`` (``retest_policy.official_max``), it is allowed with no pending
+test (trigger ``expiry``), one postpone reaches at most
+``EXTENSION_MAX_D`` days past the current validity (``until_too_far``), and a
+new postpone REPLACES the axis' active ones (repeatable, no total cap).
 
 Functions (pure, no I/O, deterministic — the caller passes every date):
 
@@ -134,10 +144,12 @@ def build_record(
     ``invalid_until`` (postpone without ``until``, ``until`` with a decline,
     ``until`` not after today, or not after the pending test's own day — a
     postpone never brings a test forward) | ``not_covered`` (no tested
-    official max the policy reads: untested, older than 90 days, loading pin) |
-    ``until_after_expiry`` (after the axis' ``tested_until``) |
-    ``no_pending_retest`` (no planned nor projected policy test) |
-    ``trigger_mismatch``.
+    official max the policy reads: untested, loading pin) |
+    ``until_too_far`` (B414: more than ``EXTENSION_MAX_D`` days past the
+    later of today and the axis' ``valid_until`` — it replaced A320's
+    ``until_after_expiry``) | ``no_pending_retest`` (a DECLINE with no planned
+    nor projected policy test; B414: a postpone without one is the expiry
+    postpone, trigger ``expiry``) | ``trigger_mismatch``.
     """
     if axis not in rp.RETEST_AXES:
         raise DeclineError("unknown_axis", f"Unknown axis {axis!r}: expected finger or pulling.")
@@ -166,15 +178,30 @@ def build_record(
         raise DeclineError("invalid_until", "A declined test takes no date: postpone it instead.")
     if not status_row or not status_row.get("covered"):
         raise DeclineError("not_covered", f"The {axis} axis is not scheduled by the retest policy "
-                                          "(no tested max in the last 90 days).")
-    tested_until = status_row.get("tested_until")
-    if until_d is not None and tested_until and until_d.isoformat() > str(tested_until)[:10]:
-        raise DeclineError("until_after_expiry", f"The tested max stops counting after {tested_until}: "
-                                                 "postpone the test to that day at the latest.")
+                                          "(no test of that axis, or a loading pin).")
+    valid_until = status_row.get("valid_until") or status_row.get("tested_until")
+    if until_d is not None:
+        # B414 (B414-2): a postpone also extends the max's validity — at most
+        # EXTENSION_MAX_D days past the later of today and the current validity
+        # per postpone (repeatable: each one starts from the last).
+        base = local
+        if valid_until:
+            try:
+                base = max(base, _as_date(valid_until))
+            except (TypeError, ValueError):
+                pass
+        cap = base + timedelta(days=rp.EXTENSION_MAX_D)
+        if until_d > cap:
+            raise DeclineError("until_too_far", f"One postpone reaches {cap.isoformat()} at the latest "
+                                                f"({rp.EXTENSION_MAX_D} days past {base.isoformat()}).")
     nt = status_row.get("next_test") or {}
     pending = rp.normalize_trigger(nt.get("trigger"))
     if not nt or pending is None:
-        raise DeclineError("no_pending_retest", f"No {axis} test of the retest policy is planned or due.")
+        if kind != rp.DECLINE_KIND_POSTPONE:
+            raise DeclineError("no_pending_retest", f"No {axis} test of the retest policy is planned or due.")
+        # B414: "Postpone the expiry" with nothing pending (after the end of
+        # the cycle, a declined test…): the record's own trigger.
+        nt, pending = {}, rp.TRIGGER_EXPIRY
     if trigger is not None and rp.normalize_trigger(trigger) != pending:
         raise DeclineError("trigger_mismatch", f"The pending {axis} test is the {pending} one, not {trigger}.")
     pending_day = str(nt.get("date") or "")[:10]
@@ -185,11 +212,11 @@ def build_record(
                                             "postpone it to a later day.")
     official_date = str(status_row.get("test_date") or "")[:10]
     mc_start = (state.get("macrocycle") or {}).get("start_date")
+    prev = active_postpone(state, axis, official_date)
     if pending == rp.TRIGGER_POSTPONED:
-        prev = active_postpone(state, axis, official_date)
         if prev is not None and prev.get("trigger"):
             pending, mc_start = rp.normalize_trigger(prev["trigger"]), prev.get("macrocycle_start")
-    return {
+    rec = {
         "axis": axis,
         "kind": kind,
         "trigger": pending,
@@ -201,6 +228,10 @@ def build_record(
         "declined_at": day.isoformat(),
         "source": source,
     }
+    if kind == rp.DECLINE_KIND_POSTPONE:
+        # B414: the audit of a repeated postpone (the one this record replaces).
+        rec["previous_until"] = (prev or {}).get("until")
+    return rec
 
 
 def upsert(
@@ -220,15 +251,18 @@ def upsert(
     ``until`` (the weeks before it have no test), so declining it declines the
     test the postpone had put off; kept, the postpone brought it back as
     ``postponed`` the moment the decline suppressed the natural trigger.
+    B414 (B414-2): a ``postpone`` ends them too — "Postpone the expiry" is
+    repeatable and the last ``until`` is the one that counts (``previous_until``
+    in the new record keeps the audit).
 
     Returns the record *rec* replaced — the one with the same key, else the
-    postpone a decline ended — or None."""
+    postpone it ended — or None."""
     current = {}
     for axis in rp.RETEST_AXES:
         om = rp.axis_official(state, axis, today, finger_device=finger_device)
         current[axis] = om["date"] if om else None
     key = _record_key(rec)
-    ends_postpones = rec.get("kind") == rp.DECLINE_KIND_DECLINE
+    ends_postpones = rec.get("kind") in (rp.DECLINE_KIND_DECLINE, rp.DECLINE_KIND_POSTPONE)
     kept: List[Any] = []
     replaced: Optional[Dict[str, Any]] = None
     ended: Optional[Dict[str, Any]] = None
@@ -423,8 +457,8 @@ def week_to_reopen(
 
     None when a test of the axis is still planned (the athlete's own, kept),
     when that first due week is not generated yet or already stale (the next
-    GET /api/week generates it), or when nothing is due before the max
-    expires within ``STATUS_HORIZON_WEEKS``. The same week walk as
+    GET /api/week generates it), or when nothing is due within
+    ``STATUS_HORIZON_WEEKS``. The same week walk as
     ``retest_status``'s projection; dates only (the archived weeks feed the
     confidence, which moves no date since A319)."""
     day = _as_date(today)
@@ -436,7 +470,7 @@ def week_to_reopen(
         dec = rp._axis_week_decision(state, axis, wk, today=day, finger_device=finger_device,
                                      archived_weeks=None, check_already_scheduled=False)
         if dec is None:
-            return None  # the max expires first: the legacy rules take over
+            return None  # defensive: the axis is not covered (B414: a real test covers it at any age)
         if dec["status"] != "due":
             continue
         hot = rp._hot_plan(state, wk.isoformat())

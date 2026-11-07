@@ -459,7 +459,8 @@ def test_write_endpoints_are_serialised_per_user():
                session.remove_exercise, session.surface_override, outdoor.post_outdoor_log,
                outdoor.put_outdoor_log, outdoor.finish_outdoor_session,
                # A320: the decline edits week plans (removal + revision + stale flag).
-               retest.decline, retest.undecline):
+               # B414: so does "Postpone the expiry" (extend).
+               retest.decline, retest.undecline, retest.extend):
         assert hasattr(fn, "__wrapped__"), fn
     assert user_write_lock("u1") is user_write_lock("u1")
     assert user_write_lock("u1") is not user_write_lock("u2")

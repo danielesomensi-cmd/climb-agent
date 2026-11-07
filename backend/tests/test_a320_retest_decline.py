@@ -940,7 +940,10 @@ class TestRecords:
         ({"kind": "postpone", "until": "2026-10-20"}, _row(), "invalid_until"),
         ({}, None, "not_covered"),
         ({}, _row(covered=False), "not_covered"),
-        ({"kind": "postpone", "until": "2026-12-09"}, _row(), "until_after_expiry"),
+        # B414: a postpone may pass the expiry (it extends it), by at most
+        # EXTENSION_MAX_D past the validity (08/12 + 42 = 19/01).
+        ({"kind": "postpone", "until": "2027-01-20"}, _row(), "until_too_far"),
+        ({"kind": "postpone", "until": "2027-01-20"}, _row(valid_until="2026-12-08"), "until_too_far"),
         ({}, _row(next_test=None), "no_pending_retest"),
         ({}, _row(next_test={"date": THU, "source": "planned", "trigger": None}), "no_pending_retest"),
         ({"trigger": rp.TRIGGER_MAINTENANCE}, _row(), "trigger_mismatch"),
@@ -953,6 +956,32 @@ class TestRecords:
         assert err.value.code == code
         assert isinstance(err.value, ValueError)
         assert (code in rd.CONFLICT_CODES) == (code in ("no_pending_retest", "trigger_mismatch"))
+
+    def test_b414_a_postpone_past_the_expiry_extends_it(self):
+        # B414 (B414-2): until_after_expiry is gone — a postpone past 08/12
+        # is accepted up to 08/12 + 42 and extends the max's validity.
+        st = _due_1019()
+        rec = rd.build_record(st, "finger", status_row=_row(), today="2026-10-18", reason="travel",
+                              kind="postpone", until="2027-01-19")
+        assert (rec["until"], rec["previous_until"]) == ("2027-01-19", None)
+        rd.upsert(st, rec, today="2026-10-18", finger_device="hangboard")
+        om = rp.official_max(st, rp.PROTOCOL_HANG_7S, "2026-12-20")
+        assert (om["valid_until"], om["extended"], om["expired"]) == ("2027-01-19", True, False)
+        # The pulling axis (no record) keeps its own validity.
+        assert rp.official_max(st, rp.PROTOCOL_PULLUP_2RM, "2026-12-20")["valid_until"] == "2026-12-08"
+
+    def test_b414_a_postpone_with_nothing_pending_is_the_expiry_postpone(self):
+        rec = rd.build_record(_due_1019(), "finger", status_row=_row(next_test=None), today="2026-10-18",
+                              reason="schedule", kind="postpone", until="2026-12-20")
+        assert (rec["trigger"], rec["until"]) == (rp.TRIGGER_EXPIRY, "2026-12-20")
+        rec = rd.build_record(_due_1019(), "finger", status_row=_row(next_test=None), today="2026-10-18",
+                              reason="schedule", kind="postpone", until="2026-12-20", trigger=rp.TRIGGER_EXPIRY)
+        assert rec["trigger"] == rp.TRIGGER_EXPIRY
+        # A decline still needs a pending test.
+        with pytest.raises(rd.DeclineError) as err:
+            rd.build_record(_due_1019(), "finger", status_row=_row(next_test=None), today="2026-10-18",
+                            reason="schedule")
+        assert err.value.code == "no_pending_retest"
 
     def test_postpone_to_tested_until_is_accepted(self):
         rec = rd.build_record(_due_1019(), "finger", status_row=_row(), today="2026-10-18", reason="travel",
@@ -1430,9 +1459,14 @@ class TestApi:
         body11 = client.get("/api/week/11").json()
         assert "test_reminder" not in body11
         assert body11["retest_status"]["covered_axes"] == ["finger", "pulling"]
-        # Declined, the test is no longer pending: a second decline is a conflict.
-        r = _post(kind="postpone", until=(date.fromisoformat(nxt) + timedelta(days=10)).isoformat())
+        # Declined, the test is no longer pending: a second decline is a conflict
+        # (B414: a postpone is not — with nothing pending it is the expiry
+        # postpone, which extends the validity; dry run only here).
+        r = _post()
         assert (r.status_code, r.json()["detail"]["code"]) == (409, "no_pending_retest")
+        r = _post(kind="postpone", until=(date.fromisoformat(nxt) + timedelta(days=10)).isoformat(), dry_run=True)
+        assert r.status_code == 200, r.text
+        assert r.json()["decline"]["trigger"] == rp.TRIGGER_EXPIRY
         # Undo: the week generated under the decline is regenerated with the test.
         r = client.delete("/api/retest/decline/finger")
         assert r.status_code == 200, r.text
@@ -1615,7 +1649,9 @@ class TestApi:
             ({"kind": "postpone"}, "invalid_until"),
             ({"kind": "postpone", "until": today.isoformat()}, "invalid_until"),
             ({"until": (today + timedelta(days=3)).isoformat()}, "invalid_until"),
-            ({"kind": "postpone", "until": (tested_until + timedelta(days=1)).isoformat()}, "until_after_expiry"),
+            # B414: past the expiry is fine (it extends it), past + 42 is not.
+            ({"kind": "postpone", "until": (tested_until + timedelta(days=rp.EXTENSION_MAX_D + 1)).isoformat()},
+             "until_too_far"),
         ):
             r = _post(**body)
             assert (r.status_code, r.json()["detail"]["code"]) == (422, code), body

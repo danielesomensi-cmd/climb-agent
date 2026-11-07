@@ -76,6 +76,16 @@ TEST_FRESH_DAYS = 90
 #: B414: the max is ``expiring`` from this many days before ``valid_until``
 #: (the Today card "Do the test / Postpone the expiry" shows from then on).
 EXPIRY_WARNING_D = 14
+#: B414 (B414-2): "Postpone the expiry" — a postpone (A320 ``kind: postpone``)
+#: also extends the max's validity to its ``until`` (``valid_until`` = the
+#: later of the test day + TEST_FRESH_DAYS − 1 and the active postpone's
+#: ``until``). The app offers EXTENSION_WEEKS (default EXTENSION_DEFAULT_WEEKS,
+#: Daniele 2026-11-07), repeatable with no total cap; ENGINEERING CONSTANT: one
+#: postpone reaches at most EXTENSION_MAX_D days past the current validity (or
+#: past today, when later) — ``until_too_far``.
+EXTENSION_WEEKS = (2, 4, 6)
+EXTENSION_DEFAULT_WEEKS = 4
+EXTENSION_MAX_D = 42
 
 #: Confidence of a test: fewer than LOW_CONF_MIN_EXPOSURES exposure days of the
 #: tested family in the LOW_CONF_WINDOW_D days before it → "low".
@@ -268,16 +278,43 @@ def _pull_candidates(state: Mapping[str, Any], as_of: date) -> List[Dict[str, An
     return cands
 
 
-def _validity(tested: bool, test_day: date, on: date) -> Dict[str, Any]:
-    """B414: ``valid_until`` / ``expired`` / ``expiring`` of an official max on
-    ``on`` (a non-test max has no validity: None / False / False)."""
+_PROTOCOL_AXIS: Dict[str, str] = {
+    PROTOCOL_HANG_7S: "finger", PROTOCOL_HANG_5S: "finger", PROTOCOL_PULLUP_2RM: "pulling",
+}
+
+
+def _postponed_until(state: Mapping[str, Any], protocol: str, test_day: date) -> Optional[date]:
+    """B414 (B414-2): the latest ``until`` of the axis' ACTIVE postpones of the
+    test of ``test_day`` (A320 records, ``official_date`` = that test: a newer
+    test makes them inert) — the day the athlete postponed the expiry to."""
+    axis = _PROTOCOL_AXIS.get(protocol)
+    best: Optional[date] = None
+    for rec in state.get(DECLINES_KEY) or []:
+        if not isinstance(rec, Mapping) or rec.get("axis") != axis or rec.get("kind") != DECLINE_KIND_POSTPONE \
+                or str(rec.get("official_date") or "")[:10] != test_day.isoformat():
+            continue
+        until = _parse_date(rec.get("until"))
+        if until is not None and (best is None or until > best):
+            best = until
+    return best
+
+
+def _validity(tested: bool, test_day: date, on: date, postponed: Optional[date] = None) -> Dict[str, Any]:
+    """B414: ``valid_until`` / ``expired`` / ``expiring`` / ``extended`` of an
+    official max on ``on`` (a non-test max has no validity: None / False).
+    ``postponed`` (B414-2): an active postpone's ``until`` extends the validity
+    when it is later than the test day + TEST_FRESH_DAYS − 1."""
     if not tested:
-        return {"valid_until": None, "expired": False, "expiring": False}
+        return {"valid_until": None, "expired": False, "expiring": False, "extended": False}
     until = test_day + timedelta(days=TEST_FRESH_DAYS - 1)
+    extended = postponed is not None and postponed > until
+    if extended:
+        until = postponed
     return {
         "valid_until": until.isoformat(),
         "expired": on > until,
         "expiring": until - timedelta(days=EXPIRY_WARNING_D) <= on <= until,
+        "extended": extended,
     }
 
 
@@ -289,12 +326,14 @@ def official_max(state: Mapping[str, Any], protocol: str, as_of: DateLike) -> Op
         {protocol, family, total_kg, date, age_days, fresh, tested, source,
          test_id, seconds?, source_seconds?, converted?, one_rm_kg?,
          bodyweight_kg, edge_mm?, grip?, stored_confidence,
-         valid_until, expired, expiring}
+         valid_until, expired, expiring, extended}
 
     - B414 (model A): ``tested`` = the max comes from a real test (a
       ``tests.*`` entry, or a baseline a test log wrote), at ANY age. ``fresh``
       (younger than ``TEST_FRESH_DAYS``) is informational, and so are
-      ``valid_until`` / ``expired`` / ``expiring`` (``_validity``).
+      ``valid_until`` / ``expired`` / ``expiring`` (``_validity``); B414-2: an
+      active A320 postpone of that test extends ``valid_until`` to its
+      ``until`` (``extended`` True) — "Postpone the expiry".
 
     - Freshest candidate ≤ ``as_of`` wins; on a date tie a same-duration hang
       test wins over a converted one.
@@ -325,7 +364,7 @@ def official_max(state: Mapping[str, Any], protocol: str, as_of: DateLike) -> Op
             "age_days": age,
             "fresh": age < TEST_FRESH_DAYS,
             "tested": _cand_tested(best),
-            **_validity(_cand_tested(best), best["date"], on),
+            **_validity(_cand_tested(best), best["date"], on, _postponed_until(state, protocol, best["date"])),
             "from_baseline": bool(best.get("from_baseline")),
             "source": best["source"],
             "test_id": best["test_id"],
@@ -353,7 +392,7 @@ def official_max(state: Mapping[str, Any], protocol: str, as_of: DateLike) -> Op
             "age_days": age,
             "fresh": age < TEST_FRESH_DAYS,
             "tested": _cand_tested(best),
-            **_validity(_cand_tested(best), best["date"], on),
+            **_validity(_cand_tested(best), best["date"], on, _postponed_until(state, protocol, best["date"])),
             "from_baseline": bool(best.get("from_baseline")),
             "source": best["source"],
             "test_id": best["test_id"],
@@ -532,6 +571,12 @@ def is_heavy_pulling_session(
 #             every covered week until a new test. The endpoint takes an
 #             ``until`` only after the pending test's own day, and a later
 #             decline ends the postpone (``retest_declines.upsert``).
+#             B414 (B414-2): a postpone is also "Postpone the expiry" — its
+#             ``until`` extends the max's ``valid_until`` (``official_max``);
+#             allowed with no pending test (trigger ``expiry``), at most
+#             EXTENSION_MAX_D past the current validity per postpone,
+#             repeatable (a new postpone replaces the axis' active ones,
+#             ``previous_until`` + a ``retest_postponed`` event).
 # Implicit decline: a policy test the USER removed or replaced in a week
 # (the plan's removal records — not a move, not an automatic A315
 # re-schedule, not an extra test of their own taken back while the policy's
@@ -611,6 +656,11 @@ TRIGGER_EARLY = "early_retest"
 #: A320: a postponed test, due from the athlete's ``until`` on (lowest priority:
 #: a natural trigger that is not declined keeps its own name).
 TRIGGER_POSTPONED = "postponed"
+#: B414 (B414-2): the trigger a postpone record carries when NO test was
+#: pending — "Postpone the expiry" with nothing planned or projected (after the
+#: end of the cycle, a declined test…). Never a scheduling trigger: from the
+#: record's ``until`` the test is due as ``postponed``, like any postpone.
+TRIGGER_EXPIRY = "expiry"
 
 _TRIGGER_TEXT: Dict[str, str] = {
     TRIGGER_END_OF_PHASE: "End of the strength phase: measure what the block built.",
@@ -643,7 +693,7 @@ _DECLINE_SKIPS = (SKIP_DECLINED, SKIP_POSTPONED)
 _WEEK_BOUND_TRIGGERS = (TRIGGER_END_OF_PHASE, TRIGGER_CYCLE_START)
 #: The triggers a record can carry (the pending test's, normalized).
 _DECLINE_TRIGGERS = (TRIGGER_END_OF_PHASE, TRIGGER_CYCLE_START, TRIGGER_MAINTENANCE, TRIGGER_EARLY,
-                     TRIGGER_POSTPONED)
+                     TRIGGER_POSTPONED, TRIGGER_EXPIRY)
 #: B369's flag on a cached week the next GET /api/week regenerates
 #: (``deps.STALE_KEY``; the engine never imports the API layer).
 _STALE_KEY = "_stale"
@@ -1005,7 +1055,7 @@ def decline_view(rec: Mapping[str, Any]) -> Dict[str, Any]:
     reason, source = rec.get("reason"), rec.get("source")
     trigger = normalize_trigger(rec.get("trigger"))
     declined_at, until = _parse_date(rec.get("declined_at")), _parse_date(rec.get("until"))
-    return {
+    out = {
         "axis": rec.get("axis") if rec.get("axis") in RETEST_AXES else None,
         "kind": rec.get("kind") if rec.get("kind") in DECLINE_KINDS else None,
         "trigger": trigger if trigger in _DECLINE_TRIGGERS else None,
@@ -1014,6 +1064,11 @@ def decline_view(rec: Mapping[str, Any]) -> Dict[str, Any]:
         "until": until.isoformat() if until else None,
         "source": source if source in DECLINE_SOURCES else None,
     }
+    if rec.get("kind") == DECLINE_KIND_POSTPONE and "previous_until" in rec:
+        # B414-2: a repeated postpone — the day it replaced (audit, ISO only).
+        prev = _parse_date(rec.get("previous_until"))
+        out["previous_until"] = prev.isoformat() if prev else None
+    return out
 
 
 def _active_postpone(declines: Sequence[Mapping[str, Any]]) -> Optional[Mapping[str, Any]]:
@@ -1597,6 +1652,7 @@ def retest_status(
         {axis, covered, official_total_kg, test_date, age_days, protocol,
          tested_until,           # B400; B414: = valid_until (kept for old clients)
          valid_until, expired, expiring,   # B414 (model A): informational
+         extended,               # B414-2: valid_until moved by a postpone
          confidence, confidence_exposures, trend, delta_pct, previous_date,
          earliest_retest, signals: {count, needed}, fatigue,
          next_test: {date, session_id, source: planned|projected, trigger,
@@ -1646,7 +1702,7 @@ def retest_status(
         # B414 (model A): the max never stops counting; ``valid_until`` (the
         # test day + TEST_FRESH_DAYS − 1) only says when to propose the test.
         # ``tested_until`` (B400) is the same day, kept for the old clients.
-        row.update({k: om.get(k) for k in ("valid_until", "expired", "expiring")})
+        row.update({k: om.get(k) for k in ("valid_until", "expired", "expiring", "extended")})
         row["tested_until"] = om.get("valid_until") if row["covered"] else None
         conf = axis_confidence(state, om, archived_weeks=archived_weeks)
         row.update({"confidence": conf["confidence"], "confidence_exposures": conf["exposures"],
@@ -1830,7 +1886,8 @@ def _planned_reason(state: Mapping[str, Any], axis: str, planned: Mapping[str, A
 
 
 __all__ = [
-    "TEST_FRESH_DAYS", "EXPIRY_WARNING_D", "LOW_CONF_MIN_EXPOSURES", "LOW_CONF_WINDOW_D", "LOW_CONF_RETEST_D",
+    "TEST_FRESH_DAYS", "EXPIRY_WARNING_D", "EXTENSION_WEEKS", "EXTENSION_DEFAULT_WEEKS", "EXTENSION_MAX_D",
+    "LOW_CONF_MIN_EXPOSURES", "LOW_CONF_WINDOW_D", "LOW_CONF_RETEST_D",
     "HANG_PCT_PER_S",
     "FINGER_GAP_H", "RETEST_BLOCK_H", "PULL_TEST_BLOCK_H", "HEAVY_PULL_PCT_1RM",
     "VERY_HARD_BLOCK_D", "PRE_TRIP_BLOCK_D", "RETEST_BLOCKED_PHASES",
@@ -1848,7 +1905,7 @@ __all__ = [
     # A319
     "COMBINED_TEST_SESSION",
     # A320
-    "TRIGGER_POSTPONED", "DECLINES_KEY", "DECLINE_KIND_DECLINE", "DECLINE_KIND_POSTPONE", "DECLINE_KINDS",
+    "TRIGGER_POSTPONED", "TRIGGER_EXPIRY", "DECLINES_KEY", "DECLINE_KIND_DECLINE", "DECLINE_KIND_POSTPONE", "DECLINE_KINDS",
     "DECLINE_REASONS", "DECLINE_SOURCES", "DECLINE_SOURCE_PLAN_EDIT", "SKIP_DECLINED", "SKIP_POSTPONED",
     "normalize_trigger", "axis_declines", "decline_view", "plan_edit_removal", "is_policy_test",
 ]

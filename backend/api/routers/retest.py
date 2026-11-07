@@ -19,7 +19,21 @@
   decline (the athlete removed or replaced the test in a week's plan) is not
   undone here: the test goes back with an explicit add.
 
-Both: ``dry_run`` runs everything on a copy and writes nothing (allowed while
+- ``POST /api/retest/extend`` — B414 (B414-2) "Postpone the expiry": one
+  button for both axes. A postpone (``kind: postpone``) of every covered axis
+  to the SAME day, ``weeks`` (2 | 4 | 6, default 4) after the later of the
+  athlete's today and the latest ``valid_until`` of those axes (never
+  shortening one). Same record path as the decline endpoint (a postpone also
+  extends the max's validity to its ``until``; with no pending test the record
+  carries the trigger ``expiry``; a new postpone replaces the axis' active
+  ones), one save for both axes. Repeatable with no total cap. Undo: the
+  DELETE below, per axis.
+
+Every real write of a postpone appends a ``retest_postponed`` event (axis,
+until, previous_until, trigger, source) to the user's event log (fail-soft:
+the state is already saved).
+
+All: ``dry_run`` runs everything on a copy and writes nothing (allowed while
 the plan is paused); a real write refuses a paused plan (409), takes the
 per-user write lock (B371) and saves once. Neither ever touches a past or
 played session: "today" is the later of the server's day and the athlete's
@@ -30,8 +44,9 @@ when the server (UTC) still calls it today.
 
 from __future__ import annotations
 
+import logging
 from copy import deepcopy
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -45,6 +60,9 @@ from backend.api.plan_revision import serialized_by_user, stamp_revision, stored
 from backend.api.routers.week import _client_today, _compute_retest_status
 from backend.engine import retest_declines as rd
 from backend.engine import retest_policy as rp
+from backend.engine import storage
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/retest", tags=["retest"])
 
@@ -63,6 +81,17 @@ class DeclineRequest(BaseModel):
     today: Optional[str] = None
 
 
+class ExtendRequest(BaseModel):
+    """B414: "Postpone the expiry" — both covered axes, ``weeks`` from the
+    later of today and their latest ``valid_until``."""
+    weeks: int = rp.EXTENSION_DEFAULT_WEEKS
+    reason: Literal["fatigue", "injury", "illness", "travel", "schedule", "not_needed", "other"] = "other"
+    note: Optional[str] = Field(default=None, max_length=rd.NOTE_MAX_CHARS)
+    source: Literal["app", "coach", "cli"] = "app"
+    dry_run: bool = False
+    today: Optional[str] = None
+
+
 def _error(status: int, code: str, message: str) -> HTTPException:
     return HTTPException(status_code=status, detail={"code": code, "message": message})
 
@@ -75,10 +104,61 @@ def _mark_stale(state: dict, week_start: str) -> list:
     return marked
 
 
+def _apply_record(work: dict, rec: dict, *, server_today: date, local_today: date,
+                  finger_device: Optional[str]) -> dict:
+    """Store *rec* (``rd.upsert``), take the engine's planned tests of its axis
+    out from the later of the two todays, and flag the weeks to regenerate.
+    In place on *work*; returns what the response reports."""
+    axis = rec["axis"]
+    replaced = rd.upsert(work, rec, today=server_today, finger_device=finger_device)
+    # Never a test the athlete already lived: from the later of the two todays.
+    rows = rd.planned_tests(work, axis, since=max(server_today, local_today))
+    removed = rd.drop_engine_tests(work, rows)
+    stale: list = []
+    for week_start in sorted({r["week_start"] for r in removed}):
+        plan = stored_plan_for(work, week_start)
+        if plan is not None:
+            # B371: the week changed — a client holding the old copy gets a 409,
+            # also when the week was already stale (no bump from the flag then).
+            stamp_revision(plan, plan)
+        stale.extend(_mark_stale(work, week_start))
+    # The cached week the test now belongs to (a postpone's `until`, the next
+    # trigger of another kind) was generated without it: flagged too, or the
+    # test would wait for the first week generated later.
+    reopen = rd.week_to_reopen(work, axis, today=server_today, finger_device=finger_device)
+    if reopen is not None:
+        stale.extend(_mark_stale(work, reopen))
+    return {
+        "replaced": replaced,
+        "tests_removed": removed,
+        "kept_user_owned_tests": [{k: r[k] for k in ("week_start", "date", "slot", "session_id")}
+                                  for r in rows if r["user_owned"]],
+        "weeks_marked_stale": stale,
+    }
+
+
+def _log_postpones(user_id: Optional[str], recs: list) -> None:
+    """B414: the append-only audit of every postpone written (fail-soft — the
+    state is already saved; the record keeps ``previous_until`` anyway)."""
+    for rec in recs:
+        if rec.get("kind") != rp.DECLINE_KIND_POSTPONE:
+            continue
+        try:
+            storage.append_event(user_id, {
+                "event": "retest_postponed",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "axis": rec.get("axis"), "until": rec.get("until"), "previous_until": rec.get("previous_until"),
+                "trigger": rec.get("trigger"), "source": rec.get("source"),
+            })
+        except Exception:  # pragma: no cover - the event log never fails the write
+            logger.warning("B414: retest_postponed event not written", exc_info=True)
+
+
 @router.post("/decline", dependencies=[Depends(require_active_subscription)])
 @serialized_by_user
 def decline(req: DeclineRequest, user_id: Optional[str] = Depends(get_user_id)):
-    """Decline or postpone the pending test of one axis (A320)."""
+    """Decline or postpone the pending test of one axis (A320; B414: a postpone
+    also extends the max's validity, and needs no pending test)."""
     state = load_state(user_id)
     if not req.dry_run:
         assert_plan_not_paused(state)  # A223 — a dry run only answers "what would happen"
@@ -95,33 +175,78 @@ def decline(req: DeclineRequest, user_id: Optional[str] = Depends(get_user_id)):
         )
     except rd.DeclineError as e:
         raise _error(409 if e.code in rd.CONFLICT_CODES else 422, e.code, e.message)
-    replaced = rd.upsert(work, rec, today=server_today, finger_device=finger_device)
-    # Never a test the athlete already lived: from the later of the two todays.
-    rows = rd.planned_tests(work, req.axis, since=max(server_today, local_today))
-    removed = rd.drop_engine_tests(work, rows)
-    stale: list = []
-    for week_start in sorted({r["week_start"] for r in removed}):
-        plan = stored_plan_for(work, week_start)
-        if plan is not None:
-            # B371: the week changed — a client holding the old copy gets a 409,
-            # also when the week was already stale (no bump from the flag then).
-            stamp_revision(plan, plan)
-        stale.extend(_mark_stale(work, week_start))
-    # The cached week the test now belongs to (a postpone's `until`, the next
-    # trigger of another kind) was generated without it: flagged too, or the
-    # test would wait for the first week generated later.
-    reopen = rd.week_to_reopen(work, req.axis, today=server_today, finger_device=finger_device)
-    if reopen is not None:
-        stale.extend(_mark_stale(work, reopen))
+    out = _apply_record(work, rec, server_today=server_today, local_today=local_today,
+                        finger_device=finger_device)
     if not req.dry_run:
         save_state(work, user_id)
+        _log_postpones(user_id, [rec])
     return {
         "dry_run": req.dry_run,
         "decline": rec,
-        "replaced": replaced,
+        "replaced": out["replaced"],
+        "tests_removed": out["tests_removed"],
+        "kept_user_owned_tests": out["kept_user_owned_tests"],
+        "weeks_marked_stale": sorted(set(out["weeks_marked_stale"])),
+        "retest_status": _compute_retest_status(work, user_id),
+    }
+
+
+@router.post("/extend", dependencies=[Depends(require_active_subscription)])
+@serialized_by_user
+def extend(req: ExtendRequest, user_id: Optional[str] = Depends(get_user_id)):
+    """B414 (B414-2): "Postpone the expiry" of both covered axes at once."""
+    if req.weeks not in rp.EXTENSION_WEEKS:
+        raise _error(422, "invalid_weeks", "Postpone the expiry by "
+                     + ", ".join(str(w) for w in rp.EXTENSION_WEEKS) + " weeks.")
+    state = load_state(user_id)
+    if not req.dry_run:
+        assert_plan_not_paused(state)  # A223
+    work = deepcopy(state) if req.dry_run else state
+    server_today = datetime.now().date()
+    local_today = date.fromisoformat(_client_today(req.today))
+    status = _compute_retest_status(work, user_id) or {}
+    rows = {a: r for a, r in (status.get("axes") or {}).items() if r.get("covered")}
+    if not rows:
+        raise _error(422, "not_covered", "No tested max to postpone the expiry of.")
+    finger_device = (work.get("preferences") or {}).get("finger_training_device")
+    # One day for both axes, never shortening one: from the later of today and
+    # their latest validity.
+    base = max([local_today] + [date.fromisoformat(str(r.get("valid_until"))[:10])
+                                for r in rows.values() if r.get("valid_until")])
+    until = base + timedelta(weeks=req.weeks)
+    recs: list = []
+    for axis in rp.RETEST_AXES:
+        if axis not in rows:
+            continue
+        try:
+            recs.append(rd.build_record(
+                work, axis, status_row=rows[axis], today=server_today, today_local=local_today,
+                kind=rp.DECLINE_KIND_POSTPONE, until=until, reason=req.reason, note=req.note, source=req.source,
+            ))
+        except rd.DeclineError as e:
+            raise _error(409 if e.code in rd.CONFLICT_CODES else 422, e.code, e.message)
+    extensions: list = []
+    removed: list = []
+    kept: list = []
+    stale: list = []
+    for rec in recs:
+        out = _apply_record(work, rec, server_today=server_today, local_today=local_today,
+                            finger_device=finger_device)
+        extensions.append({"axis": rec["axis"], "decline": rec, "replaced": out["replaced"],
+                           "previous_until": rec.get("previous_until")})
+        removed.extend(out["tests_removed"])
+        kept.extend(r for r in out["kept_user_owned_tests"] if r not in kept)
+        stale.extend(out["weeks_marked_stale"])
+    if not req.dry_run:
+        save_state(work, user_id)
+        _log_postpones(user_id, recs)
+    return {
+        "dry_run": req.dry_run,
+        "weeks": req.weeks,
+        "until": until.isoformat(),
+        "extensions": extensions,
         "tests_removed": removed,
-        "kept_user_owned_tests": [{k: r[k] for k in ("week_start", "date", "slot", "session_id")}
-                                  for r in rows if r["user_owned"]],
+        "kept_user_owned_tests": kept,
         "weeks_marked_stale": sorted(set(stale)),
         "retest_status": _compute_retest_status(work, user_id),
     }
