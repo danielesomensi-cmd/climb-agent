@@ -732,6 +732,18 @@ without `retest_status`. A cached week is never regenerated for the policy; the
 live status flags a planned test that became too close to a hard session
 instead of moving it.
 
+**A test done in its week closes it (B414, A289-TEST-DONE-IN-WEEK).** The
+decision reads the official max on the Monday of the week, so a test logged
+from Tuesday on did not move `last`: the week stayed `due`, a mid-week
+regeneration put the test back in the days left (or wrote `no_placement_slot`)
+and `retest_status` said `missed` / `not_in_plan` until Sunday.
+`_test_done_in_week` now runs before the declines, the triggers and the gap: a
+real test dated in the week (max read at the end of the week for this check
+only), or a test session of the axis marked `done` with no values
+(`result_missing: true`, the max stays the old one), makes the week `not_due` +
+`done_in_week`. A skipped test session does not count; the coverage is still
+read on Monday. planner_v2 is unchanged (it receives no required test).
+
 **One gap, no slip, one test day (A319, 2026-10-20).** From climb-coach's
 bug-inbox of 2026-10-18 ("tests too close together"): Daniele's low-confidence
 tests of 24/09 were due again 28 days later, the end-of-SP test slipped one week

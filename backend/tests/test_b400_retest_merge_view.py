@@ -608,17 +608,22 @@ class TestTestsTheMergeKeeps:
         assert _placement_failures(merged) == []
 
     def test_a_done_test_is_history_not_a_scheduled_one(self):
-        # The hang test done on Tuesday with no result in the test log: the
-        # policy still calls the axis due (it reads the log), and PASS 3a
-        # reads the week the same way — a done test is not "already
-        # scheduled". The pair goes on Sunday, after the 72 h block.
+        # The hang test done on Tuesday with no result in the test log. A done
+        # test is not "already scheduled" (PASS 3a reads the week the same
+        # way). B414 (A289-TEST-DONE-IN-WEEK, part 2, Daniele 2026-11-07): the
+        # done test session closes its axis for the week (not_due +
+        # result_missing) — before, the policy still called it due and put a
+        # second max hang on Sunday next to the pull-up. Only the pull-up is
+        # placed now, alone.
         st = _due_state()
         old = generate_phase_week(**_pe_week(session_pool=POOL))
         _day(old, TUE)["sessions"] = [_done(HANG, "evening")]
         dec, fresh, _m = _regen(old, st, today=WED, session_pool=POOL)
-        assert [r["session_id"] for r in dec["required_sessions"]] == [HANG, PULL]
+        assert [r["session_id"] for r in dec["required_sessions"]] == [PULL]
+        fin = dec["axes"]["finger"]
+        assert (fin["status"], fin["done_in_week"], fin["result_missing"]) == ("not_due", TUE, True)
         assert fresh["profile_snapshot"]["retest_decisions"]["already_scheduled"] == []
-        assert _placed(fresh) == {HANG: (SUN, "morning"), PULL: (SUN, "evening")}
+        assert HANG not in _placed(fresh) and PULL in _placed(fresh)
 
     def test_the_lone_partner_keeps_the_hang_first_on_a_shared_day(self):
         """The partner of a test the user moved comes alone: never earlier on

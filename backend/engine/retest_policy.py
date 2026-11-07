@@ -1235,6 +1235,42 @@ def _trigger_for_week(
     return None, None
 
 
+def _test_done_in_week(
+    state: Mapping[str, Any],
+    axis: str,
+    ws: date,
+    we: date,
+    *,
+    finger_device: Optional[str],
+) -> Optional[Dict[str, Any]]:
+    """B414 (A289-TEST-DONE-IN-WEEK): the test of ``axis`` done inside the week
+    ``ws``..``we``, or None.
+
+    1. A real test (``tests.*``, or a baseline a test log wrote) dated in the
+       week: ``{"done_in_week": date}``. The max is read at the END of the week
+       for this check only: everything else in the decision reads it on Monday.
+    2. Else a test session of the axis (``AXIS_TEST_SESSIONS_ALL``, the combined
+       one under both axes) marked ``done`` in the week's hot plan, even with no
+       values logged: ``{"done_in_week": date, "result_missing": True}``. The
+       max stays the old one until the values are entered; a ``skipped`` test
+       session does not count.
+
+    Pure: state only (no clock). Monday is in the week, as for every reader."""
+    om_we = axis_official(state, axis, we, finger_device=finger_device)
+    if om_we is not None and _om_is_test(om_we) and ws <= _as_date(om_we["date"]) <= we:
+        return {"done_in_week": om_we["date"]}
+    sids = AXIS_TEST_SESSIONS_ALL[axis]
+    for day in _plan_days(_hot_plan(state, ws.isoformat())):
+        d = _parse_date(str(day.get("date") or "")[:10])
+        if d is None or not ws <= d <= we:
+            continue
+        for session in day.get("sessions") or []:
+            if isinstance(session, Mapping) and session.get("session_id") in sids \
+                    and session.get("status") == "done":
+                return {"done_in_week": d.isoformat(), "result_missing": True}
+    return None
+
+
 def _axis_week_decision(
     state: Mapping[str, Any],
     axis: str,
@@ -1254,7 +1290,11 @@ def _axis_week_decision(
 
     A320: a declined / postponed axis is ``skipped`` (``declined`` /
     ``postponed``, with the ``declined`` view), decided before the phase, gap
-    and already-scheduled checks — never ``None``: the axis stays covered."""
+    and already-scheduled checks — never ``None``: the axis stays covered.
+
+    B414: a test of the axis done inside the week (``_test_done_in_week``) makes
+    the week ``not_due`` with ``done_in_week`` (+ ``result_missing`` for a test
+    session done with no values), before the declines."""
     from backend.engine.macro_position import position_on
 
     om = axis_official(state, axis, ws, finger_device=finger_device)
@@ -1276,6 +1316,15 @@ def _axis_week_decision(
         "earliest_date": earliest.isoformat(),
     }
     we = ws + timedelta(days=6)
+    # B414 (A289-TEST-DONE-IN-WEEK): a test of the axis done INSIDE the week
+    # closes it — read before the declines, the triggers and the gap. The max
+    # above is read on Monday (the coverage does not change mid-week), so a
+    # test logged from Tuesday on did not move ``last`` and the week stayed
+    # due: the regeneration put the test back (or wrote no_placement_slot) and
+    # retest_status said missed / not_in_plan until Sunday.
+    done = _test_done_in_week(state, axis, ws, we, finger_device=finger_device)
+    if done is not None:
+        return {**base, "status": "not_due", **done}
     # A320: the athlete's active declines of this test (the trigger comment
     # block above). A week entirely before a postponed date has no test.
     declines = axis_declines(state, axis, om)
@@ -1443,7 +1492,8 @@ def retest_decisions(
                                     # declined_at, until, source} on a declined /
                                     # postponed axis (skip_reason declined | postponed)
           "already_scheduled": [{axis, date, trigger}],  # B400: + tests the merge keeps
-          "axes": {axis: <week-level decision>},
+          "axes": {axis: <week-level decision>},   # B414: not_due + done_in_week
+                                    # (+ result_missing) when a test was done in the week
           "finger_hard_dates": [...], "heavy_pull_dates": [...],
           "locked_slots": [{date, slot}], "locked_dates": [...],
           "block_hours": {"hang": 72, "pull": 48},
