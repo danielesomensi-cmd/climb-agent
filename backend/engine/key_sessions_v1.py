@@ -737,7 +737,9 @@ def _simulate_add(state: Mapping[str, Any], plan: Mapping[str, Any], event: Mapp
     same prev_days seed, same frozen past as POST /events)."""
     from backend.engine.replanner_v1 import apply_events
 
+    equipment = state.get("equipment") or {}
     after = apply_events(copy.deepcopy(dict(plan)), [dict(event)],
+                         gyms=equipment.get("gyms"), home_equipment=equipment.get("home"),
                          custom_sessions=custom_sessions,
                          prev_days=_prev_days(state, ws, archived_weeks),
                          today=today.isoformat() if today else None)
@@ -1689,7 +1691,12 @@ def check_insertion(
     st["week_plans"][ws.isoformat()] = before_plan
     before = compute_key_status(st, today, archived_weeks=archived_weeks, outdoor_rows=outdoor_rows,
                                 week_start=ws, exercise_catalog=cat, with_proposals=False)
+    # B414 (A319-CHANGE-GYM): the same gyms and home kit as the real write —
+    # without them a change_gym in the dry run replaced every session that
+    # needs equipment, even towards the same gym.
+    _equipment = st.get("equipment") or {}
     after_plan = apply_events(copy.deepcopy(before_plan), [dict(e) for e in events],
+                              gyms=_equipment.get("gyms"), home_equipment=_equipment.get("home"),
                               custom_sessions=custom_sessions,
                               prev_days=_prev_days(st, ws, archived_weeks),
                               today=_as_date(today).isoformat())

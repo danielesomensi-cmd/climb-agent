@@ -702,6 +702,9 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
             # (the guard alerts are computed below by build_guard_warnings).
             prev_days=_prev_week_days(state, week_plan.get("start_date")),
             today=resolve_today(req.today),
+            # B414 (A319-CHANGE-GYM): "change location → home" checks the
+            # athlete's saved home kit (the app never sends one in the event).
+            home_equipment=(state.get("equipment") or {}).get("home"),
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))

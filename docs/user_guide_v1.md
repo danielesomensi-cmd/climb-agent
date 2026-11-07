@@ -772,7 +772,7 @@ The **Replan Dialog** lets you make changes to your weekly plan without regenera
 
 **What you can do:**
 
-- **Change location**: Switch a day from home to gym, gym to outdoor, etc. A session that needs equipment the new place lacks is replaced by a conditioning session — tests included: the weighted pull-up test, or the combined max hang + pull-up test (its max hang too, for now), moved to a gym without weights.
+- **Change location**: Switch a day from home to gym, gym to outdoor, etc. A session that needs equipment the new place lacks is replaced by a conditioning session — the weighted pull-up test too, moved to a gym without weights. The combined max hang + pull-up test moved to a gym (or home) with a hangboard but no weights keeps its max hang: the pull-up test waits for its next turn, and the test card says so. Moving to home checks the home equipment you saved in Settings.
 - **Change intent**: Override what kind of session you want (e.g., strength, endurance, technique, projecting, rest, recovery, power endurance, or "hard" for auto-select)
 - **Go outdoor**: Switch to an outdoor intent (easy outdoor, projecting, volume routes, boulder outdoor). The dialog asks **where**: pick one of your saved spots, or add a new one inline. Apply stays disabled until you choose — the crag name is what the Coach geocodes to give you the weather for that day, so it can't be guessed from the intent.
 - **Rest**: Set the intent to "Rest" to replace a session with rest (the other sessions of the day stay — remove them too for a full rest day)

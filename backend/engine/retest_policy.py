@@ -708,6 +708,10 @@ DECLINE_SOURCE_PLAN_EDIT = "plan_edit"
 SKIP_DECLINED = "declined"
 SKIP_POSTPONED = "postponed"
 _DECLINE_SKIPS = (SKIP_DECLINED, SKIP_POSTPONED)
+#: A319: the pull-up test waits for its next turn — PASS 3a found no slot next
+#: to the hang (planner_v2 writes the same string), or (B414) a change of gym
+#: kept the combined test's hang alone.
+SKIP_NO_PAIRED_SLOT = "blocked:no_paired_slot"
 #: Triggers tied to one week of one macrocycle: a decline matches them only in
 #: the macrocycle it was declined in.
 _WEEK_BOUND_TRIGGERS = (TRIGGER_END_OF_PHASE, TRIGGER_CYCLE_START)
@@ -1943,20 +1947,40 @@ def _plan_edit_weeks(
     return out
 
 
+def _hang_alone_at(plan: Optional[Mapping[str, Any]], d_iso: Any, slot: Any) -> bool:
+    """B414 (A319-CHANGE-GYM): the slot where PASS 3a placed the combined test
+    now holds a finger test alone — a change of gym kept its max hang where
+    the weights are not (``replanner_v1`` change_gym)."""
+    finger_only = set(AXIS_TEST_SESSIONS_ALL[AXIS_FINGER]) - {COMBINED_TEST_SESSION}
+    for day in _plan_days(plan):
+        if str(day.get("date") or "")[:10] != str(d_iso or "")[:10]:
+            continue
+        return any(isinstance(s, Mapping) and s.get("slot") == slot and s.get("session_id") in finger_only
+                   and s.get("status") != "skipped" for s in day.get("sessions") or [])
+    return False
+
+
 def _generated_week_skip(state: Mapping[str, Any], axis: str, wk: date, today: date) -> str:
     """Why a generated week has no upcoming test of ``axis`` although the
     policy would call it due: what PASS 3a recorded, else ``not_in_plan``
     (week generated before A289, or the slot was lost to a regeneration).
     A320: ``declined`` when the athlete removed or replaced the test of that
-    week (it used to read ``not_in_plan``, then ``missed``)."""
-    if plan_edit_removal(_hot_plan(state, wk.isoformat()), axis, today=today) is not None:
+    week (it used to read ``not_in_plan``, then ``missed``). B414
+    (A319-CHANGE-GYM): ``blocked:no_paired_slot`` for the pull-up of a combined
+    test a change of gym turned into the max hang alone — the pull-up waits
+    for its next turn, as when PASS 3a finds no paired slot."""
+    plan = _hot_plan(state, wk.isoformat())
+    if plan_edit_removal(plan, axis, today=today) is not None:
         return SKIP_DECLINED
-    snap = ((_hot_plan(state, wk.isoformat()) or {}).get("profile_snapshot") or {}).get("retest_decisions") or {}
+    snap = ((plan or {}).get("profile_snapshot") or {}).get("retest_decisions") or {}
     for req in snap.get("required_sessions") or []:
         if not isinstance(req, Mapping) or req.get("axis") != axis:
             continue
         if req.get("status") == "skipped" and req.get("skip_reason"):
             return str(req["skip_reason"])
+        if axis == AXIS_PULLING and req.get("status") == "placed" and req.get("combined") \
+                and _hang_alone_at(plan, req.get("placed_date"), req.get("placed_slot")):
+            return SKIP_NO_PAIRED_SLOT
         if req.get("status") == "placed" and str(req.get("placed_date") or "") < today.isoformat():
             return "missed"
     for sk in snap.get("skipped") or []:
@@ -1999,6 +2023,7 @@ __all__ = [
     # A320
     "TRIGGER_POSTPONED", "TRIGGER_EXPIRY", "DECLINES_KEY", "DECLINE_KIND_DECLINE", "DECLINE_KIND_POSTPONE", "DECLINE_KINDS",
     "DECLINE_REASONS", "DECLINE_SOURCES", "DECLINE_SOURCE_PLAN_EDIT", "SKIP_DECLINED", "SKIP_POSTPONED",
+    "SKIP_NO_PAIRED_SLOT",
     "normalize_trigger", "axis_declines", "decline_view", "plan_edit_removal", "is_policy_test",
     # B414
     "TRIGGER_REQUESTED", "DECLINE_KIND_REQUEST", "RECORD_KINDS", "axis_request", "request_view",

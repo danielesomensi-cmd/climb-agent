@@ -328,6 +328,7 @@ def simulate(state: Dict[str, Any], draft: Dict[str, Any], target_date: str, slo
             custom_sessions=pool,
             prev_days=deepcopy(prev_days),  # A294: same seed as /events
             today=str(today)[:10] if today else None,  # A294 review: same frozen past as /events
+            home_equipment=deepcopy((state.get("equipment") or {}).get("home")),  # B414: as /events
         )
     except ValueError as exc:
         result["error"] = f"il replanner rifiuterebbe gli eventi: {exc}"

@@ -831,9 +831,16 @@ and the pair was split over two hard evenings (22/10 + 24/10). Now:
   else `test_pullup_bw` on the first day the 2RM passed every rule but found
   no weights (review: decided on the outcome — weights only on the day the
   finger test took used to lose the pull test silently). `change_gym` reads
-  the same catalog requirement: a 2RM or combined moved to a gym without
-  weights becomes `complementary_conditioning` (the combined loses its max
-  hang too — open, `A319-CHANGE-GYM`).
+  the same catalog requirement: a 2RM moved to a gym without weights becomes
+  `complementary_conditioning`. B414 (A319-CHANGE-GYM): the combined moved
+  where the hangboard is but not the weights becomes `test_max_hang_7s`
+  (equipment only, never the catalog location; the finger stamp
+  `retest:finger:<t>` becomes `retest:<t>`, the `retest:pulling:*` one goes, no
+  `lost_finger`, warning "the pull-up test waits for its next turn"); without
+  a hangboard it still becomes `complementary_conditioning` + `lost_finger` —
+  never the 2RM alone. `retest_status` then reads the pull-up's week as
+  `blocked:no_paired_slot` (`_generated_week_skip`, snapshot row `combined` +
+  a finger test alone at its `placed_date`/`placed_slot`), never "planned".
 
 **PASS 3a on the merged week (B400, 2026-10-18).** The rules above used to read
 only the sessions the planner had just generated; the merge then put the user's
@@ -1020,7 +1027,7 @@ Processes event lists. Supported event types:
 - `remove_session` — delete from day
 - `complete_other_activity` / `add_other_activity` — non-climbing activities
 - `add_outdoor` / `complete_outdoor` / `undo_outdoor` / `remove_outdoor` — outdoor sessions (`undo_outdoor` only un-ticks the day: since B403 the router no longer deletes the day's `outdoor_logs`)
-- `change_gym` — equipment-aware session replacement via `_find_gym_change_replacement()` (A319: a 2RM or combined test moved to a gym without weights is replaced too — see the A319 notes of §8.2)
+- `change_gym` — equipment-aware session replacement via `_find_gym_change_replacement()` (A319: a 2RM test moved to a gym without weights is replaced too; B414: the combined keeps its max hang where the hangboard is — see the A319 notes of §8.2). B414: to home it checks the event's `home_equipment`, else the saved kit `apply_events(home_equipment=state.equipment.home)` (None = unknown, not checked; a list, even empty, is what is there); the /events dry run (`check_insertion`, `_simulate_add`) passes the same gyms and home kit as the write
 - `set_availability` — **retired in B367**: `ValueError` in the engine, 422 at `/events`. It regenerated the week with a fraction of the `GET /api/week` inputs (no tests, retest decisions, taper, finger device) and overwrote the snapshot; availability changes go through settings / `PUT /api/weekly-override/{week_start}`
 
 **Tags of a user-authored session (B345, B392, B405, B414).** `add_custom_session` stores the tags

@@ -1758,8 +1758,16 @@ Other A301 semantics:
 - **`change_gym`** losing a finger session: no compensation; the `change_gym` adaptation gets
   `lost_finger: true` + a warning string. A319: the catalog `required_equipment` of `test_max_weighted_pullup`
   and `test_max_hang_pullup` holds `weight` (the gym's list is expanded: dumbbell / kettlebell / barbell imply
-  it), so moved to a gym without weights both become `complementary_conditioning` — the combined loses its max
-  hang too, although the gym may have a hangboard (open: `A319-CHANGE-GYM`).
+  it), so a 2RM moved to a gym without weights becomes `complementary_conditioning`. B414 (A319-CHANGE-GYM):
+  the combined moved where the hangboard is (equipment only) but not the rest becomes `test_max_hang_7s` —
+  `explain` = `gym_change: …`, the missing equipment, and its finger stamp as `retest:<trigger>` (the
+  `retest:pulling:*` stamp goes), no `lost_finger`, warning `"… : the pull-up test waits for its next turn"`;
+  without a hangboard, `complementary_conditioning` + `lost_finger` as before (never the 2RM alone). To home:
+  the event's `home_equipment`, else the saved `state.equipment.home` (the router passes it; None = not checked,
+  a list — even empty — is the kit).
+- **`blocked:no_paired_slot`** (`retest_policy.SKIP_NO_PAIRED_SLOT`): the pull-up test waits for its next
+  turn — PASS 3a found no slot next to the hang, or (B414) a change of gym kept the combined's hang alone
+  (`_generated_week_skip`: pulling row `combined` + a finger-only test at its `placed_date`/`placed_slot`).
 - **`complete_outdoor`**: stores `outdoor_load_score`, no ripple (`allow_ripple` accepted and ignored).
 - **A294 proposals** (`_propose_for`) reject a candidate that would ADD a guard alert to the week
   (rejection `reason: "guard_alert"`, `codes[]`, `with[]`) — the engine's proposal never needs a neighbour to

@@ -14,7 +14,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence
 logger = logging.getLogger(__name__)
 
 from backend.engine.macrocycle_v1 import _build_session_pool
-from backend.engine.planner_v2 import _INTENSITY_TO_LOAD, _SESSION_META
+from backend.engine.planner_v2 import _COMBINED_TEST_SID, _INTENSITY_TO_LOAD, _SESSION_META
 from backend.engine.session_tags import derive_session_tags, merge_declared_tags
 from backend.engine import user_owned as _uo
 from backend.engine.other_activity_v1 import (
@@ -76,8 +76,12 @@ def _find_gym_change_replacement(
 
     Fallback chain:
     1. complementary_conditioning (home+gym, no required_equipment)
-    2. finger_strength_home — only if going home AND original was a finger session
-    3. regeneration_easy (universal final fallback)
+    2. regeneration_easy (universal final fallback)
+
+    B414 (A319-CHANGE-GYM): the combined test is not handled here — the
+    ``change_gym`` branch keeps its max hang (``_CHANGE_GYM_HANG_SID``) where
+    the new place has a hangboard but not the rest. Before B414 this docstring
+    also promised a ``finger_strength_home`` step the code never had.
     """
     # First fallback: complementary_conditioning
     cc_meta = _meta_for("complementary_conditioning")
@@ -88,6 +92,27 @@ def _find_gym_change_replacement(
 
     # Universal fallback
     return "regeneration_easy"
+
+
+#: B414 (A319-CHANGE-GYM): what the combined test (max hang 7 s + 2RM,
+#: ``_COMBINED_TEST_SID``) becomes when a change of gym/location takes it where
+#: the hangboard is but the rest of its equipment (the weights) is not: its max
+#: hang alone. The pull-up test waits for its next turn — never the 2RM alone
+#: (A319: the pull-up never comes without the hang).
+_CHANGE_GYM_HANG_SID = "test_max_hang_7s"
+
+
+def _finger_stamps_of_combined(explain: Any) -> List[str]:
+    """B414: the retest-policy stamps of a combined test that stay on its max
+    hang alone — ``retest:finger:<trigger>`` becomes the single-axis
+    ``retest:<trigger>`` (what PASS 3a writes on a finger test), every
+    ``retest:pulling:*`` stamp is dropped (the pull-up is no longer there).
+    A combined the policy did not place (no stamp) gives none."""
+    out: List[str] = []
+    for e in explain or []:
+        if isinstance(e, str) and e.startswith("retest:finger:"):
+            out.append("retest:" + e[len("retest:finger:"):])
+    return out
 
 # Phase-aware intent → session_id mapping (uses planner_v2 session catalog)
 INTENT_TO_SESSION = {
@@ -1171,8 +1196,14 @@ def apply_events(
     custom_sessions: Optional[List[Dict[str, Any]]] = None,
     prev_days: Optional[Sequence[Dict[str, Any]]] = None,
     today: Optional[str] = None,
+    home_equipment: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """Apply *events* to a copy of *plan*.
+
+    B414 (A319-CHANGE-GYM): *home_equipment* is the athlete's saved home kit
+    (``state.equipment.home``, the planner's reading: None = unknown, a list =
+    what is there, even empty). ``change_gym`` to home checks it when the event
+    carries no ``home_equipment`` of its own (the app never sends one).
 
     A301 (guards are alerts): every event is a user action, and after it
     NOTHING the user did not touch is rewritten — no final reconcile (finger
@@ -1513,6 +1544,12 @@ def apply_events(
                         new_gym_id, len(gyms),
                     )
 
+            # B414 (A319-CHANGE-GYM): the home kit the event carries, else the
+            # athlete's saved one (the router passes ``state.equipment.home``).
+            # None = unknown → not checked (as before); a list is what is there.
+            _home_kit = event.get("home_equipment") or home_equipment
+            home_eq: Optional[set] = set(expand_equipment(_home_kit)) if _home_kit is not None else None
+
             change_warnings: list = []
             lost_finger = False
 
@@ -1536,29 +1573,44 @@ def apply_events(
                                 equipment_ok = False
                                 missing = req_eq - gym_equipment
                         elif new_location == "home":
-                            home_eq = set(expand_equipment(event.get("home_equipment") or []))
-                            if home_eq and not req_eq.issubset(home_eq):
+                            if home_eq is not None and not req_eq.issubset(home_eq):
                                 equipment_ok = False
                                 missing = req_eq - home_eq
 
                 if not location_ok or not equipment_ok:
-                    # Need replacement
-                    replacement = _find_gym_change_replacement(
-                        sid, new_location, gym_equipment, meta.get("finger", False),
+                    # B414 (A319-CHANGE-GYM): the combined test keeps its max
+                    # hang where the new place has the hangboard (equipment
+                    # only, never the catalog location); the pull-up waits.
+                    avail = gym_equipment if new_location == "gym" else home_eq
+                    keeps_hang = (
+                        sid == _COMBINED_TEST_SID and equipment_ok is False and avail is not None
+                        and set(_get_required_equipment(_CHANGE_GYM_HANG_SID)).issubset(avail)
                     )
+                    if keeps_hang:
+                        replacement = _CHANGE_GYM_HANG_SID
+                    else:
+                        replacement = _find_gym_change_replacement(
+                            sid, new_location, gym_equipment, meta.get("finger", False),
+                        )
                     if meta.get("finger") and not _meta_for(replacement).get("finger"):
                         lost_finger = True
                     rep_meta = _meta_for(replacement)
                     reason = f"incompatible_location={new_location}" if not location_ok else f"missing_equipment={missing}"
+                    stamps = _finger_stamps_of_combined(s.get("explain")) if keeps_hang else []
                     s["session_id"] = replacement
                     s["location"] = new_location
                     s["gym_id"] = new_gym_id if new_location == "gym" else None
                     s["intensity"] = rep_meta["intensity"]
                     s["estimated_load_score"] = _INTENSITY_TO_LOAD.get(rep_meta["intensity"], 40)
                     s["tags"] = {"hard": rep_meta["hard"], "finger": rep_meta["finger"], **({"test": True} if rep_meta.get("test") else {})}
-                    s["explain"] = [f"gym_change: {sid} → {replacement}", reason]
+                    s["explain"] = [f"gym_change: {sid} → {replacement}", reason] + stamps
                     s.pop("resolved", None)
-                    change_warnings.append(f"{sid} → {replacement} ({reason})")
+                    if keeps_hang:
+                        change_warnings.append(
+                            f"{sid} → {replacement} ({reason}): the pull-up test waits for its next turn"
+                        )
+                    else:
+                        change_warnings.append(f"{sid} → {replacement} ({reason})")
                 else:
                     # Compatible — update gym_id/location, clear resolved to force re-resolution
                     s["location"] = new_location

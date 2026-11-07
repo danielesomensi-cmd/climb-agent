@@ -1191,13 +1191,13 @@ class TestCombinedCues:
 
 
 class TestChangeGymOnATestDay:
-    """Characterization (A319 review): ``change_gym`` (replanner_v1) checks the
-    catalog's ``required_equipment`` against the new gym's expanded equipment
-    (dumbbell → weight). Since A319(d) a 2RM test moved to a gym without
-    weights becomes complementary_conditioning — it would measure nothing
-    there — and so does the combined, which loses its max hang too although
-    the gym has a hangboard. Whether it should become ``test_max_hang_7s``
-    instead is open (roadmap A319-CHANGE-GYM: replanner_v1 → Phase 1 + STOP)."""
+    """A319 review / B414: ``change_gym`` (replanner_v1) checks the catalog's
+    ``required_equipment`` against the new gym's expanded equipment (dumbbell
+    → weight). Since A319(d) a 2RM test moved to a gym without weights becomes
+    complementary_conditioning — it would measure nothing there. B414
+    (A319-CHANGE-GYM, decided 2026-11-07): the combined keeps its max hang
+    there (``test_max_hang_7s``, the pull-up waits) — before B414 it lost it
+    although the gym has a hangboard. Full matrix: test_b414_change_gym_combined."""
 
     _GYMS = [{"gym_id": "cocque", "name": "Cocque", "equipment": ["spraywall", "gym_routes", "hangboard", "pullup_bar"]},
              {"gym_id": "bkl", "name": "Bkl", "equipment": ["hangboard", "gym_boulder", "pullup_bar", "dumbbell"]},
@@ -1221,8 +1221,9 @@ class TestChangeGymOnATestDay:
         assert sid == "complementary_conditioning"
         assert "missing_equipment={'weight'}" in " ".join(adaptation.get("warnings") or [])
 
-    def test_combined_replaced_where_there_are_no_weights_and_its_hang_is_lost(self):
+    def test_combined_keeps_its_hang_where_there_are_no_weights(self):
+        # B414: was test_combined_replaced_where_there_are_no_weights_and_its_hang_is_lost.
         sid, adaptation = self._moved(COMBO, "cocque")
-        assert sid == "complementary_conditioning"
-        assert adaptation.get("lost_finger") is True
-        assert self._moved(HANG, "cocque")[0] == HANG  # the max hang alone would stay
+        assert sid == HANG
+        assert adaptation.get("lost_finger") is None
+        assert self._moved(HANG, "cocque")[0] == HANG  # the max hang alone stays
