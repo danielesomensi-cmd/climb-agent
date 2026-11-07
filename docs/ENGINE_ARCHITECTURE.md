@@ -404,6 +404,17 @@ payload. Absent a `completed` flag nothing is subtracted (the `/today` and
 thing that lowers the load. A `session_load_actual` of 0 is honoured; a
 *prescribed* 0 means the resolver produced no instances and still falls through.
 
+**Which prescription the actual load is scored against (B414, B312-LOAD-ACTUAL-VS-FROZEN).**
+An engine session that `/feedback` itself marks done (the guided player) is
+scored on the prescription GET showed — the B413 D2 freeze computed at step 1
+(key `(date, slot, session_id)`), the same `resolved` step 7b writes. A pending
+engine session is stored without `resolved`, so before B414 the guided player's
+sessions never got a `session_load_actual`. A session already done (the
+`/today` flow: `/events` writes the freeze, then the dialog posts), a custom or
+a body-part session falls back to the stored `resolved` as before. Full
+completion = the frozen `session_load_score`; nothing is recomputed for
+sessions already played.
+
 ### Output structure
 
 ```python

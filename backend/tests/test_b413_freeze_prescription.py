@@ -322,14 +322,19 @@ def test_b216_alt_plan():
 def test_feedback_inputs_bit_identical_with_and_without_freeze(monkeypatch):
     """Everything the closed loop reads, and everything it writes, is the same
     with and without the freeze: only the played session's ``resolved``
-    differs (the clock-stamped fields aside)."""
+    differs (the clock-stamped fields aside) — and, since B414
+    (B312-LOAD-ACTUAL-VS-FROZEN), its ``session_load_actual``, scored on the
+    frozen prescription (without the freeze a pending engine session has no
+    stored ``resolved`` to score against). Neither feeds the closed loop."""
     captured: dict = {}
     real = feedback_router.apply_feedback
 
     def scrub(obj):
-        """Without the frozen ``resolved`` and the clock stamps (``*_at``)."""
+        """Without the frozen ``resolved``, the actual load scored on it (B414)
+        and the clock stamps (``*_at``)."""
         if isinstance(obj, dict):
-            return {k: scrub(v) for k, v in obj.items() if k != "resolved" and not k.endswith("_at")}
+            return {k: scrub(v) for k, v in obj.items()
+                    if k not in ("resolved", "session_load_actual") and not k.endswith("_at")}
         if isinstance(obj, list):
             return [scrub(v) for v in obj]
         return obj
@@ -356,6 +361,9 @@ def test_feedback_inputs_bit_identical_with_and_without_freeze(monkeypatch):
     assert len(captured["calls"]) == 2 and captured["calls"][0] == captured["calls"][1]
     assert _session(with_freeze["week_plans"][MON_ISO]).get("resolved")
     assert not _session(without["week_plans"][MON_ISO]).get("resolved")
+    # B414: the actual load exists only where there is a prescription to score.
+    assert isinstance(_session(with_freeze["week_plans"][MON_ISO]).get("session_load_actual"), int)
+    assert "session_load_actual" not in _session(without["week_plans"][MON_ISO])
     assert scrub(with_freeze) == scrub(without)
 
 

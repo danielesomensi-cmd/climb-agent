@@ -485,12 +485,23 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
                             # weekly report and the heatmap stop showing a full
                             # load for a half-done session. None → no usable
                             # signal, leave the prescribed score alone.
+                            # B414 (B312-LOAD-ACTUAL-VS-FROZEN): an engine
+                            # session marked done by THIS request is scored
+                            # against the prescription GET showed (frozen at
+                            # step 1, written at 7b) — a pending engine
+                            # session is stored without ``resolved``, so the
+                            # stored copy left the guided player's sessions
+                            # with no actual load at all. Already done (the
+                            # /today flow), custom or body-part: the stored
+                            # ``resolved`` as before.
+                            _frozen_res = _frozen.get((target_date, _sess.get("slot"), target_sid))
+                            _res_src = (
+                                _frozen_res if isinstance(_frozen_res, dict)
+                                else (_sess.get("resolved") or {})
+                            )
                             _actual_load = compute_actual_load_score(
                                 _fb_items,
-                                (
-                                    (_sess.get("resolved") or {}).get("resolved_session")
-                                    or {}
-                                ).get("exercise_instances"),
+                                (_res_src.get("resolved_session") or {}).get("exercise_instances"),
                                 _fatigue_map,
                             )
                             if _actual_load is not None:
