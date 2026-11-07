@@ -273,7 +273,13 @@ def log_climb(
     climb["grade"] = normalize_grade(req.grade) or req.grade
 
     now = datetime.now(timezone.utc).isoformat()
-    index = len(session.get("climbs", [])) + 1
+    # B414 (A-CLIMB-CLIENT-ID step 1): monotonic, never ``len + 1`` — after a
+    # delete that repeated an index still in use (1,2,3 − 2 → a second 3), and
+    # deleting one "3" removed both.
+    index = max(
+        (c["index"] for c in session.get("climbs", []) if isinstance(c.get("index"), int)),
+        default=0,
+    ) + 1
     climb["index"] = index
     climb["logged_at"] = now
 

@@ -609,6 +609,38 @@ class TestLogClimbEndpoint:
         })
         assert r.status_code == 400
 
+    # B414 (A-CLIMB-CLIENT-ID step 1): the index is max + 1, never len + 1.
+
+    def _log(self, client, sid, grade="6A"):
+        r = client.post(f"/api/free-session/{sid}/log-climb", json={
+            "grade": grade, "status": "flash", "attempts": 1,
+        })
+        assert r.status_code == 200
+        return r.json()["index"]
+
+    def _indices(self, client, sid):
+        state = client.get("/api/state?full=1").json()
+        sess = next(s for s in state["free_sessions"] if s["id"] == sid)
+        return [c["index"] for c in sess["climbs"]]
+
+    def test_index_never_repeats_after_a_delete(self, client, _seed_state):
+        """Log 1,2,3 → delete 2 → the next climb is 4 (len + 1 gave a second
+        3, and deleting that "3" removed both climbs)."""
+        sid = self._start_session(client)
+        assert [self._log(client, sid) for _ in range(3)] == [1, 2, 3]
+        assert client.delete(f"/api/free-session/{sid}/climb/2").status_code == 200
+        assert self._log(client, sid, "6B") == 4
+        r = client.delete(f"/api/free-session/{sid}/climb/4")
+        assert r.status_code == 200 and r.json()["climbs_remaining"] == 2
+        assert self._indices(client, sid) == [1, 3]
+
+    def test_delete_of_a_missing_index_is_404(self, client, _seed_state):
+        sid = self._start_session(client)
+        self._log(client, sid)
+        r = client.delete(f"/api/free-session/{sid}/climb/7")
+        assert r.status_code == 404
+        assert self._indices(client, sid) == [1]
+
 
 class TestFinishEndpoint:
     def _start_and_log(self, client):

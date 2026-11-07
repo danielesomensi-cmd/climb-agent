@@ -80,7 +80,7 @@
 | GET | `/api/free-session/surfaces` | Available surfaces + user gyms |
 | GET | `/api/free-session/presets` | Presets for surface (personalized grades, phase tips) |
 | POST | `/api/free-session/start` | Start a free climbing session |
-| POST | `/api/free-session/{session_id}/log-climb` | Log a climb to active session |
+| POST | `/api/free-session/{session_id}/log-climb` | Log a climb to active session. `index` = highest index in the session + 1 (B414: never repeats after a delete) |
 | POST | `/api/free-session/{session_id}/finish` | Finish session (summary + load) |
 | GET | `/api/free-session/history` | Free sessions for a date |
 | DELETE | `/api/free-session/{session_id}/climb/{climb_index}` | Delete a climb from active session |
