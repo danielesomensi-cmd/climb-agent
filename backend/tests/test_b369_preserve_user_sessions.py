@@ -778,23 +778,21 @@ def test_move_over_an_engine_session_records_and_honours_the_replacement():
     assert _ids(_day(out, 3)) == [("strength_long", "evening")]
 
 
-def test_regeneration_alerts_on_a_guard_conflict_without_rewriting():
+def test_merge_rewrites_nothing_on_a_guard_conflict_and_writes_no_alert_record():
     """A forced finger session the merge puts back next to a finger session
-    the planner generated: an alert, nothing downshifted (A301)."""
+    the planner generated: nothing downshifted (A301). B414 (B369-P6 point 1):
+    the merge writes no ``regeneration_guard_warnings`` record any more — the
+    planner respects the gaps and the cap around the user's sessions itself
+    (test_b414_user_session_anchors) and the week's alerts are guards_v1's, at
+    read time; a record left by an older regeneration is dropped."""
     old = _plan({1: [{**_forced("evening"), "session_id": "max_hang_5s"}]})
+    old["adaptations"] = [{"type": "regeneration_guard_warnings", "warnings": [{"date": "2026-10-14"}]}]
     fresh = _plan({2: [{"slot": "evening", "session_id": "strength_long", "intensity": "max",
                         "tags": _tags(True, True)}]})
     out = regenerate_preserving_completed(old, fresh)
     assert _ids(_day(out, 1)) == [("max_hang_5s", "evening")]
     assert _ids(_day(out, 2)) == [("strength_long", "evening")]
-    alerts = [a for a in out["adaptations"] if a["type"] == "regeneration_guard_warnings"]
-    assert len(alerts) == 1
-    w = alerts[0]["warnings"]
-    assert w[0]["date"] == "2026-10-14" and w[0]["action"] == "guard_alert"
-    assert w[0]["reason"] == "finger_spacing_downshift"
-    # Recomputed, not piled up, on the next regeneration.
-    again = regenerate_preserving_completed(out, fresh)
-    assert len([a for a in again["adaptations"] if a["type"] == "regeneration_guard_warnings"]) == 1
+    assert not any(a["type"] == "regeneration_guard_warnings" for a in out.get("adaptations") or [])
 
 
 def test_engine_only_week_has_no_alert_and_fresh_load():

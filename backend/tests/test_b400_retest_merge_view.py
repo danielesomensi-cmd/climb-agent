@@ -437,15 +437,22 @@ class TestRulesOnTheMergedWeek:
     def test_the_users_hard_session_makes_the_day_hard_for_the_cap(self):
         # Cap 2 full with Monday + Wednesday: Sunday is refused — unless the
         # user's own hard session already makes it a hard day (the test then
-        # adds none; the third hard day is the user's choice, alert-only).
+        # adds none). B414 (B369-P6 point 1): the user's hard Sunday counts in
+        # the cap when the week is generated, so the engine no longer opens
+        # Wednesday as a third hard day (before B414: Mon + Wed + Sun, alert
+        # only). No Saturday (the fixture's own week puts a finger maintenance
+        # there once Wednesday's finger session is gone, and its 48 h gap then
+        # refuses Sunday — another rule).
         st = _hang_only()
-        old = generate_phase_week(**_pe_week(**_cap(2)))
-        _dec, fresh, _m = _regen(deepcopy(old), st, allowed=[SUN], **_cap(2))
+        kw = {**_cap(2), "availability": _avail(days=("mon", "tue", "wed", "thu", "fri", "sun"))}
+        old = generate_phase_week(**_pe_week(**kw))
+        _dec, fresh, merged = _regen(deepcopy(old), st, allowed=[SUN], **kw)
         assert _skip_reasons(fresh) == {HANG: "no_placement_slot"}
+        assert _hard_days(merged) == [MON, WED]
         _put(old, SUN, _owned("power_endurance_gym", "evening"))
-        _dec, fresh, merged = _regen(old, st, allowed=[SUN], **_cap(2))
+        _dec, fresh, merged = _regen(old, st, allowed=[SUN], **kw)
         assert _placed(fresh) == {HANG: (SUN, "morning")}
-        assert _hard_days(merged) == [MON, WED, SUN]
+        assert _hard_days(merged) == [MON, SUN]
 
     def test_lived_hard_days_count_once(self):
         # Cap 4, Monday + Tuesday done hard, regeneration on Wednesday: two

@@ -1667,7 +1667,7 @@ Adjustment (legacy): { date, slot, action: "downgraded", reason, previous_sessio
          | recovery_ripple_proportional | recovery_ripple | outdoor_ripple
 ```
 
-`_reconcile` survives only as a PROBE on a copy (`regeneration_guard_warnings`, §5.7.2).
+`_reconcile` has no engine caller since B414 (its last one, the post-merge `regeneration_guard_warnings` probe, was removed); the enforcers stay pinned by their tests.
 
 ```
 GuardWarning (backend/engine/guards_v1.py, computed at read, NEVER persisted):
@@ -1813,11 +1813,11 @@ is_preservable(session)   = status ∈ {done, skipped} | is_user_owned(session)
   done, edit) does not get the engine's session back. **A320:** removing or replacing a **retest-policy test**
   (not moving it, not an automatic A315 re-schedule) is also the athlete's decline of that test for the week
   (§4.5b): the regeneration does not put it back on another day of the week.
-- **`regeneration_guard_warnings`** (adaptation, B369 review): `{type, warnings: [{date, slot, action:
-  "guard_alert", reason: finger_spacing_downshift | hard_cap_downshift, previous_session_id, session_id}]}` —
-  what the guards would downshift in a regenerated week once the merge put the user's sessions back. Alert
-  only, nothing rewritten; recomputed at each regeneration (never piled up); absent for a week without user
-  sessions.
+- **`regeneration_guard_warnings`** (adaptation, B369 review) — **removed in B414** (read by nobody): it said
+  what the guards would downshift once the merge put the user's sessions back. The planner now respects the
+  finger gap, the hard gap and the hard cap around the user's sessions of the week from today on (B369-P6
+  point 1, `planner_v2` `_user_finger` / `_user_hard`, `_near_anchor`); a record left in a stored plan is
+  dropped by the next merge, never written again.
 - **Ownership markers survive guard rewrites** (B369 review): the reconcile probe keeps the user markers in
   `constraints_applied` (`user_owned.carry_user_markers`). Since A301 no user action rewrites anything, so this
   only matters for legacy plans.

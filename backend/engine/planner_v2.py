@@ -1825,13 +1825,49 @@ def generate_phase_week(
                 if _sid:
                     session_count[_sid] = session_count.get(_sid, 0) + 1
 
-    def _near_crag(offset: int, finger: bool, hard: bool) -> bool:
+    # B414 (B369-P6 point 1): the user's own sessions of this week from today
+    # on — custom, quick-add (forced or not), override, moved, key
+    # re-schedule, generated add (``user_owned.is_user_owned``), not skipped,
+    # not done (a done one is B390's lived day). The merge puts them back
+    # byte-identical, so the engine's sessions around them respect the finger
+    # gap, the hard gap and the hard cap (decided 2026-11-07: those three only —
+    # no slot is blocked, the target days do not change). Same flag reading as
+    # guards_v1 (``session_flag``: own tags, else ``_SESSION_META``). Before
+    # B414 only an alert after the merge said so (``regeneration_guard_warnings``,
+    # read by nobody, removed). Checked on both sides in PASS 1 / 1.5 like a
+    # crag day (``_near_anchor``) — the same day included, as for a lived day
+    # (B390): the engine stacks no hard / finger session on the user's — and
+    # joined to the offset lists after PASS 1.5; a hard day of the user's not
+    # already counted (crag, lived) counts in the cap.
+    _user_finger: List[int] = []
+    _user_hard: List[int] = []
+    if _same_week:
+        from backend.engine.stimulus import session_flag as _uflag
+        from backend.engine.user_owned import is_user_owned as _owned
+        _cur_by = {str(d.get("date"))[:10]: d for d in _plan_days_list(existing_week_plan)}
+        for offset in range(7):
+            if today_date is not None and day_dates[offset] < today_date:
+                continue  # B390: a past session never marked did not happen
+            _ud = _cur_by.get(day_dates[offset].isoformat())
+            mine = [x for x in (_ud or {}).get("sessions") or []
+                    if isinstance(x, dict) and _owned(x) and x.get("status") not in ("done", "skipped")]
+            if any(_uflag(x, "hard") for x in mine):
+                _user_hard.append(offset)
+            if any(_uflag(x, "finger") for x in mine):
+                _user_finger.append(offset)
+    _user_hard_new = [o for o in _user_hard if o not in crag_in_week and o not in _past_hard_offsets]
+    hard_days += len(_user_hard_new)
+
+    def _near_anchor(offset: int, finger: bool, hard: bool) -> bool:
         """B382(b): a finger / hard session within its gap of a crag day, on
-        either side (PASS 1 / 1.5 check spacing backwards only)."""
+        either side (PASS 1 / 1.5 check spacing backwards only). B414: and of
+        a finger / hard session of the user's (``_user_finger`` /
+        ``_user_hard``)."""
         return any(
             (finger and abs(offset - c) <= finger_gap_days) or (hard and abs(offset - c) <= hard_gap_days)
             for c in crag_offsets
-        )
+        ) or any(finger and abs(offset - u) <= finger_gap_days for u in _user_finger) \
+            or any(hard and abs(offset - u) <= hard_gap_days for u in _user_hard)
 
     # Cap available days to target_training_days_per_week
     available_day_count = sum(day_has_available_slot)
@@ -1952,7 +1988,8 @@ def generate_phase_week(
                     skip = True
 
             # B382(b): not next to a declared crag day — TEMPORARY
-            if not skip and _near_crag(offset, meta["finger"], meta["hard"]):
+            # B414: nor next to (or on) a finger / hard session of the user's
+            if not skip and _near_anchor(offset, meta["finger"], meta["hard"]):
                 skip = True
 
             # No consecutive hard/max-intensity days (extended by D83 recovery multiplier) — TEMPORARY
@@ -2090,7 +2127,7 @@ def generate_phase_week(
                     continue
                 if fb_meta.get("finger") and finger_day_offsets and (offset - finger_day_offsets[-1]) <= finger_gap_days:
                     continue
-                if _near_crag(offset, bool(fb_meta.get("finger")), bool(fb_meta.get("hard"))):
+                if _near_anchor(offset, bool(fb_meta.get("finger")), bool(fb_meta.get("hard"))):
                     continue
                 result = _find_best_slot(
                     day_avail, fb_meta, locations, prefer_evening=True,
@@ -2123,6 +2160,15 @@ def generate_phase_week(
             _crag_seeded_finger.append(_c)
         if _c not in hard_day_offsets:
             hard_day_offsets.append(_c)
+    # B414: the user's finger / hard days join the same lists (kept out of the
+    # plan's own counters too — the summary counts the engine's sessions).
+    for _u in _user_finger:
+        if _u not in finger_day_offsets:
+            finger_day_offsets.append(_u)
+            _crag_seeded_finger.append(_u)
+    for _u in _user_hard:
+        if _u not in hard_day_offsets:
+            hard_day_offsets.append(_u)
 
     # ── PASS 2: Fill remaining days with complementary sessions ──
     days_with_sessions = sum(1 for ds in day_sessions if ds)
@@ -2932,7 +2978,10 @@ def generate_phase_week(
                     hard_day_offsets.append(offset)
             hard_days = sum(1 for o in range(7) if o not in _past_hard_offsets
                             and any((e.get("tags") or {}).get("hard") for e in day_sessions[o])) \
-                + len(crag_in_week) + len(_past_hard_offsets)  # B382(b) crag days, B390 lived days stay counted
+                + len(crag_in_week) + len(_past_hard_offsets) \
+                + sum(1 for u in _user_hard_new
+                      if not any((e.get("tags") or {}).get("hard") for e in day_sessions[u]))
+            # B382(b) crag days, B390 lived days, B414 the user's hard days stay counted
             _rd_placed_offsets.add(offset)
             if any(_SESSION_META[e["session_id"]].get("finger") for e in new_entries):
                 _rd_hang_offsets.append(offset)

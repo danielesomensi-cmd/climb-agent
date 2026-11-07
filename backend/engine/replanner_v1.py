@@ -678,8 +678,12 @@ def _session_sort_key(s: Dict[str, Any]) -> tuple:
     )
 
 
-#: Adaptation type of the guard alerts a regeneration raises (B369 review).
-REGEN_GUARD_WARNINGS = "regeneration_guard_warnings"
+#: Adaptation type of the guard alerts a regeneration used to raise (B369
+#: review). B414: no longer written — the planner respects the finger gap, the
+#: hard gap and the hard cap around the user's sessions (B369-P6 point 1) and
+#: the alerts of the week are guards_v1's, at read time. A record left by an
+#: older regeneration is dropped by the next merge.
+_LEGACY_REGEN_GUARD_WARNINGS = "regeneration_guard_warnings"
 
 
 def _skips_days(plan: Dict[str, Any], preserve_date: Any) -> bool:
@@ -690,24 +694,6 @@ def _skips_days(plan: Dict[str, Any], preserve_date: Any) -> bool:
     except ValueError:
         return False
     return start < preserve_date <= start + timedelta(days=6)
-
-
-def _regen_guard_warnings(
-    plan: Dict[str, Any],
-    prev_days: Optional[Sequence[Dict[str, Any]]],
-    frozen_before: Optional[str],
-) -> List[Dict[str, Any]]:
-    """B369 review: what the guards (48h finger gap, weekly hard cap) would
-    downshift in the merged *plan* — computed on a copy, nothing rewritten.
-    Each entry is a reconcile adjustment (``action: "downgraded"`` would-be)
-    renamed ``action: "guard_alert"``."""
-    probe = deepcopy(plan)
-    try:
-        adjustments = _reconcile(probe, prev_days=prev_days, frozen_before=frozen_before)
-    except Exception:  # an alert must never break a regeneration
-        logger.warning("B369: guard check after merge failed", exc_info=True)
-        return []
-    return [{**a, "action": "guard_alert"} for a in adjustments]
 
 
 def _merge_user_content(
@@ -740,6 +726,10 @@ def _merge_user_content(
     - the day-level outdoor / other-activity fields of the old day are kept;
     - ``adaptations`` (the record of the user's removals) is carried forward,
       so the NEXT regeneration still honours them.
+
+    *prev_days* is accepted and unused since B414 (it fed the post-merge guard
+    probe; the planner now respects the gaps and the cap around the user's
+    sessions itself, B369-P6 point 1).
     """
     result = deepcopy(new_plan)
 
@@ -765,7 +755,6 @@ def _merge_user_content(
 
     new_days = (result.get("weeks") or [{}])[0].get("days", [])
     copied: set = set()  # indices copied wholesale: byte-identical, no recompute
-    user_reinserted = False  # a user-owned session went back over generated days
     for i, day in enumerate(new_days):
         date_key = day.get("date")
         if not date_key:
@@ -821,8 +810,6 @@ def _merge_user_content(
 
         kept = [deepcopy(s) for s in old_day.get("sessions", []) if _uo.is_preservable(s)]
         kept_slots = {s.get("slot") for s in kept}
-        if any(_uo.is_user_owned(s) for s in kept):
-            user_reinserted = True
         # B369 review: an engine session leaves the day only through a recorded
         # removal (above). A slot that holds a kept session gives the engine
         # back only what the old day still had there next to it: a slot the
@@ -862,25 +849,15 @@ def _merge_user_content(
             result.setdefault("weekly_load_summary", {})["planned_load"] = old_planned
 
     # B369: the user's removals stay on record for the next regeneration.
-    # The previous regeneration's guard alerts are recomputed below, not
-    # carried (they would pile up one copy per regeneration).
+    # B414: a guard-alert record of an older regeneration is not carried
+    # (none is written any more: the planner respects the gaps and the cap
+    # around the user's sessions, B369-P6 point 1).
     old_adaptations = [
         a for a in old_plan.get("adaptations") or []
-        if not (isinstance(a, dict) and a.get("type") == REGEN_GUARD_WARNINGS)
+        if not (isinstance(a, dict) and a.get("type") == _LEGACY_REGEN_GUARD_WARNINGS)
     ]
     if old_adaptations:
         result["adaptations"] = deepcopy(old_adaptations) + list(result.get("adaptations") or [])
-
-    # B369 review: the planner generated without knowing the user's sessions
-    # the merge put back — check the result against the guards. Alert only
-    # (A301: a user's session is the user's decision, and the engine's
-    # sessions next to it are not downshifted behind their back).
-    if user_reinserted:
-        warnings = _regen_guard_warnings(result, prev_days, preserve_before)
-        if warnings:
-            result.setdefault("adaptations", []).append(
-                {"type": REGEN_GUARD_WARNINGS, "warnings": warnings}
-            )
 
     # B369: monotonic across regenerations (it used to restart from the fresh
     # plan's 1 → always 2).
@@ -1178,8 +1155,10 @@ def _reconcile(
     immutable for both enforcers — it counts, it is never rewritten.
 
     A301: no user action calls this on the real plan any more (guards are
-    alerts — ``guards_v1``). It survives as a PROBE on a copy: the post-merge
-    alert of a regeneration (``_regen_guard_warnings``).
+    alerts — ``guards_v1``). B414: nor does the regeneration (its post-merge
+    probe ``_regen_guard_warnings`` is gone); no engine caller is left — the
+    enforcers stay pinned by their tests (b287, b165b, b367) until a brief
+    removes them.
     """
     adjustments = _enforce_no_consecutive_finger(plan, prev_days=prev_days, frozen_before=frozen_before)
     adjustments.extend(_enforce_caps(plan, frozen_before=frozen_before))
