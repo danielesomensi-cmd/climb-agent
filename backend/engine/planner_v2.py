@@ -1839,6 +1839,10 @@ def generate_phase_week(
     # (B390): the engine stacks no hard / finger session on the user's — and
     # joined to the offset lists after PASS 1.5; a hard day of the user's not
     # already counted (crag, lived) counts in the cap.
+    # B414 review: a session marked done on a day AFTER today (done ahead of
+    # its date) is no lived day — B390 reads days up to today only — but the
+    # merge keeps it byte-identical as well: it is an anchor too, whoever
+    # placed it (engine or user).
     _user_finger: List[int] = []
     _user_hard: List[int] = []
     if _same_week:
@@ -1848,9 +1852,12 @@ def generate_phase_week(
         for offset in range(7):
             if today_date is not None and day_dates[offset] < today_date:
                 continue  # B390: a past session never marked did not happen
+            _ahead = today_date is not None and day_dates[offset] > today_date
             _ud = _cur_by.get(day_dates[offset].isoformat())
             mine = [x for x in (_ud or {}).get("sessions") or []
-                    if isinstance(x, dict) and _owned(x) and x.get("status") not in ("done", "skipped")]
+                    if isinstance(x, dict) and (
+                        (_owned(x) and x.get("status") not in ("done", "skipped"))
+                        or (_ahead and x.get("status") == "done"))]
             if any(_uflag(x, "hard") for x in mine):
                 _user_hard.append(offset)
             if any(_uflag(x, "finger") for x in mine):

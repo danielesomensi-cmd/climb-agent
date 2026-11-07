@@ -161,6 +161,24 @@ class TestWhichSessionsCount:
     def test_engine_sessions_are_not_anchors(self, base):
         assert _fp(gen(existing=base, days=NO_THU)) == _fp(gen(days=NO_THU))
 
+    def test_a_session_done_ahead_of_its_date_counts(self, base):
+        # B414 review: Saturday's session marked done on Monday — no lived day
+        # yet (B390 reads up to today), but the merge keeps it: an anchor,
+        # engine session or not.
+        def _sat(status):
+            old = deepcopy(base)
+            _day(old, SAT)["sessions"] = [{"slot": "lunch", "session_id": "finger_strength_home", "status": status,
+                                           "location": "home", "tags": {"hard": True, "finger": True},
+                                           "constraints_applied": ["pass1:primary"]}]
+            return old
+        done = _sat("done")
+        new, merged = _regen(done, today=MON)
+        assert not _flag(new, FRI, "finger") and not _flag(new, FRI, "hard")
+        assert _day(merged, SAT)["sessions"][:1] == _day(done, SAT)["sessions"]  # byte-identical, kept
+        # Non-vacuity: the same engine session still planned is no anchor.
+        planned = gen(existing=_sat("planned"), days=NO_THU, today=MON)
+        assert _flag(planned, FRI, "finger") or _flag(planned, FRI, "hard")
+
 
 class TestInvariants:
     def test_week_without_user_sessions_is_identical(self, base):

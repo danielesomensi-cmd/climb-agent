@@ -930,8 +930,9 @@ def get_week(
                 try:
                     week_plan = regenerate_preserving_completed(
                         source, week_plan, preserve_before=effective_preserve,
-                        # B369 review: Sunday→Monday finger gap for the
-                        # post-merge guard alerts.
+                        # Accepted and unused since B414 (it fed the post-merge
+                        # guard probe; the planner now plans around the user's
+                        # sessions, B369-P6 point 1).
                         prev_days=((_prev_week_plan or {}).get("weeks") or [{}])[0].get("days"),
                     )
                     # A300: the lunch alerts of the week as merged (the user's
