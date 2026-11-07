@@ -58,6 +58,31 @@
 
 **B-ALTSIDES-SETS — esercizi destro/sinistro: il server confronta le serie interne con quelle prescritte (da [[B408]], verificato il 2026-10-30)** 🟢 P3. Il timer è corretto: conta le serie interne (3×8 per lato = 6, destra e sinistra alternate, `alt-sides.ts`) e il player manda `completed_sets` = conteggio interno. Il server però lo confronta con `prescribed_sets` = 3 senza raddoppiarlo (`progression_v1._apply_dp_feedback` `sets_ok`, `anchored_load.py:1042/1244`): fermarsi dopo destra-sinistra-destra (1,5 serie) vale come «tutte le serie fatte». Riprodotto: split squat bulgaro 3×8, `completed_sets` 3 → `reps_up`, come con 6. Con tutte le serie fatte il risultato è giusto, quindi nell'uso normale l'effetto è nullo; `athlete_context` stampa però «6/3 serie». Fix: il player manda le serie prescritte completate (o il server dimezza per gli alt_sides), con test sui due lati.
 
+**C285 — illustrazioni della tecnica e degli esercizi strani (Daniele, 2026-11-07: «sarebbe importante mettere dei disegni per le cose di tecnica… ben fatti e chiari»)** 🟡 in corso, primo lotto in prod 2026-11-07.
+
+**Analisi (workflow a 12 agenti).** Inventario di tutto il catalogo: i 57 esercizi di tecnica non avevano nessuna immagine. Per ciascuno c'è una specifica visiva, poi una revisione da allenatore avversaria: 18 drill ricevono un disegno (28 tavole), gli altri sono regole, ritmi o protocolli di tentativo e restano senza di proposito. Le specifiche verificate stanno nello scratchpad della sessione; ricetta e strumenti stanno in `scripts/illustrations/`.
+
+**Stile.** «S3 editoriale» semi-realistico, scelto da Daniele.
+
+**Ricetta.**
+1. Manichino 3D in Blender con la posa esatta.
+2. Composito.
+3. gpt-image-2 in modalità EDIT via OpenRouter, a $0,065 (medium) o $0,19 (high).
+4. Verifica di un allenatore indipendente.
+
+Drop knee e backstep vanno ripresi dal lato aperto: da dietro tutti i modelli disegnano il bacino frontale.
+
+**Primo lotto in prod:** `flag_practice` (outside flag), `twist_lock_drill` (backstep + drop knee come seconda tavola, `CATALOG_EXERCISE_EXTRA_PANELS`).
+
+**Immagini sbagliate tolte.** Lo straddle L-sit era disegnato come una spaccata a terra, il dragon flag tuck come un leg raise sdraiato: tolte dal catalogo e dal circuito, in attesa del ridisegno. `hanging_leg_raise` (gambe fino alla sbarra) passa all'immagine toes-to-bar.
+
+**Riusi esatti a costo zero.** `pike_pushup`, `plank`, `rkc_plank`, `hollow_rock`, `copenhagen_dynamic`, `elbow_wrist_extensor_eccentric`, `test_hip_flexibility`.
+
+**Resto.** Budget della chiave OpenRouter: $5 al giorno. Il resto procede a lotti giornalieri:
+- tavole di tecnica (back flag e inside flag, hip turn, piedi piccoli, hard target, cadute, kneebar e rinvio…);
+- ridisegno dei 2 esercizi del circuito;
+- esercizi strani (scapular pull-up, frenchies, moving hangs, pinch block, toe flexor, cossack squat…).
+
 **C284 — `fall_practice`: le altezze dei voli dicono da dove si misurano (Daniele, 2026-11-04: «2 m sopra cosa vuol dire? I piedi?»)** ✅ (2026-11-04). I cue «Fall from 30cm / 1m / 2m above clip» non dicevano il riferimento. Ora: nodo dell'imbrago rispetto all'ultimo rinvio; lo step 2 dà i piedi circa all'altezza del rinvio, lo step 3 i piedi ~1 m sopra e il volo totale 4-5 m. Nota della prescrizione allineata (distanza = nodo → rinvio, volo ≈ il doppio più l'elasticità). Solo testo: sets, reps, stress_tags, pattern, role, domain invariati (regola B395 non toccata). Fuori scope: `fall_ladder` (riga «F2 1-2 m above the clip») ha la stessa ambiguità.
 
 **C283 — `route_intervals`: una salita per serie, e i drill PE con la loro categoria (Daniele, 2026-11-02: «4 × 1 min, rest 1:00… mi sembra strano, è pe?!»)** ✅ (2026-11-02). La prescrizione diceva `work_seconds` 60 + 60" di recupero, mentre descrizione e cue parlano di salite ripetute della stessa via con recupero ≈ tempo di salita: una via a OS −1 dura 2-4 min e calarsi ne porta via uno. Ora `sets` 4, `reps` 1 (una salita), `work_seconds` null (il player passa al «Done» manuale, come il 4x4), `rest_between_sets_seconds` 180 (default 1:1 per una salita di 2-3 min, mai oltre il doppio), nota riscritta. Grado, ancora PE, stress_tags, pattern, role, domain e intensity invariati (regola B395 non toccata). `category` main_strength → power_endurance su `route_intervals`, `four_by_four_bouldering`, `linked_boulders`: il player la stampava come etichetta («Main Strength»). Lettori della categoria verificati: nessun blocco filtra su `main_strength`, il report la usa solo col dominio `finger_strength`, athlete_context non la elenca, l'ad-hoc cambia solo l'ordine del blocco main. Golden: 2 digest a290 + 3 c272 (`power_endurance_gym`), rigenerati dopo il diff dell'output grezzo, stessi id. Fuori scope: un recupero che copia il tempo di salita reale (sarebbe un A sul player).

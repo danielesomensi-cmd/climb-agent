@@ -7,11 +7,21 @@ import { CATALOG_EXERCISE_IMAGES, exerciseImage } from "@/lib/exercise-images";
 
 const CORE = join(process.cwd(), "public", "exercises", "core");
 
+// C285: these two pictures showed a different exercise (a floor straddle, a lying
+// leg raise) and were removed; the redraws come with the C285 batch. Drop an id
+// from here when its new picture ships — the last test below enforces it.
+const AWAITING_REDRAW = new Set(["ce_dragon_flag_tuck", "ce_straddle_l_sit"]);
+
 /** C280 — one illustration set for the circuit, reused by the guided players. */
 describe("core circuit illustrations", () => {
   it("gives every circuit exercise an image (no TODO placeholders left)", () => {
-    const without = CORE_EXERCISES.filter((e) => !e.image).map((e) => e.id);
+    const without = CORE_EXERCISES.filter((e) => !e.image && !AWAITING_REDRAW.has(e.id)).map((e) => e.id);
     expect(without).toEqual([]);
+  });
+
+  it("lists as awaiting a redraw only exercises that still have no image", () => {
+    const redrawn = CORE_EXERCISES.filter((e) => AWAITING_REDRAW.has(e.id) && e.image).map((e) => e.id);
+    expect(redrawn).toEqual([]);
   });
 
   it("ships no orphan file: every image in the folder is referenced", () => {
@@ -21,7 +31,7 @@ describe("core circuit illustrations", () => {
   });
 
   it("uses one format, WebP", () => {
-    const other = CORE_EXERCISES.map((e) => e.image!).filter((f) => !f.endsWith(".webp"));
+    const other = CORE_EXERCISES.flatMap((e) => (e.image ? [e.image] : [])).filter((f) => !f.endsWith(".webp"));
     expect(other).toEqual([]);
   });
 });

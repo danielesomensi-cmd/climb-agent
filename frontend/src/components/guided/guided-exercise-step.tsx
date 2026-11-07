@@ -22,7 +22,7 @@ import { displayPrescribedGrade } from "@/lib/gradeUtils";
 import { formatLoad, loadInputLabel } from "@/lib/load-units";
 import { LimitProblemLogger } from "@/components/training/limit-problem-logger";
 import { limitFeedbackFields, limitTargetFor } from "@/lib/limit-problems";
-import { exerciseImage } from "@/lib/exercise-images";
+import { exerciseImagePanels } from "@/lib/exercise-images";
 
 interface GuidedExerciseStepProps {
   exercise: GuidedExercise;
@@ -377,8 +377,8 @@ export function GuidedExerciseStep({
     .filter((line) => !(heroShowsPrescribedLoad && line.startsWith("Load: ")));
   const showTimer = !isTestMeasurement && !isUnilateralTestMeasurement && hasExerciseTimer(exercise.prescription);
   const cueCount = exercise.cues?.length ?? 0;
-  const image = exerciseImage(exercise.exerciseId);
-  const hasHowTo = cueCount > 0 || !!exercise.prescription.notes || !!exercise.videoUrl || !!image;
+  const images = exerciseImagePanels(exercise.exerciseId);
+  const hasHowTo = cueCount > 0 || !!exercise.prescription.notes || !!exercise.videoUrl || images.length > 0;
   const isAlreadyDone = exercise.status === "done";
   const isAlreadySkipped = exercise.status === "skipped";
 
@@ -665,17 +665,19 @@ export function GuidedExerciseStep({
               <ChevronDown className="size-4 shrink-0 transition-transform group-open:rotate-180 motion-reduce:transition-none" />
             </summary>
             <div className="space-y-2 px-3 pb-3">
-              {/* C280: same illustration as the core circuit, where one exists */}
-              {image && (
+              {/* C280: same illustration as the core circuit, where one exists;
+                  C285: a technique drill can show a second position below */}
+              {images.map((src, i) => (
                 <Image
-                  src={image}
-                  alt={exercise.name}
+                  key={src}
+                  src={src}
+                  alt={images.length > 1 ? `${exercise.name} (${i + 1}/${images.length})` : exercise.name}
                   width={560}
                   height={280}
                   sizes="(max-width: 640px) 100vw, 560px"
                   className="mx-auto max-h-[140px] w-full object-contain rounded-xl"
                 />
-              )}
+              ))}
               {exercise.prescription.notes && (
                 <p className="text-sm text-muted-foreground italic">
                   {exercise.prescription.notes}

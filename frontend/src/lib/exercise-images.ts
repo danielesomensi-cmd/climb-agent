@@ -7,9 +7,17 @@
 // mobility catalog).
 // C282: the strength and prehab moves Daniele's plans use most whose name does
 // not show the position (front lever one leg, wall slide, face pull, wrist
-// curls…) get their own illustration in `strength/`; hanging_leg_raise reuses
-// the circuit's Hanging Leg Raise (same exercise). Knees to elbows and the
+// curls…) get their own illustration in `strength/`. Knees to elbows and the
 // thigh-supported elbow eccentric curl stay without one (no exact picture).
+// C285: technique drills whose position a name cannot teach (backstep, drop
+// knee, flag…) get their own illustration in `technique/`, made from a 3D
+// mannequin pose and checked by an adversarial coach review (recipe in
+// scripts/illustrations/README.md). Drills that are rules, tempos or attempt
+// protocols stay without a picture on purpose. A drill whose lesson needs a
+// second position lists it in CATALOG_EXERCISE_EXTRA_PANELS. C285 also removed
+// two pictures that showed a different exercise (straddle L-sit drawn as a
+// floor straddle, tuck dragon flag drawn as a lying leg raise) and moved
+// hanging_leg_raise (legs to the bar) to the toes-to-bar picture.
 //
 // Only exact matches: same position, not just same muscles. Near variants
 // (weighted hollow, bent-knee raises, v_sit with hands behind) stay without
@@ -32,12 +40,9 @@ export const CATALOG_EXERCISE_IMAGES: Readonly<Record<string, string>> = {
   core_l_sit: "core/26_l_sit_floor.webp",
   test_l_sit_hold: "core/26_l_sit_floor.webp",
   single_leg_glute_bridge: "core/30_sl_glute_bridge.webp",
-  dragon_flag_tuck: "core/31_dragon_flag_tuck.webp",
   front_lever_tuck: "core/32_front_lever_tuck.webp",
   windshield_wipers: "core/33_hanging_wipers.webp",
   side_plank_star: "core/34_star_side_plank_r.webp",
-  straddle_l_sit: "core/36_straddle_l_sit.webp",
-  hanging_leg_raise: "core/38_hanging_leg_raise.webp",
   hanging_leg_raise_horizontal: "core/38_hanging_leg_raise.webp",
   nordic_curl: "core/39_nordic_curl.webp",
   arch_hold: "core/40_arch_body_hold.webp",
@@ -67,6 +72,27 @@ export const CATALOG_EXERCISE_IMAGES: Readonly<Record<string, string>> = {
   forearm_pronation_supination: "strength/forearm_pronation_supination.webp",
   bear_crawl: "strength/bear_crawl.webp",
   turkish_getup: "strength/turkish_getup.webp",
+  hanging_leg_raise: "strength/toes_to_bar.webp",
+  // C285 — exact existing pictures (same position; dynamic variants follow the
+  // wall_handstand_shrugs precedent: the picture shows the position they move in)
+  pike_pushup: "core/28_pike_pulse.webp",
+  plank: "core/05_body_saw.webp",
+  rkc_plank: "core/05_body_saw.webp",
+  hollow_rock: "core/01_hollow_body.webp",
+  copenhagen_dynamic: "core/12_copenhagen_r.webp",
+  elbow_wrist_extensor_eccentric: "strength/reverse_wrist_curl.webp",
+  test_hip_flexibility: "stretch/stretch_seated_straddle.webp",
+  // C285 — technique drills
+  twist_lock_drill: "technique/twist_lock_backstep.webp",
+  flag_practice: "technique/flag_outside.webp",
+};
+
+/**
+ * C285: further panels of a drill whose lesson is more than one position,
+ * shown after the main picture in the guided player's How-to.
+ */
+export const CATALOG_EXERCISE_EXTRA_PANELS: Readonly<Record<string, readonly string[]>> = {
+  twist_lock_drill: ["technique/drop_knee.webp"],
 };
 
 const LEFT_SIDE: Readonly<Record<string, string>> = {
@@ -94,6 +120,13 @@ export function exerciseImage(
   if (!file) return null;
   if (side !== "LEFT") return DIR + file;
   return DIR + (LEFT_SIDE[file] ?? (file.startsWith("stretch/") ? leftStretch(file) : file));
+}
+
+/** C285: every picture of an exercise, main one first; [] when it has none. */
+export function exerciseImagePanels(exerciseId: string | null | undefined): string[] {
+  const main = exerciseImage(exerciseId);
+  if (!main || !exerciseId) return [];
+  return [main, ...(CATALOG_EXERCISE_EXTRA_PANELS[exerciseId] ?? []).map((f) => DIR + f)];
 }
 
 /**

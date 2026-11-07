@@ -1,0 +1,80 @@
+{
+ "_comment": "twist_lock_drill, panel 'Drop knee' (panels[1], 0-based), coach correction applied (pelvis sits back over the right foot). Right drop knee on a 20 deg overhang: right foot OUTSIDE edge on RF, right knee turned in and down under the right hip (pole down+0.15*in), knee ~level with the foot, shin roughly horizontal along the wall; right hip into the wall (pelvis yaw +58) and pelvis shifted 14 cm toward RF (x 0.12, y 1.22) so the weight sits on the drop-knee side; left foot INSIDE edge on LF (moved in to -0.40) pushing nearly straight; left arm long and straight on LH (moved to -0.472, 2.037); right arm reaching up-right to T (moved to 0.37, 2.31); chest turned left. Camera: rear view shifted 15 deg right, lens at hip height.",
+ "_camera_note": "camfix A: camera only, open (left) side az -30 el 0",
+ "figure": "woman",
+ "wall": {
+  "angle_deg": 20
+ },
+ "holds": {
+  "LH": {
+   "type": "jug",
+   "pos": [
+    -0.472,
+    2.037
+   ],
+   "lip": "up"
+  },
+  "T": {
+   "type": "jug",
+   "pos": [
+    0.37,
+    2.31
+   ],
+   "lip": "up"
+  },
+  "LF": {
+   "type": "chip",
+   "pos": [
+    -0.4,
+    0.44
+   ],
+   "size": 1.3
+  },
+  "RF": {
+   "type": "chip",
+   "pos": [
+    0.5,
+    0.8
+   ],
+   "size": 1.3
+  }
+ },
+ "pelvis": {
+  "pos": [
+   0.12,
+   1.22,
+   0.22
+  ],
+  "yaw": 58
+ },
+ "chest": {
+  "twist": -5,
+  "side": -10
+ },
+ "head": {
+  "look_at": "T"
+ },
+ "left_hand": {
+  "hold": "LH",
+  "straight": true
+ },
+ "right_hand": {
+  "hold": "T"
+ },
+ "left_foot": {
+  "hold": "LF",
+  "edge": "inside"
+ },
+ "right_foot": {
+  "hold": "RF",
+  "edge": "outside",
+  "pole": "down+0.15*in",
+  "turn_deg": 55,
+  "ankle_limit_deg": 60
+ },
+ "camera": {
+  "azimuth": -30,
+  "elevation": 0,
+  "margin": 0.9
+ }
+}

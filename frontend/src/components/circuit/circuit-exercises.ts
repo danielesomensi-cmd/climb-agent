@@ -114,7 +114,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "hard",
     requires_bar: false,
-    image: "31_dragon_flag_tuck.webp",
+    // C285: the old picture showed a lying leg raise (hips on the bench), not a dragon flag
   },
   {
     id: "ce_front_lever_tuck",
@@ -333,7 +333,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "isometric",
     difficulty: "hard",
     requires_bar: false,
-    image: "36_straddle_l_sit.webp",
+    // C285: the old picture showed a floor straddle, legs down, not a lifted straddle L-sit
   },
   {
     id: "ce_v_up_hold",

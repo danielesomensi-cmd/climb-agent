@@ -64,8 +64,8 @@ describe("strength illustrations", () => {
     expect(exerciseImage("toes_to_bar", "LEFT")).toBe("/exercises/strength/toes_to_bar.webp");
   });
 
-  it("reuses the circuit's Hanging Leg Raise and leaves inexact moves without a picture", () => {
-    expect(exerciseImage("hanging_leg_raise")).toBe("/exercises/core/38_hanging_leg_raise.webp");
+  it("shows toes-to-bar for the legs-to-the-bar raise and leaves inexact moves without a picture", () => {
+    expect(exerciseImage("hanging_leg_raise")).toBe("/exercises/strength/toes_to_bar.webp");
     expect(exerciseImage("knees_to_elbows")).toBeNull();
     expect(exerciseImage("elbow_eccentric_curl")).toBeNull();
   });
