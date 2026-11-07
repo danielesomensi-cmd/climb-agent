@@ -11,7 +11,8 @@ import { PERSIST_MAX_AGE_MS } from "@/lib/query-persist";
  *
  * staleTime 60s — week plan changes via mutations (replanner, feedback)
  * which use setQueryData / invalidateQueries to push updates immediately.
- * Background revalidation after 60s catches any server-side cascade.
+ * Background revalidation after 60s catches any server-side cascade, and
+ * (B414) a return to the foreground refetches a week older than that.
  *
  * structuralSharing: false — React Query's default deep-equality structural
  * sharing preserves the OLD reference when new data is "structurally similar".
@@ -65,6 +66,11 @@ export function useWeekPlan(weekNum = 0, enabled = true, options: UseWeekPlanOpt
     structuralSharing: false,
     // A245 B-2: see use-user-state — gcTime must outlive the persisted cache.
     gcTime: PERSIST_MAX_AGE_MS,
+    // B414 (ORPHAN): back in the foreground, a week older than staleTime is
+    // read again — the plan may have changed from another client (the coach
+    // swapped the treadmill on 04/11 while the phone kept the morning's copy).
+    // At most one GET a minute; every other query keeps the global `false`.
+    refetchOnWindowFocus: true,
   });
 
   // Prefetch the next week once we have data for the current one.

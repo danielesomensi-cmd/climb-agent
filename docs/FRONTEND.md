@@ -28,7 +28,7 @@ Answers typed before signing up live in `localStorage` under `climb_onboarding_d
 - `/outdoor` — Outdoor history, stats, per-spot breakdown, grade histogram. A324: an attempt's outcome is read only through `src/lib/outdoor-result.ts` (a send = `sent` on lead; clean on second / top-rope is blue, A0 amber), the route styles through `src/lib/outdoor-routes.ts`; the trash deletes one crag of the day (`?spot_name=`)
 - `/whats-next` — Votable roadmap + feedback form
 - `/settings` — Profile, goals, equipment, spots, regenerate assessment/macrocycle
-- `/guided/[date]/[sessionId]` — Step-by-step guided session with timer. B414: a row is done on Done or with every set counted (`guidedRowDone`), `completed_sets` goes out in real sets (`realSetsFromInternal`), the summary marks fully counted rows «all sets counted»
+- `/guided/[date]/[sessionId]` — Step-by-step guided session with timer. B414: a row is done on Done or with every set counted (`guidedRowDone`), `completed_sets` goes out in real sets (`realSetsFromInternal`), the summary marks fully counted rows «all sets counted»; B414 ORPHAN: a `SessionNotInPlanError` (`lib/session-not-in-plan.ts`) keeps the body «to decide» and shows `OrphanSessionBox` (in place of / extra / discard, `lib/orphan-session.ts`), /today lists such entries (`OrphanSessionsBanner`); Start re-reads a week cached > 60 s (`lib/start-plan-check.ts`, 3 s bound, fail-open) and `useWeekPlan` refetches on focus
 - `/free-session` — Log free climbing sessions (lead/boulder/outdoor)
 - `/mobility` — Stretching & Mobility guided flow (multi-region setup → auto-advancing timer, Core Circuit UX)
 - `/tabata` — Standalone interval timer (documented in `docs/user_guide_v1.md` §16)

@@ -294,6 +294,8 @@ Audio cues require one initial tap to activate (iOS requirement).
 
 **Finishing without a connection.** If **Submit & finish** cannot reach the server, your feedback is saved on the phone. It is sent once, with the real session duration, as soon as the connection comes back while Today is open; a toast confirms it. In the meantime the session's button reads **Waiting to sync** (it cannot be discarded) and opens "saved on this device" with **Send now**, never a second submit.
 
+**A session that left your plan while you trained.** If the plan changed from somewhere else (the coach swapped the session, another device moved it) while you were playing a copy on the phone, the app does not save the session against a plan that no longer has it. The player says *This session is no longer in your plan* and keeps your feedback on the phone until you choose: **Log it in place of …** (the session there now leaves the day and yours takes its slot — offered for each session still to do that day), **Log it as an extra** (only when the day has a free slot), or **Discard** (it asks first; the feedback is deleted). Until you choose, Today shows the session in a yellow note, and the other saved sessions keep syncing. To make this rare, the week is read again when you come back to the app, and **Start session** checks the plan first when the copy on the phone is more than a minute old (offline it starts as usual).
+
 **End of a rest on rep-based work**: three beeps and the voice cue "Go", so you notice without looking at the phone. Like every cue, the beeps follow the phone's silent switch, and on iPhone there is no vibration (Safari does not allow it).
 
 ---

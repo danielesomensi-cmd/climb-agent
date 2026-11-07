@@ -16,6 +16,8 @@ import { GuidedExerciseStep } from "@/components/guided/guided-exercise-step";
 import { GUIDED_ACTION_BAR_SPACE } from "@/components/guided/guided-action-bar";
 import { GuidedSummary } from "@/components/guided/guided-summary";
 import { postFeedback, getState } from "@/lib/api";
+import { isSessionNotInPlan } from "@/lib/session-not-in-plan";
+import { OrphanSessionBox } from "@/components/guided/orphan-session-box";
 import { queryKeys } from "@/lib/query-keys";
 import { writeWeekCache } from "@/lib/week-cache";
 import { bodyweightFromState, hasWorkoutStarted, loadGuidedSession } from "@/lib/guided-session-utils";
@@ -175,6 +177,8 @@ export default function GuidedSessionPage() {
 
   /** B397 G1 — the key the session was read from, and who owns it. */
   const scopeRef = useRef<{ key: string; owner: string | null } | null>(null);
+  /** B414 — the same pinned key, for render (the orphan box writes under it). */
+  const [pinnedKey, setPinnedKey] = useState<string | null>(null);
   /**
    * B397 G2 — latched when the session is handed over. Synchronous, unlike
    * `handedOver`: a tap landing between the end of the request and the route
@@ -214,6 +218,7 @@ export default function GuidedSessionPage() {
         scopeRef.current = null;
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setState(null);
+        setPinnedKey(null);
         router.replace(`/today?date=${date}`);
       }
       return;
@@ -222,6 +227,7 @@ export default function GuidedSessionPage() {
     const loaded = loadGuidedSession(date, sessionId);
     if (loaded) {
       scopeRef.current = { key: loaded.key, owner: loaded.owner };
+      setPinnedKey(loaded.key);
       let saved = loaded.state;
       // B397 G7 — body weight for the test sessions' total-load maths comes
       // from the ['state'] cache (persisted, so it works offline); the GET is
@@ -688,7 +694,29 @@ export default function GuidedSessionPage() {
         qc.invalidateQueries({ queryKey: queryKeys.state });
         // A245 G-3 (F36): loads just changed — drop cached resolutions.
         qc.invalidateQueries({ queryKey: queryKeys.sessionResolveAll });
-      } catch {
+      } catch (err) {
+        // B414 (ORPHAN): the session is no longer on that day of the plan —
+        // the server saved nothing. Not a network error: keep the exact body
+        // «to decide» and show the choices right here (OrphanSessionBox).
+        if (isSessionNotInPlan(err)) {
+          const undecided: PendingGuidedState = {
+            ...state,
+            exercises: finalExercises,
+            submitStatus: "feedback_pending",
+            pendingFeedback: body,
+            orphan: {
+              detectedAt: new Date().toISOString(),
+              ...(err.daySessions ? { daySessions: err.daySessions } : {}),
+            },
+          };
+          if (!writeGuided(scope.key, undecided)) {
+            setError("Could not save your session on this device. Check your connection and try again.");
+            return;
+          }
+          setShowSummary(false);
+          setState(undecided);
+          return;
+        }
         // Feedback POST failed — save for retry, with the exact body (B397 G3).
         const pending: PendingGuidedState = {
           ...state,
@@ -831,6 +859,20 @@ export default function GuidedSessionPage() {
           </div>
         </div>
         <main className="p-4">
+          {/* B414 (ORPHAN): refused because the session left the plan — the
+              athlete chooses (in place of / as an extra / discard). */}
+          {(state as PendingGuidedState).orphan && pinnedKey ? (
+            <OrphanSessionBox
+              date={date}
+              sessionId={sessionId}
+              sessionName={sessionName}
+              storageKey={pinnedKey}
+              onDone={() => {
+                finishedRef.current = true;
+                router.replace(`/today?date=${date}`);
+              }}
+            />
+          ) : (
           <Card className="gap-0 py-0">
             <CardContent className="space-y-4 py-5">
               <div className="flex items-start gap-3">
@@ -862,6 +904,7 @@ export default function GuidedSessionPage() {
               </div>
             </CardContent>
           </Card>
+          )}
         </main>
       </div>
     );

@@ -23,6 +23,7 @@ import { localToday } from "@/lib/key-sessions";
 import { scheduleIdle } from "@/lib/hooks/queries/use-week-plan";
 import { useOnline } from "@/lib/hooks/use-auth-wait";
 import { confirmServerDenied, hasCachedServerNo } from "@/lib/hooks/use-subscription";
+import { sessionStillPlanned, startNeedsPlanCheck } from "@/lib/start-plan-check";
 import { ChunkErrorBoundary } from "@/components/chunk-error-boundary";
 import { notifyChunkLoadFailure } from "@/lib/chunk-load";
 import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, RefreshCw, Mountain, Star, AlertTriangle, Loader2, RotateCcw, CloudOff } from "lucide-react";
@@ -955,16 +956,31 @@ export function SessionCard({
                   // fresh answer before a NEW session goes to /subscribe (the
                   // athlete may just have paid); resume and queued feedback
                   // never wait for the network.
-                  if (!hasCachedServerNo(qc) || resumesSavedSession(session, date)) {
+                  const resumes = resumesSavedSession(session, date);
+                  // B414 (ORPHAN) — a NEW session from a week copy older than
+                  // a minute: is it still on that day? (bounded, fail-open)
+                  const checkPlan = !resumes && startNeedsPlanCheck(qc, date);
+                  const checkPaywall = !resumes && hasCachedServerNo(qc);
+                  if (!checkPlan && !checkPaywall) {
                     if (handleStartGuided(session, date, router)) setStarting(true);
                     return;
                   }
                   setStarting(true);
                   const tap = ++startTapRef.current;
                   confirmingRef.current = true;
-                  void confirmServerDenied(qc).then((denied) => {
+                  void Promise.all([
+                    checkPaywall ? confirmServerDenied(qc) : Promise.resolve(false),
+                    checkPlan ? sessionStillPlanned(qc, date, session.session_id) : Promise.resolve(true),
+                  ]).then(([denied, stillPlanned]) => {
                     if (startTapRef.current !== tap) return; // superseded: no late navigation
                     confirmingRef.current = false;
+                    if (!stillPlanned) {
+                      toast.warning("Your plan changed", {
+                        description: "This session is no longer on that day — check the updated plan.",
+                      });
+                      setStarting(false);
+                      return;
+                    }
                     if (!handleStartGuided(session, date, router, denied)) setStarting(false);
                   });
                 }}

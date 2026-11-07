@@ -75,6 +75,7 @@ import { toast } from "sonner";
 const OutdoorLogForm = dynamic(() => import("@/components/training/OutdoorLogForm"), { ssr: false });
 import { TodayHeroCTA, type NextSessionInfo } from "@/components/training/today-hero-cta";
 import { PausedBanner } from "@/components/training/paused-banner";
+import { OrphanSessionsBanner } from "@/components/training/orphan-sessions-banner";
 import { confirmFeedback } from "@/lib/haptics";
 import {
   Dialog,
@@ -1241,6 +1242,10 @@ function TodayContent() {
             Your subscription is active. Welcome to climb-agent Pro!
           </Banner>
         )}
+
+        {/* B414 (ORPHAN): a played session the server refused because it left
+            the plan — waiting on the device for the athlete's choice. */}
+        <OrphanSessionsBanner authReady={authReady} />
 
         {/* Resume in-progress session banner.
             B396 — only for a session no card on this page can resume (another

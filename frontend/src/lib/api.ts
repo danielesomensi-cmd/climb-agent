@@ -1,3 +1,10 @@
+import {
+  SESSION_NOT_IN_PLAN,
+  SESSION_NOT_IN_PLAN_MESSAGE,
+  parseSessionNotInPlan,
+  type DaySessionRef,
+  type SessionNotInPlanInfo,
+} from "@/lib/session-not-in-plan";
 import type { LoadUnit } from "@/lib/load-units";
 import type { AutoReschedule } from "@/lib/auto-reschedule";
 import type {
@@ -214,6 +221,10 @@ async function _send<T>(
         detail || "Subscription required. Manage your plan in Settings.",
       );
     }
+    // B414: a session that is not in the plan any more — before the stale
+    // check (its 409 carries no revision), and never a generic 422.
+    const orphan = parseSessionNotInPlan(res.status, body);
+    if (orphan) throw new SessionNotInPlanError(res.status, orphan);
     if (res.status === 409) {
       // B371: a write on an older revision of the week — nothing was saved.
       const stale = parseStalePlanBody(body);
@@ -266,6 +277,27 @@ export class ApiError extends Error {
     super(message);
     this.name = "ApiError";
     this.status = status;
+  }
+}
+
+/**
+ * B414 (INBOX-2026-11-04-ORPHAN) — the session being logged is no longer on
+ * that day of the plan; nothing was saved. Shapes and the recognizer live in
+ * `session-not-in-plan.ts` (no dependency on this module, so code that only
+ * needs to recognize the error does not pull — or have to mock — the client).
+ */
+export class SessionNotInPlanError extends ApiError {
+  readonly code = SESSION_NOT_IN_PLAN;
+  date: string | null;
+  sessionId: string | null;
+  /** The day as the server sees it (409 of /feedback only). */
+  daySessions: DaySessionRef[] | null;
+  constructor(status: number, info: SessionNotInPlanInfo) {
+    super(status, SESSION_NOT_IN_PLAN_MESSAGE);
+    this.name = "SessionNotInPlanError";
+    this.date = info.date ?? null;
+    this.sessionId = info.session_id ?? null;
+    this.daySessions = Array.isArray(info.day_sessions) ? info.day_sessions : null;
   }
 }
 

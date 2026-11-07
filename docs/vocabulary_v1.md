@@ -1754,6 +1754,14 @@ Other A301 semantics:
   `/events` → 422, dry run included, nothing written (no completion-log row — before B414 an orphan row was
   logged for a session that was not there). `/feedback` recognises it (never the B216 rollover retry) and still
   answers 200 for now; a `mark_done` on a session already done is matched (idempotent), not an orphan.
+  **Client (B414 step 24):** `request()` turns the `/events` 422 (the sentence above) and the future `/feedback`
+  409 (`detail.code: "session_not_in_plan"`, step 27) into `SessionNotInPlanError` (`lib/session-not-in-plan.ts`,
+  never a `StalePlanError`). The guided player keeps the exact body on the phone with an **`orphan`** mark
+  (`{detectedAt, daySessions?}`, localStorage only) and shows the choices: *in place of X* (`remove_session` X +
+  `add_planned_session` / `add_custom_session` in X's slot, after a dry run that must show the session on the day),
+  *as an extra* (only with a free slot), *discard* (confirmed); a `generated_` session cannot be placed back. The
+  replay skips an `orphan` entry (`PendingSyncResult.undecided` counts the newly refused ones; the queue goes on)
+  and /today lists them (`OrphanSessionsBanner`).
 - **Quick-add `force`**: compatibility no-op (no `forced`, no `user_forced` stamp); every quick-add is applied.
 - **`change_gym`** losing a finger session: no compensation; the `change_gym` adaptation gets
   `lost_finger: true` + a warning string. A319: the catalog `required_equipment` of `test_max_weighted_pullup`

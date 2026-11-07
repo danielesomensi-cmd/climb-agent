@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ApiError, postFeedback } from "@/lib/api";
+import { isSessionNotInPlan, type DaySessionRef } from "@/lib/session-not-in-plan";
 import { buildGuidedFeedbackItems, isPlayerSession } from "@/lib/feedback-items";
 import { getKeyPrefix } from "@/lib/guided-session-utils";
 import { notifyGuidedProgress } from "@/lib/guided-resume";
@@ -44,8 +45,21 @@ export interface GuidedFeedbackBody {
   status: "done";
 }
 
+/**
+ * B414 (INBOX-2026-11-04-ORPHAN) — the server refused this feedback because
+ * the session is no longer on that day of the plan (`SessionNotInPlanError`).
+ * The entry stays on the phone, «to decide»: the replay passes over it (the
+ * queue goes on) until the athlete picks a choice in the player
+ * (orphan-session.ts). `daySessions` is the day as the server saw it, when
+ * the refusal carried it.
+ */
+export interface OrphanMark {
+  detectedAt: string;
+  daySessions?: DaySessionRef[] | null;
+}
+
 /** A guided state saved after a failed submit. B397: it carries the body. */
-export type PendingGuidedState = GuidedSessionState & { pendingFeedback?: GuidedFeedbackBody };
+export type PendingGuidedState = GuidedSessionState & { pendingFeedback?: GuidedFeedbackBody; orphan?: OrphanMark };
 
 /** Finished or abandoned sessions are cleaned up after this (B127). */
 const STALE_MS = 24 * 60 * 60 * 1000;
@@ -140,6 +154,12 @@ function isPermanent(err: unknown): boolean {
 export interface PendingSyncResult {
   /** POSTed and accepted. */
   sent: number;
+  /**
+   * B414: refused this pass because the session is no longer in the plan —
+   * kept «to decide», the queue went on. Entries already waiting for a
+   * decision are not counted (nor sent again).
+   */
+  undecided?: number;
   /** Dropped without a POST: the server already logged this session. */
   alreadySaved: number;
   /** Dropped after a permanent rejection (never silently: see announce). */
@@ -169,7 +189,7 @@ export function flushPendingGuidedFeedback(options: FlushOptions = {}): Promise<
 }
 
 async function runFlush({ alreadyLogged }: FlushOptions): Promise<PendingSyncResult> {
-  const result: PendingSyncResult = { sent: 0, alreadySaved: 0, rejected: 0, failed: 0 };
+  const result: PendingSyncResult = { sent: 0, alreadySaved: 0, rejected: 0, failed: 0, undecided: 0 };
   const now = Date.now();
   const housekeeping = { removedStale: 0 };
   try {
@@ -178,7 +198,9 @@ async function runFlush({ alreadyLogged }: FlushOptions): Promise<PendingSyncRes
     // B397 review (round 2) — a queued entry that is gone (sent, already on
     // the server, refused, or stale) must not leave its card on "Waiting to
     // sync": the cards re-read their label on this event.
-    if (result.sent || result.alreadySaved || result.rejected || housekeeping.removedStale) notifyGuidedProgress();
+    if (result.sent || result.alreadySaved || result.rejected || result.undecided || housekeeping.removedStale) {
+      notifyGuidedProgress();
+    }
   }
 }
 
@@ -210,12 +232,22 @@ async function flushEntries(
       result.alreadySaved++;
       continue;
     }
+    // B414: waiting for the athlete's choice — never re-sent on its own.
+    if (saved.orphan) continue;
 
     try {
       await postFeedback(pendingFeedbackBody(saved));
       window.localStorage.removeItem(key);
       result.sent++;
     } catch (err) {
+      if (isSessionNotInPlan(err)) {
+        // B414: not in the plan any more. Kept «to decide» (the body is the
+        // only copy), and the queue goes on: this answer came from the server,
+        // so the network is fine for the others.
+        markOrphan(key, saved, err.daySessions);
+        result.undecided = (result.undecided ?? 0) + 1;
+        continue;
+      }
       if (isPermanent(err)) {
         window.localStorage.removeItem(key);
         result.rejected++;
@@ -230,6 +262,53 @@ async function flushEntries(
     }
   }
   return result;
+}
+
+/** B414 — keep the entry, flagged «to decide», with the exact body it had. */
+export function markOrphan(key: string, saved: PendingGuidedState, daySessions?: DaySessionRef[] | null): boolean {
+  const next: PendingGuidedState = {
+    ...saved,
+    submitStatus: "feedback_pending",
+    pendingFeedback: pendingFeedbackBody(saved),
+    orphan: { detectedAt: new Date().toISOString(), ...(daySessions ? { daySessions } : {}) },
+  };
+  try {
+    window.localStorage.setItem(key, JSON.stringify(next));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** B414 — the choice was made (session placed): the replay may send it again. */
+export function clearOrphan(key: string): void {
+  const saved = readEntry(key);
+  if (!saved?.orphan) return;
+  const rest: PendingGuidedState = { ...saved };
+  delete rest.orphan;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(rest));
+  } catch {
+    /* storage blocked: the entry stays «to decide» */
+  }
+}
+
+export interface UndecidedFeedback {
+  key: string;
+  date: string;
+  sessionId: string;
+  sessionName: string;
+}
+
+/** B414 — sessions waiting for «in place of / extra / discard» (for /today's banner). */
+export function listUndecidedGuidedFeedback(): UndecidedFeedback[] {
+  const out: UndecidedFeedback[] = [];
+  for (const key of scopedKeys()) {
+    const saved = readEntry(key);
+    if (saved?.submitStatus !== "feedback_pending" || !saved.orphan) continue;
+    out.push({ key, date: saved.date, sessionId: saved.sessionId, sessionName: saved.sessionName || saved.sessionId });
+  }
+  return out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.sessionId.localeCompare(b.sessionId)));
 }
 
 /**
@@ -291,6 +370,11 @@ export function announcePendingSync(result: PendingSyncResult): void {
   }
   if (result.rejected > 0) {
     toast.error("Saved session feedback was rejected by the server and could not be sent.", {
+      duration: 10_000,
+    });
+  }
+  if ((result.undecided ?? 0) > 0) {
+    toast.warning("A session you played is no longer in your plan — choose what to do with it on Today.", {
       duration: 10_000,
     });
   }
