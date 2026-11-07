@@ -17,10 +17,9 @@ import type { RetestAxisStatus, RetestStatus } from "@/lib/types";
  *
  * A choice already made hides it: a test in the plan, an active request, or a
  * postpone — which moves `valid_until`, so the card comes back 14 days before
- * the NEW date. B414 review: a 2-week postpone of a max that already expired
- * starts from today, so its new date is already inside the window and the
- * card stays (with the new date): open point for Daniele, not a bug of the
- * rule as written.
+ * the NEW date, and never in the 14 days after the postpone (the server's
+ * `expiring`, POSTPONE_QUIET_D, Daniele 07/11): a 2-week postpone of a max
+ * that already expired brings it back on the new expiry day.
  */
 export function expiryAxes(status?: RetestStatus | null): RetestAxisStatus[] {
   return coveredAxes(status).filter(

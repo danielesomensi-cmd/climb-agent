@@ -175,6 +175,29 @@ class TestEngine:
         st[rp.DECLINES_KEY][0]["kind"] = "decline"
         assert rp.official_max(st, rp.PROTOCOL_HANG_7S, "2027-01-05")["valid_until"] == "2026-12-22"
 
+    def test_the_card_stays_hidden_14_days_after_a_postpone(self):
+        # Daniele 07/11 («proroga ok»): a 2-week postpone of a max that had
+        # already expired (22/12) starts from today (10/01 → 24/01): its new
+        # date is inside the 14-day window at once. After a postpone the card
+        # stays hidden POSTPONE_QUIET_D days: back on the new expiry day.
+        st = _daniele()
+        st[rp.DECLINES_KEY] = [{"axis": "finger", "kind": "postpone", "trigger": "expiry",
+                                "official_date": "2026-09-24", "until": "2027-01-24",
+                                "declined_at": "2027-01-10"}]
+        flags = {on: (om["expiring"], om["expired"]) for on in ("2027-01-10", "2027-01-23", "2027-01-24",
+                                                               "2027-01-25")
+                 for om in [rp.official_max(st, rp.PROTOCOL_HANG_7S, on)]}
+        assert flags == {"2027-01-10": (False, False), "2027-01-23": (False, False),
+                         "2027-01-24": (True, False), "2027-01-25": (False, True)}
+        # A 4-week postpone made inside the window (10/12, max until 22/12 →
+        # 19/01): the window (05/01) is already past the quiet days (24/12).
+        st[rp.DECLINES_KEY][0].update({"until": "2027-01-19", "declined_at": "2026-12-10"})
+        assert rp.official_max(st, rp.PROTOCOL_HANG_7S, "2027-01-04")["expiring"] is False
+        assert rp.official_max(st, rp.PROTOCOL_HANG_7S, "2027-01-05")["expiring"] is True
+        # No postpone: the plain 14-day window.
+        st.pop(rp.DECLINES_KEY)
+        assert rp.official_max(st, rp.PROTOCOL_HANG_7S, "2026-12-08")["expiring"] is True
+
     def test_from_until_on_the_test_is_proposed_again(self):
         # A covered week after the extension: due again from `until` (the
         # natural maintenance trigger keeps its name, A320; with none it

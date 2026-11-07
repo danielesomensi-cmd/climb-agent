@@ -748,7 +748,8 @@ anchored loads and their closed loop (`anchored_load` → the legacy branch),
 the A290 rotation, the A292 PE anchor, the tested coach and the policy's
 coverage. Now the 90 days are the max's **validity**, informational only:
 `official_max` returns `valid_until` (test day + `TEST_FRESH_DAYS` − 1),
-`expired` and `expiring` (from `EXPIRY_WARNING_D` = 14 days before), and so does
+`expired` and `expiring` (from `EXPIRY_WARNING_D` = 14 days before; never in the
+`POSTPONE_QUIET_D` = 14 days after the latest postpone's `declined_at`), and so does
 `retest_status` per axis. The axis stays covered: from `MAINTENANCE_RETEST_D`
 the maintenance trigger proposes the test in every week the phase allows (never
 in performance / deload, never after the end of the macrocycle — the projection

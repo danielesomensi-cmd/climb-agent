@@ -76,6 +76,10 @@ TEST_FRESH_DAYS = 90
 #: B414: the max is ``expiring`` from this many days before ``valid_until``
 #: (the Today card "Do the test / Postpone the expiry" shows from then on).
 EXPIRY_WARNING_D = 14
+#: B414 (Daniele 07/11, «proroga ok»): after a postpone the card stays hidden
+#: this many days — a 2-week postpone of a max that had already expired starts
+#: from today, so its new date would fall straight inside the warning window.
+POSTPONE_QUIET_D = 14
 #: B414 (B414-2): "Postpone the expiry" — a postpone (A320 ``kind: postpone``)
 #: also extends the max's validity to its ``until`` (``valid_until`` = the
 #: later of the test day + TEST_FRESH_DAYS − 1 and the active postpone's
@@ -303,21 +307,42 @@ def _postponed_until(state: Mapping[str, Any], protocol: str, test_day: date) ->
     return best
 
 
-def _validity(tested: bool, test_day: date, on: date, postponed: Optional[date] = None) -> Dict[str, Any]:
+def _postponed_on(state: Mapping[str, Any], protocol: str, test_day: date) -> Optional[date]:
+    """B414: the latest ``declined_at`` of the axis' ACTIVE postpones of the
+    test of ``test_day`` — the day the athlete last postponed the expiry."""
+    axis = _PROTOCOL_AXIS.get(protocol)
+    best: Optional[date] = None
+    for rec in state.get(DECLINES_KEY) or []:
+        if not isinstance(rec, Mapping) or rec.get("axis") != axis or rec.get("kind") != DECLINE_KIND_POSTPONE \
+                or str(rec.get("official_date") or "")[:10] != test_day.isoformat():
+            continue
+        on = _parse_date(rec.get("declined_at"))
+        if on is not None and (best is None or on > best):
+            best = on
+    return best
+
+
+def _validity(tested: bool, test_day: date, on: date, postponed: Optional[date] = None,
+              postponed_on: Optional[date] = None) -> Dict[str, Any]:
     """B414: ``valid_until`` / ``expired`` / ``expiring`` / ``extended`` of an
     official max on ``on`` (a non-test max has no validity: None / False).
     ``postponed`` (B414-2): an active postpone's ``until`` extends the validity
-    when it is later than the test day + TEST_FRESH_DAYS − 1."""
+    when it is later than the test day + TEST_FRESH_DAYS − 1. ``postponed_on``:
+    the day of the latest postpone — ``expiring`` stays False for
+    POSTPONE_QUIET_D days after it (the card comes back at the earliest then)."""
     if not tested:
         return {"valid_until": None, "expired": False, "expiring": False, "extended": False}
     until = test_day + timedelta(days=TEST_FRESH_DAYS - 1)
     extended = postponed is not None and postponed > until
     if extended:
         until = postponed
+    warn_from = until - timedelta(days=EXPIRY_WARNING_D)
+    if extended and postponed_on is not None:
+        warn_from = max(warn_from, postponed_on + timedelta(days=POSTPONE_QUIET_D))
     return {
         "valid_until": until.isoformat(),
         "expired": on > until,
-        "expiring": until - timedelta(days=EXPIRY_WARNING_D) <= on <= until,
+        "expiring": warn_from <= on <= until,
         "extended": extended,
     }
 
@@ -368,7 +393,8 @@ def official_max(state: Mapping[str, Any], protocol: str, as_of: DateLike) -> Op
             "age_days": age,
             "fresh": age < TEST_FRESH_DAYS,
             "tested": _cand_tested(best),
-            **_validity(_cand_tested(best), best["date"], on, _postponed_until(state, protocol, best["date"])),
+            **_validity(_cand_tested(best), best["date"], on, _postponed_until(state, protocol, best["date"]),
+                        _postponed_on(state, protocol, best["date"])),
             "from_baseline": bool(best.get("from_baseline")),
             "source": best["source"],
             "test_id": best["test_id"],
@@ -396,7 +422,8 @@ def official_max(state: Mapping[str, Any], protocol: str, as_of: DateLike) -> Op
             "age_days": age,
             "fresh": age < TEST_FRESH_DAYS,
             "tested": _cand_tested(best),
-            **_validity(_cand_tested(best), best["date"], on, _postponed_until(state, protocol, best["date"])),
+            **_validity(_cand_tested(best), best["date"], on, _postponed_until(state, protocol, best["date"]),
+                        _postponed_on(state, protocol, best["date"])),
             "from_baseline": bool(best.get("from_baseline")),
             "source": best["source"],
             "test_id": best["test_id"],
