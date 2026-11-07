@@ -31,12 +31,15 @@ Session exercise rule (one rule, from R3/R7):
 - ``actual_exercises`` when present and non-empty (what was logged), else
   ``exercises`` (custom / generated sessions), else the resolved
   ``exercise_instances`` (catalog sessions). Never the union.
-- A logged entry counts only if it was actually done: not ``completed: False``,
-  not labelled ``skipped``, and with some measure of work. For sessions played
-  through the custom/generated player (``is_custom`` or a ``custom_`` /
-  ``generated_`` id) the player pre-fills ``completed: true`` and the load even
-  for skipped exercises, so ``completed_sets >= 1`` or ``completed_reps >= 1``
-  is REQUIRED there. Catalog sessions also accept a logged load.
+- A logged entry counts only if it was actually done: ``row_done`` (B414), the
+  ONE rule shared with the ladders and the closed loop. Not labelled
+  ``skipped``; ``completed: False`` only when the counted sets reach the dose;
+  for sessions played through the custom/generated player (``is_custom`` or a
+  ``custom_`` / ``generated_`` id) the player pre-fills ``completed: true`` and
+  the load even for skipped exercises, so ``completed_sets >= 1`` or
+  ``completed_reps >= 1`` is REQUIRED there; a catalog row needs nothing more
+  than not being ``completed: False`` (Done without the set timer, the
+  post-session dialog), unless it says it counted 0 sets.
 - A done session with no logged entries contributes its planned exercises
   with ``evidence: "planned"``; logged entries carry ``evidence: "measured"``.
 """
@@ -331,22 +334,64 @@ def _num(value: Any) -> Optional[float]:
         return None
 
 
-def logged_entry_counts(entry: Mapping[str, Any], *, player_session: bool) -> bool:
-    """Whether a logged (``actual_exercises``) entry is real work. See module doc."""
-    if entry.get("completed") is False:
+def _dose_int(value: Any) -> Optional[int]:
+    """First positive integer of a dose value ("4-6" → 4, 8.0 → 8), else None."""
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return int(value) if value > 0 else None
+    try:
+        n = int(float(str(value).strip().split("-")[0].strip()))
+    except ValueError:
+        return None
+    return n if n > 0 else None
+
+
+def row_done(row: Mapping[str, Any], *, player_session: bool,
+             dose_sets: Optional[int] = None) -> bool:
+    """B414 — THE "was this logged row done" rule, one for every reader.
+
+    A row is a logged ``actual_exercises`` entry or a feedback item (the same
+    dict: feedback.py stores the items as they are). Readers: the stimulus
+    views (exposures, key sessions, finger-hard days, recency — through
+    ``logged_entry_counts`` / ``counted_entries``), the ladders and the closed
+    loop's "done and unrated" (``bw_ladders.ladder_row_done``). Rules, in order:
+
+    1. a ``skipped`` label → not done;
+    2. ``completed: false`` → done only when the counted sets reach the dose
+       (``dose_sets``, else the row's ``prescribed_sets``): a player that saves
+       a fully counted row as not completed (4x4 of 03/11) did the work;
+    3. ``completed_reps`` >= 1 → done; else counted sets present → done with
+       at least one (an explicit 0 is "no set counted": not done);
+    4. no counted work in a player session (custom / generated): not done —
+       the session-builder player pre-fills ``completed: true`` and the load
+       even for skipped exercises;
+    5. a catalog session otherwise → done: ``completed: true`` from the guided
+       player (Done without the set timer: 1x1 drills, fall practice, timed
+       work closed while running), the post-session dialog, or a row with no
+       ``completed`` flag at all from a non-app client (coach, API) — the same
+       "absent flag = done" ``load_score`` reads. A logged load adds nothing.
+
+    Pure: reads only the row.
+    """
+    if str(row.get("feedback_label") or "").strip().lower() == "skipped":
         return False
-    if str(entry.get("feedback_label") or "") == "skipped":
-        return False
-    sets = _num(entry.get("completed_sets")) or 0
-    reps = _num(entry.get("completed_reps")) or 0
-    if sets >= 1 or reps >= 1:
+    sets = _num(row.get("completed_sets"))
+    if row.get("completed") is False:
+        need = dose_sets if dose_sets else _dose_int(row.get("prescribed_sets"))
+        return sets is not None and need is not None and sets >= need
+    reps = _num(row.get("completed_reps"))
+    if reps is not None and reps >= 1:
         return True
-    if player_session:
-        return False
-    return (
-        _num(entry.get("used_total_load_kg")) is not None
-        or _num(entry.get("used_external_load_kg")) is not None
-    )
+    if sets is not None:
+        return sets >= 1
+    return not player_session
+
+
+def logged_entry_counts(entry: Mapping[str, Any], *, player_session: bool) -> bool:
+    """Whether a logged (``actual_exercises``) entry is real work: ``row_done``
+    with the row's own ``prescribed_sets`` as the dose (B414)."""
+    return row_done(entry, player_session=player_session)
 
 
 def counted_entries(session: Mapping[str, Any]) -> Tuple[List[Dict[str, Any]], str]:

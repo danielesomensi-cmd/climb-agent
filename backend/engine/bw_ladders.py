@@ -39,6 +39,7 @@ from backend.engine.stimulus import (
     is_finger_hard_session,
     is_test_session,
     iter_plan_sessions,
+    row_done,
     session_exercise_entries,
 )
 
@@ -212,41 +213,20 @@ def _clamp_target(value: int, band: Mapping[str, Any]) -> int:
     return max(int(band["lo"]), min(int(band["hi"]), int(value)))
 
 
-def _count(value: Any) -> Optional[float]:
-    if value is None or isinstance(value, bool):
-        return None
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
-
-
 def ladder_row_done(row: Mapping[str, Any], *, player_session: bool,
                     dose_sets: Optional[int] = None) -> bool:
-    """B413 (D3): the ONE "was this ladder row done" rule, shared by the
-    history seed (a logged ``actual_exercises`` row) and the closed loop (a
-    feedback item — the same dict, feedback.py stores the items as they are).
+    """B413 (D3): "was this ladder row done", shared by the history seed (a
+    logged ``actual_exercises`` row) and the closed loop (a feedback item —
+    the same dict, feedback.py stores the items as they are).
 
-    - a ``skipped`` label → not done;
-    - ``completed: false`` → done only when the counted sets reach the dose
-      (``dose_sets``, else the row's ``prescribed_sets``): the player that
-      saves a fully logged row as not completed (bug-inbox 04/11) is not a
-      failure;
-    - counted sets present → done with at least one;
-    - no counted sets: the players (custom / generated sessions — the custom
-      player always sends ``completed: true``) need a counted set; the dialog
-      needs nothing more than not ``completed: false``.
-
-    It does not replace ``stimulus.logged_entry_counts`` (guards, exposures)."""
-    if str(row.get("feedback_label") or "").strip().lower() == "skipped":
-        return False
-    sets = _count(row.get("completed_sets"))
-    if row.get("completed") is False:
-        need = dose_sets if dose_sets else _int(row.get("prescribed_sets"))
-        return sets is not None and need is not None and sets >= need
-    if sets is not None:
-        return sets >= 1
-    return not player_session
+    B414: it IS ``stimulus.row_done`` — one rule for the ladders, the closed
+    loop and the stimulus views (guards, exposures, key sessions): skipped →
+    no; ``completed: false`` → only when the counted sets reach the dose
+    (``dose_sets``, else ``prescribed_sets``); counted sets (or reps) → at
+    least one; no counted work → not done in the players (custom /
+    generated), done on a catalog session (dialog, Done without the timer, a
+    row with no ``completed`` flag from a non-app client)."""
+    return row_done(row, player_session=player_session, dose_sets=dose_sets)
 
 
 def _is_player_session(session: Mapping[str, Any]) -> bool:

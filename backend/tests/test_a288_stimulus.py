@@ -116,7 +116,11 @@ def test_fallback_only_without_any_exercise_list():
     ({"exercise_id": "max_hang_7s", "completed": True, "used_total_load_kg": 116}, False, True),
     ({"exercise_id": "max_hang_7s", "completed": False, "completed_sets": 5}, False, False),
     ({"exercise_id": "max_hang_7s", "feedback_label": "skipped", "completed_sets": 5}, False, False),
-    ({"exercise_id": "max_hang_7s"}, False, False),
+    # B414: one "done" rule (stimulus.row_done, shared with the ladders). A
+    # catalog row with no ``completed`` flag (non-app client: coach, API) is
+    # done, as the ladders and load_score already read it — was False here.
+    ({"exercise_id": "max_hang_7s"}, False, True),
+    ({"exercise_id": "max_hang_7s"}, True, False),
 ])
 def test_logged_entry_counts(entry, player, counts):
     assert st.logged_entry_counts(entry, player_session=player) is counts
