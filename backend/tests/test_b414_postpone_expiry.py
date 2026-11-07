@@ -233,6 +233,40 @@ class TestApi:
             (test_day + timedelta(days=89)).isoformat(), False)
         assert (axes["pulling"]["valid_until"], axes["pulling"]["extended"]) == (second, True)
 
+    def test_extend_six_weeks_with_axes_tested_on_different_days(self, api):
+        """B414 review: one button, one day for both axes, counted from the
+        LATER validity. The axis tested first must not refuse the 6 weeks
+        (until_too_far on its own earlier validity): before the fix the
+        whole extend failed with 422 whenever the two tests were not on the
+        same day — and after a DELETE of one axis' postpone."""
+        state = _seed()
+        today = _today()
+        state["tests"]["pulling_strength"][0]["date"] = (today - timedelta(days=70)).isoformat()
+        deps.save_state(state, None)
+        late = today + timedelta(days=19)  # pulling: 70 days ago + 89
+        r = client.post("/api/retest/extend", json={"weeks": 6})
+        assert r.status_code == 200, r.text
+        until = (late + timedelta(weeks=6)).isoformat()
+        assert r.json()["until"] == until
+        axes = r.json()["retest_status"]["axes"]
+        assert {a: (row["valid_until"], row["extended"]) for a, row in axes.items()} == {
+            "finger": (until, True), "pulling": (until, True)}
+        # Undo one axis, extend again by 6: the undone one is 42+ days behind.
+        assert client.delete("/api/retest/decline/finger").status_code == 200
+        r = client.post("/api/retest/extend", json={"weeks": 6})
+        assert r.status_code == 200, r.text
+        again = (date.fromisoformat(until) + timedelta(weeks=6)).isoformat()
+        assert {a: row["valid_until"] for a, row in r.json()["retest_status"]["axes"].items()} == {
+            "finger": again, "pulling": again}
+        # The per-axis path keeps its own cap (no cap_from there).
+        with pytest.raises(rd.DeclineError) as err:
+            rd.build_record(_daniele(), "finger", status_row=_row(), today="2026-12-10", reason="schedule",
+                            kind="postpone", until="2027-02-09")
+        assert err.value.code == "until_too_far"
+        ok = rd.build_record(_daniele(), "finger", status_row=_row(), today="2026-12-10", reason="schedule",
+                             kind="postpone", until="2027-02-09", cap_from="2026-12-29")
+        assert ok["until"] == "2027-02-09"
+
     def test_dry_run_writes_nothing_and_paused_plan_refuses(self, api):
         _seed()
         # The first read of the fixture saves its load-time migrations (any

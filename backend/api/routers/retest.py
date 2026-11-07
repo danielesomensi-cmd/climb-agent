@@ -242,6 +242,9 @@ def extend(req: ExtendRequest, user_id: Optional[str] = Depends(get_user_id)):
             recs.append(rd.build_record(
                 work, axis, status_row=rows[axis], today=server_today, today_local=local_today,
                 kind=rp.DECLINE_KIND_POSTPONE, until=until, reason=req.reason, note=req.note, source=req.source,
+                # B414 review: the cap counts from the common base — the axis
+                # tested first (earlier validity) would refuse 6 weeks.
+                cap_from=base,
             ))
         except rd.DeclineError as e:
             raise _error(409 if e.code in rd.CONFLICT_CODES else 422, e.code, e.message)

@@ -133,6 +133,7 @@ def build_record(
     source: str = "app",
     trigger: Optional[str] = None,
     today_local: Optional[DateLike] = None,
+    cap_from: Optional[DateLike] = None,
 ) -> Dict[str, Any]:
     """The record declining / postponing the PENDING test of ``axis``.
 
@@ -141,6 +142,10 @@ def build_record(
     ``declined_at``; ``today_local`` (the athlete's day, clamped by the
     caller; default ``today``) is the day ``until`` must come after.
     ``trigger`` is the client's assertion of the pending trigger.
+    ``cap_from`` (B414 review): a later day the ``until_too_far`` cap may count
+    from — the one-button extend moves both axes to the same day, counted from
+    the LATEST validity of the two, so the axis tested first must not be
+    capped on its own earlier validity.
 
     The pending trigger is the one of ``status_row.next_test`` (planned: the
     trigger PASS 3a stored; projected: the decision's). A pending
@@ -198,6 +203,8 @@ def build_record(
                 base = max(base, _as_date(valid_until))
             except (TypeError, ValueError):
                 pass
+        if cap_from:
+            base = max(base, _as_date(cap_from))
         cap = base + timedelta(days=rp.EXTENSION_MAX_D)
         if until_d > cap:
             raise DeclineError("until_too_far", f"One postpone reaches {cap.isoformat()} at the latest "
