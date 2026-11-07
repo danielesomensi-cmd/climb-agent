@@ -1,0 +1,105 @@
+{
+ "_comment": "flag_practice panel 0: Outside (side) flag, rev 2 after coach review. Diagonal support: RIGHT hand on R (arm nearly straight) + LEFT foot on F (inside edge, knee ~114 deg pointing left, kneecap >=5 cm off the wall). Free RIGHT leg long (knee ~170 deg, kneecap into the wall, pelvis square, no hip turn-out), foot POINTED: plantarflexed ~57 deg + inverted ~48 deg about the toe axis (toe_dir/sole_up derived from the solved shin frame, zero tibial rotation), so toes point into-wall 0.62 / down 0.59 / right 0.52, sole faces down-left-away, heel ~10 cm off the wall, big-toe tip of the shoe pressing blank wall ~4 cm below the left sole (level with F). Contact moved to x 0.70, y 0.45 (y 0.40 with x >= 0.66 is out of reach with a ~170 deg knee); hip->toe line ~37 deg off vertical. Camera: azimuth 40, lens at wall-y 1.43 (0.24 m above the hips in the wall frame); explicit position/target so all three panels can share it.",
+ "figure": "woman",
+ "wall": {
+  "angle_deg": 8,
+  "floor": true
+ },
+ "holds": {
+  "R": {
+   "type": "jug",
+   "pos": [
+    0.32,
+    2.255
+   ],
+   "lip": "up",
+   "color": "#22a35a"
+  },
+  "T": {
+   "type": "jug",
+   "pos": [
+    -0.66,
+    2.27
+   ],
+   "lip": "up",
+   "color": "#e0a020"
+  },
+  "F": {
+   "type": "chip",
+   "pos": [
+    0.0,
+    0.45
+   ],
+   "color": "#c03ca0",
+   "size": 1.7
+  }
+ },
+ "pelvis": {
+  "pos": [
+   0.05,
+   1.19,
+   0.24
+  ],
+  "yaw": 0,
+  "roll": 6
+ },
+ "chest": {
+  "twist": 0,
+  "side": -8
+ },
+ "head": {
+  "look_at": "T"
+ },
+ "right_hand": {
+  "hold": "R",
+  "straight": true
+ },
+ "left_hand": {
+  "pos": [
+   -0.51,
+   2.11,
+   0.09
+  ],
+  "open": true
+ },
+ "left_foot": {
+  "hold": "F",
+  "edge": "inside",
+  "turn_deg": 68,
+  "pole": "outward+0.25*in+0.2*up"
+ },
+ "right_foot": {
+  "pos": [
+   0.697,
+   0.45,
+   0.018
+  ],
+  "edge": "inside",
+  "pole": "in",
+  "toe_dir": [
+   0.5209,
+   -0.5882,
+   -0.6186
+  ],
+  "sole_up": [
+   0.2819,
+   0.8026,
+   -0.5257
+  ]
+ },
+ "camera": {
+  "azimuth": 40,
+  "elevation": -5.5,
+  "position": [
+   3.094,
+   1.431,
+   3.625
+  ],
+  "target": [
+   0.145,
+   1.379,
+   0.083
+  ],
+  "lens": 50
+ }
+}

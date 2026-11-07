@@ -1,0 +1,77 @@
+{
+ "_comment": "twist_lock_drill panel 0 'Twist-lock (backstep)'. Woman on a 20 deg overhang. Left arm LOCKED (elbow ~68 deg, elbow down at the ribs, hand by the left shoulder) on a big incut edge whose lip faces up-left (120 deg), thumb-up grip pulling down and in. Pelvis yaw 85 = right hip into the wall (pelvis surface touching it); chest yaw ~70 (twist -15) facing left, slight forward lean (bend 15) toward the locked hand; right shoulder ~3 cm off the wall. Right foot on a chip under the right hip, OUTSIDE edge, knee bent ~61 deg pointing left (body-front). Left foot on a lower-left chip, INSIDE edge, leg nearly straight (~162 deg). Right arm straight (~175 deg) up to a high jug. Head looks up toward the right hand (neck clamped at its limit). Camera: rear three-quarter from the climber's right at 30 deg (not 40: at 40 the locked forearm hides behind the torso), lens at hip height (elevation -3.5 with auto target). CAMFIX: identical pose; camera only changed to her open (left) side, front three-quarter, az -35, el 1 (lens slightly above hip height).",
+ "figure": "woman",
+ "wall": {
+  "angle_deg": 20
+ },
+ "holds": {
+  "LH": {
+   "type": "edge",
+   "pos": [
+    -0.37,
+    1.43
+   ],
+   "lip": 120,
+   "size": 1.6
+  },
+  "T": {
+   "type": "jug",
+   "pos": [
+    -0.04,
+    2.1685
+   ],
+   "lip": "up"
+  },
+  "RF": {
+   "type": "chip",
+   "pos": [
+    -0.02,
+    0.54
+   ]
+  },
+  "LF": {
+   "type": "chip",
+   "pos": [
+    -0.48,
+    0.28
+   ]
+  }
+ },
+ "pelvis": {
+  "pos": [
+   0.0,
+   1.05,
+   0.19
+  ],
+  "yaw": 85
+ },
+ "chest": {
+  "twist": -15,
+  "bend": 15
+ },
+ "left_hand": {
+  "hold": "LH",
+  "pole": "down+0.3*right"
+ },
+ "right_hand": {
+  "hold": "T",
+  "straight": true
+ },
+ "left_foot": {
+  "hold": "LF",
+  "edge": "inside"
+ },
+ "right_foot": {
+  "hold": "RF",
+  "edge": "outside",
+  "pole": "left+0.3*down"
+ },
+ "head": {
+  "look_at": "right_hand"
+ },
+ "camera": {
+  "azimuth": -35,
+  "elevation": 1,
+  "margin": 0.9
+ }
+}

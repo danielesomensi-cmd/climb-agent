@@ -1,0 +1,4 @@
+#!/bin/bash
+# Usage: mannequin POSE.json -o OUT.png [--views] [--sheet] [--check] [--engine eevee|workbench|cycles]
+BLENDER="${BLENDER:-/Applications/Blender.app/Contents/MacOS/Blender}"
+exec "$BLENDER" -b -q --factory-startup --python-exit-code 2 -P "$(cd "$(dirname "$0")" && pwd)/mannequin.py" -- "$@" < /dev/null
