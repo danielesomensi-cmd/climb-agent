@@ -73,14 +73,14 @@
 
 Drop knee e backstep vanno ripresi dal lato aperto: da dietro tutti i modelli disegnano il bacino frontale.
 
-**In prod:** `flag_practice` (outside flag), `twist_lock_drill` (backstep + drop knee come seconda tavola, `CATALOG_EXERCISE_EXTRA_PANELS`), `hip_rotation_drill` (lotto 2). `small_feet_press_hold` bocciato dalla verifica (presa a due dita disegnata come un segno a V): torna in coda.
+**In prod:** `flag_practice` (outside flag), `twist_lock_drill` (backstep + drop knee come seconda tavola, `CATALOG_EXERCISE_EXTRA_PANELS`), `hip_rotation_drill` (lotto 2), `tech_hard_target` (lotto 3, 2026-11-08; da rifare in high quando c'è credito: la figura è vista quasi da dietro e lo sguardo sul piede non si vede). `small_feet_press_hold` bocciato dalla verifica (presa a due dita disegnata come un segno a V): torna in coda.
 
 **Immagini sbagliate tolte.** Lo straddle L-sit era disegnato come una spaccata a terra, il dragon flag tuck come un leg raise sdraiato: tolte dal catalogo e dal circuito, in attesa del ridisegno. `hanging_leg_raise` (gambe fino alla sbarra) passa all'immagine toes-to-bar.
 
 **Riusi esatti a costo zero.** `pike_pushup`, `plank`, `rkc_plank`, `hollow_rock`, `copenhagen_dynamic`, `elbow_wrist_extensor_eccentric`, `test_hip_flexibility`.
 
-**Resto.** Budget della chiave OpenRouter: $5 al giorno. Il resto procede a lotti giornalieri:
-- tavole di tecnica (back flag e inside flag, hip turn, piedi piccoli, hard target, cadute, kneebar e rinvio…);
+**Resto.** Budget della chiave OpenRouter: $5 al giorno. Dal 2026-11-08 è fermo il credito dell'account: con $1,26 rimasti OpenRouter rifiuta ogni gpt-image-2 (402, riserva il costo massimo in anticipo); straddle L-sit e dragon flag tuck hanno posa verificata e prompt pronti, in attesa di ricarica. Il resto procede a lotti giornalieri:
+- tavole di tecnica (back flag e inside flag, piedi piccoli, cadute, kneebar e rinvio…);
 - ridisegno dei 2 esercizi del circuito;
 - esercizi strani (scapular pull-up, frenchies, moving hangs, pinch block, toe flexor, cossack squat…).
 

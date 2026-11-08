@@ -1,0 +1,156 @@
+{
+ "_comment": "tech_hard_target panel 0 'Hanging from matched jugs, one foot laser-taps a foothold'. Woman on a 30 deg overhang. Both hands matched on one large jug J (size 1.6, hands at x -0.06/+0.06), arms straight (elbows ~171 deg; the 5.8 cm scapular shift is the tool's price for a straight arm). Body hangs PLUMB under the grip: pelvis pitch 30 = torso world-vertical, hip joint 71 cm from the wall surface (82 cm horizontally to the wall at hip height); 40-60 cm is not reachable with a plumb hang on 30 deg for a 1.66 m figure, so plumb + clear gap was kept. RIGHT leg raised forward: thigh ~3 deg below horizontal, knee ~154 deg pointing up (kneecap on top), shin ~25 deg down to F1; only the toe tip (shoe level, pointed foot, ankle ~61 deg) touches the top of F1 (the PURPLE chip, x +0.18, ~28 cm below the hip joint = between hip and mid-thigh), heel in the air. LEFT leg hangs straight (knee ~169 deg) on the plumb line, toes down, touching nothing. Head turned slightly right and down, looking at the right toe. Six more green chips F2-F7 spread at x -0.42..+0.50 between hip height and ~mid-thigh height (next targets). Narrow wall panel (1.5 x 3.2 m, no floor) on navy #1F2633 for compositing. Camera: side-rear from the climber's right, az 62 (28 deg off the wall plane), lens at hip height (camera world height 1.31 = hip), figure centred, ~86% of frame height. v3 (coach fixes): F4 deleted (it sat behind the right heel in the main view); F6 moved to (0.45,1.31), inside the hip..mid-thigh band and within the leg's reach. Optional shrug fix NOT applied: raising the pelvis 5.5 cm removes the 5.8 cm shoulder shift but the tool then caps the elbows at 160 deg (visibly bent arms, a listed wrong version); the shrug is handled in the prompt instead. v4: in the main view F7 (-0.42,1.466) sat 14 px from the shin line right past the kneecap (read as the shin/knee resting on a hold) and F2 (-0.10,1.373) 20 px above the shin; moved F7 to (0.62,1.48) and F2 to (0.175,1.44), both inside the hip..mid-thigh band (world 1.28 / 1.25 m), within reach (0.96 / 0.83 m from the right hip), >=44 px from every other hold and >=58 px from the legs in the main view. v5: panel narrowed to x -0.35..+0.80 (was -0.70..+0.80) so that in the main view its far edge no longer grazes the chest: more navy between the hanging body and the wall.",
+ "figure": "woman",
+ "wall": {
+  "angle_deg": 30,
+  "width": 1.15,
+  "height": 3.2,
+  "x_center": 0.225,
+  "floor": false
+ },
+ "holds": {
+  "J": {
+   "type": "jug",
+   "pos": [
+    0.0,
+    2.9
+   ],
+   "lip": "up",
+   "size": 1.6
+  },
+  "F1": {
+   "type": "chip",
+   "pos": [
+    0.18,
+    1.183
+   ],
+   "size": 1.5,
+   "color": "#8b5cf6"
+  },
+  "F2": {
+   "type": "chip",
+   "pos": [
+    0.175,
+    1.44
+   ],
+   "size": 1.5
+  },
+  "F3": {
+   "type": "chip",
+   "pos": [
+    0.38,
+    1.42
+   ],
+   "size": 1.5
+  },
+  "F5": {
+   "type": "chip",
+   "pos": [
+    0.05,
+    1.512
+   ],
+   "size": 1.5
+  },
+  "F6": {
+   "type": "chip",
+   "pos": [
+    0.45,
+    1.31
+   ],
+   "size": 1.5
+  },
+  "F7": {
+   "type": "chip",
+   "pos": [
+    0.62,
+    1.48
+   ],
+   "size": 1.5
+  }
+ },
+ "pelvis": {
+  "pos": [
+   0.0,
+   1.923,
+   0.712
+  ],
+  "pitch": 30
+ },
+ "chest": {
+  "twist": 0,
+  "bend": 0
+ },
+ "left_hand": {
+  "hold": "J",
+  "offset": [
+   -0.06,
+   0,
+   0
+  ],
+  "straight": true
+ },
+ "right_hand": {
+  "hold": "J",
+  "offset": [
+   0.06,
+   0,
+   0
+  ],
+  "straight": true
+ },
+ "right_foot": {
+  "hold": "F1",
+  "edge": "toe",
+  "offset": [
+   0,
+   0.0,
+   0.0
+  ],
+  "toe_dir": [
+   0.0,
+   -0.5,
+   -0.866
+  ],
+  "sole_up": [
+   0.0,
+   0.866,
+   -0.5
+  ],
+  "pole": "bodyup+0.25*outward"
+ },
+ "left_foot": {
+  "pos": [
+   -0.091,
+   1.035,
+   1.19
+  ],
+  "edge": "toe",
+  "toe_dir": [
+   0.0,
+   -0.996,
+   0.087
+  ],
+  "sole_up": [
+   0.0,
+   -0.087,
+   -0.996
+  ],
+  "pole": "fwd"
+ },
+ "head": {
+  "look_at": "right_foot"
+ },
+ "camera": {
+  "azimuth": 62,
+  "elevation": -2.4,
+  "target": [
+   0.1,
+   1.935,
+   0.29
+  ],
+  "distance": 5.45
+ },
+ "render": {
+  "background": "#1F2633"
+ }
+}

@@ -86,6 +86,7 @@ export const CATALOG_EXERCISE_IMAGES: Readonly<Record<string, string>> = {
   twist_lock_drill: "technique/twist_lock_backstep.webp",
   flag_practice: "technique/flag_outside.webp",
   hip_rotation_drill: "technique/hip_rotation.webp",
+  tech_hard_target: "technique/hard_target.webp",
 };
 
 /**

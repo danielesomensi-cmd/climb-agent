@@ -52,6 +52,7 @@ describe("technique illustrations", () => {
     expect(exerciseImage("twist_lock_drill")).toBe("/exercises/technique/twist_lock_backstep.webp");
     expect(exerciseImagePanels("flag_practice")).toEqual(["/exercises/technique/flag_outside.webp"]);
     expect(exerciseImage("hip_rotation_drill")).toBe("/exercises/technique/hip_rotation.webp");
+    expect(exerciseImage("tech_hard_target")).toBe("/exercises/technique/hard_target.webp");
   });
 
   it("returns no panels for an exercise without a picture", () => {
