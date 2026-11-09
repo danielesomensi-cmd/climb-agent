@@ -5,7 +5,10 @@ public path and the generated flow copies it onto each step, so the player
 needs no id → file map of its own. One-sided stretches also ship the mirrored
 `<id>_l.webp` that the player shows on the left side's turn. The sleeper
 stretch has none: the model kept drawing folded arms instead of the vertical
-forearm, and the region silhouette misleads less than a wrong pose.
+forearm, and the region silhouette misleads less than a wrong pose. C285
+(vector batch) removed three more that showed another position: the pigeon
+(drawn as a low lunge), the wall soleus stretch (back heel off the floor, knee
+straight) and thread the needle (a twisted bridge).
 """
 
 from __future__ import annotations
@@ -19,7 +22,7 @@ from backend.engine.mobility import REGION_IDS, load_mobility_catalog
 
 PUBLIC = Path(__file__).resolve().parents[2] / "frontend" / "public"
 client = TestClient(app)
-NO_PICTURE = {"stretch_sleeper"}
+NO_PICTURE = {"stretch_sleeper", "stretch_pigeon", "stretch_wall_soleus", "stretch_thread_the_needle"}
 
 
 def _file(public_path: str) -> Path:

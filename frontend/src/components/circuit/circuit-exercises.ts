@@ -114,7 +114,9 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "hard",
     requires_bar: false,
-    // C285: the old picture showed a lying leg raise (hips on the bench), not a dragon flag
+    // C285: redrawn from the joint positions (scripts/illustrations/vector/). New file name on purpose:
+    // the old 31_ picture (a lying leg raise, hips on the bench) may still sit in the 7-day image cache.
+    image: "41_dragon_flag_tuck.webp",
   },
   {
     id: "ce_front_lever_tuck",
@@ -137,7 +139,8 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "easy",
     requires_bar: false,
-    image: "06_bird_dog.webp",
+    // C285: the old picture showed only the leg, no arm reaching forward (the lesson is "opposite arm
+    // and leg together"): removed, no picture until the redraw.
   },
   {
     id: "ce_plank_hip_dips",
@@ -147,7 +150,8 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "easy",
     requires_bar: false,
-    image: "07_plank_hip_dips.webp",
+    // C285: the old picture showed hips and legs resting on the floor, not a plank: removed, no picture
+    // until the redraw.
   },
   {
     id: "ce_thread_the_needle",

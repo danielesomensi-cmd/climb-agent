@@ -7,10 +7,12 @@ import { CATALOG_EXERCISE_IMAGES, exerciseImage } from "@/lib/exercise-images";
 
 const CORE = join(process.cwd(), "public", "exercises", "core");
 
-// C285: these two pictures showed a different exercise (a floor straddle, a lying
-// leg raise) and were removed; the redraws come with the C285 batch. Drop an id
-// from here when its new picture ships — the last test below enforces it.
-const AWAITING_REDRAW = new Set(["ce_dragon_flag_tuck", "ce_straddle_l_sit"]);
+// C285: pictures that showed a different position were removed (a floor straddle
+// for the straddle L-sit; then, in the vector batch, a bird dog with no arm
+// forward and "plank" hip dips lying on the floor). The tuck dragon flag was
+// redrawn in that batch. Drop an id from here when its new picture ships — the
+// second test below enforces it.
+const AWAITING_REDRAW = new Set(["ce_straddle_l_sit", "ce_bird_dog", "ce_plank_hip_dips"]);
 
 /** C280 — one illustration set for the circuit, reused by the guided players. */
 describe("core circuit illustrations", () => {

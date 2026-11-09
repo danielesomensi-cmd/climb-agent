@@ -62,11 +62,16 @@ describe("strength illustrations", () => {
     expect(exerciseImage("archer_pullup", "RIGHT")).toBe("/exercises/strength/archer_pullup.webp");
     expect(exerciseImage("archer_pullup", "LEFT")).toBe("/exercises/strength/archer_pullup_l.webp");
     expect(exerciseImage("toes_to_bar", "LEFT")).toBe("/exercises/strength/toes_to_bar.webp");
+    expect(exerciseImage("pistol_squat")).toBe("/exercises/strength/pistol_squat.webp");
+    expect(exerciseImage("pistol_squat", "LEFT")).toBe("/exercises/strength/pistol_squat_l.webp");
+    expect(exerciseImage("ring_fallout", "LEFT")).toBe("/exercises/strength/ring_fallout.webp");
   });
 
   it("shows toes-to-bar for the legs-to-the-bar raise and leaves inexact moves without a picture", () => {
     expect(exerciseImage("hanging_leg_raise")).toBe("/exercises/strength/toes_to_bar.webp");
     expect(exerciseImage("knees_to_elbows")).toBeNull();
     expect(exerciseImage("elbow_eccentric_curl")).toBeNull();
+    // C285: the face pull was drawn with the band coming from the side, across the face: removed
+    expect(exerciseImage("face_pull")).toBeNull();
   });
 });

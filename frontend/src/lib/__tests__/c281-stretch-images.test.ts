@@ -22,7 +22,15 @@ const shipped = (publicPath: string) => existsSync(join(PUBLIC, publicPath));
 
 // The model kept drawing folded arms instead of the vertical forearm: a wrong
 // pose misleads more than the region silhouette the player falls back to.
-const NO_PICTURE = new Set(["stretch_sleeper"]);
+// C285 (vector batch) removed three more for the same reason: the pigeon was
+// drawn as a low lunge, the wall soleus stretch with the back heel off the
+// floor and the knee straight, thread the needle as a twisted bridge.
+const NO_PICTURE = new Set([
+  "stretch_sleeper",
+  "stretch_pigeon",
+  "stretch_wall_soleus",
+  "stretch_thread_the_needle",
+]);
 
 /** C281 — one illustration per Mobility stretch, mirrored for the left side. */
 describe("Mobility stretch illustrations", () => {
@@ -66,11 +74,11 @@ describe("Mobility stretch illustrations", () => {
   });
 
   it("mirrors only on the left side's turn", () => {
-    expect(mobilityStepImage("/exercises/stretch/stretch_pigeon.webp", "left")).toBe(
-      "/exercises/stretch/stretch_pigeon_l.webp",
+    expect(mobilityStepImage("/exercises/stretch/stretch_piriformis.webp", "left")).toBe(
+      "/exercises/stretch/stretch_piriformis_l.webp",
     );
-    expect(mobilityStepImage("/exercises/stretch/stretch_pigeon.webp", "right")).toBe(
-      "/exercises/stretch/stretch_pigeon.webp",
+    expect(mobilityStepImage("/exercises/stretch/stretch_piriformis.webp", "right")).toBe(
+      "/exercises/stretch/stretch_piriformis.webp",
     );
     expect(mobilityStepImage("/exercises/stretch/stretch_cobra.webp", null)).toBe(
       "/exercises/stretch/stretch_cobra.webp",
@@ -87,7 +95,12 @@ describe("exerciseImage — cooldown stretches in the guided and custom players"
       .map((id) => exerciseImage(id, "LEFT")!)
       .filter((p) => !shipped(p));
     expect(missing).toEqual([]);
-    expect(exerciseImage("cooldown_hip_pigeon", "LEFT")).toBe("/exercises/stretch/stretch_pigeon_l.webp");
-    expect(exerciseImage("cooldown_hip_pigeon")).toBe("/exercises/stretch/stretch_pigeon.webp");
+    expect(exerciseImage("hip_flexor_couch_stretch", "LEFT")).toBe(
+      "/exercises/stretch/hip_flexor_couch_stretch_l.webp",
+    );
+    expect(exerciseImage("hip_flexor_couch_stretch")).toBe("/exercises/stretch/hip_flexor_couch_stretch.webp");
+    // C285: the pigeon picture showed a low lunge and was removed
+    expect(exerciseImage("cooldown_hip_pigeon")).toBeNull();
+    expect(exerciseImage("cooldown_hip_pigeon", "LEFT")).toBeNull();
   });
 });

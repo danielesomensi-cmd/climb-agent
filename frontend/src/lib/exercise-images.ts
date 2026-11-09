@@ -18,10 +18,18 @@
 // two pictures that showed a different exercise (straddle L-sit drawn as a
 // floor straddle, tuck dragon flag drawn as a lying leg raise) and moved
 // hanging_leg_raise (legs to the bar) to the toes-to-bar picture.
+// C285 (vector batch): pictures drawn by a script from the joint positions
+// (scripts/illustrations/vector/), in true profile, with the lesson marked on
+// top (line of sight, ring, magnified detail). They replace the hard target
+// seen from behind, redraw the tuck dragon flag and cover drills and strength
+// moves that had none. Six pictures that showed another position were removed
+// (bird dog, plank hip dips, face pull, pigeon, wall soleus, thread the
+// needle): no picture until the redraw. A picture that changes ships under a
+// NEW file name: the service worker keeps /_next/image for 7 days by URL.
 //
 // Only exact matches: same position, not just same muscles. Near variants
-// (weighted hollow, bent-knee raises, v_sit with hands behind) stay without
-// an image rather than show a different exercise. Side-specific moves show the
+// (weighted hollow, bent-knee raises, the pistol progression's easier steps)
+// stay without an image rather than show a different exercise. Side-specific moves show the
 // right-side picture unless the caller knows it is the left side's turn.
 
 const DIR = "/exercises/";
@@ -30,7 +38,6 @@ export const CATALOG_EXERCISE_IMAGES: Readonly<Record<string, string>> = {
   core_hollow_hold: "core/01_hollow_body.webp",
   dead_bug: "core/02_dead_bug.webp",
   plank_shoulder_tap: "core/03_plank_shoulder_taps.webp",
-  kneeling_superman: "core/06_bird_dog.webp",
   side_plank: "core/10_side_plank_r.webp",
   copenhagen_plank: "core/12_copenhagen_r.webp",
   copenhagen_adductor_plank: "core/12_copenhagen_r.webp",
@@ -50,7 +57,6 @@ export const CATALOG_EXERCISE_IMAGES: Readonly<Record<string, string>> = {
   cooldown_forearm_wrist_stretch: "stretch/stretch_finger_flexor.webp",
   forearm_stretches: "stretch/stretch_finger_flexor.webp",
   cooldown_hamstring_fold: "stretch/stretch_standing_forward_fold.webp",
-  cooldown_hip_pigeon: "stretch/stretch_pigeon.webp",
   cooldown_spinal_twist: "stretch/stretch_supine_twist.webp",
   cooldown_deep_squat_hold: "stretch/stretch_deep_squat.webp",
   cooldown_shoulder_chest: "stretch/stretch_doorway_chest.webp",
@@ -60,7 +66,6 @@ export const CATALOG_EXERCISE_IMAGES: Readonly<Record<string, string>> = {
   // C282 — strength and prehab moves whose name does not show the position
   front_lever_one_leg: "strength/front_lever_one_leg.webp",
   wall_slide: "strength/wall_slide.webp",
-  face_pull: "strength/face_pull.webp",
   wall_handstand_hold: "strength/wall_handstand_hold.webp",
   wall_handstand_shrugs: "strength/wall_handstand_hold.webp",
   heel_pulls_chest_to_wall: "strength/heel_pulls_chest_to_wall.webp",
@@ -86,7 +91,23 @@ export const CATALOG_EXERCISE_IMAGES: Readonly<Record<string, string>> = {
   twist_lock_drill: "technique/twist_lock_backstep.webp",
   flag_practice: "technique/flag_outside.webp",
   hip_rotation_drill: "technique/hip_rotation.webp",
-  tech_hard_target: "technique/hard_target.webp",
+  tech_hard_target: "technique/hard_target_profile.webp",
+  // C285 — vector batch (scripts/illustrations/vector/)
+  glued_feet_board: "technique/glued_feet.webp",
+  tech_talon_feet: "technique/glued_feet.webp",
+  small_feet_press_hold: "technique/small_feet_press.webp",
+  rest_and_clip_drill: "technique/kneebar_rest.webp",
+  fall_practice: "technique/fall_practice.webp",
+  fall_ladder: "technique/fall_practice.webp",
+  pocket_rampup_hangboard: "strength/pocket_rampup.webp",
+  single_finger_pocket_rampup: "strength/pocket_rampup_mono.webp",
+  v_sit: "strength/v_sit.webp",
+  v_sit_45: "strength/v_sit_45.webp",
+  elevated_pike_pushup: "strength/elevated_pike_pushup.webp",
+  ring_fallout: "strength/ring_fallout.webp",
+  pistol_squat: "strength/pistol_squat.webp",
+  dragon_flag_tuck: "core/41_dragon_flag_tuck.webp",
+  dragon_flag_tuck_negative: "core/41_dragon_flag_tuck.webp",
 };
 
 /**
@@ -106,6 +127,8 @@ const LEFT_SIDE: Readonly<Record<string, string>> = {
   "strength/wrist_curl.webp": "strength/wrist_curl_l.webp",
   "strength/forearm_pronation_supination.webp": "strength/forearm_pronation_supination_l.webp",
   "strength/turkish_getup.webp": "strength/turkish_getup_l.webp",
+  "strength/pistol_squat.webp": "strength/pistol_squat_l.webp",
+  "technique/small_feet_press.webp": "technique/small_feet_press_l.webp",
 };
 
 /** C281: a one-sided stretch ships its mirrored picture as `<name>_l.webp`. */

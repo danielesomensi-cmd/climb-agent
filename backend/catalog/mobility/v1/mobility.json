@@ -356,7 +356,7 @@
       "fatigue_cost": 0,
       "stress_tags": {},
       "recency_group": "mobility_thoracic_spine",
-      "image": "/exercises/stretch/stretch_thread_the_needle.webp",
+      "image": null,
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -524,7 +524,7 @@
       "fatigue_cost": 1,
       "stress_tags": {"knee": "low"},
       "recency_group": "mobility_hips_glutes",
-      "image": "/exercises/stretch/stretch_pigeon.webp",
+      "image": null,
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -860,7 +860,7 @@
       "fatigue_cost": 0,
       "stress_tags": {},
       "recency_group": "mobility_calves_ankles",
-      "image": "/exercises/stretch/stretch_wall_soleus.webp",
+      "image": null,
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
