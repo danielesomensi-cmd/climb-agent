@@ -586,9 +586,13 @@ export const addExerciseToSession = (data: {
   session_index: number;
   exercise_id: string;
   prescription_override?: Record<string, unknown>;
+  /** A325: "after_warmup" puts it right after the last warm-up exercise (default: at the end). */
+  position?: "end" | "after_warmup";
   week_plan: WeekPlan;
 }) =>
-  revisionedWrite<{ week_plan: WeekPlan }>("/api/session/add-exercise", data);
+  // A325: client-local today → the response carries the key status of the week.
+  revisionedWrite<{ week_plan: WeekPlan; key_status?: KeyStatus | null }>(
+    "/api/session/add-exercise", { ...data, today: localToday() });
 
 export const removeExerciseFromSession = (data: {
   date: string;
@@ -596,7 +600,8 @@ export const removeExerciseFromSession = (data: {
   exercise_index: number;
   week_plan: WeekPlan;
 }) =>
-  revisionedWrite<{ week_plan: WeekPlan }>("/api/session/remove-exercise", data);
+  revisionedWrite<{ week_plan: WeekPlan; key_status?: KeyStatus | null }>(
+    "/api/session/remove-exercise", { ...data, today: localToday() });
 
 /**
  * B313 — "Boulder only (today)": adapt a rope session to the boulder wall, or

@@ -64,6 +64,16 @@ def _persist_week_plan(updated: dict, state: dict, user_id) -> None:
     _replanner_persist(updated, state, user_id)
 
 
+def _key_status(week_plan: dict, state: dict, user_id, today: Optional[str]):
+    """A325: the key status after an exercise edit — a technique top-up added
+    (or taken away) by hand changes what the week still owes. Fail-soft."""
+    from backend.api.auto_reschedule import state_with_plan
+    from backend.api.key_status import build_key_status
+
+    return build_key_status(state_with_plan(state, week_plan), user_id,
+                            week_start=week_plan.get("start_date"), today=today)
+
+
 @router.post("/resolve", dependencies=[Depends(require_active_subscription)])
 def resolve(req: SessionResolveRequest, user_id: Optional[str] = Depends(get_user_id)):
     """Resolve a session_id into concrete exercises."""
@@ -173,7 +183,13 @@ def add_exercise(req: AddExerciseRequest, user_id: Optional[str] = Depends(get_u
         "alt_sides": bool(exercise.get("alt_sides")),
     }
 
-    exercise_instances.append(new_instance)
+    if req.position == "after_warmup":
+        # A325: after the last warm-up exercise (0 → first, when there is none).
+        last_warmup = max((i for i, inst in enumerate(exercise_instances)
+                           if str((inst or {}).get("category") or "").startswith("warmup")), default=-1)
+        exercise_instances.insert(last_warmup + 1, new_instance)
+    else:
+        exercise_instances.append(new_instance)
     resolved_session["exercise_instances"] = exercise_instances
 
     # Recalculate session_load_score (D151: rescaled ×1.5, cap 85 — B312: shared helper)
@@ -186,7 +202,8 @@ def add_exercise(req: AddExerciseRequest, user_id: Optional[str] = Depends(get_u
     session["_user_edited"] = True
     _persist_week_plan(week_plan, state, user_id)
 
-    return {"week_plan": _view(week_plan, state, user_id)}
+    return {"week_plan": _view(week_plan, state, user_id),
+            "key_status": _key_status(week_plan, state, user_id, req.today)}
 
 
 def _find_session(week_plan: dict, date: str, session_index: int):
@@ -259,7 +276,8 @@ def remove_exercise(req: RemoveExerciseRequest, user_id: Optional[str] = Depends
     session["_user_edited"] = True
     _persist_week_plan(week_plan, state, user_id)
 
-    return {"week_plan": _view(week_plan, state, user_id)}
+    return {"week_plan": _view(week_plan, state, user_id),
+            "key_status": _key_status(week_plan, state, user_id, req.today)}
 
 
 # --------------------------------------------------------------------------- #

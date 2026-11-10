@@ -102,6 +102,12 @@ class AddExerciseRequest(BaseModel):
     session_index: int = 0
     exercise_id: str
     prescription_override: Optional[Dict[str, Any]] = None
+    # A325: where the exercise lands. None / "end" (default, as before) or
+    # "after_warmup": right after the last warm-up exercise — a technique
+    # top-up is done fresh, before the main work.
+    position: Optional[Literal["end", "after_warmup"]] = None
+    # A325: client-local date, for the key status the response carries.
+    today: Optional[str] = None
     week_plan: Optional[Dict[str, Any]] = None
     # B371: the plan_revision of the week_plan the client is editing. A
     # mismatch with the stored week → 409 {detail, current_revision}. None
@@ -114,6 +120,8 @@ class RemoveExerciseRequest(BaseModel):
     date: str
     session_index: int = 0
     exercise_index: int
+    # A325: client-local date, for the key status the response carries.
+    today: Optional[str] = None
     week_plan: Optional[Dict[str, Any]] = None
     # B371: the plan_revision of the week_plan the client is editing. A
     # mismatch with the stored week → 409 {detail, current_revision}. None

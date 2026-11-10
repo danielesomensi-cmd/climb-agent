@@ -387,7 +387,8 @@ def _key_sessions(
         ws = _monday(week_of or today)
         return {"source": "error", "error": f"{type(exc).__name__}: {exc}", "week_start": ws.isoformat(),
                 "week_end": (ws + timedelta(days=6)).isoformat(), "requirements": [], "sessions": [],
-                "proposals": [], "conflicts": [], "summary": {}, "unknown_skips": [], "removed_unknown": 0}
+                "proposals": [], "topups": [], "conflicts": [], "summary": {}, "unknown_skips": [],
+                "removed_unknown": 0}
 
 
 def _session_view(d: str, s: Mapping[str, Any]) -> Dict[str, Any]:
@@ -1276,7 +1277,7 @@ def _anchor_line(ex: str, a: Mapping[str, Any]) -> str:
 _RESOLUTION_IT = {
     "proposal": "proposta", "deferred_next": "rimandata alla prossima chiave",
     "deferred_fatigue": "niente recupero (fatica recente)", "let_go": "lasciala andare",
-    "missed": "persa",
+    "missed": "persa", "topup": "integrazione proposta (un drill)",
 }
 
 
@@ -1318,6 +1319,10 @@ def _render_keys(L: List[str], ks: Mapping[str, Any], label: str) -> None:
         L.append(f"  PROPOSTA ({', '.join(p.get('keys') or [])}): {p['date']} {p['slot']} {p['session_id']} "
                  f"[{p.get('location')}]" + (f" | effetti: {side}" if side else " | nessun effetto collaterale")
                  + (" | dose di rientro (niente campus)" if p.get("reduced_reentry_dose") else ""))
+    for t in ks.get("topups") or []:  # A325
+        L.append(f"  INTEGRAZIONE ({t.get('key')}): aggiungi {t['exercise_id']} a {t['session_id']} "
+                 f"del {t['date']} {t['slot']} (dopo il riscaldamento) — manca dalla sessione del "
+                 f"{(t.get('from') or {}).get('date')}")
     for c in ks.get("conflicts") or []:
         L.append(f"  ! {c.get('code')}: {c.get('message')}")
     sm = ks.get("summary") or {}

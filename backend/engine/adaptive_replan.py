@@ -102,7 +102,10 @@ def append_feedback_log(
     pain = sanitize_pain(log_entry.get("pain"))
 
     feedback_log: List[Dict[str, Any]] = state.setdefault("feedback_log", [])
-    duration = log_entry.get("session_duration_seconds")
+    from backend.engine.session_duration import keep_longest, plausible_duration
+
+    # A325: never a wall clock left running (see session_duration).
+    duration = plausible_duration(log_entry.get("session_duration_seconds"))
 
     # B197 Bug 1: dedup by (date, session_id). On resubmit, merge the new
     # payload into the existing entry instead of appending. Duration is kept
@@ -124,9 +127,7 @@ def append_feedback_log(
             existing["exercise_feedback"] = exercise_feedback
         if duration is not None:
             prev = existing.get("session_duration_seconds")
-            existing["session_duration_seconds"] = (
-                max(prev, duration) if isinstance(prev, (int, float)) else duration
-            )
+            existing["session_duration_seconds"] = keep_longest(prev, duration)
     else:
         entry: Dict[str, Any] = {
             "date": date,

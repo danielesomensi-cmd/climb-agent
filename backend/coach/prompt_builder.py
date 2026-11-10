@@ -23,6 +23,7 @@ from datetime import date, timedelta
 from functools import lru_cache
 from typing import Any, Dict, List, Optional
 
+from backend.engine.session_duration import plausible_duration
 from backend.coach.routing import KNOWLEDGE_DIR, route_query
 from backend.engine.assessment_v1 import _redpoint_onsight_gap
 from backend.engine.load_score import effective_session_load
@@ -697,7 +698,8 @@ def _logs_section(
         if fb:
             if fb.get("difficulty"):
                 bits.append(f"felt: {fb['difficulty']}")
-            if fb.get("session_duration_seconds"):
+            # A325: not a wall clock left running overnight.
+            if fb.get("session_duration_seconds") and plausible_duration(fb["session_duration_seconds"]):
                 bits.append(
                     f"duration: {int(fb['session_duration_seconds']) // 60} min"
                 )

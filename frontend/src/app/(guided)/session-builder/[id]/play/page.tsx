@@ -11,6 +11,7 @@ import { useWakeLock } from "@/lib/hooks/use-wake-lock";
 import { useSubscription } from "@/lib/hooks/use-subscription";
 import { queryKeys } from "@/lib/query-keys";
 import { applyEvents, postFeedback } from "@/lib/api";
+import { plausibleDuration } from "@/lib/session-duration";
 import type { WeekPlan, CustomSessionExercise } from "@/lib/types";
 import { CustomExerciseStep, hasRepRest } from "@/components/session-play/custom-exercise-step";
 import { CustomRestTimer } from "@/components/session-play/custom-rest-timer";
@@ -441,12 +442,15 @@ export default function SessionPlayPage() {
       // gate skips on absent resolved_day, and the _is_custom_session guard is a
       // second server-side barrier. This is off-plan support work: it must
       // never feed macrocycle progression (stimulus_recency / fatigue_proxy).
-      const durationSeconds =
+      // A325: a player left open for hours is not a session length — the
+      // feedback then goes out without a duration.
+      const durationSeconds = plausibleDuration(
         durationSec > 0
           ? durationSec
           : startedAtRef.current > 0
             ? Math.max(0, Math.floor((Date.now() - startedAtRef.current) / 1000))
-            : 0;
+            : 0,
+      );
       const exerciseFeedback = exercises.map((ex, i) => {
         // B414 — the player tells the truth. Done = the exercise ran to its
         // last set; stopped earlier with "Skip exercise" it is not done but
@@ -493,7 +497,7 @@ export default function SessionPlayPage() {
           ...(startedAtRef.current > 0
             ? { started_at: new Date(startedAtRef.current).toISOString() }
             : {}),
-          session_duration_seconds: durationSeconds,
+          ...(durationSeconds != null ? { session_duration_seconds: durationSeconds } : {}),
           actual: { exercise_feedback_v1: exerciseFeedback },
         }, pain),
         status: "done",
@@ -721,7 +725,9 @@ export default function SessionPlayPage() {
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Duration</span>
                 <span className="font-medium tabular-nums">
-                  {Math.floor(durationSec / 60)}m {durationSec % 60}s
+                  {plausibleDuration(durationSec) != null
+                    ? `${Math.floor(durationSec / 60)}m ${durationSec % 60}s`
+                    : "not recorded"}
                 </span>
               </div>
               <div className="flex justify-between text-sm">

@@ -16,6 +16,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { addExerciseToSession } from "@/lib/api";
+import { siblingsOf, type WeekSiblings } from "@/lib/week-cache";
 import type { Exercise, WeekPlan } from "@/lib/types";
 import { isExerciseCompatible } from "@/lib/equipment-filter";
 import { loadInputLabel } from "@/lib/load-units";
@@ -47,7 +48,8 @@ export function AddExerciseDialog({
   sessionIndex: number;
   weekPlan: WeekPlan;
   availableEquipment: Set<string> | null;
-  onSuccess: (updatedPlan?: WeekPlan) => void;
+  /** A325: `siblings` = the key status the response carried. */
+  onSuccess: (updatedPlan?: WeekPlan, siblings?: WeekSiblings) => void;
 }) {
   const catalogQuery = useCatalogExercises(open);
   const catalog = useMemo<Exercise[]>(() => catalogQuery.data?.exercises ?? [], [catalogQuery.data]);
@@ -159,7 +161,7 @@ export function AddExerciseDialog({
       onOpenChange(false);
       setSelected(null);
       setSearch("");
-      onSuccess(result.week_plan);
+      onSuccess(result.week_plan, siblingsOf(result));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to add exercise");
     }

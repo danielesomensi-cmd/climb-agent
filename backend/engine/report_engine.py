@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
+from backend.engine.session_duration import plausible_duration
 from backend.engine import storage
 from backend.engine.closed_loop_v1 import STIMULUS_CATEGORIES, _session_categories
 from backend.engine.other_activity_v1 import normalize_other_activities
@@ -1185,7 +1186,8 @@ def _build_training_time(
     # default "timer" was the only value this branch ever produced.
     sessions_with_duration: set = set()
     for key, entry in cl_by_key.items():
-        dur = entry.get("session_duration_seconds")
+        # A325: a wall clock left running is not a duration → slot estimate below.
+        dur = plausible_duration(entry.get("session_duration_seconds"))
         if dur is not None:
             dur = int(dur)
             total_seconds += dur
@@ -1206,7 +1208,8 @@ def _build_training_time(
                     if key in sessions_with_duration:
                         continue  # already counted from real data
                     # Check if completion_log has entry without duration
-                    if key in cl_by_key and cl_by_key[key].get("session_duration_seconds") is not None:
+                    if key in cl_by_key and plausible_duration(
+                            cl_by_key[key].get("session_duration_seconds")) is not None:
                         continue
                     # Template estimate based on slot
                     slot = session.get("slot", "evening")

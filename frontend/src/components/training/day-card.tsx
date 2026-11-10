@@ -28,6 +28,7 @@ import type {
   WeekPlan,
   KeyStatus,
 } from "@/lib/types";
+import type { WeekSiblings } from "@/lib/week-cache";
 import { keyRoleFor } from "@/lib/key-sessions";
 import { alertsForSession } from "@/lib/week-alerts";
 import { normalizeOtherActivities, hasOtherActivity } from "@/lib/other-activity";
@@ -94,7 +95,7 @@ interface DayCardProps {
   /** @deprecated No longer used — View day button removed (B166) */
   showActions?: boolean;
   weekPlan?: WeekPlan | null;
-  onSessionUpdated?: (updatedWeekPlan?: WeekPlan) => void;
+  onSessionUpdated?: (updatedWeekPlan?: WeekPlan, siblings?: WeekSiblings) => void;
   /**
    * A308 — skip the weekday/date header (/today: the TopBar already says it).
    * The overflow menu then moves to the action row.

@@ -27,6 +27,7 @@ import { MeasureInput, PainPicker } from "@/components/training/measured-feedbac
 import { FEEDBACK_CHIP } from "@/components/training/feedback-colors";
 import { cn } from "@/lib/utils";
 import { LimitProblemLogger } from "@/components/training/limit-problem-logger";
+import { MAX_SESSION_DURATION_S } from "@/lib/session-duration";
 
 interface FeedbackDialogProps {
   open: boolean;
@@ -166,7 +167,8 @@ export function FeedbackDialog({
     }
     const parsed = parseInt(durationStr, 10);
     const userEntered = !isNaN(parsed) && parsed > 0;
-    const dur = userEntered ? parsed : estimatedMin;
+    // A325: capped at the longest duration the server takes as a measure.
+    const dur = Math.min(userEntered ? parsed : estimatedMin, MAX_SESSION_DURATION_S / 60);
     // B217: duration_source dropped — was a Potemkin field (never persisted
     // server-side, read only with hard-coded default).
     onSubmit(rated, dur, loads, measures, pain, grades, problems);
@@ -324,7 +326,7 @@ export function FeedbackDialog({
                 type="number"
                 inputMode="numeric"
                 min={1}
-                max={600}
+                max={MAX_SESSION_DURATION_S / 60}
                 step={5}
                 value={durationStr}
                 onChange={(e) => setDurationTyped(e.target.value)}

@@ -1,6 +1,13 @@
 // A294 — pure helpers over the key-session status (`key_status`, a sibling of
 // `week_plan` in the week / replanner responses). No React, no I/O.
-import type { KeyConflict, KeyRequirement, KeySessionRole, KeyStatus } from "@/lib/types";
+import type {
+  KeyConflict,
+  KeyProposal,
+  KeyProposalSideEffect,
+  KeyRequirement,
+  KeySessionRole,
+  KeyStatus,
+} from "@/lib/types";
 
 const KEY_LABELS: Record<string, string> = {
   finger_max: "Finger max",
@@ -57,12 +64,65 @@ export function keyDays(status: KeyStatus | null | undefined): Record<string, "k
   return out;
 }
 
-/** "Fri 09/10" from an ISO date (local, no timezone shift). */
-export function shortDay(iso: string): string {
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function parseIso(iso: string): { y: number; m: number; d: number } | null {
   const [y, m, d] = iso.split("-").map(Number);
-  if (!y || !m || !d) return iso;
-  const wd = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][new Date(y, m - 1, d).getDay()];
-  return `${wd} ${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}`;
+  return y && m && d ? { y, m, d } : null;
+}
+
+/** "Fri 9 Oct" from an ISO date (local, no timezone shift). A325: the month by
+ *  name — "10/11" reads as 10 November or as October 11 depending on the reader. */
+export function shortDay(iso: string): string {
+  const p = parseIso(iso);
+  if (!p) return iso;
+  return `${WEEKDAYS[new Date(p.y, p.m - 1, p.d).getDay()]} ${p.d} ${MONTHS[p.m - 1]}`;
+}
+
+/** "Mon" from an ISO date. */
+export function weekdayOf(iso: string): string {
+  const p = parseIso(iso);
+  return p ? WEEKDAYS[new Date(p.y, p.m - 1, p.d).getDay()] : iso;
+}
+
+/**
+ * A325 — when a session takes place, the way one would say it: "tonight",
+ * "today (lunch)", "tomorrow (evening)", else "Thu 12 Nov (evening)".
+ */
+export function whenLabel(iso: string, slot: string | null | undefined, today: string = localToday()): string {
+  const slotPart = slot ? ` (${slot})` : "";
+  if (iso === today) return slot === "evening" ? "tonight" : `today${slotPart}`;
+  const t = parseIso(today);
+  if (t) {
+    const next = new Date(t.y, t.m - 1, t.d + 1);
+    if (iso === localToday(next)) return `tomorrow${slotPart}`;
+  }
+  return `${shortDay(iso)}${slotPart}`;
+}
+
+/**
+ * A325 — the session a re-schedule proposal takes the place of: the side
+ * effect on the proposal's own day and slot. Said once ("Swap A for B"),
+ * never as a headline plus an "also changes" that repeats it.
+ */
+export function replacedBy(p: KeyProposal): KeyProposalSideEffect | null {
+  return (
+    p.side_effects.find(
+      (s) => s.date === p.date && s.slot === p.slot && s.to === p.session_id && !!s.from && s.from !== s.to,
+    ) ?? null
+  );
+}
+
+/** A325 — "1 of 2 drills done on Mon, Hard Target still to do" (technique only), or null. */
+export function techniqueProgressLine(r: KeyRequirement): string | null {
+  const pr = r.progress;
+  if (!pr || pr.done <= 0) return null;
+  const days = [...new Set(r.partial.map((x) => weekdayOf(x.date)))];
+  const on = days.length === 1 ? ` on ${days[0]}` : "";
+  const missed = pr.drills_missed.map((d) => d.name).join(", ");
+  const left = pr.needed - pr.done;
+  return `${pr.done} of ${pr.needed} drills done${on}${missed ? `, ${missed} still to do` : `, ${left} more to do`}`;
 }
 
 export function formatSessionId(id: string | null | undefined): string {
@@ -77,18 +137,25 @@ export function requirementLine(r: KeyRequirement): string {
   switch (r.status) {
     case "done":
       return "Done";
-    case "planned":
+    case "planned": {
+      // A325: the missing drill sits in a planned session (a top-up).
+      const drill = nextPlanned?.topup ? nextPlanned.drills?.map((d) => d.name).join(", ") : "";
+      if (nextPlanned && drill) return `${drill} added to ${shortDay(nextPlanned.date)}'s session`;
       return nextPlanned ? `Next: ${shortDay(nextPlanned.date)}` : "Planned";
+    }
     case "not_due":
       return r.due_by ? `Not due — next one by ${shortDay(r.due_by)}` : "Not due this week";
     case "unplaceable":
       return "The plan could not fit it this week";
     case "partial":
     case "missing": {
-      const prefix = r.status === "partial" ? "Only a partial dose" : "Missing";
+      // A325: say WHY — which drills counted and which is still owed.
+      const prefix = techniqueProgressLine(r) ?? (r.status === "partial" ? "Only a partial dose" : "Missing");
       switch (r.resolution) {
         case "proposal":
           return `${prefix} — catch-up proposed below`;
+        case "topup":
+          return `${prefix} — one-tap add below`;
         case "deferred_next":
           return r.next_key?.date
             ? `${prefix} — next key session ${shortDay(r.next_key.date)}, no catch-up this week`

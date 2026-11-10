@@ -10,6 +10,7 @@ import type { GuidedExercise, SessionPain } from "@/lib/types";
 import { PainPicker } from "@/components/training/measured-feedback-inputs";
 import { tapFeedback } from "@/lib/haptics";
 import { guidedRowDone } from "@/lib/feedback-items";
+import { elapsedDuration } from "@/lib/session-duration";
 
 interface GuidedSummaryProps {
   exercises: GuidedExercise[];
@@ -62,9 +63,11 @@ export function GuidedSummary({
   const skippedCount = exercises.filter((ex) => ex.status === "skipped" && !guidedRowDone(ex)).length;
   // A307: the session is over — show how long it took, frozen on arrival,
   // instead of a clock that keeps running while you fill the summary.
-  const [duration] = useState(() =>
-    formatDuration(Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000))),
-  );
+  // A325: no time shown when the player stayed open for hours.
+  const [duration] = useState(() => {
+    const seconds = elapsedDuration(new Date(startedAt).getTime());
+    return seconds != null ? formatDuration(seconds) : null;
+  });
 
   // B397 G6: nothing is editable once the submit is under way.
   const canEdit = !!onEditExercise && !submitting;
@@ -92,10 +95,12 @@ export function GuidedSummary({
             <CardTitle className="text-lg">
               {pendingExercises.length > 0 ? "Finish session?" : "Session complete"}
             </CardTitle>
-            <span className="flex items-center gap-1 text-sm text-muted-foreground tabular-nums">
-              <Timer className="size-3.5" />
-              {duration}
-            </span>
+            {duration && (
+              <span className="flex items-center gap-1 text-sm text-muted-foreground tabular-nums">
+                <Timer className="size-3.5" />
+                {duration}
+              </span>
+            )}
           </div>
           <p className="text-sm text-muted-foreground">{sessionName}</p>
         </CardHeader>

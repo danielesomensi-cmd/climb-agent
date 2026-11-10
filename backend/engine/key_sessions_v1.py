@@ -42,6 +42,12 @@ re-schedule is attached), ``deferred_next`` (catching up would break a key of
 next week — "the next one is <date>"), ``deferred_fatigue`` (very_hard
 feedback / adaptive replan in the last 72 h: no catch-up, by principle),
 ``let_go`` (no valid day left) or ``missed`` (the week is over).
+
+A325 — technique only: the feet / positioning drills done outside a technique
+session add up over the week (``progress``); one drill short of
+``TECHNIQUE_MIN_DRILLS`` → ``resolution: "topup"`` and an entry in ``topups``
+(add the listed-but-not-done drill to a planned climbing session through
+``/api/session/add-exercise``) instead of a whole-session re-schedule.
 """
 
 from __future__ import annotations
@@ -68,7 +74,9 @@ from backend.engine.stimulus import (
     session_flag,
     session_stimuli,
     stimulus_of,
+    _is_player_session,
     _outdoor_entries as _stimulus_outdoor_entries,
+    _resolved_instances,
 )
 
 DateLike = Union[date, str]
@@ -87,6 +95,10 @@ _EXERCISES_PATH = os.path.join(_REPO_ROOT, "backend", "catalog", "exercises", "v
 #: Minimum technique-category drills (catalog ``category == technique``) in a
 #: session to count it as the technique key. ENGINEERING CONSTANT (A293).
 TECHNIQUE_MIN_DRILLS = 2
+#: A325 — a top-up drill (the one missing to reach TECHNIQUE_MIN_DRILLS, added
+#: to a planned climbing session) must not cost recovery: catalog
+#: ``intensity_level`` allowed for it. ENGINEERING CONSTANT.
+TOPUP_INTENSITY = ("low", "medium")
 #: Zero-cost warm-up drills (athlete_plan.md §3): the warm-up is not the
 #: technique stimulus, so these never count towards the technique key.
 WARMUP_TECHNIQUE_DRILLS = ("silent_feet_drill", "foothold_stare", "straight_arms", "hip_rotation_drill",
@@ -275,6 +287,23 @@ def _phase_on(state: Mapping[str, Any], on: date) -> Optional[Dict[str, Any]]:
 # Matching: which key stimuli a session delivers
 # ---------------------------------------------------------------------------
 
+def technique_drill_ids(session: Mapping[str, Any], catalog: Mapping[str, Mapping[str, Any]]) -> List[str]:
+    """The distinct feet / positioning drills a session counts (logged work when
+    there is a log, else what it plans), in order."""
+    entries, _origin = counted_entries(session)
+    out: List[str] = []
+    for e in entries:
+        eid = str(e.get("exercise_id") or "")
+        if eid and eid not in out and _counts_as_technique_drill(eid, catalog):
+            out.append(eid)
+    return out
+
+
+def _counts_as_technique_drill(exercise_id: str, catalog: Mapping[str, Mapping[str, Any]]) -> bool:
+    return (exercise_id != "fall_practice" and exercise_id not in WARMUP_TECHNIQUE_DRILLS
+            and _is_technique_key_drill(catalog.get(exercise_id) or {}))
+
+
 def technique_hit(session: Mapping[str, Any], catalog: Mapping[str, Mapping[str, Any]],
                   req: Optional[Mapping[str, Any]] = None) -> bool:
     """The technique key: the technique catalog session, or ≥ TECHNIQUE_MIN_DRILLS
@@ -283,11 +312,7 @@ def technique_hit(session: Mapping[str, Any], catalog: Mapping[str, Mapping[str,
     sids = (req or {}).get("session_ids") or ["technique_focus_gym"]
     if str(session.get("session_id") or "") in sids:
         return True
-    entries, _origin = counted_entries(session)
-    drills = {str(e.get("exercise_id") or "") for e in entries
-              if _is_technique_key_drill(catalog.get(str(e.get("exercise_id") or "")) or {})}
-    drills -= {"fall_practice"} | set(WARMUP_TECHNIQUE_DRILLS)
-    return len(drills) >= TECHNIQUE_MIN_DRILLS
+    return len(technique_drill_ids(session, catalog)) >= TECHNIQUE_MIN_DRILLS
 
 
 def _is_technique_key_drill(ex: Mapping[str, Any]) -> bool:
@@ -591,6 +616,9 @@ def _phase_history(state: Mapping[str, Any], req: Mapping[str, Any], ws: date,
                 if s.get("status") == "done" and session_delivers(req, s, catalog) \
                         and session_dose(state, s, d, req)["dose"] == "full":
                     hit = True
+        if not hit and req.get("key") == "technique" \
+                and _week_drill_count(days, wk, catalog) >= TECHNIQUE_MIN_DRILLS:
+            hit = True  # A325: drills add up over the week
         if not hit and req.get("free_limit_counts") and _free_limit_dates(state, wk, we):
             hit = True
         if not hit and req.get("outdoor_hard_counts") and outdoor_hard_days(
@@ -1157,6 +1185,194 @@ def _propose_for(
 # Main entry point
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# A325 — technique: drills add up over the week, and ONE missing drill is a
+# top-up of a planned session, never a whole session to re-schedule
+# ---------------------------------------------------------------------------
+
+def _drill_ref(exercise_id: str, catalog: Mapping[str, Mapping[str, Any]]) -> Dict[str, Any]:
+    name = (catalog.get(exercise_id) or {}).get("name")
+    return {"exercise_id": exercise_id, "name": name or _session_name(exercise_id)}
+
+
+def _listed_drill_rows(session: Mapping[str, Any],
+                       catalog: Mapping[str, Mapping[str, Any]]) -> List[Dict[str, Any]]:
+    """Every feet / positioning drill the session lists — planned or logged,
+    done or not — in order, with the dose it was prescribed."""
+    out: Dict[str, Dict[str, Any]] = {}
+    lists = (session.get("exercises") or [], _resolved_instances(session), session.get("actual_exercises") or [])
+    for lst in lists:
+        for e in lst:
+            if not isinstance(e, Mapping):
+                continue
+            eid = str(e.get("exercise_id") or "")
+            if not eid or eid in out or not _counts_as_technique_drill(eid, catalog):
+                continue
+            presc = e.get("prescription") if isinstance(e.get("prescription"), Mapping) else {}
+            row: Dict[str, Any] = _drill_ref(eid, catalog)
+            for k in ("sets", "reps"):
+                v = e.get(k) if e.get(k) is not None else presc.get(k)
+                if isinstance(v, int) and not isinstance(v, bool) and v > 0:
+                    row[k] = v
+            out[eid] = row
+    return list(out.values())
+
+
+def _committed_drill_ids(session: Mapping[str, Any], catalog: Mapping[str, Mapping[str, Any]]) -> List[str]:
+    """The drills a PENDING session is committed to: its whole list when the
+    athlete composed it (custom / generated), else only the exercises added by
+    hand — a resolver pick may change at the next resolution, so it is not a
+    promise the week can count on."""
+    if _is_player_session(session):
+        rows = [e for e in (session.get("exercises") or []) if isinstance(e, Mapping)]
+    else:
+        rows = [i for i in _resolved_instances(session) if i.get("source") == "user_added"]
+    out: List[str] = []
+    for e in rows:
+        eid = str(e.get("exercise_id") or "")
+        if eid and eid not in out and _counts_as_technique_drill(eid, catalog):
+            out.append(eid)
+    return out
+
+
+def _technique_week(req: Mapping[str, Any], week_sessions: Sequence[Tuple[str, Mapping[str, Any]]],
+                    catalog: Mapping[str, Mapping[str, Any]], today_iso: str) -> Dict[str, Any]:
+    """The drills of the week OUTSIDE the sessions that deliver the technique
+    key on their own: ``sources`` (done sessions with some), ``done_ids``
+    (distinct, in order) and ``committed`` (pending sessions from today on
+    that carry further ones)."""
+    sources: List[Tuple[str, Mapping[str, Any], List[str]]] = []
+    done_ids: List[str] = []
+    for d, s in week_sessions:
+        if s.get("status") != "done" or is_test_session(s) or technique_hit(s, catalog, req):
+            continue
+        ids = technique_drill_ids(s, catalog)
+        if ids:
+            sources.append((d, s, ids))
+            done_ids.extend(i for i in ids if i not in done_ids)
+    committed: List[Tuple[str, Mapping[str, Any], List[str]]] = []
+    for d, s in week_sessions:
+        if d < today_iso or s.get("status") in ("done", "skipped") or is_test_session(s) \
+                or technique_hit(s, catalog, req):
+            continue
+        ids = [i for i in _committed_drill_ids(s, catalog) if i not in done_ids]
+        if ids:
+            committed.append((d, s, ids))
+    return {"sources": sources, "done_ids": done_ids, "committed": committed}
+
+
+def _week_drill_count(days: Mapping[str, List[Mapping[str, Any]]], wk: date,
+                      catalog: Mapping[str, Mapping[str, Any]]) -> int:
+    ids: set = set()
+    for k in range(7):
+        for s in days.get((wk + timedelta(days=k)).isoformat(), []):
+            if s.get("status") == "done" and not is_test_session(s):
+                ids.update(technique_drill_ids(s, catalog))
+    return len(ids)
+
+
+def _session_equipment(state: Mapping[str, Any], session: Mapping[str, Any]) -> Optional[List[str]]:
+    """What is available where ``session`` takes place, or None when unknown
+    (a top-up is only proposed where the equipment is known to fit)."""
+    from backend.engine.equipment_utils import expand_equipment
+
+    eq = state.get("equipment") or {}
+    loc = session.get("location")
+    if loc == "home":
+        home = eq.get("home")
+        return expand_equipment(list(home)) if isinstance(home, list) else None
+    if loc != "gym":
+        return None
+    gym_id = session.get("gym_id") or _default_gym_id(state)
+    for g in eq.get("gyms") or []:
+        if isinstance(g, Mapping) and gym_id and g.get("gym_id") == gym_id:
+            return expand_equipment(list(g.get("equipment") or []) + ["pullup_bar"])
+    return None
+
+
+def _drill_fits(ex: Mapping[str, Any], location: Optional[str], available: Sequence[str]) -> bool:
+    allowed = ex.get("location_allowed") or []
+    if allowed and location not in allowed:
+        return False
+    avail = set(available)
+    need = set(ex.get("equipment_required") or [])
+    if need and not need.issubset(avail):
+        return False
+    need_any = set(ex.get("equipment_required_any") or [])
+    return not need_any or bool(need_any & avail)
+
+
+def _technique_topup(state: Mapping[str, Any], plan: Optional[Mapping[str, Any]], row: Mapping[str, Any],
+                     catalog: Mapping[str, Mapping[str, Any]], today: date, we: date,
+                     taken: Sequence[Tuple[str, str]] = ()) -> Optional[Dict[str, Any]]:
+    """One drill short of the technique key: the drill the athlete listed and
+    did not do, added to the first planned climbing session from today on whose
+    equipment fits it. None when more than one drill is missing, no listed
+    drill is cheap enough (``TOPUP_INTENSITY``) or no session can host it —
+    the caller then falls back to the whole-session re-schedule.
+
+    ``taken``: (date, slot) pairs an earlier proposal of this status already
+    changes — never the host of a top-up."""
+    from backend.engine.planner_v2 import _SESSION_META
+
+    prog = row.get("progress") or {}
+    if not isinstance(plan, Mapping) or int(prog.get("needed") or 0) - int(prog.get("done") or 0) != 1:
+        return None
+    cands: List[Tuple[Dict[str, Any], Mapping[str, Any]]] = []
+    seen: set = set()
+    for ref in sorted(row.get("partial") or [], key=lambda x: (x["date"], str(x.get("slot") or "")), reverse=True):
+        for m in ref.get("drills_missed") or []:
+            ex = catalog.get(m["exercise_id"]) or {}
+            if m["exercise_id"] in seen or ex.get("intensity_level") not in TOPUP_INTENSITY \
+                    or ex.get("active") is False:
+                continue
+            seen.add(m["exercise_id"])
+            cands.append((m, ref))
+    if not cands:
+        return None
+    hosts: List[Tuple[Tuple[str, int, int], str, int, Mapping[str, Any]]] = []
+    for week in plan.get("weeks") or []:
+        for day in (week or {}).get("days") or []:
+            d = str(day.get("date") or "")
+            if not (today.isoformat() <= d <= we.isoformat()):
+                continue
+            for idx, s in enumerate(day.get("sessions") or []):
+                if not isinstance(s, Mapping) or s.get("status") in ("done", "skipped"):
+                    continue
+                if _is_player_session(s) or is_test_session(s) or (d, str(s.get("slot"))) in taken:
+                    continue
+                if not (_SESSION_META.get(str(s.get("session_id") or "")) or {}).get("climbing"):
+                    continue
+                hosts.append(((d, SLOT_INDEX.get(str(s.get("slot")), 9), idx), d, idx, s))
+    for _rank, d, idx, s in sorted(hosts, key=lambda h: h[0]):
+        available = _session_equipment(state, s)
+        if available is None:
+            continue
+        listed = {str(e.get("exercise_id") or "") for e in _resolved_instances(s)}
+        for m, ref in cands:
+            eid = m["exercise_id"]
+            if eid in listed or not _drill_fits(catalog.get(eid) or {}, s.get("location"), available):
+                continue
+            body: Dict[str, Any] = {"date": d, "session_index": idx, "exercise_id": eid,
+                                    "position": "after_warmup"}
+            override = {k: m[k] for k in ("sets", "reps") if k in m}
+            if override:
+                body["prescription_override"] = override
+            sid = str(s.get("session_id") or "")
+            return {
+                "key": row.get("key"), "kind": "add_exercise",
+                "date": d, "slot": s.get("slot"), "session_index": idx,
+                "session_id": sid, "session_name": _session_name(sid),
+                "location": s.get("location"), "gym_id": s.get("gym_id"),
+                "exercise_id": eid, "exercise_name": m.get("name"),
+                "from": {"date": ref["date"], "slot": ref.get("slot"), "session_id": ref.get("session_id"),
+                         "name": ref.get("name")},
+                "drills_done": list(prog.get("drills_done") or []),
+                "apply": {"endpoint": "/api/session/add-exercise", "body": body},
+            }
+    return None
+
+
 def compute_key_status(
     state: Mapping[str, Any],
     today: DateLike,
@@ -1179,7 +1395,7 @@ def compute_key_status(
                          lost[], last_full_date?, due_by?, exposures_21d,
                          next_key?, hint?}],
          sessions: [{date, slot, session_id, role, keys}],
-         proposals: [...], conflicts: [...],
+         proposals: [...], topups: [...] (A325), conflicts: [...],
          summary: {required, covered, done, missing, debt, max_severity}}
     """
     st: Dict[str, Any] = copy.deepcopy(dict(state or {}))
@@ -1254,6 +1470,39 @@ def compute_key_status(
                 if not any(x["date"] == d_iso for x in done):
                     done.append({"date": d_iso, "slot": None, "session_id": None, "name": "free boulder",
                                  "status": "done", "dose": "full", "evidence": "free session ≥ soglia"})
+        # A325: the feet / positioning drills done outside a technique session
+        # add up over the week. TECHNIQUE_MIN_DRILLS distinct ones done → the
+        # key is done; fewer → a PARTIAL dose that says which drills count and
+        # which were listed and not done; a pending session committed to the
+        # missing one (a top-up) → planned.
+        progress: Optional[Dict[str, Any]] = None
+        if req.get("key") == "technique" and not done:
+            tw = _technique_week(req, week_sessions, cat, td.isoformat())
+            done_ids: List[str] = tw["done_ids"]
+            if len(done_ids) >= TECHNIQUE_MIN_DRILLS:
+                d_last, s_last, _ids = tw["sources"][-1]
+                done.append(_ref(d_last, s_last, dose="full", dose_reason=None,
+                                 evidence=f"{len(done_ids)} technique drills across the week's sessions",
+                                 drills=[_drill_ref(i, cat) for i in done_ids]))
+            elif done_ids:
+                missed_all: List[Dict[str, Any]] = []
+                for d_src, s_src, ids in tw["sources"]:
+                    missed = [m for m in _listed_drill_rows(s_src, cat) if m["exercise_id"] not in done_ids]
+                    missed_all.extend(m for m in missed
+                                      if m["exercise_id"] not in {x["exercise_id"] for x in missed_all})
+                    partial.append(_ref(d_src, s_src, dose="partial", dose_reason="technique_drills",
+                                        drills_done=[_drill_ref(i, cat) for i in ids], drills_missed=missed))
+                have = list(done_ids)
+                for d_c, s_c, ids in tw["committed"]:
+                    have.extend(i for i in ids if i not in have)
+                    if len(have) >= TECHNIQUE_MIN_DRILLS:
+                        planned.append(_ref(d_c, s_c, dose="full", dose_reason=None, topup=True,
+                                            drills=[_drill_ref(i, cat) for i in ids]))
+                        break
+                progress = {"done": len(done_ids), "needed": TECHNIQUE_MIN_DRILLS,
+                            "drills_done": [_drill_ref(i, cat) for i in done_ids],
+                            "drills_missed": [{"exercise_id": m["exercise_id"], "name": m["name"]}
+                                              for m in missed_all]}
         skipped = [k for k in skipped_all if k.get("session_id")
                    and session_delivers(req, {"session_id": k["session_id"], "tags": {}}, cat)]
         lost = [dict(k, reason="skipped") for k in skipped]
@@ -1280,6 +1529,8 @@ def compute_key_status(
             "partial": partial, "planned": planned, "skipped": skipped, "lost": lost,
             "debt": debt, "resolution": None, "severity": "none",
         }
+        if progress:
+            row["progress"] = progress
         if req["key"] in ("finger_max", "limit_power", "finger_maintenance"):
             fam = FAMILY_LIMIT_POWER if req["key"] == "limit_power" else FAMILY_FINGER_MAX
             row["exposures_21d"] = count_exposures(st, fam, since=lookback - timedelta(days=REENTRY_WINDOW_D),
@@ -1408,6 +1659,7 @@ def compute_key_status(
     # Resolution, proposals and severity.
     fatigue = _fatigue_recent(st, td, plan) if is_current else None
     proposals: List[Dict[str, Any]] = []
+    topups: List[Dict[str, Any]] = []
     finger_proposal_made = False
     covered: set = set()
     # A294 review: proposals are validated CUMULATIVELY — each one against the
@@ -1428,6 +1680,18 @@ def compute_key_status(
             r["fatigue_reason"] = fatigue
         elif req["key"] in covered:
             r["resolution"] = "proposal"
+        elif with_proposals and r.get("progress") and (topup := _technique_topup(
+                st, plan, r, cat, td, we,
+                taken=[(x["date"], str(x["slot"])) for p in proposals
+                       for x in [p, *(p.get("side_effects") or [])]])):
+            # A325: one drill short → add that drill to a planned session
+            # (one tap, ~10 min) instead of re-scheduling a whole session.
+            topups.append(topup)
+            r["resolution"] = "topup"
+            r["hint"] = (f"{r['progress']['done']} of {r['progress']['needed']} drills done — add "
+                         f"{topup['exercise_name']} to {topup['session_name']} on {topup['date']}")
+            # Later proposals must not take the host session's slot.
+            work_index.setdefault((topup["date"], str(topup["slot"])), []).append(req["key"])
         elif not with_proposals or not req.get("propose"):
             r["resolution"] = None
         elif req.get("finger_hard") and finger_proposal_made:
@@ -1526,6 +1790,9 @@ def compute_key_status(
         "requirements": out_rows,
         "sessions": [sessions_roles[k] for k in sorted(sessions_roles)],
         "proposals": proposals,
+        # A325: a separate list on purpose — a client from before A325 applies
+        # every entry of ``proposals`` as a replanner event.
+        "topups": topups,
         "conflicts": conflicts,
         "summary": {
             "required": len(out_rows),
@@ -1846,6 +2113,11 @@ def key_status_text(status: Optional[Mapping[str, Any]], *, max_lines: int = 12)
             p = next((p for p in status.get("proposals") or [] if r["key"] in p.get("keys", [])), None)
             if p:
                 line += f" → proposed {p['date'][5:]} {p['slot']} {p['session_id']}"
+        elif r.get("resolution") == "topup":
+            t = next((t for t in status.get("topups") or [] if t.get("key") == r["key"]), None)
+            if t:
+                line += (f" ({r['progress']['done']}/{r['progress']['needed']} drills done) → add "
+                         f"{t['exercise_id']} to {t['session_id']} {t['date'][5:]} {t['slot']}")
         elif r.get("resolution") == "deferred_next" and r.get("next_key"):
             line += f" → next key {str(r['next_key'].get('date'))[5:]}, do not catch up this week"
         elif r.get("resolution") == "deferred_fatigue":

@@ -52,6 +52,8 @@ import { ExerciseCard } from "@/components/training/exercise-card";
 import { sessionEstimatedMinutes } from "@/lib/feedback-items";
 import { FEEDBACK_CHIP } from "@/components/training/feedback-colors";
 import { removeExerciseFromSession, setSessionSurface, apiErrorDetail } from "@/lib/api";
+import { plausibleDuration } from "@/lib/session-duration";
+import { siblingsOf, type WeekSiblings } from "@/lib/week-cache";
 import type { SessionSlot, GuidedSessionState, GuidedExercise, WeekPlan, KeySessionRole } from "@/lib/types";
 import { formatSessionId, keyLabel } from "@/lib/key-sessions";
 import { focusLabel, type SessionAlert } from "@/lib/week-alerts";
@@ -103,7 +105,8 @@ interface SessionCardProps {
   onMove?: () => void;
   onRemove?: () => void;
   onReplan?: () => void;
-  onSessionUpdated?: (updatedWeekPlan?: WeekPlan) => void;
+  /** A325: `siblings` = the key status an exercise edit returns. */
+  onSessionUpdated?: (updatedWeekPlan?: WeekPlan, siblings?: WeekSiblings) => void;
   /** A294 — the session's role in the week's key stimuli (from key_status). */
   keyRole?: KeySessionRole | null;
   /**
@@ -537,7 +540,7 @@ export function SessionCard({
         exercise_index: exerciseIndex,
         week_plan: weekPlan,
       });
-      onSessionUpdated?.(result.week_plan);
+      onSessionUpdated?.(result.week_plan, siblingsOf(result));
     } catch (err) {
       console.error("[B155d] remove exercise FAILED:", err);
     }
@@ -851,7 +854,8 @@ export function SessionCard({
               {isDone && (() => {
                 // B217: only show a duration when we have a measured one. No
                 // slot-table fallback — "Completed" alone is the honest signal.
-                const hasReal = session.session_duration_seconds != null && session.session_duration_seconds > 0;
+                // A325: a wall clock left running overnight is not a measure.
+                const hasReal = (plausibleDuration(session.session_duration_seconds) ?? 0) > 0;
                 return (
                   <Badge
                     variant="outline"
@@ -1237,7 +1241,8 @@ export function SessionCard({
             <DrawerDescription>
               {(() => {
                 // B217: drop slot-table fallback. Show duration only when measured.
-                const hasReal = session.session_duration_seconds != null && session.session_duration_seconds > 0;
+                // A325: a wall clock left running overnight is not a measure.
+                const hasReal = (plausibleDuration(session.session_duration_seconds) ?? 0) > 0;
                 const status = isDone ? "Completed" : isSkipped ? "Skipped" : "Planned";
                 const durSegment = isDone && hasReal
                   ? ` · ${Math.round(session.session_duration_seconds! / 60)} min`
@@ -1422,7 +1427,7 @@ export function SessionCard({
             sessionIndex={sessionIndex}
             weekPlan={weekPlan}
             availableEquipment={availableEquipment}
-            onSuccess={(updatedPlan) => onSessionUpdated?.(updatedPlan)}
+            onSuccess={(updatedPlan, siblings) => onSessionUpdated?.(updatedPlan, siblings)}
           />
         </ChunkErrorBoundary>
       )}

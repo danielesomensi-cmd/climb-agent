@@ -27,11 +27,11 @@ describe("auto-reschedule", () => {
 
   it("names the keys, the day and what was replaced", () => {
     expect(autoRescheduleText(replaced)).toEqual({
-      title: "Finger max + Max pulling moved to Sun 11/10",
-      description: "Strength long on Sun 11/10 evening, in place of Finger maintenance gym.",
+      title: "Finger max + Max pulling moved to Sun 11 Oct",
+      description: "Strength long on Sun 11 Oct evening, in place of Finger maintenance gym.",
     });
     expect(autoRescheduleText({ ...replaced, replaced: null, keys: ["limit_power", "try_hard"] }).title)
-      .toBe("Limit moved to Sun 11/10");
+      .toBe("Limit moved to Sun 11 Oct");
   });
 
   it("builds the undo event", () => {

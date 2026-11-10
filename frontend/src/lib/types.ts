@@ -1542,7 +1542,7 @@ export type KeyStimulus =
   | string;
 
 export type KeyRequirementStatus = "done" | "planned" | "partial" | "missing" | "not_due" | "unplaceable";
-export type KeyResolution = "proposal" | "deferred_next" | "deferred_fatigue" | "let_go" | "missed" | null;
+export type KeyResolution = "proposal" | "topup" | "deferred_next" | "deferred_fatigue" | "let_go" | "missed" | null;
 export type KeySeverity = "none" | "info" | "warning" | "critical";
 
 export interface KeySessionRef {
@@ -1555,6 +1555,20 @@ export interface KeySessionRef {
   dose_reason?: string | null;
   unmarked?: boolean;
   evidence?: string;
+  /** A325 — technique: the feet / positioning drills this session counted, and the listed ones not done. */
+  drills_done?: KeyDrill[];
+  drills_missed?: KeyDrill[];
+  drills?: KeyDrill[];
+  /** A325 — a planned session that carries the missing drill, added by hand. */
+  topup?: boolean;
+}
+
+/** A325 — a technique drill of the week (catalog id + display name). */
+export interface KeyDrill {
+  exercise_id: string;
+  name: string;
+  sets?: number;
+  reps?: number;
 }
 
 export interface KeyRequirement {
@@ -1576,6 +1590,8 @@ export interface KeyRequirement {
   last_full_date?: string | null;
   hint?: string;
   exposures_21d?: number;
+  /** A325 — technique only: drills done across the week's sessions, short of the dose. */
+  progress?: { done: number; needed: number; drills_done: KeyDrill[]; drills_missed: KeyDrill[] };
 }
 
 export interface KeyProposalSideEffect {
@@ -1597,6 +1613,37 @@ export interface KeyProposal {
   reduced_reentry_dose: boolean;
   side_effects: KeyProposalSideEffect[];
   apply: { endpoint: string; event: Record<string, unknown> };
+}
+
+/**
+ * A325 — one drill short of the technique key: add the listed-but-not-done
+ * drill to a planned climbing session (POST `apply.endpoint` with `apply.body`
+ * + the week plan) instead of re-scheduling a whole session.
+ */
+export interface KeyTopup {
+  key: KeyStimulus;
+  kind: "add_exercise";
+  date: string;
+  slot: string;
+  session_index: number;
+  session_id: string;
+  session_name: string;
+  location?: string | null;
+  gym_id?: string | null;
+  exercise_id: string;
+  exercise_name: string;
+  from: { date: string; slot: string | null; session_id: string | null; name?: string | null };
+  drills_done: KeyDrill[];
+  apply: {
+    endpoint: string;
+    body: {
+      date: string;
+      session_index: number;
+      exercise_id: string;
+      position?: "end" | "after_warmup";
+      prescription_override?: Record<string, unknown>;
+    };
+  };
 }
 
 export interface KeyConflict {
@@ -1637,6 +1684,8 @@ export interface KeyStatus {
   requirements: KeyRequirement[];
   sessions: KeySessionRole[];
   proposals: KeyProposal[];
+  /** A325 — absent on a backend from before A325. */
+  topups?: KeyTopup[];
   conflicts: KeyConflict[];
   summary: { required: number; covered: number; done: number; missing: string[]; debt: number; max_severity: KeySeverity };
 }

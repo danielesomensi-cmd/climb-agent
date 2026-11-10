@@ -9,11 +9,13 @@ import {
   formatSessionId,
   hasKeyIssues,
   readDismissed,
+  replacedBy,
   requirementLine,
   shortDay,
+  whenLabel,
   writeDismissed,
 } from "@/lib/key-sessions";
-import type { KeyProposal, KeyRequirement, KeyStatus } from "@/lib/types";
+import type { KeyProposal, KeyRequirement, KeyStatus, KeyTopup } from "@/lib/types";
 
 /**
  * A294 — the key sessions of the week, and what is owed.
@@ -25,6 +27,11 @@ import type { KeyProposal, KeyRequirement, KeyStatus } from "@/lib/types";
  * effects declared. Deferred / let-go outcomes are told in a neutral tone: not
  * catching up is often the right call, never an alarm.
  *
+ * A325 — a technique dose one drill short says which drill is owed, and the
+ * catch-up is that drill added to a planned session (`topups`), not a whole
+ * session replaced. A re-schedule that takes another session's place says so
+ * once: "Swap A for B".
+ *
  * `compact` (on /today): renders nothing when the week is on track.
  * `collapsible` (A308, /today): a one-line summary that opens on tap — open
  * from the start only when there is a re-schedule to accept or a critical row.
@@ -34,11 +41,14 @@ export function KeySessionsCard({
   compact = false,
   collapsible = false,
   onApplyProposal,
+  onApplyTopup,
 }: {
   status?: KeyStatus | null;
   compact?: boolean;
   collapsible?: boolean;
   onApplyProposal?: (p: KeyProposal) => Promise<void> | void;
+  /** A325: add the one missing technique drill to a planned session. */
+  onApplyTopup?: (t: KeyTopup) => Promise<void> | void;
 }) {
   const [busy, setBusy] = useState<string | null>(null);
   // Dismissed this session (works without storage too: private mode).
@@ -61,8 +71,10 @@ export function KeySessionsCard({
       ? "border-warning/30 bg-warning/5"
       : "border-border";
 
+  // A325: a top-up follows its row — hidden with it when dismissed.
+  const topups = (status.topups ?? []).filter((t) => visibleReqs.some((r) => r.key === t.key));
   const urgent =
-    status.proposals.length > 0 || status.requirements.some((r) => r.severity === "critical");
+    status.proposals.length > 0 || topups.length > 0 || status.requirements.some((r) => r.severity === "critical");
   const expanded = !collapsible || (open ?? urgent);
 
   const header = (
@@ -107,44 +119,94 @@ export function KeySessionsCard({
               ))}
             </ul>
 
-            {status.proposals.map((p) => (
-              <div key={`${p.date}-${p.slot}-${p.session_id}`} className="rounded-md border border-primary/30 bg-primary/5 p-2 space-y-1">
-                <p className="text-sm">
-                  Re-schedule <span className="font-medium">{p.session_name || formatSessionId(p.session_id)}</span>{" "}
-                  on <span className="font-medium">{shortDay(p.date)}</span> ({p.slot})
-                </p>
-                {p.reduced_reentry_dose && (
-                  <p className="text-xs text-muted-foreground">Re-entry week: limit boulders only, no campus.</p>
-                )}
-                {p.side_effects.length > 0 ? (
-                  <p className="text-xs text-warning">
-                    Also changes:{" "}
-                    {p.side_effects
-                      .map((s) => `${shortDay(s.date)} ${formatSessionId(s.from)} → ${formatSessionId(s.to)}`)
-                      .join("; ")}
+            {topups.map((t) => {
+              const id = `topup:${t.date}-${t.slot}-${t.exercise_id}`;
+              return (
+                <div key={id} className="rounded-md border border-primary/30 bg-primary/5 p-2 space-y-1" data-testid="key-topup">
+                  <p className="text-sm">
+                    Add <span className="font-medium">{t.exercise_name}</span> to{" "}
+                    <span className="font-medium">{t.session_name || formatSessionId(t.session_id)}</span>{" "}
+                    — {whenLabel(t.date, t.slot)}
                   </p>
-                ) : (
-                  <p className="text-xs text-muted-foreground">Nothing else in your week changes.</p>
-                )}
-                {onApplyProposal && (
-                  <Button
-                    size="sm"
-                    className="min-h-[44px]"
-                    disabled={busy !== null}
-                    onClick={async () => {
-                      setBusy(p.date);
-                      try {
-                        await onApplyProposal(p);
-                      } finally {
-                        setBusy(null);
-                      }
-                    }}
-                  >
-                    {busy === p.date ? "Adding…" : "Add to my week"}
-                  </Button>
-                )}
-              </div>
-            ))}
+                  <p className="text-xs text-muted-foreground">
+                    One drill, right after the warm-up. The rest of the session stays as it is.
+                  </p>
+                  {onApplyTopup && (
+                    <Button
+                      size="sm"
+                      className="min-h-[44px]"
+                      disabled={busy !== null}
+                      onClick={async () => {
+                        setBusy(id);
+                        try {
+                          await onApplyTopup(t);
+                        } finally {
+                          setBusy(null);
+                        }
+                      }}
+                    >
+                      {busy === id ? "Adding…" : "Add the drill"}
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
+
+            {status.proposals.map((p) => {
+              const id = `${p.date}-${p.slot}-${p.session_id}`;
+              const name = p.session_name || formatSessionId(p.session_id);
+              // A325: the session it takes the place of is said once, in the
+              // headline — the other side effects stay listed below.
+              const replaced = replacedBy(p);
+              const others = p.side_effects.filter((s) => s !== replaced);
+              return (
+                <div key={id} className="rounded-md border border-primary/30 bg-primary/5 p-2 space-y-1" data-testid="key-proposal">
+                  <p className="text-sm">
+                    {replaced ? (
+                      <>
+                        Swap <span className="font-medium">{formatSessionId(replaced.from)}</span> for{" "}
+                        <span className="font-medium">{name}</span>
+                      </>
+                    ) : (
+                      <>
+                        Add <span className="font-medium">{name}</span>
+                      </>
+                    )}{" "}
+                    — {whenLabel(p.date, p.slot)}
+                  </p>
+                  {p.reduced_reentry_dose && (
+                    <p className="text-xs text-muted-foreground">Re-entry week: limit boulders only, no campus.</p>
+                  )}
+                  {others.length > 0 ? (
+                    <p className="text-xs text-warning">
+                      Also changes:{" "}
+                      {others
+                        .map((s) => `${shortDay(s.date)} ${formatSessionId(s.from)} → ${formatSessionId(s.to)}`)
+                        .join("; ")}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Nothing else in your week changes.</p>
+                  )}
+                  {onApplyProposal && (
+                    <Button
+                      size="sm"
+                      className="min-h-[44px]"
+                      disabled={busy !== null}
+                      onClick={async () => {
+                        setBusy(id);
+                        try {
+                          await onApplyProposal(p);
+                        } finally {
+                          setBusy(null);
+                        }
+                      }}
+                    >
+                      {busy === id ? (replaced ? "Swapping…" : "Adding…") : replaced ? "Swap sessions" : "Add to my week"}
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
 
             {status.conflicts.length > 0 && (
               <ul className="space-y-1">

@@ -23,6 +23,7 @@ from backend.api.deps import (
 )
 from backend.api import ladder_archive as _ladder_archive
 from backend.api.models import TestReminderResponse
+from backend.engine.session_duration import plausible_duration
 from backend.engine.bw_ladders import RETEST_ARCHIVE_LOOKBACK_D
 from backend.engine.macrocycle_v1 import compute_pretrip_dates, compute_taper_windows
 from backend.engine.cues import get_session_cue
@@ -459,7 +460,8 @@ def _attach_feedback(week_plan: dict, feedback_log: list) -> None:
                         session_entry["feedback_summary"] = fb["difficulty"]
                     if fb.get("exercise_feedback"):
                         session_entry["exercise_feedback"] = fb["exercise_feedback"]
-                    if fb.get("session_duration_seconds") is not None:
+                    # A325: only a plausible duration is a measure.
+                    if plausible_duration(fb.get("session_duration_seconds")) is not None:
                         session_entry["session_duration_seconds"] = fb["session_duration_seconds"]
 
 

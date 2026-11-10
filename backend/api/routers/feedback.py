@@ -47,6 +47,7 @@ from backend.api.plan_revision import (
     serialized_by_user, write_played_resolved,
 )
 from backend.api.routers.replanner import _event_floor, _prev_week_days, persist_week_plan
+from backend.engine.session_duration import keep_longest, plausible_duration
 from backend.engine.adaptive_replan import (
     append_feedback_log,
     build_adaptive_suggestion,
@@ -325,6 +326,13 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
 
     target_date = req.log_entry.get("date")
     target_sid = req.log_entry.get("session_id")
+    # A325: a wall clock that ran for hours past any session (player left
+    # open) is not a measure — the feedback is saved without a duration.
+    if req.log_entry.get("session_duration_seconds") is not None \
+            and plausible_duration(req.log_entry.get("session_duration_seconds")) is None:
+        logger.warning("A325 implausible session_duration_seconds dropped: %r (date=%r sid=%r)",
+                       req.log_entry.get("session_duration_seconds"), target_date, target_sid)
+        req.log_entry.pop("session_duration_seconds", None)
     _week_snap = _snapshot_weeks(state, target_date)
     # B414 (ORPHAN, step 27): a session no longer on that day of the plan
     # (removed or replaced since the phone loaded it) is refused before any
@@ -613,11 +621,7 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
                         if _dur_new is not None:
                             # B197-style guard: never regress a measured duration.
                             _prev = _sess.get("session_duration_seconds")
-                            _sess["session_duration_seconds"] = (
-                                max(_prev, _dur_new)
-                                if isinstance(_prev, (int, float))
-                                else _dur_new
-                            )
+                            _sess["session_duration_seconds"] = keep_longest(_prev, _dur_new)
                         return
 
         _plans_cache = state.get("week_plans") or {}
@@ -751,9 +755,7 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
                     # `startedAt` and submit tiny durations (~30s); without max()
                     # they clobber the real training duration.
                     prev = entry.get("session_duration_seconds")
-                    entry["session_duration_seconds"] = (
-                        max(prev, duration) if isinstance(prev, (int, float)) else duration
-                    )
+                    entry["session_duration_seconds"] = keep_longest(prev, duration)
                 break
 
     # 7b. B413 (D2): the engine session marked done above keeps the

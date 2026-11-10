@@ -29,6 +29,7 @@ import {
 } from "@/lib/guided-pending-feedback";
 import { applyStepUndo, closeStep, isWithinAdvanceGuard, nextPendingIndex, type StepUndo } from "@/lib/guided-step-undo";
 import { unlockAudio, getAudioContext } from "@/lib/audio-unlock";
+import { elapsedDuration } from "@/lib/session-duration";
 import { readServerRuling, useServerRuling, useSubscription } from "@/lib/hooks/use-subscription";
 import { useSubmitLock } from "@/lib/hooks/use-submit-lock";
 import { useWakeLock } from "@/lib/hooks/use-wake-lock";
@@ -664,7 +665,9 @@ export default function GuidedSessionPage() {
       // /api/feedback and returns the updated week_plan. No prelude
       // getState/getWeek/applyEvents round-trips needed.
 
-      const durationSeconds = Math.max(0, Math.floor((Date.now() - new Date(state.startedAt).getTime()) / 1000));
+      // A325: undefined when the clock ran past any real session (player left
+      // open) — the body then carries no duration.
+      const durationSeconds = elapsedDuration(new Date(state.startedAt).getTime());
 
       // B288 / B397 G3: ONE builder for the first POST and for the replay, and
       // the replay sends this very body — duration included.

@@ -47,7 +47,7 @@ import { TestExpiryCard } from "@/components/training/test-expiry-card";
 import { WeekProgressBar } from "@/components/training/week-progress-bar";
 import { TodaySkeleton } from "@/components/training/today-skeleton";
 import { ApiError, apiErrorDetail, applyEvents, checkKeyConflicts, postFeedback, applyOverride, quickAddSession,
-  getOutdoorSpots, getOutdoorLogByDate, deleteFreeSession, getPitchLadder, setOutdoorPlan } from "@/lib/api";
+  getOutdoorSpots, getOutdoorLogByDate, deleteFreeSession, getPitchLadder, setOutdoorPlan, addExerciseToSession } from "@/lib/api";
 import { STALE_PLAN_MESSAGE } from "@/lib/plan-revision";
 import { useSubscription, paywallDecision } from "@/lib/hooks/use-subscription";
 import { useAuthWaitExpired, useOnline } from "@/lib/hooks/use-auth-wait";
@@ -88,7 +88,7 @@ import { getInProgressSession, type InProgressSession } from "@/lib/guided-sessi
 import { usePendingGuidedFeedback } from "@/lib/guided-pending-feedback";
 import { Play } from "lucide-react";
 import { getBoulderPhaseTip } from "@/lib/boulder-phase-tips";
-import type { WeekPlan, DayPlan, OutdoorSpot, OutdoorSession, OutdoorDayType, OutdoorPitchLadder, KeyStatus, KeyProposal, SessionPain, LimitProblemDraft } from "@/lib/types";
+import type { WeekPlan, DayPlan, OutdoorSpot, OutdoorSession, OutdoorDayType, OutdoorPitchLadder, KeyStatus, KeyProposal, KeyTopup, SessionPain, LimitProblemDraft } from "@/lib/types";
 import { boulderGradeSystemOf } from "@/lib/gradeUtils";
 import { withFeedbackContract, type MeasureValues } from "@/lib/measured-feedback";
 import { hasOtherActivity } from "@/lib/other-activity";
@@ -856,6 +856,22 @@ function TodayContent() {
     }
   }
 
+  /** A325: one drill short of the technique key — add it to a planned session. */
+  async function handleApplyKeyTopup(t: KeyTopup) {
+    if (!weekPlan) return;
+    setError(null);
+    try {
+      const result = await addExerciseToSession({ ...t.apply.body, week_plan: weekPlan });
+      updateWeekCache(result.week_plan, siblingsOf(result));
+      toast(`${t.exercise_name} added`, {
+        description: `${t.session_name}, right after the warm-up`,
+        duration: 6000,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to add the drill");
+    }
+  }
+
   /** Handle move session: call events API with move_session event */
   async function handleMoveApply(data: { to_date: string; to_slot: string }) {
     if (!weekPlan || !moveSession) return;
@@ -1435,7 +1451,7 @@ function TodayContent() {
 
         {/* A294 — only when a key session of this week is owed or at risk. */}
         {!loading && !error && isViewingToday && !isPaused && (
-          <KeySessionsCard status={keyStatus} compact collapsible onApplyProposal={handleApplyKeyProposal} />
+          <KeySessionsCard status={keyStatus} compact collapsible onApplyProposal={handleApplyKeyProposal} onApplyTopup={handleApplyKeyTopup} />
         )}
 
         {/* A301 — the alerts of the day shown (recovery guards + lunch rules):
@@ -1474,9 +1490,9 @@ function TodayContent() {
             outdoorLoadScore={outdoorLoadMap[dayPlan.date]}
             hasQuaderno={quadernoDays?.includes(dayPlan.date)}
             weekPlan={weekPlan}
-            onSessionUpdated={(updatedPlan) => {
+            onSessionUpdated={(updatedPlan, siblings) => {
               // B153d: use response data when available to avoid 422 reload race
-              if (updatedPlan) { updateWeekCache(updatedPlan); } else { refetchAll(); }
+              if (updatedPlan) { updateWeekCache(updatedPlan, siblings); } else { refetchAll(); }
             }}
             onMarkDone={handleMarkDone}
             onMarkSkipped={handleMarkSkipped}

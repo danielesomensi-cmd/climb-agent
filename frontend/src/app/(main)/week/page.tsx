@@ -31,7 +31,7 @@ import { ChevronLeft, ChevronRight, ChevronDown, BarChart3, Check, NotebookText 
 const FeedbackDialog = dynamic(() => import("@/components/training/feedback-dialog").then((m) => m.FeedbackDialog), { ssr: false });
 import { useRouter } from "next/navigation";
 import { applyOverride, quickAddSession,
-  ApiError, apiErrorDetail, applyEvents, checkKeyConflicts, postFeedback, getOutdoorLogByDate, deleteFreeSession, getPitchLadder, setOutdoorPlan } from "@/lib/api";
+  ApiError, addExerciseToSession, apiErrorDetail, applyEvents, checkKeyConflicts, postFeedback, getOutdoorLogByDate, deleteFreeSession, getPitchLadder, setOutdoorPlan } from "@/lib/api";
 import { STALE_PLAN_MESSAGE } from "@/lib/plan-revision";
 import { useUserState } from "@/lib/hooks/queries/use-user-state";
 import { useWeekPlan } from "@/lib/hooks/queries/use-week-plan";
@@ -59,7 +59,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { WeekPlan, DayPlan, Macrocycle, OutdoorSpot, OutdoorSession, Phase, OutdoorDayType, OutdoorPitchLadder, KeyStatus, KeyProposal, SessionPain, LimitProblemDraft } from "@/lib/types";
+import type { WeekPlan, DayPlan, Macrocycle, OutdoorSpot, OutdoorSession, Phase, OutdoorDayType, OutdoorPitchLadder, KeyStatus, KeyProposal, KeyTopup, SessionPain, LimitProblemDraft } from "@/lib/types";
 import { boulderGradeSystemOf } from "@/lib/gradeUtils";
 import { withFeedbackContract, type MeasureValues } from "@/lib/measured-feedback";
 import {
@@ -405,6 +405,22 @@ export default function WeekPage() {
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to re-schedule the key session");
+    }
+  }
+
+  /** A325: one drill short of the technique key — add it to a planned session. */
+  async function handleApplyKeyTopup(t: KeyTopup) {
+    if (!weekPlan) return;
+    setError(null);
+    try {
+      const result = await addExerciseToSession({ ...t.apply.body, week_plan: weekPlan });
+      updateWeekCache(result.week_plan, siblingsOf(result));
+      toast(`${t.exercise_name} added`, {
+        description: `${t.session_name}, right after the warm-up`,
+        duration: 6000,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to add the drill");
     }
   }
 
@@ -1009,7 +1025,7 @@ export default function WeekPage() {
         {/* A294 — key sessions of the week, here only when something is owed
             (A308: on track, the full card sits in the week notes below). */}
         {!loading && !error && (
-          <KeySessionsCard status={keyStatus} compact onApplyProposal={handleApplyKeyProposal} />
+          <KeySessionsCard status={keyStatus} compact onApplyProposal={handleApplyKeyProposal} onApplyTopup={handleApplyKeyTopup} />
         )}
 
         {/* A300 / A301 — alerts of the week: recovery guards, lunch-rotation
@@ -1043,8 +1059,8 @@ export default function WeekPage() {
                   outdoorLoadScore={outdoorLoadMap[day.date]}
                   hasQuaderno={quadernoDays?.includes(day.date)}
                   weekPlan={weekPlan}
-                  onSessionUpdated={(updatedPlan) => {
-                    if (updatedPlan) { updateWeekCache(updatedPlan); } else { refetchAll(); }
+                  onSessionUpdated={(updatedPlan, siblings) => {
+                    if (updatedPlan) { updateWeekCache(updatedPlan, siblings); } else { refetchAll(); }
                   }}
                   showActions
                   onMarkDone={(sessionId) => handleMarkDone(sessionId, day.date)}
@@ -1109,7 +1125,7 @@ export default function WeekPage() {
             {notesExpanded && (
               <div className="space-y-3">
                 {keyInNotes && (
-                  <KeySessionsCard status={keyStatus} onApplyProposal={handleApplyKeyProposal} />
+                  <KeySessionsCard status={keyStatus} onApplyProposal={handleApplyKeyProposal} onApplyTopup={handleApplyKeyTopup} />
                 )}
 
                 {/* B297 (D211-F9): tests the planner couldn't fit this week */}
