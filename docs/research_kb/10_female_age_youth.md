@@ -110,7 +110,7 @@ From Consuegra Ch.8:
 
 ### 3.2 Engine Adjustments for Older Climbers
 
-- **Extended recovery between sessions:** where a 25-year-old might recover in 48h from a hangboard session, a 45-year-old may need 72h+. Engine should allow user to set recovery multiplier.
+- **Recovery between sessions (corrected in D288, 2026-11-13):** the earlier line «a 45-year-old may need 72h+» had no source. A 2025 meta-analysis (Fernandes et al., *J Aging Phys Act*, doi:10.1123/japa.2024-0165, 36 studies) found the loss of muscle function after damaging exercise not different between older and younger adults (soreness and 24 h CK lower in the older); no data exist on finger tendons or pulleys by age. Engine (decision of Daniele, 2026-11-13): no automatic modifier at 40-49 — `recovery_multiplier` 1.0 under 50, 1.25× at 50-59, 1.5× from 60 (B165b), user-adjustable; modifiers are signal-driven (pain rule), not birth-year-driven.
 - **Conservative volume progression:** the <10% weekly increase rule (D71) should be even more conservative for older climbers.
 - **Prioritise warm-up:** even more important with age — reduced tissue elasticity increases injury risk from insufficient warm-up.
 - **Strength training is essential:** combats sarcopenia and maintains bone density. Should not be de-prioritised in favour of climbing-only programs.
@@ -135,7 +135,7 @@ From Consuegra Ch.8:
 | D80 | **Hard age gates for youth users (<16): no campus, no max hangboard, no hypergravity** | Schöffl (2004-2024): 600% increase in epiphyseal fractures. 45% of youth injuries are growth plate. López-Rivera: <16 = contraindicated for advanced hangboard. | Engine checks age at onboarding; if <16, these exercises are blocked entirely. If 16-18, warnings + prerequisites. |
 | D81 | **Youth training cap: max 4 days/week climbing + training** | Hörst, Schöffl consensus: chronic overuse is the primary risk for youth. >10-12 hours/week during growth spurts = significantly elevated injury risk. | Engine limits session scheduling for users <18 to max 4 days/week. |
 | D82 | **Optional menstrual cycle tracking (v2), no algorithmic cycle-phase training** | Phillips (2023) umbrella review: premature to conclude hormonal fluctuations affect performance. But 93% of athletes report symptoms. Individual tracking = useful. Algorithmic rules = not evidence-based. | v2: optional cycle tracking feature. User can note phase/symptoms. Engine suggests intensity adjustment if user reports low energy, but defers to subjective experience. |
-| D83 | **Adjustable recovery multiplier for older users (40+)** | Recovery slows with age: muscle repair slower, HGH reduced, tendon adaptation even more gradual. Same recovery timelines as younger users = inadequate. | Engine applies age-based recovery multiplier: 40-50 = 1.25×, 50-60 = 1.5×, 60+ = 1.75× (user-adjustable). |
+| D83 | **Adjustable recovery multiplier for older users (40+)** | Recovery slows with age: muscle repair slower, HGH reduced, tendon adaptation even more gradual. Same recovery timelines as younger users = inadequate. | Engine applies age-based recovery multiplier: 40-50 = 1.25×, 50-60 = 1.5×, 60+ = 1.75× (user-adjustable). **Superseded (D288, 2026-11-13, Daniele):** code = 1.0 under 50, 1.25× at 50-59, 1.5× from 60 (B165b); no automatic change at 40-49 (Fernandes 2025 meta-analysis), signal-driven modifiers only. |
 
 ---
 

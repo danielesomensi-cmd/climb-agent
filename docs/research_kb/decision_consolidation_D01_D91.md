@@ -106,7 +106,7 @@
 - D68: Collect injury history in onboarding
 - D80: Hard age gates for youth <16 (CRITICAL)
 - D81: Youth training cap: max 4 days/week
-- D83: Adjustable recovery multiplier for 40+ users
+- D83: Adjustable recovery multiplier for 40+ users (*superseded by D288, 2026-11-13: no automatic change before 50, as in the code — B165b*)
 
 **Exercise Database (13):**
 - D10: Add overcoming isometric pull exercise

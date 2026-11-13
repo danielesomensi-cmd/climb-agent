@@ -193,8 +193,8 @@ A Berdorf: volume verticale 7a-7c su piedi piccoli, scarpetta annotata, scivolat
 ## 5. Settimana tipo per fase
 
 **Regole comuni:**
-- almeno **2 giorni di riposo veri**;
-- nessuna settimana con più di 3 stimoli dita-hard più l'outdoor duro;
+- almeno **2 giorni di riposo veri** (un pranzo Z2, HIIT o gambe non rompe il riposo — Daniele, 2026-11-13);
+- nessuna settimana con più di 3 stimoli dita-hard, **l'outdoor duro compreso** (Daniele, 2026-11-13, D288 R1);
 - il riscaldamento tecnico è ovunque e non costa tempo.
 
 La chiave TECNICA della settimana si soddisfa con una di queste:

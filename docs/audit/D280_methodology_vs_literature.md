@@ -346,7 +346,7 @@ engine, api o frontend.
 
 Ma: l'evidenza a favore di una cadenza 4:1 è **solo** un sondaggio di pratica auto-riportata su
 powerlifter (Sports Med Open 2024, n=246), mentre le due fonti sperimentali disponibili trovano
-che inserire o omettere lo scarico non cambia gli adattamenti. **Nota di roadmap, non intervento
+che inserire o omettere lo scarico non cambia gli adattamenti (*correzione D288: non esatto — Coleman 2024, PeerJ 12:e16777, trova meno guadagno di forza degli arti inferiori nel gruppo che si ferma una settimana*). **Nota di roadmap, non intervento
 urgente.** Il dead code va rimosso o reso effettivo in ogni caso.
 
 ---
@@ -399,7 +399,7 @@ somma quel carico nel report settimanale. Quello che l'outdoor **non** fa è ali
 `stimulus_recency`, `working_loads` e i gap di sicurezza dita.
 
 Cosa manca, con numeri: taper 2 settimane pre-trip (volume ×0,6 poi ×0,4, intensità e giorni
-invariati); mantenimento in trip senza attrezzatura (Javorský & Saeterbakken 2023, crossover
+invariati); mantenimento in trip senza attrezzatura (*D288: campione di livello basso-intermedio senza altra arrampicata — non dimostra il mantenimento per un 8a+*; Javorský & Saeterbakken 2023, crossover
 n=13, 5 settimane: 2 sessioni/settimana non esaustive, 6×6 rip in 7 s:3 s a ~60% MVC,
 36-72 contrazioni/settimana bastano a mantenere MVC, critical force e impulso di forza);
 rientro con volume ridotto e re-test.
@@ -559,7 +559,7 @@ misattribuite in tre finding su cinque.
   partecipanti; ICC mediano 0,86)
 - Systematic review 2023 PMC10756908 / 2025 PMC12821603 — epidemiologia infortuni, 93% da
   sovraccarico, re-infortunio 63%
-- Bell et al. 2024 — Sports Medicine - Open 10.1186/s40798-024-00691-y (sondaggio deload, n=246
+- Rogerson et al. 2024 (ultimo autore Bell; corretto in D288) — Sports Medicine - Open 10.1186/s40798-024-00691-y (sondaggio deload, n=246
   — **evidenza livello 5, non arrampicatori**)
 
 **Da NON citare** (misattribuite dagli agenti e corrette in verifica): Faggian 2025 per gli
