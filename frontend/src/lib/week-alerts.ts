@@ -22,6 +22,7 @@ import type {
   WeekPlan,
 } from "@/lib/types";
 import { FOCUS_FAMILIES } from "@/lib/slot-structure";
+import { formatSessionId, shortDay } from "@/lib/key-sessions";
 
 /** One alert line on a session card or in a list. */
 export interface SessionAlert {
@@ -63,10 +64,130 @@ const GUARD_TITLES: Record<string, string> = {
   // is in the message, so the title no longer says "big".
   post_outdoor: "After an outdoor day",
   hard_back_to_back: "Back-to-back hard days",
+  // A330 (D288-FE) — the A327 codes, named as in the user guide.
+  finger_low_gap: "Light finger work too close",
+  finger_hard_cap: "Above the weekly finger-hard cap",
+  max_hang_cap: "Above the weekly max-hang cap",
+  crag_block: "After a crag block",
 };
 
-export function guardTitle(code: string): string {
+/** A330 — `crag_block` says which of its three rules the session breaks. */
+const CRAG_BLOCK_TITLES: Record<string, string> = {
+  rest_day: "Rest day after a crag block",
+  no_hard: "No hard session after a crag block",
+  finger_72h: "Fingers wait after a crag block",
+};
+
+/** Mirror of `retest_policy.FINGER_LOW_MAX_PER_DAY` (light finger sessions a day). */
+export const FINGER_LOW_MAX_PER_DAY = 2;
+
+export function guardTitle(code: string, detail?: string | null): string {
+  if (code === "crag_block" && detail && CRAG_BLOCK_TITLES[detail]) return CRAG_BLOCK_TITLES[detail];
   return GUARD_TITLES[code] ?? "Recovery alert";
+}
+
+// ---------------------------------------------------------------------------
+// A330 (D288-FE) — the app's own text for the A327 codes, built from the
+// payload fields (`count`, `cap`, `detail`, `crag_days`, `finger_ok_from`,
+// `gap_h`, `low_count`). A field missing (an older server) → the backend's
+// `message`, as before. Informative only: nothing here says a session was
+// blocked or changed.
+// ---------------------------------------------------------------------------
+
+const isIsoDay = (v: unknown): v is string => typeof v === "string" && /^\d{4}-\d{2}-\d{2}/.test(v);
+const isNum = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+
+/** "Limit boulder gym" — the session's display name, else its id made readable. */
+function sessionName(w: GuardWarning): string {
+  return (w.name && w.name.trim()) || formatSessionId(w.session_id);
+}
+
+/** "Sat 7 Nov – Sun 8 Nov" (two or more days), or the one day. */
+function dayRange(days: string[]): string {
+  const sorted = [...days].filter(isIsoDay).sort();
+  if (sorted.length === 0) return "";
+  const first = shortDay(sorted[0].slice(0, 10));
+  const last = shortDay(sorted[sorted.length - 1].slice(0, 10));
+  return sorted.length === 1 ? first : `${first} – ${last}`;
+}
+
+/** "Wed 11 Nov, 18:00" from "2026-11-11T18:00". */
+function clockLabel(iso: string): string {
+  const day = shortDay(iso.slice(0, 10));
+  const hm = /T(\d{2}:\d{2})/.exec(iso)?.[1];
+  return hm ? `${day}, ${hm}` : day;
+}
+
+const slotOrder = (s: string | null | undefined) =>
+  s === "morning" ? 0 : s === "lunch" ? 1 : s === "evening" ? 2 : 3;
+
+/** 6 → "6", 7.5 → "7.5". */
+function hours(h: number): string {
+  return String(Math.round(h * 10) / 10);
+}
+
+/**
+ * The other side of a `finger_low_gap` pair: the nearest `with` ref at or
+ * before the flagged session (the later of a pair is the one flagged; a crag
+ * day has no slot and runs 08-18).
+ */
+function partnerLabel(w: GuardWarning): string | null {
+  const refs = (w.with ?? []).filter((r) => isIsoDay(r.date));
+  const before = refs.filter(
+    (r) => r.date < w.date || (r.date === w.date && (!r.session_id || slotOrder(r.slot) <= slotOrder(w.slot))),
+  );
+  const pool = before.length ? before : refs;
+  const p = pool[pool.length - 1];
+  if (!p) return null;
+  if (!p.session_id) return `your crag day on ${shortDay(p.date.slice(0, 10))}`;
+  const when = p.date === w.date ? "same day" : shortDay(p.date.slice(0, 10));
+  return `${formatSessionId(p.session_id)} (${when}${p.slot ? `, ${p.slot}` : ""})`;
+}
+
+/** The app's message for a guard alert (the backend's for the codes it does not word). */
+export function guardMessage(w: GuardWarning): string {
+  const name = sessionName(w);
+  const day = isIsoDay(w.date) ? shortDay(w.date.slice(0, 10)) : w.date;
+  switch (w.code) {
+    case "finger_hard_cap":
+      if (isNum(w.count) && isNum(w.cap)) {
+        return `This week has ${w.count} finger-hard days, crag days included; the cap is ${w.cap}. ${name} on ${day} is past it.`;
+      }
+      break;
+    case "max_hang_cap":
+      if (isNum(w.count) && isNum(w.cap)) {
+        return `This week has ${w.count} max-hang days; the cap is ${w.cap}. ${name} on ${day} is past it.`;
+      }
+      break;
+    case "crag_block": {
+      const crag = w.crag_days ?? [];
+      if (crag.length < 2) break;
+      const block = `${crag.length} hard crag days in a row (${dayRange(crag)})`;
+      if (w.detail === "rest_day") {
+        return `After ${block}, ${day} is meant as a true rest day: ${name} is planned on it. A lunch extra or recovery / prehab is fine.`;
+      }
+      if (w.detail === "no_hard") {
+        return `${day} is the second day after ${block}: no hard session that day, and ${name} is a hard one.`;
+      }
+      if (w.detail === "finger_72h" && isIsoDay(w.finger_ok_from)) {
+        const at = w.slot ? ` (${w.slot})` : "";
+        return `After ${block}, hard finger work only from ${clockLabel(w.finger_ok_from)} (72 h after the crag): ${name} on ${day}${at} comes earlier.`;
+      }
+      break;
+    }
+    case "finger_low_gap":
+      if (w.detail === "gap" && isNum(w.gap_h)) {
+        const other = partnerLabel(w);
+        if (other) {
+          return `${name} on ${day} is less than ${hours(w.gap_h)} h from ${other}: a light finger session needs ${hours(w.gap_h)} h from any other finger session.`;
+        }
+      }
+      if (w.detail === "per_day" && isNum(w.low_count)) {
+        return `${day} has ${w.low_count} light finger sessions, at most ${FINGER_LOW_MAX_PER_DAY} a day: ${name} is one too many.`;
+      }
+      break;
+  }
+  return w.message;
 }
 
 const STRUCTURE_TITLES: Record<string, string> = {
@@ -103,8 +224,8 @@ export function guardAlert(w: GuardWarning): SessionAlert {
   return {
     source: "guard",
     code: w.code,
-    title: guardTitle(w.code),
-    message: w.message,
+    title: guardTitle(w.code, w.detail),
+    message: guardMessage(w),
     date: w.date,
     slot: w.slot ?? null,
     session_id: w.session_id ?? null,
@@ -273,7 +394,7 @@ export function alertMessagesFor(
     d === date && (slot == null || s == null || s === slot);
   return (warnings ?? [])
     .filter((w) => hit(w.date, w.slot) || (w.with ?? []).some((r) => hit(r.date, r.slot)))
-    .map((w) => w.message);
+    .map((w) => guardMessage(w));
 }
 
 /**

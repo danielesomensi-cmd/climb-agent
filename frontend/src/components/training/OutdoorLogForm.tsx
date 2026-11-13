@@ -14,6 +14,15 @@ import { ApiError, getOutdoorLogByDate, postOutdoorLog, putOutdoorLog } from "@/
 import { useSubmitLock } from "@/lib/hooks/use-submit-lock";
 import { enqueue } from "@/lib/outbox";
 import { deriveTryTimings, routeHasTimestamps } from "@/lib/try-timings";
+import {
+  TECHNIQUE_METRICS,
+  TECHNIQUE_SAMPLE_MAX,
+  TECHNIQUE_VALUE_MAX,
+  parseTechniqueDraft,
+  techniqueDraftOf,
+  techniqueTargetField,
+  type TechniqueDraft,
+} from "@/lib/outdoor-technique";
 import { TryBreakdown } from "@/components/outdoor/try-breakdown";
 import {
   attemptChipClass,
@@ -155,6 +164,12 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
   // edited crag's own (routes are only appended, never reordered). «Add as
   // another crag» saves only the ones after them — never the edited crag's.
   const [editedCragRoutes, setEditedCragRoutes] = useState(initialData?.routes?.length ?? 0);
+  // A330 (D288-FE) — the crag day's technique target (A329): the day ticks the
+  // week's technique key only with one. Prefilled from the log on an edit.
+  const initialTechnique = initialData?.technique_target ?? null;
+  const [technique, setTechnique] = useState<TechniqueDraft>(() => techniqueDraftOf(initialTechnique));
+  const parsedTechnique = parseTechniqueDraft(technique);
+  const techniqueHint = TECHNIQUE_METRICS.find((m) => m.value === technique.metric)?.hint;
 
   const gradeList = discipline === "lead" || discipline === "both"
     ? FRENCH_SPORT_GRADES
@@ -291,6 +306,10 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
     if (dayType) payload.day_type = dayType;
     if (routeProfile && Object.keys(routeProfile).length > 0) payload.route_profile = routeProfile;
     if (conditions) payload.conditions = conditions;
+    // A330 — `technique_target` as the schema wants it; on an edit, left out
+    // keeps the stored one and null clears it (A324).
+    const tt = techniqueTargetField(parsedTechnique.target, forEdit ? "put" : "post", initialTechnique);
+    if (tt !== undefined) payload.technique_target = tt;
     return payload;
   };
 
@@ -309,6 +328,10 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
     payload.routes = addedRoutes;
     payload.duration_minutes = addDuration;
     if (!notesChanged) delete payload.notes;
+    // A330: the edited crag's technique target stays with it — only one typed here goes.
+    const tt = techniqueTargetField(parsedTechnique.target, "add", initialTechnique);
+    if (tt === undefined) delete payload.technique_target;
+    else payload.technique_target = tt;
     return payload;
   };
 
@@ -335,6 +358,11 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
   const { run: submit, busy: submitting } = useSubmitLock(async (mode: SaveMode) => {
     if (!spotName.trim()) {
       setError("Spot name is required");
+      return;
+    }
+    // A330: a technique number the server would refuse (422) never leaves the form.
+    if (parsedTechnique.error) {
+      setError(parsedTechnique.error);
       return;
     }
     // A324 (B-OUTDOOR-CRAG-PICKER point 4): «Log outdoor» / «Quick log» open
@@ -613,6 +641,55 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
         >
           + Add route
         </button>
+      </div>
+
+      {/* A330 (D288-FE) — technique target (A329): optional, one per crag. */}
+      <div className="rounded-lg border p-3 space-y-2" data-testid="technique-target">
+        <div>
+          <label htmlFor="technique-metric" className="text-sm font-medium">
+            Technique (counts for the key)
+          </label>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Optional. Log one number and this day ticks the week&apos;s technique key — what counts is
+            that you measured it, not how good it is.
+          </p>
+        </div>
+        <select
+          id="technique-metric"
+          value={technique.metric}
+          onChange={(e) => setTechnique((t) => ({ ...t, metric: e.target.value as TechniqueDraft["metric"] }))}
+          className="w-full min-h-[44px] rounded-md border bg-background px-3 py-2 text-sm"
+        >
+          <option value="">Not measured</option>
+          {TECHNIQUE_METRICS.map((m) => (
+            <option key={m.value} value={m.value}>{m.label}</option>
+          ))}
+        </select>
+        {technique.metric && (
+          <>
+            {techniqueHint && <p className="text-xs text-muted-foreground">{techniqueHint}</p>}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                inputMode="decimal"
+                aria-label={`Technique number (0-${TECHNIQUE_VALUE_MAX})`}
+                placeholder={`0-${TECHNIQUE_VALUE_MAX}`}
+                value={technique.value}
+                onChange={(e) => setTechnique((t) => ({ ...t, value: e.target.value }))}
+                className="w-24 min-h-[44px] shrink-0 rounded-md border bg-background px-3 py-2 text-sm"
+              />
+              <input
+                type="text"
+                aria-label="Route or pitch measured (optional)"
+                placeholder="Route / pitch (optional)"
+                maxLength={TECHNIQUE_SAMPLE_MAX}
+                value={technique.sample}
+                onChange={(e) => setTechnique((t) => ({ ...t, sample: e.target.value }))}
+                className="min-w-0 flex-1 min-h-[44px] rounded-md border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {/* Notes */}

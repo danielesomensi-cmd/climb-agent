@@ -11,6 +11,7 @@ import Link from "next/link";
 import { TopBar } from "@/components/layout/top-bar";
 import { DayCard } from "@/components/training/day-card";
 import { WeekAlertsCard } from "@/components/training/week-alerts-card";
+import { ReducedWeekCard } from "@/components/training/reduced-week-card";
 import { KeySessionsCard } from "@/components/training/key-sessions-card";
 import { KeyConflictDialog } from "@/components/training/key-conflict-dialog";
 import { useKeyConflictGate } from "@/lib/hooks/use-key-conflict-gate";
@@ -1452,6 +1453,12 @@ function TodayContent() {
         {/* A294 — only when a key session of this week is owed or at risk. */}
         {!loading && !error && isViewingToday && !isPaused && (
           <KeySessionsCard status={keyStatus} compact collapsible onApplyProposal={handleApplyKeyProposal} onApplyTopup={handleApplyKeyTopup} />
+        )}
+
+        {/* A330 (D288-FE) — a reduced week suggested from next Monday (very
+            hard sessions, a pain report): a note, the plan stays as it is. */}
+        {!loading && !error && isViewingToday && !isPaused && (
+          <ReducedWeekCard suggestion={weekData?.reduced_week} />
         )}
 
         {/* A301 — the alerts of the day shown (recovery guards + lunch rules):

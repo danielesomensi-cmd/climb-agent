@@ -27,6 +27,8 @@ const FILES = [
   "components/training/day-card.tsx",
   "components/training/feedback-dialog.tsx",
   "components/training/key-sessions-card.tsx",
+  // A330 — the reduced-week card (/today, /week).
+  "components/training/reduced-week-card.tsx",
   "components/training/replan-dialog.tsx",
   "components/training/retest-status-card.tsx",
   "components/training/session-card.tsx",

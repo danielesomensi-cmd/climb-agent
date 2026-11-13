@@ -125,6 +125,31 @@ export function techniqueProgressLine(r: KeyRequirement): string | null {
   return `${pr.done} of ${pr.needed} drills done${on}${missed ? `, ${missed} still to do` : `, ${left} more to do`}`;
 }
 
+/** A329 — the technique metrics an outdoor day is logged with: [one, many]. */
+const TECHNIQUE_METRIC_TEXT: Record<string, [string, string]> = {
+  foot_slips_per_go: ["foot slip per go", "foot slips per go"],
+  sample_readjust: ["foot readjustment on a sample pitch", "foot readjustments on a sample pitch"],
+};
+
+/** 2 → "2", 1.5 → "1.5", 1.333 → "1.33". */
+function formatValue(v: number): string {
+  return String(Math.round(v * 100) / 100);
+}
+
+/**
+ * A330 (D288-FE) — technique ticked by a crag day with a logged target (A329):
+ * "done outdoors: 2 foot slips per go (Isatis L1)", or null when the key was
+ * not done that way.
+ */
+export function outdoorTechniqueLine(r: KeyRequirement): string | null {
+  if (r.status !== "done") return null;
+  const tt = r.done.find((x) => x.technique_target)?.technique_target;
+  if (!tt || typeof tt.value !== "number" || !Number.isFinite(tt.value)) return null;
+  const [one, many] = TECHNIQUE_METRIC_TEXT[tt.metric] ?? [String(tt.metric).replace(/_/g, " "), String(tt.metric).replace(/_/g, " ")];
+  const sample = tt.sample?.trim();
+  return `done outdoors: ${formatValue(tt.value)} ${tt.value === 1 ? one : many}${sample ? ` (${sample})` : ""}`;
+}
+
 export function formatSessionId(id: string | null | undefined): string {
   if (!id) return "session";
   const s = id.replace(/^custom_/, "").replace(/_/g, " ");
@@ -136,7 +161,7 @@ export function requirementLine(r: KeyRequirement): string {
   const nextPlanned = r.planned.find((p) => !p.unmarked);
   switch (r.status) {
     case "done":
-      return "Done";
+      return outdoorTechniqueLine(r) ?? "Done";
     case "planned": {
       // A325: the missing drill sits in a planned session (a top-up).
       const drill = nextPlanned?.topup ? nextPlanned.drills?.map((d) => d.name).join(", ") : "";

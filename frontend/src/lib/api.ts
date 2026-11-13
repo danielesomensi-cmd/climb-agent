@@ -46,6 +46,7 @@ import type {
   KeyStatus,
   KeyConflict,
   GuardWarning,
+  ReducedWeekSuggestion,
   AdaptiveSuggestion,
 } from "./types";
 import { localToday } from "./key-sessions";
@@ -487,6 +488,8 @@ export const getWeek = (weekNum: number, force?: boolean, preserveBefore?: strin
     key_status?: KeyStatus | null;
     /** A301 — recovery guards as alerts (sibling of week_plan, never persisted). */
     guard_warnings?: GuardWarning[];
+    /** A328 (b) — current week only, present only when a reduced week is suggested. */
+    reduced_week?: ReducedWeekSuggestion;
   }>(`/api/week/${weekNum}${qs ? `?${qs}` : ""}`);
 };
 

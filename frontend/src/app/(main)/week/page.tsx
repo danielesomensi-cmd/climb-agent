@@ -20,6 +20,7 @@ import { hasKeyIssues, keyDays } from "@/lib/key-sessions";
 import { computeCurrentWeek } from "@/lib/phase-progress";
 import { UnmetStimulusCard } from "@/components/training/unmet-stimulus-card";
 import { WeekAlertsCard } from "@/components/training/week-alerts-card";
+import { ReducedWeekCard } from "@/components/training/reduced-week-card";
 const QuickAddDialog = dynamic(() => import("@/components/training/quick-add-dialog").then((m) => m.QuickAddDialog), { ssr: false });
 const ReplanDialog = dynamic(() => import("@/components/training/replan-dialog").then((m) => m.ReplanDialog), { ssr: false });
 const MoveSessionDialog = dynamic(() => import("@/components/training/move-session-dialog").then((m) => m.MoveSessionDialog), { ssr: false });
@@ -1026,6 +1027,12 @@ export default function WeekPage() {
             (A308: on track, the full card sits in the week notes below). */}
         {!loading && !error && (
           <KeySessionsCard status={keyStatus} compact onApplyProposal={handleApplyKeyProposal} onApplyTopup={handleApplyKeyTopup} />
+        )}
+
+        {/* A330 (D288-FE) — the reduced-week suggestion: the current week's
+            response carries it only when one is suggested. Informational. */}
+        {!loading && !error && weekPlan && (
+          <ReducedWeekCard suggestion={weekQuery.data?.reduced_week} />
         )}
 
         {/* A300 / A301 — alerts of the week: recovery guards, lunch-rotation

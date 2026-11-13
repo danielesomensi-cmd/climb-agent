@@ -294,7 +294,12 @@ export type GuardCode =
   | "hard_cap"
   | "pre_trip"
   | "post_outdoor"
-  | "hard_back_to_back";
+  | "hard_back_to_back"
+  // A327 (D288 R1 / R2) — titled and worded by the app since A330.
+  | "finger_low_gap"
+  | "finger_hard_cap"
+  | "max_hang_cap"
+  | "crag_block";
 
 export interface GuardRef {
   date: string;
@@ -312,6 +317,39 @@ export interface GuardWarning {
   user_owned: boolean;
   with: GuardRef[];
   message: string;
+  /**
+   * A327 — extra fields of the new codes (mirror of `backend/engine/guards_v1.py`):
+   * `finger_hard_cap` / `max_hang_cap` (and `hard_cap`): `count`, `cap`;
+   * `crag_block`: `detail` (`rest_day` | `no_hard` | `finger_72h`), `crag_days`,
+   * `finger_ok_from` ("YYYY-MM-DDTHH:00"); `finger_low_gap`: `detail`
+   * (`gap` | `per_day`), `gap_h`, `low_count`. Absent on the other codes.
+   */
+  detail?: string;
+  count?: number;
+  cap?: number;
+  crag_days?: string[];
+  finger_ok_from?: string;
+  gap_h?: number;
+  low_count?: number;
+}
+
+/**
+ * A328 (b) — D288 R3-b: the reduced-week suggestion, a sibling of `week_plan`
+ * on `GET /api/week` for the CURRENT week only, and only when suggested.
+ * Mirror of `backend/engine/reduced_week.suggestion()` + `message`. Never
+ * applied: the athlete decides.
+ */
+export type ReducedWeekReason = "very_hard_7d" | "pain_block" | "athlete_request";
+
+export interface ReducedWeekSuggestion {
+  suggested: boolean;
+  /** The first Monday on or after today (YYYY-MM-DD). */
+  week_start: string;
+  reasons: Array<ReducedWeekReason | string>;
+  skipped?: "recent_taper" | "deload_soon" | string | null;
+  as_of?: string;
+  /** The backend's own sentence (English). */
+  message?: string | null;
 }
 
 /** B369 — POST /api/feedback after a very_hard / fail: a suggestion, never a plan change. */
@@ -610,6 +648,22 @@ export interface OutdoorConditions {
   qualifiers?: WeatherQualifiers;
 }
 
+/**
+ * A329 (D288 R8) — the measurable technique target of a crag day: the day
+ * counts for the weekly technique key only with one. Schema
+ * `backend/data/schemas/outdoor_session_entry.v1.json` (additionalProperties
+ * false): `metric` foot slips per go on the project | foot readjustments on
+ * one sample pitch; `value` 0-30 (a per-go mean may be decimal); `sample` the
+ * route / pitch measured (≤ 80 chars, optional).
+ */
+export type OutdoorTechniqueMetric = "foot_slips_per_go" | "sample_readjust";
+
+export interface OutdoorTechniqueTarget {
+  metric: OutdoorTechniqueMetric;
+  value: number;
+  sample?: string;
+}
+
 export interface OutdoorSession {
   log_version: string;
   date: string;
@@ -624,6 +678,8 @@ export interface OutdoorSession {
   overall_feeling?: string;
   day_type?: OutdoorDayType;
   route_profile?: OutdoorRouteProfile;
+  /** A329 — PUT: absent keeps the stored one, `null` clears it (A324). */
+  technique_target?: OutdoorTechniqueTarget | null;
   load_score?: number;
 }
 
@@ -1561,6 +1617,11 @@ export interface KeySessionRef {
   drills?: KeyDrill[];
   /** A325 — a planned session that carries the missing drill, added by hand. */
   topup?: boolean;
+  /**
+   * A329 — technique done at the crag: the logged target that ticked the key
+   * (a `done` row with no session, `name` "outdoor <crag>").
+   */
+  technique_target?: OutdoorTechniqueTarget;
 }
 
 /** A325 — a technique drill of the week (catalog id + display name). */
