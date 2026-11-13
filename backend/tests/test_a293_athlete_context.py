@@ -320,7 +320,8 @@ class TestKeySessions:
         assert [r["key"] for r in ctx["key_sessions"]["requirements"]] == ["technique"]
 
     def test_deload_has_technique_without_try_hard(self):
-        assert [r["key"] for r in ac.key_requirements_for("deload")] == ["technique"]
+        # A328 (D288 R3): the deload keeps one finger exposure next to technique.
+        assert [r["key"] for r in ac.key_requirements_for("deload")] == ["finger_maintenance", "technique"]
 
     def test_pe_limit_gap(self):
         st = _state()
@@ -611,6 +612,8 @@ class TestReviewFixes:
         row = _day(ctx, "2026-11-30")
         assert row["finger_max_ok"] is False and row["heavy_pull_ok"] is False
         assert any("deload" in r for r in row["finger_reasons"])
+        # A328: the plan carries the deload's one finger exposure, not a custom.
+        assert any("una sola esposizione dita" in r and "la mette il piano" in r for r in row["finger_reasons"])
         assert "Tetto di intensità della fase: max" in ac.render_text(_ctx())
 
     def test_heavy_pull_window_looks_forward(self):

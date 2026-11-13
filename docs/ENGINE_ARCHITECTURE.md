@@ -189,7 +189,15 @@ The `technique` and `core_prehab` weights are fixed per phase — only the renor
 
 ### Deload and trips
 
-- `apply_deload_week(week_plan)` — called by `generate_phase_week` when `phase_id == "deload"`. Walks the days in order: drops every session tagged `hard`, keeps the first 5 of the others and drops the rest, sets `phase = "deload"` and `targets = {hard_days: 0, finger_days: 0}`. Nothing replaces a dropped session (the docstring says otherwise; `DELOAD_SESSION_POOL` is not read by it) and the test is the `hard` tag, not the intensity.
+- **The deload form (A328, D288 R3 — decided 2026-11-13).** The terminal deload keeps a reduced dose of each key stimulus instead of removing all hard work (one week of cessation costs strength, Coleman 2024; strength is kept on a low volume if the relative load is kept, Spiering 2021 — engineering constants, no climbing data). `macrocycle_v1.DELOAD_*`:
+  - **the same climbing days as a normal week** of the same availability: PASS 1 fills every kept day that has a climbing venue with the form — `DELOAD_TECHNIQUE_SESSION` (`technique_focus_gym`, ×1), then the easy fillers `DELOAD_FILLERS` (`easy_climbing_deload` ×4, `regeneration_easy` ×2: weekly limits valid in the deload only), budget one pool rotation per weekday;
+  - **one finger exposure** `DELOAD_FINGER_SESSION` (`deload_finger_touch`: finger warm-up, 3 × 7 s `max_hang_7s`, easy climbing pinned with `pin_exhausted: skip` so it is skipped at home, finger prehab) — only when `generate_phase_week(deload_finger_exposure=True)`, which `week.py` passes for an athlete with a tested hang max (`anchored_load.is_anchored_and_tested`). Placed BEFORE PASS 1 on the first valid day from Monday: never in the last `DELOAD_TOUCH_LAST_DAYS` (3) days of the week (the 72 h before a test opening the next cycle), never within the finger gap of a finger day (previous week B161, lived days B390, crag days B382, the user's sessions B414). No day fits → `unmet_stimulus` row `{stimulus: "finger_strength", phase_id: "deload"}`. Meta: `finger` (48 h gap), not `hard` (the hard cap stays 0), intensity `medium`;
+  - **sets × 0.5**: the technique drills declare `deload_sets: 0.5` (A312's factor form, `resolve_session._apply_deload_sets`: a value in (0, 1) multiplies the picked exercise's own sets, rounded up, at least 1); the finger exposure has 3 sets (5 × 0.5 rounded up); the native deload sessions keep their light doses; the lunches keep A312 (no second cut); the bodyweight ladders keep their deload dose (−1 set);
+  - **no** power-endurance intervals, tests, work to failure or weighted pull-ups (Daniele, 2026-11-13: heavy pulling stays out of the deload). `finger_aerobic_base` leaves the complementary pool when the finger exposure is there.
+  - **Where the form lives:** in code, read whenever `phase_id == "deload"`, whatever the saved pool and cap say — an existing macrocycle keeps its old `session_pool` / `intensity_cap: low` in `phases[]`. Two sources then exist: the form (climbing days) and the saved pool (complementary sessions); the deload week's `profile_snapshot.session_pool` records both (form first). `_SESSION_POOL[...]["deload"]` lists the two sessions too, for new macrocycles; `DELOAD_ABOVE_CAP` names the two sessions placed above the `low` cap.
+  - **Load and closed loop:** see §8.1 (the deload hang = the previous phase's anchored load × `DELOAD_LOAD_FACTOR` 0.90, feedback frozen).
+- `apply_deload_week(week_plan)` — called by `generate_phase_week` when `phase_id == "deload"`, as a safety net: drops every session tagged `hard` (none is placed), sets `phase = "deload"` and `targets = {hard_days: 0, finger_days: <days with a finger session>}`. A328: no session cap any more (B160c capped the week at 5 sessions, which cut the climbing days R3 keeps); nothing is replaced.
+- **Reduced week on a trigger (R3-b):** inside the cycle there is no calendar unload; a reduced week is only ever proposed as an alert, never applied by the engine (A301 / B369).
 - **Trip taper (A281)** — `compute_taper_windows(trips, week_start, week_end)` → `{"volume": {date: multiplier}, "no_hard": [dates]}`: volume ×0.6 on T-14..T-8 and ×0.4 on T-7..T-1 (`TAPER_WEEK1_VOLUME` / `TAPER_WEEK2_VOLUME`; the lower multiplier wins when trips overlap), no hard / max session on T-2..T (`TAPER_NO_HARD_DAYS` = 3). `backend/api/routers/week.py` passes `no_hard` to the planner as `pretrip_dates` and `volume` as `taper_volume`; the multiplier travels on the day (`taper_volume_multiplier`) and scales the sets of training work at resolution (`week.py::_apply_taper_volume`).
 - The older 5-day helpers — `compute_pretrip_dates()`, `check_pretrip_deload()` and the `pretrip_deload` annotation `generate_macrocycle` puts on a phase (`_check_pretrip_overlap`) — are still in the module but no longer feed the planner.
 - No adaptive phase duration: there is no feedback-driven phase extension or emergency deload. Overreach is handled per exercise by the closed loop (§8).
@@ -236,7 +244,7 @@ Used in `_make_session_entry()` to set `estimated_load_score` before resolution.
 
 Computed once, before PASS 1:
 
-- **Intensity cap:** `intensity_cap`, else `PHASE_INTENSITY_CAP[phase_id]` (base `medium`, strength_power `max`, power_endurance `high`, performance `max`, deload `low`), filters the pool; what is left is split into `primary_pool` (`hard` or `climbing`, `_is_primary_session`) and `complementary_pool`. Tests and the phase-declared candidates of PASS 2.7 bypass it.
+- **Intensity cap:** `intensity_cap`, else `PHASE_INTENSITY_CAP[phase_id]` (base `medium`, strength_power `max`, power_endurance `high`, performance `max`, deload `low`), filters the pool; what is left is split into `primary_pool` (`hard` or `climbing`, `_is_primary_session`) and `complementary_pool`. Tests and the phase-declared candidates of PASS 2.7 bypass it. A328: in deload the primary pool is the deload form (§3 *Deload and trips*: technique + easy fillers, the finger exposure placed first), above the `low` cap for `DELOAD_ABOVE_CAP` only; the `low` cap still filters the complementary sessions.
 - **Hard-day cap:** `effective_hard_cap = min(hard_cap_per_week, planning_prefs.hard_day_cap_per_week)` — the argument defaults to 3 and `week.py` passes the same preference — and `0` in deload. Declared crag days (B382), lived hard days (B390) and the user's own hard sessions (B414) count against it before PASS 1.
 - **Gaps are calendar days, not hours:** `hard_gap_days = finger_gap_days = ceil(1 × planning_prefs.recovery_multiplier)` (D83; default 1.0 → 1). A placement is refused when the distance in days from a hard (resp. finger-HIGH) day is `<= gap`: by default never on consecutive days. The slots are not read, so this is not a 48 h guarantee — an evening session and a morning one two days later are allowed. PASS 1 / 1.5 look backwards at the last hard / finger day (and at the anchors on both sides, `_near_anchor`); the later passes check any distance.
 - **Finger-load tiers (A327, D288 R1):** `_SESSION_META.finger_load` (`high` on every finger entry, `low` on `finger_aerobic_base`; `finger ⇔ finger_load` pinned). `finger_day_offsets` holds the HIGH days only — the calendar rule above, unchanged. A LOW session needs `retest_policy.FINGER_LOW_GAP_H` (6 h) × `recovery_multiplier` from any finger session on the `complementary_v1.SLOT_HOUR` clock (a crag day is high 08:00-18:00), at most `FINGER_LOW_MAX_PER_DAY` (2) a day: one gate, `_finger_clock_ok(offset, slot, tier)`, read by every placement site once its slot is known (PASS 1, 1.5, 2, 2.2, the floors, 2.6, 3a through `_test_clock_ok` on the merged week, legacy PASS 3), against `finger_low_slots` / `finger_high_times`; a replaced low session leaves the clock (`_unbook_low`). Seeds read `stimulus.finger_load_of` (previous week, lived days, the user's sessions: a high user session is a calendar anchor, a low one sits on the clock). PASS 2.7 reads high for its calendar check and refuses any `finger_low_gap` through its alert check. **PASS 2 fix (D288 §1.3-1):** it placed finger sessions with no gap and no booking; it now applies the high calendar rule, the clock gate and books what it places. `targets.finger_days` still counts high + low.
@@ -248,6 +256,7 @@ Stages of `generate_phase_week` in execution order (the pass numbers are histori
 
 | # | Stage | `explain` label | What it does |
 |---|-------|-----------------|--------------|
+| 0 | PASS 1 (deload) | `pass1:deload_finger` | A328: the deload's finger exposure, tested athletes only |
 | 1 | PASS 1 | `pass1:primary` | One primary session per kept day |
 | 2 | PASS 1.5 | `pass1.5:climbing_fallback` | Climbing fallback on gym days without routes |
 | 3 | PASS 2 | `pass2:complementary` | Complementary session on the empty kept days |
@@ -340,7 +349,8 @@ candidates by the parity of `key_pass_week_index(start)` = `(Monday.toordinal() 
 limit: `limit_boulder_gym` / `power_contact_gym` week by week; the planner places it every week, A294 keeps its
 12-day `max_gap_days` for "not due"). Phase-declared candidates bypass the phase intensity cap (the PE limit is
 `max` under a `high` cap) like tests do. Rows: base technique; SP limit / technique / try-hard; PE power
-endurance (×2) / limit / technique / try-hard; performance project / technique / try-hard; deload none.
+endurance (×2) / limit / technique / try-hard; performance project / technique / try-hard; deload none (A328:
+the deload form places its finger exposure and technique session itself; PASS 2.7 skips the deload).
 
 Order: requirements by `priority`, candidates in catalog order with phase-pool sessions first, then for each
 candidate the least invasive place: an empty day kept by `target_training_days_per_week`, else in place of a
@@ -765,6 +775,24 @@ prescriptions are read as stored) → pain
 finger-hard day in the 2 days before) → `floor_eff = min(floor, cap_eff)` →
 fatigue (3 hard / 14 days → floor). All engineering constants are labelled in
 the module.
+
+A328 (D288 R3, 2026-11-13 — supersedes the deload row of the D282 §6 cap table
+for hangs): a max hang in the **deload** is `_deload_hang` — the previous
+phase's prescription (`deload_source_phase`: the last non-deload phase of the
+macrocycle, `performance` in a full cycle) at intensity `hard` on the same date
+(its working load or cold target, pain / guards / fatigue applied) ×
+`macrocycle_v1.DELOAD_LOAD_FACTOR` (0.90), never above that prescription's
+structural cap (3 s of reserve); output `phase_id: "deload"` plus
+`deload: {factor, from_phase, from_total, from_clamped}` (also in
+`anchor_summary`). Daniele 02/12: performance 110 kg (the 0.95 cap of 116) →
+**99 kg (+21)**, 85.3 % of the max — the old deload cap (0.70 → 81 kg) no
+longer applies to hangs. `hang_write_cap` (the non-anchored hangs) reads the
+same source phase in a deload. **Closed loop:** in a deload a hang's feedback
+never rewrites the working load (frozen like the bodyweight ladders; a
+`hard` / `very_hard` label still lands in `hard_labels`), otherwise an entry
+logged with phase `deload` (pct 0.65) would come back × 1.23 in the next base.
+Pulls are unchanged (no pull in the deload form). The deload rows of
+`HANG_PHASE_*` stay only to convert a legacy entry logged in a deload.
 
 B413 (D3): a DONE exercise with no rating and no measure is an `ok`, and it
 never rewrites the memory lower than what `anchored_load(...,
@@ -1405,7 +1433,7 @@ Key session categories:
 - **Climbing easy:** `endurance_aerobic_gym`, `technique_focus_gym`, `easy_climbing_deload`, `route_endurance_gym`, `boulder_circuit_gym`
 - **Supplementary (quick-add only):** `pulling_strength_gym`, `heavy_conditioning_gym`, `lower_body_gym`, `upper_body_weights`, `legs_strength`, `core_training`
 - **Tests:** `test_max_hang_5s`, `test_max_hang_7s`, `test_lp_max_5s`, `test_repeater_7_3`, `test_lp_repeater`, `test_max_weighted_pullup`, `test_pullup_bw`, `test_max_hang_pullup` (A319: both max tests in one session, PASS 3a only)
-- **Deload:** `deload_recovery`
+- **Deload:** `deload_recovery`, `deload_finger_touch` (A328: the deload's finger exposure — finger, not hard)
 
 ### Week plan structure (in `user_state.week_plans`)
 

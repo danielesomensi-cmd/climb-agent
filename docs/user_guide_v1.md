@@ -137,11 +137,11 @@ profile without an account — nothing entered there is stored.
 
 ### Deload (1 week)
 
-**What you'll do**: Easy climbing, stretching, light movement. Active recovery.
+**What you'll do**: The same climbing days as a normal week, at half the volume. One **technique** session (the drills at half the sets), one short **finger session** if you have a tested max hang — three 7-second max hangs at your working load minus 10 %, with at least 3 seconds left in reserve on every hang, then easy climbing — and easy climbing on the other days. No power-endurance intervals, no tests, no sets to failure, no weighted pull-ups.
 
-**What it feels like**: A break. Enjoy it. Your body is recovering and supercompensating.
+**What it feels like**: An easy week that keeps you sharp. A full week of complete rest costs strength; a small dose of each key stimulus keeps it while you recover.
 
-**Don't**: "Just do a quick session" at full intensity. Deload means deload.
+**Don't**: "Just do a quick session" at full intensity, or add max work on top. The finger session is the only one: it sits on the first day at least 48 hours after your last hard finger day, and never in the last three days of the week (the next cycle may open with a test). Its feedback does not change your working load: the next cycle starts from the load you had built.
 
 The lunch strength sessions keep their lifts in a deload week, with one set fewer already in the plan (squat 4 sets, Romanian deadlift 3, split squat 2, dumbbell bench press 4, fly, triceps and curl 3, and the push-up block 2 when the gym has no rings — with rings, the ring push-up follows its ladder, which drops a set as well) — stop every set at RIR 3.
 

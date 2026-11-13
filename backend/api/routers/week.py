@@ -38,6 +38,7 @@ from backend.engine.resolve_session import resolve_session
 from backend.engine.target_refresh import refresh_edited_session_targets
 from backend.engine.weekly_override import merge_override_into_availability
 from backend.engine import retest_policy as _retest_policy
+from backend.engine import anchored_load as _anchored
 
 logger = logging.getLogger(__name__)
 
@@ -930,6 +931,12 @@ def get_week(
                     (datetime.strptime(ctx["start_date"], "%Y-%m-%d") + timedelta(weeks=1)).strftime("%Y-%m-%d")
                 ),
                 crag_hard_dates=_crag_hard_dates,
+                # A328 (D288 R3): the deload's finger exposure, only for an
+                # athlete with a tested hang max (anchors need one, D282).
+                deload_finger_exposure=(
+                    ctx["phase_id"] == "deload"
+                    and _anchored.is_anchored_and_tested(state, "max_hang_7s", ctx["start_date"])
+                ),
             )
         except Exception as e:
             logger.error("Week generation failed: %s", e, exc_info=True)

@@ -33,6 +33,10 @@ Clamp order (one place, documented because R4's pain hook depends on it):
   → fatigue (3 hard in 14 days → floor)
 Rounding: cap DOWN, floor UP, load to the nearest half kilo.
 
+A328 (D288 R3): a max hang in the DELOAD is the previous phase's prescription
+(intensity "hard", the whole order above) x DELOAD_LOAD_FACTOR 0.90
+(`_deload_hang`); its feedback never rewrites the working load.
+
 Pure and deterministic: never writes state, never calls ``date.today()``.
 """
 
@@ -134,6 +138,12 @@ HANG_PHASE_PCT: Dict[Tuple[str, str], float] = {
 HANG_PHASE_DEFAULT_CAP = 0.85
 HANG_PHASE_DEFAULT_FLOOR = 0.75
 HANG_PHASE_DEFAULT_PCT = 0.80
+# A328 (D288 R3, decided 2026-11-13 — supersedes the deload row of the D282 §6
+# table for hangs): a hang in the deload is NOT read on the deload rows above
+# any more. It is the previous phase's anchored load at intensity "hard" x
+# macrocycle_v1.DELOAD_LOAD_FACTOR (0.90), under the structural cap
+# (`_deload_hang`). The deload rows stay for one reading only: converting a
+# legacy working entry logged in a deload before A328 (`phase_id_at_log`).
 
 #: A working entry is trusted for this many days (same gate the planned path
 #: has always used for maxes and hangs). Older → phase target.
@@ -288,6 +298,15 @@ def phase_on(state: Mapping[str, Any], on: Optional[date]) -> str:
         return str(pos["phase_id"])
     phases = (state.get("macrocycle") or {}).get("phases") or []
     return str(phases[0].get("phase_id", "base")) if phases else "base"
+
+
+def deload_source_phase(state: Mapping[str, Any]) -> str:
+    """A328: the phase the deload's finger dose is cut from — the last
+    non-deload phase of the macrocycle (``performance`` in a full cycle, and
+    the fallback without one)."""
+    ids = [str(p.get("phase_id")) for p in ((state.get("macrocycle") or {}).get("phases") or [])
+           if isinstance(p, Mapping) and p.get("phase_id") and p.get("phase_id") != "deload"]
+    return ids[-1] if ids else "performance"
 
 
 def _pulling_pct(phase: str, intensity: str) -> float:
@@ -548,6 +567,10 @@ def anchored_load(
     if intensity not in ("easy", "medium", "hard"):
         intensity = CUSTOM_INTENSITY
     axis = axis_of(exercise_id)
+    if phase == "deload" and axis == AXIS_FINGER:
+        return _deload_hang(state, exercise_id, date=date, intensity=intensity, sets=sets,
+                            work_seconds=work_seconds, session_exercise_ids=session_exercise_ids,
+                            setup=setup, temporary_cuts=temporary_cuts)
     entry = working_entry(state, exercise_id, on, om.get("date"), setup)
     guards: List[Dict[str, Any]] = []
     n_sets = int(sets or CATALOG_SETS[exercise_id])
@@ -713,6 +736,57 @@ def anchored_load(
     return out
 
 
+def _deload_hang(
+    state: Mapping[str, Any],
+    exercise_id: str,
+    *,
+    date: Any,
+    intensity: str,
+    sets: Optional[int],
+    work_seconds: Optional[float],
+    session_exercise_ids: Optional[Iterable[str]],
+    setup: Optional[Mapping[str, Any]],
+    temporary_cuts: bool,
+) -> Optional[Dict[str, Any]]:
+    """A328 (D288 R3): a max hang in the deload — "the phase working load
+    −10 %, ≥ 3 s in reserve".
+
+    The previous phase's prescription at intensity "hard" on the same date
+    (its working load normalised, or its cold target; its pain, guards and
+    fatigue already applied) x DELOAD_LOAD_FACTOR, never above that
+    prescription's structural cap (3 s of reserve). The deload rows of the
+    phase tables (cap 0.70) no longer apply to hangs. Pure."""
+    from backend.engine.macrocycle_v1 import DELOAD_LOAD_FACTOR
+
+    src = deload_source_phase(state)
+    base = anchored_load(state, exercise_id, date=date, phase_id=src, intensity="hard", sets=sets,
+                         work_seconds=work_seconds, session_exercise_ids=session_exercise_ids,
+                         setup=setup, temporary_cuts=temporary_cuts)
+    if base is None:
+        return None
+    cap_r = float(base["cap"])
+    cut = round_half(float(base["total"]) * DELOAD_LOAD_FACTOR)
+    total = min(cut, cap_r)
+    floor_r = min(ceil_half(float(base["floor"]) * DELOAD_LOAD_FACTOR), total)
+    ref = _num((base.get("official") or {}).get("total_at_duration"))
+    out = dict(base)
+    out.pop("ceiling_note", None)  # the deload dose is a cut, never "at the ceiling"
+    out.update({
+        "total": total,
+        "external": round_half(total - _bodyweight(state)),
+        "phase_id": "deload",
+        "intensity": intensity,
+        "floor": floor_r,
+        "cap": cap_r,
+        # The previous phase's clamp is its business (kept in `deload`).
+        "clamped": "cap" if cut > cap_r else None,
+        "pct_of_official": round(total / ref, 3) if ref else None,
+        "deload": {"factor": DELOAD_LOAD_FACTOR, "from_phase": src, "from_total": base["total"],
+                   "from_clamped": base.get("clamped")},
+    })
+    return out
+
+
 def anchored_suggested_fields(anch: Mapping[str, Any]) -> Dict[str, Any]:
     """Fields to merge into an instance's ``suggested`` (resolver shape included:
     ``target_total_load_kg`` / ``added_weight_kg`` / ``assistance_kg`` are
@@ -739,7 +813,7 @@ def anchored_suggested_fields(anch: Mapping[str, Any]) -> Dict[str, Any]:
 def anchor_summary(anch: Mapping[str, Any]) -> Dict[str, Any]:
     """Compact, UI/coach-safe description of an anchored prescription."""
     keys = ("source", "phase_id", "intensity", "floor", "cap", "clamped", "pct_of_official",
-            "official", "evidence", "guards", "pain", "fatigue", "no_date")
+            "official", "evidence", "guards", "pain", "fatigue", "no_date", "deload")
     return {k: anch[k] for k in keys if k in anch}
 
 
@@ -1009,6 +1083,17 @@ def apply_anchored_feedback(
     phase = phase_on(updated, on)
     intensity = _intensity_label(dict(planned_session)) if planned_session else CUSTOM_INTENSITY
     counters = updated.setdefault("progression_counters", {})
+    if phase == "deload" and axis == AXIS_FINGER:
+        # A328 (D288 R3): the deload hang is a cut of the previous phase's
+        # load (`_deload_hang`), not a new level — its feedback never rewrites
+        # the working load (frozen, like the bodyweight ladders). Written with
+        # phase 'deload' (pct 0.65) it would come back x 1.23 in the next base
+        # (0.80 / 0.65). A hard / very_hard label still counts (fatigue), pain
+        # is the pain blocks' business, as before. Pulls: unchanged (no pull in
+        # the deload form; the B414 expiry test pins their closed loop).
+        if feedback_label in ("hard", "very_hard"):
+            _record_hard_label(counters, axis, date_value)
+        return True
     fields: Dict[str, Any] = {}
     # A302: this session's measure becomes the evidence only when it is clean.
     evidence_ok = completed and all_sets and pain_now is None and feedback_label not in ("hard", "very_hard")
@@ -1187,6 +1272,8 @@ def hang_write_cap(state: Mapping[str, Any], work_seconds: float, date_value: An
     if ev is not None and ev["value"] > official_t:
         official_t = ev["value"]
     phase = phase_on(state, on)
+    if phase == "deload":
+        phase = deload_source_phase(state)  # A328: the deload cap 0.70 no longer applies to hangs
     return floor_half(min(official_t / (1 + rp.HANG_PCT_PER_S * RESERVE_S),
                           HANG_PHASE_CAP.get(phase, HANG_PHASE_DEFAULT_CAP) * official_t))
 
@@ -1269,5 +1356,5 @@ __all__ = [
     "rep_factor", "prilepin_cap", "phase_on", "official_for", "is_anchored_and_tested",
     "working_entry", "anchored_load", "anchored_suggested_fields", "anchor_summary",
     "effective_load_mode", "resolve_custom_exercises", "apply_anchored_feedback",
-    "record_exposures", "fatigue_for", "pain_for", "hang_write_cap",
+    "record_exposures", "fatigue_for", "pain_for", "hang_write_cap", "deload_source_phase",
 ]

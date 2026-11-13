@@ -1,6 +1,7 @@
 import hashlib
 import json
 import logging
+import math
 import os
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
@@ -86,6 +87,12 @@ def _apply_deload_sets(
     ``target_date``, progression_v1's own reading) ``sets`` becomes that value
     and the catalog one moves to ``stored_sets``. The key itself never reaches
     the output, so a session without it — or outside a deload — is unchanged.
+
+    A328 (D288 R3, "sets x 0.5"): a value strictly between 0 and 1 is a
+    FACTOR on the picked exercise's own sets (rounded up, at least 1) — for a
+    block that selects by filters (the technique drills: 1 to 6 sets), where
+    one fixed number would raise a 1-set drill. An integer keeps its A312
+    meaning.
     """
     if "deload_sets" not in prescription:
         return prescription
@@ -98,7 +105,10 @@ def _apply_deload_sets(
     if _get_current_phase_id(user_state, str(target_date)[:10]) != "deload":
         return out
     try:
-        n = int(deload_sets)
+        if isinstance(deload_sets, float) and 0 < deload_sets < 1:
+            n = max(1, math.ceil(int(out.get("sets") or 1) * deload_sets - 1e-9))
+        else:
+            n = int(deload_sets)
     except (TypeError, ValueError):
         return out
     if n >= 1 and out.get("sets") != n:

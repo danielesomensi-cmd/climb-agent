@@ -378,6 +378,18 @@
     "forearm_stretches"
    ]
   },
+  "advanced|2026-10-07|deload_finger_touch": {
+   "digest": "d7436267d18a03f8c6aa0aa784a3f438e2c2e1d2cff1dc7280e268ae2c01b65e",
+   "exercise_ids": [
+    "hang_rampup_progressive",
+    "max_hang_7s",
+    "regeneration_climbing",
+    "wrist_curl",
+    "cooldown_forearm_wrist_stretch",
+    "cooldown_hip_pigeon",
+    "forearm_stretches"
+   ]
+  },
   "advanced|2026-10-07|deload_recovery": {
    "digest": "4dda8e039838076ef5032861c15f5afe2ff8b6b1c2361b68ab7b8c4184108eda",
    "exercise_ids": [
@@ -899,6 +911,17 @@
     "cooldown_shoulder_chest"
    ]
   },
+  "advanced|2026-10-21|deload_finger_touch": {
+   "digest": "4e35f2db16ea7ea7e58647e9f243a41ac0867e1721aa6b91404db42f2c053bf2",
+   "exercise_ids": [
+    "finger_recruitment_pulls",
+    "max_hang_7s",
+    "reverse_wrist_curl",
+    "cooldown_forearm_wrist_stretch",
+    "cooldown_hip_pigeon",
+    "cooldown_shoulder_chest"
+   ]
+  },
   "advanced|2026-10-21|deload_recovery": {
    "digest": "99df8fcab7c5a2ceb46e751a600104dfa01d4d840fd83493db6ea786ab4c48fc",
    "exercise_ids": [
@@ -1405,6 +1428,18 @@
     "weighted_hanging_leg_raise",
     "scapular_pullup",
     "turkish_getup",
+    "cooldown_forearm_wrist_stretch",
+    "cooldown_hip_pigeon",
+    "forearm_stretches"
+   ]
+  },
+  "intermediate|2026-10-07|deload_finger_touch": {
+   "digest": "93ac68f691bc28228ba3d4d2fee77f67b41e9864bd66e51cba158ce89d7b07ea",
+   "exercise_ids": [
+    "hang_rampup_progressive",
+    "max_hang_7s",
+    "regeneration_climbing",
+    "wrist_curl",
     "cooldown_forearm_wrist_stretch",
     "cooldown_hip_pigeon",
     "forearm_stretches"
@@ -1931,6 +1966,17 @@
     "cooldown_shoulder_chest"
    ]
   },
+  "intermediate|2026-10-21|deload_finger_touch": {
+   "digest": "0531259d185c831cb3b09d37437b9fd91ecaeb8a54dcab438cefcc1176b2dd73",
+   "exercise_ids": [
+    "finger_recruitment_pulls",
+    "max_hang_7s",
+    "reverse_wrist_curl",
+    "cooldown_forearm_wrist_stretch",
+    "cooldown_hip_pigeon",
+    "cooldown_shoulder_chest"
+   ]
+  },
   "intermediate|2026-10-21|deload_recovery": {
    "digest": "99df8fcab7c5a2ceb46e751a600104dfa01d4d840fd83493db6ea786ab4c48fc",
    "exercise_ids": [
@@ -2437,6 +2483,18 @@
     "weighted_hanging_leg_raise",
     "scapular_pullup",
     "turkish_getup",
+    "cooldown_forearm_wrist_stretch",
+    "cooldown_hip_pigeon",
+    "forearm_stretches"
+   ]
+  },
+  "untested|2026-10-07|deload_finger_touch": {
+   "digest": "96acfe321324428b7713488658731582f6cae5ad36ddc5550cbba94e51573042",
+   "exercise_ids": [
+    "hang_rampup_progressive",
+    "max_hang_7s",
+    "regeneration_climbing",
+    "wrist_curl",
     "cooldown_forearm_wrist_stretch",
     "cooldown_hip_pigeon",
     "forearm_stretches"
@@ -2958,6 +3016,17 @@
     "v_up",
     "shoulder_car",
     "turkish_getup",
+    "cooldown_forearm_wrist_stretch",
+    "cooldown_hip_pigeon",
+    "cooldown_shoulder_chest"
+   ]
+  },
+  "untested|2026-10-21|deload_finger_touch": {
+   "digest": "3536825c9185b245cc09a7592a508bd4dce243dbd00dcc4ebc9629a092d39390",
+   "exercise_ids": [
+    "finger_recruitment_pulls",
+    "max_hang_7s",
+    "reverse_wrist_curl",
     "cooldown_forearm_wrist_stretch",
     "cooldown_hip_pigeon",
     "cooldown_shoulder_chest"

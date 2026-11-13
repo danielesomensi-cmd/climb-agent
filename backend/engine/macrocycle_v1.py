@@ -146,6 +146,11 @@ _SESSION_POOL: Dict[str, Dict[str, str]] = {
         "flexibility_full": "primary",
         "yoga_recovery": "primary",
         "prehab_maintenance": "primary",
+        # A328 (D288 R3): the two sessions of the deload form (DELOAD_FORM).
+        # The planner reads the form from code whatever the saved pool says;
+        # they are listed here for new macrocycles and the A326 venue logic.
+        "technique_focus_gym": "primary",
+        "deload_finger_touch": "primary",
         "easy_climbing_deload": "available",
         "deload_recovery": "available",
         "finger_aerobic_base": "available",
@@ -226,6 +231,11 @@ _SESSION_POOL_BOULDER: Dict[str, Dict[str, str]] = {
         "flexibility_full": "primary",
         "yoga_recovery": "primary",
         "prehab_maintenance": "primary",
+        # A328 (D288 R3): the two sessions of the deload form (DELOAD_FORM).
+        # The planner reads the form from code whatever the saved pool says;
+        # they are listed here for new macrocycles and the A326 venue logic.
+        "technique_focus_gym": "primary",
+        "deload_finger_touch": "primary",
         "easy_climbing_deload": "available",
         "deload_recovery": "available",
         "finger_aerobic_base": "available",
@@ -877,7 +887,7 @@ def _phase_notes(phase_id: str) -> str:
         "strength_power": "Max strength development. Max hangs, limit bouldering, general strength. High quality, full rest.",
         "power_endurance": "Anaerobic capacity. 4x4, intervals, threshold climbing. Tolerate pump, push volume.",
         "performance": "Peak performance. Limit climbing, projecting, outdoor. Reduce volume, maximize quality.",
-        "deload": "Recovery. Volume -50%. No max/high intensity. Mobility, prehab, easy climbing only.",
+        "deload": "Recovery with a reduced dose (A328): same climbing days, half the sets. One technique session, one short finger exposure (tested athletes: 3 x 7 s at the phase working load -10%), the rest easy climbing. No power-endurance intervals, tests or work to failure.",
     }
     return notes.get(phase_id, "")
 
@@ -888,13 +898,78 @@ def _phase_notes(phase_id: str) -> str:
 
 DELOAD_SESSION_POOL = ["regeneration_easy", "flexibility_full", "yoga_recovery", "prehab_maintenance", "easy_climbing_deload"]
 
+# ---------------------------------------------------------------------------
+# A328 (D288 R3, decided by Daniele 2026-11-13) — the terminal deload keeps a
+# reduced dose of each key stimulus instead of removing all hard work.
+#
+# Evidence (D288_kb_research_r1_r8.md §Q3): one week of complete cessation
+# gives nothing and costs some strength (Coleman 2024, RCT in trained adults);
+# strength is kept on a low volume IF the relative load is kept (Spiering
+# 2021). No climbing data: the numbers below are ENGINEERING CONSTANTS.
+#
+# The form (terminal deload; the reduced week on a trigger is an alert only,
+# reduced_week.py):
+#   * the same climbing days as a normal week of the same availability;
+#   * sets x 0.5 (catalog `deload_sets`, A312; the bodyweight ladders keep
+#     their own deload dose, -1 set);
+#   * ONE technique session (`technique_focus_gym`, drills at half the sets) —
+#     never hard, so the hard cap stays 0;
+#   * ONE finger exposure (`deload_finger_touch`: 3 x 7 s max hang at the
+#     previous phase's working load x DELOAD_LOAD_FACTOR, >= 3 s in reserve),
+#     only for an athlete with a TESTED hang max (D282: anchors exist only for
+#     a tested max); >= 48 h from the last finger day, never in the last
+#     DELOAD_TOUCH_LAST_DAYS days of the week (72 h before a test opening the
+#     next cycle), first valid day from Monday;
+#   * every other climbing day easy (`easy_climbing_deload`,
+#     `regeneration_easy`), with weekly limits valid only in the deload;
+#   * no power-endurance intervals, no tests, no work to failure, no weighted
+#     pull-ups (Daniele, 2026-11-13: heavy pulling stays out of the deload).
+#
+# The form lives HERE and the planner reads it whenever phase_id == "deload",
+# whatever the saved pool and intensity cap say: an existing macrocycle keeps
+# its old `session_pool` / `intensity_cap: low` inside `phases[]`, and only
+# code reaches it without a regeneration of the macrocycle. Two sources then
+# exist (saved pool for the complementary sessions, this form for the climbing
+# days) — documented in ENGINE_ARCHITECTURE.md §Deload.
+DELOAD_TECHNIQUE_SESSION = "technique_focus_gym"
+DELOAD_FINGER_SESSION = "deload_finger_touch"
+#: Easy climbing fillers of the deload's climbing days, in placement order,
+#: with their weekly limit IN THE DELOAD ONLY (the global max_per_week stays:
+#: it also bounds the PASS 1.5 climbing fallback).
+DELOAD_FILLERS: Tuple[Tuple[str, int], ...] = (
+    ("easy_climbing_deload", 4),
+    ("regeneration_easy", 2),
+)  # technique + 6 fillers = 7 climbing days even without the finger exposure
+#: The sessions the deload places above its `low` intensity cap.
+DELOAD_ABOVE_CAP: Tuple[str, ...] = (DELOAD_TECHNIQUE_SESSION, DELOAD_FINGER_SESSION)
+#: ENGINEERING CONSTANT (R3: "the phase working load -10 %"): the deload hang is
+#: the previous phase's anchored load at intensity "hard" x this factor
+#: (anchored_load.py), under the structural 3-s-reserve cap.
+DELOAD_LOAD_FACTOR = 0.90
+#: The finger exposure is never placed in the last N days of the deload week
+#: (the 72 h block before a max test opening the next cycle,
+#: planner_v2.KEY_PASS_PRE_TEST_DAYS).
+DELOAD_TOUCH_LAST_DAYS = 3
+
+
+def deload_form_pool(finger_exposure: bool) -> List[str]:
+    """A328: the climbing sessions of the deload form, in placement order —
+    the finger exposure (only with ``finger_exposure``: a tested athlete), the
+    technique session, then the easy fillers."""
+    head = [DELOAD_FINGER_SESSION] if finger_exposure else []
+    return head + [DELOAD_TECHNIQUE_SESSION] + [sid for sid, _n in DELOAD_FILLERS]
+
 
 def apply_deload_week(week_plan: Dict[str, Any]) -> Dict[str, Any]:
-    """Transform a week plan into a deload week.
+    """Final transform of a deload week plan (safety net).
 
-    - Remove sessions with max/high intensity
-    - Keep max 5 sessions (B160c: raised from 3 — literature expects 4-6 light sessions)
-    - Replace removed sessions with deload alternatives
+    - Removes every session tagged ``hard`` (none is placed in a deload: the
+      hard cap is 0 and the R3 sessions are not hard).
+    - A328: no session cap any more (B160c capped the week at 5 sessions, which
+      cut the climbing days R3 keeps). Nothing is replaced: the planner already
+      placed the deload form.
+    - ``targets = {hard_days: 0, finger_days: <days with a finger session>}``
+      (A328: 1 with the finger exposure, else 0).
     """
     if not week_plan or "weeks" not in week_plan:
         return week_plan
@@ -902,26 +977,23 @@ def apply_deload_week(week_plan: Dict[str, Any]) -> Dict[str, Any]:
     deload_plan = dict(week_plan)
     for week in deload_plan.get("weeks", []):
         days = week.get("days", [])
-        kept_sessions = 0
+        finger_days = 0
         for day in days:
             filtered = []
             for sess in day.get("sessions", []):
-                # Keep low/medium intensity sessions, cap at 5 total
                 tags = sess.get("tags", {})
-                if kept_sessions >= 5:
-                    continue
                 if tags.get("hard"):
                     continue
                 filtered.append(sess)
-                kept_sessions += 1
             day["sessions"] = filtered
+            if any((s.get("tags") or {}).get("finger") for s in filtered):
+                finger_days += 1
 
         week["phase"] = "deload"
         # B346: `deload_factor` removed — written here, in planner_v2 and in
         # legacy planner_v1, and read by nothing in engine, api or frontend.
-        # It described an intent (halve the sets in a deload) that was never
-        # implemented; the deload pool contains no set-based work to halve.
-        week["targets"] = {"hard_days": 0, "finger_days": 0}
+        # A328: the halved sets live in the catalog (`deload_sets`, A312).
+        week["targets"] = {"hard_days": 0, "finger_days": finger_days}
 
     return deload_plan
 

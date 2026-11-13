@@ -48,7 +48,7 @@ Un'etichetta di feedback non tocca mai il massimale e non programma mai un test.
   - SP e performance 0,95;
   - PE 0,90;
   - base 0,85;
-  - deload 0,70.
+  - deload: dal 13/11 (D288 R3 → A328) la sospensione del deload è il carico ancorato della fase precedente a intensità «hard» × 0,90, sotto il tetto dei 3 s di riserva (per Daniele 99 kg, +21, invece di 81); il vecchio 0,70 non vale più per le sospensioni. In deload il feedback non muove il carico di lavoro.
   Il 100% compare solo nei test.
 - **Tetto da misura (A302):** i tetti si calcolano sul più alto fra il massimale ufficiale e quello implicito nell'ultima misura pulita. Sospensione: tenuta L con margine m secondi → L × (1 + 1,5% × m), con «>5» letto come 5", «3-5» come 3" e un tempo cronometrato fino a +6". Trazione: ultima serie lasciando una ripetizione → e1RM = L × f(ripetizioni + 1). La misura conta 28 giorni, solo contro il test in vigore, con tutte le serie fatte, senza dolore e senza etichetta hard. Il solo voto non alza mai il tetto. Il massimale ufficiale non si muove.
 
@@ -229,6 +229,7 @@ Senza roccia: giovedì lead in palestra (cadute 10', 2 vie con regola tecnica, n
 - Chiave progetto: mappa dei punti di impegno, routine, 2-3 cadute a inizio giornata. Le 2-3 cadute sono nel catalogo: `route_projecting_gym` apre con il blocco `falls_primer` (C276).
 
 **Deload.** Riscaldamento tecnico e 20' di `slow_climbing` / hover a flash −2. Niente try-hard e niente cadute oltre il mantenimento.
+- Forma A328 (D288 R3, 13/11): stessi giorni di arrampicata di una settimana normale, serie × 0,5. Una seduta di tecnica (`technique_focus_gym`, drill a metà serie), un'esposizione dita (`deload_finger_touch`: 3 × 7" al carico di lavoro della fase −10 %, ≥ 3 s di riserva, nel primo giorno valido ≥ 48 h dopo l'ultimo giorno dita duro, mai negli ultimi 3 giorni), il resto arrampicata facile. Niente PE, test, cedimento, trazioni zavorrate. La settimana ridotta su trigger dentro il ciclo è solo un avviso (R3-b).
 
 ## 6. Corpo libero e core (scale BW)
 

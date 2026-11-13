@@ -158,11 +158,20 @@ class TestPlannerV2IntensityCap(unittest.TestCase):
                                     f"Max intensity session {s['session_id']} in base phase")
 
     def test_deload_only_low_intensity(self):
-        plan = generate_phase_week(**_make_kwargs("deload"))
-        for d in plan["weeks"][0]["days"]:
-            for s in d["sessions"]:
-                self.assertEqual(s.get("intensity"), "low",
-                                 f"Non-low intensity {s['session_id']} in deload")
+        """A328 (D288 R3): only `low` sessions in a deload, except the deload
+        form's technique session and finger exposure (DELOAD_ABOVE_CAP)."""
+        from backend.engine.macrocycle_v1 import DELOAD_ABOVE_CAP
+
+        for exposure in (False, True):
+            plan = generate_phase_week(**_make_kwargs("deload"), deload_finger_exposure=exposure)
+            for d in plan["weeks"][0]["days"]:
+                for s in d["sessions"]:
+                    if s["session_id"] in DELOAD_ABOVE_CAP:
+                        self.assertNotEqual(s.get("intensity"), "max")
+                        self.assertFalse((s.get("tags") or {}).get("hard"))
+                        continue
+                    self.assertEqual(s.get("intensity"), "low",
+                                     f"Non-low intensity {s['session_id']} in deload")
 
 
 class TestPlannerV2AntiRepetition(unittest.TestCase):
@@ -774,13 +783,17 @@ class TestPlannerV2LoadScore(unittest.TestCase):
         self.assertEqual(summary["planned_load"], summary["total_load"])
 
     def test_deload_week_low_load(self):
-        """Deload week should have low total load."""
-        plan = generate_phase_week(**_make_kwargs("deload"))
+        """Deload week should have low total load.
+
+        A328 (D288 R3): no 5-session cap any more (B160c) — the deload keeps the
+        climbing days of a normal week, so its load is bounded by the same week
+        in performance, with no hard day."""
+        plan = generate_phase_week(**_make_kwargs("deload"), deload_finger_exposure=True)
+        perf = generate_phase_week(**_make_kwargs("performance"))
         summary = plan["weekly_load_summary"]
         self.assertEqual(summary["hard_days_count"], 0)
-        # All deload sessions are low intensity, max 20 per session, max 5 sessions (B160c)
-        self.assertLessEqual(summary["planned_load"], 20 * 5)
-        self.assertLessEqual(summary["total_load"], 20 * 5)
+        self.assertLess(summary["planned_load"], perf["weekly_load_summary"]["planned_load"])
+        self.assertEqual(summary["planned_load"], summary["total_load"])
 
 
 class TestPlannerV2OtherActivity(unittest.TestCase):
@@ -1389,8 +1402,11 @@ class TestPlannerV2B84ClimbingFallback(unittest.TestCase):
 
     def test_fallback_respects_intensity_cap(self):
         """Bug B: fallback must respect phase intensity cap.
-        In deload phase (cap=low), technique_focus_gym (medium) must NOT be placed;
-        easy_climbing_deload (low) CAN be placed."""
+        In deload phase (cap=low), the FALLBACK must not place
+        technique_focus_gym (medium); easy_climbing_deload (low) CAN be placed.
+
+        A328 (D288 R3): the deload form places one technique session itself
+        (PASS 1, above the low cap on purpose) — never through PASS 1.5."""
         pool = ["endurance_aerobic_gym", "route_endurance_gym", "deload_recovery"]
         plan = generate_phase_week(
             phase_id="deload",
@@ -1407,8 +1423,13 @@ class TestPlannerV2B84ClimbingFallback(unittest.TestCase):
         days = plan["weeks"][0]["days"]
         for d in days:
             for s in d["sessions"]:
-                self.assertNotEqual(s["session_id"], "technique_focus_gym",
-                                    "technique_focus_gym (medium) must not be placed in deload (cap=low)")
+                if "pass1.5" in " ".join(s.get("explain", [])):
+                    self.assertNotEqual(s["session_id"], "technique_focus_gym",
+                                        "technique_focus_gym (medium) must not be a deload fallback (cap=low)")
+        techniques = [s for d in days for s in d["sessions"] if s["session_id"] == "technique_focus_gym"]
+        self.assertLessEqual(len(techniques), 1, "A328: one technique session in the deload, from PASS 1")
+        for s in techniques:
+            self.assertIn("pass1:primary", " ".join(s.get("explain", [])))
 
 
 class TestPlannerV2B87GymNameLookup(unittest.TestCase):

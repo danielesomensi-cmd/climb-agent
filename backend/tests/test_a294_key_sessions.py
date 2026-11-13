@@ -157,7 +157,12 @@ class TestCatalog:
         # A294 review: no limit key in base → no try-hard row; in performance
         # the try-hard rides on the project key.
         assert keys("base") == ["technique"]
-        assert keys("deload") == ["technique"]
+        # A328 (D288 R3): the deload keeps one finger exposure (info only).
+        assert keys("deload") == ["finger_maintenance", "technique"]
+        deload_finger = next(r for r in ks.phase_requirements("deload") if r["key"] == "finger_maintenance")
+        assert deload_finger["max_severity"] == "info"
+        assert deload_finger["propose"] == ["deload_finger_touch"]
+        assert deload_finger["session_ids"] == ["deload_finger_touch"]
         perf_th = next(r for r in ks.phase_requirements("performance") if r["key"] == "try_hard")
         assert perf_th["attached_to"] == "project"
         deload_tech = next(r for r in ks.phase_requirements("deload") if r["key"] == "technique")

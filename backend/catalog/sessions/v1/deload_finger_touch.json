@@ -1,0 +1,138 @@
+{
+  "id": "deload_finger_touch",
+  "name": "Deload Finger Touch (3 Max Hangs + Easy Climbing)",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "finger_max_strength",
+    "secondary_goals": [
+      "volume_climbing",
+      "prehab_wrist"
+    ],
+    "notes": "A328 (D288 R3): the deload week's one finger exposure. Three 7-second max hangs at the previous phase's working load minus 10 %, with at least 3 seconds left in reserve on every set — enough to keep the strength built in the cycle, nowhere near a max effort. Then easy climbing if you are at the gym, and finger prehab. Not a hard session: it does not count against the hard-day cap. Only for an athlete with a tested hang max; no pulling work in the deload."
+  },
+  "compatibility": {
+    "slot": [
+      "short",
+      "long"
+    ],
+    "sports": [
+      "climbing"
+    ]
+  },
+  "required_equipment": [
+    "hangboard"
+  ],
+  "boulder_fallback": null,
+  "time_budget": {
+    "target_duration_min": 45,
+    "hard_cap_min": 60
+  },
+  "tags": {
+    "hard": false,
+    "finger": true
+  },
+  "modules": [
+    {
+      "block_id": "finger_warmup",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup",
+      "notes": "Finger warm-up: tendon glides, easy hangs, progressive loading up to the working load.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": [
+              "warmup"
+            ],
+            "domain": [
+              "finger_strength"
+            ],
+            "intensity_max": "low"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "deload_max_hang",
+      "required": true,
+      "priority": 95,
+      "module_role": "primary",
+      "notes": "Deload dose: 3 x 7 s on the 20 mm edge, half crimp, full rest. The load is your phase working load minus 10 %: every hang must leave at least 3 seconds in reserve.",
+      "selection": {
+        "primary": {
+          "exercise_id": "max_hang_7s",
+          "prescription_overrides": {
+            "sets": 3,
+            "work_seconds": 7,
+            "rest_between_sets_seconds": 180,
+            "notes": "Deload: 3 x 7 s at your working load minus 10 %. Stop the set if it starts to feel like a max — at least 3 seconds must be left in the tank."
+          },
+          "filters": {
+            "role": [
+              "main"
+            ],
+            "domain": [
+              "finger_strength"
+            ],
+            "pattern": [
+              "isometric_hang"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "easy_climbing_post_finger",
+      "required": false,
+      "priority": 60,
+      "module_role": "secondary",
+      "notes": "Easy climbing after the hangs, well below your onsight: movement quality, no pump. Without a wall (at home) the block is skipped (pin_exhausted: skip) — no extra finger work after the hangs.",
+      "selection": {
+        "primary": {
+          "exercise_id": "regeneration_climbing",
+          "fallback_exercise_ids": ["continuity_climbing", "arc_training"],
+          "pin_exhausted": "skip",
+          "filters": {
+            "domain": [
+              "aerobic_capacity",
+              "regeneration"
+            ],
+            "role": [
+              "main"
+            ],
+            "pattern": [
+              "climbing_continuous"
+            ],
+            "intensity_max": "low"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "finger_extensor_prehab",
+      "required": false,
+      "priority": 55,
+      "module_role": "secondary",
+      "notes": "Finger extensor training + forearm stretches.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": [
+              "prehab"
+            ],
+            "domain": [
+              "prehab_wrist"
+            ],
+            "intensity_max": "low"
+          }
+        }
+      }
+    },
+    {
+      "template_id": "cooldown_stretch",
+      "required": false,
+      "priority": 40,
+      "module_role": "cooldown"
+    }
+  ]
+}

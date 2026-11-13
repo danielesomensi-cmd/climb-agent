@@ -349,6 +349,8 @@ def _anchors(state: Mapping[str, Any], today: date) -> Dict[str, Any]:
             "ceiling_note": anch.get("ceiling_note"),
             # A302: the measure that lifted the ceiling above the official max.
             "evidence": anch.get("evidence"),
+            # A328: a deload hang = the previous phase's load × 0.90.
+            "deload": anch.get("deload"),
         }
     return {
         "bodyweight_kg": _bodyweight(state),
@@ -816,7 +818,10 @@ def _guards(
         codes_common: List[Dict[str, str]] = []
         pos_d = position_on(mc, d) or {}
         if pos_d.get("phase_id") == "deload":
-            common.append("fase deload: niente massimali")
+            # A328 (D288 R3): the deload's one finger exposure is the plan's
+            # (deload_finger_touch); a custom adds no max lines on top.
+            common.append("fase deload: una sola esposizione dita (3 serie a −10 %), la mette il piano — "
+                          "niente massimali nelle custom")
             codes_common.append({"code": "deload", "detail": ""})
         wk = _monday(d)
         cap_d = _hard_cap_of_week(state, wk)
@@ -1429,6 +1434,9 @@ def _anchor_line(ex: str, a: Mapping[str, Any]) -> str:
         parts.append(f"| tetto da misura {_fmt_kg(ev.get('one_rm') or ev.get('total_at_duration'))} kg ({ev.get('date')})")
     if a.get("clamped"):
         parts.append(f"| clamp: {a['clamped']}")
+    dl = a.get("deload") or {}
+    if dl:  # A328 (D288 R3)
+        parts.append(f"| deload: {_fmt_kg(dl.get('from_total'))} kg di {dl.get('from_phase')} −10 %, feedback congelato")
     if a.get("guards"):
         parts.append(f"| guardie: {', '.join(a['guards'])}")
     if a.get("pain"):

@@ -86,6 +86,11 @@ floor core, arm lifts, toe pulls, wall hold. Every other key identical.
 C286 (catalog: Z2 lunch with floor core, barbell bench on the push lunch,
 one technique drill + finger ramp-up on the evening sessions) changed only
 the keys of the seven sessions it touches; every other key identical.
+
+A328 (D288 R3) added 4 keys, ``advanced`` / ``intermediate`` × the two C272
+slots, for the new session ``deload_finger_touch``; no existing key changed —
+the ``daniele`` deload lunches of 2026-12-01 included (no second set cut on
+top of A312).
 """
 
 from __future__ import annotations

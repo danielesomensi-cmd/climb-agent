@@ -189,6 +189,8 @@ SESSION_FALLBACK_STIMULI: Dict[str, Tuple[str, ...]] = {
     # and is_pulling_hard_session would not see its pulling side.
     "test_max_hang_pullup": (FAMILY_FINGER_MAX, FAMILY_PULLING_MAX),
     "pulling_strength_gym": (FAMILY_PULLING_MAX,),
+    # A328: the deload's finger exposure (3 x 7 s max hang).
+    "deload_finger_touch": (FAMILY_FINGER_MAX,),
     "limit_boulder_gym": (FAMILY_LIMIT_POWER,),
     "power_contact_gym": (FAMILY_LIMIT_POWER,),
     "power_endurance_gym": (FAMILY_POWER_ENDURANCE,),

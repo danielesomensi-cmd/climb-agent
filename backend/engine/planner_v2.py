@@ -71,6 +71,11 @@ _SESSION_META: Dict[str, Dict[str, Any]] = {
     # pulling side comes from the 2RM exercise / SESSION_FALLBACK_STIMULI.
     "test_max_hang_pullup": {"hard": True, "finger": True, "finger_load": "high", "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["hangboard", "pullup_bar", "weight"]},
     "easy_climbing_deload": {"hard": False, "finger": False, "intensity": "low", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"]},
+    # A328 (D288 R3): the deload's one finger exposure — 3 x 7 s max hang at the
+    # previous phase's working load -10 % (anchored_load), >= 3 s in reserve.
+    # Finger (48 h gap) but not hard: the deload hard cap stays 0. Gym or home
+    # (hangboard); placed by the deload form only (macrocycle_v1.DELOAD_FORM).
+    "deload_finger_touch": {"hard": False, "finger": True, "finger_load": "high", "intensity": "medium", "climbing": True, "location": ("gym", "home"), "required_equipment": ["hangboard"]},
     "finger_maintenance_gym": {"hard": False, "finger": True, "finger_load": "high", "intensity": "medium", "climbing": True, "location": ("gym",), "required_equipment": ["hangboard"]},
     "route_endurance_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",), "required_equipment": ["gym_routes"]},
     "pulling_strength_gym": {"pulling": True, "hard": True, "finger": False, "intensity": "high", "climbing": False, "location": ("gym",), "required_equipment": ["pullup_bar"]},
@@ -1451,6 +1456,7 @@ def generate_phase_week(
     trip_start_dates: Optional[List[str]] = None,
     next_week_plan: Optional[Dict[str, Any]] = None,
     crag_hard_dates: Optional[Sequence[str]] = None,
+    deload_finger_exposure: bool = False,
 ) -> Dict[str, Any]:
     """Generate a single week plan within a macrocycle phase.
 
@@ -1516,6 +1522,11 @@ def generate_phase_week(
         next_week_plan: A300 — the cached plan of the following week, if any:
             its first two days are seen by the lunch rules of this week.
             Ignored when no slot is complementary.
+        deload_finger_exposure: A328 (D288 R3) — the athlete has a TESTED hang
+            max (``anchored_load.is_anchored_and_tested``), so the deload week
+            carries its one finger exposure (``deload_finger_touch``). Read only
+            when ``phase_id == "deload"``; False → no finger session in the
+            deload, as before.
 
     Returns:
         Week plan dict compatible with planner.v1 format.
@@ -1565,6 +1576,29 @@ def generate_phase_week(
     # Split into primary (hard/climbing) and complementary pools
     primary_pool = [s for s in filtered_pool if _is_primary_session(_SESSION_META[s])]
     complementary_pool = [s for s in filtered_pool if not _is_primary_session(_SESSION_META[s])]
+
+    # A328 (D288 R3): the deload's climbing days come from the deload form
+    # (macrocycle_v1.DELOAD_FORM), whatever the saved pool and cap say — an
+    # existing macrocycle keeps its old pool and `intensity_cap: low` in
+    # `phases[]`, and only code reaches it. PASS 1 places the technique session
+    # and the easy fillers (weekly limits valid in the deload only); the finger
+    # exposure is placed first, below. The saved pool keeps the complementary
+    # sessions (minus the fillers, and minus `finger_aerobic_base` when the
+    # finger exposure is there). Other phases: untouched.
+    _deload_pw: Dict[str, int] = {}
+    _deload_unmet: List[Dict[str, Any]] = []
+    if phase_id == "deload":
+        from backend.engine.macrocycle_v1 import (
+            DELOAD_FILLERS,
+            DELOAD_FINGER_SESSION,
+            deload_form_pool,
+        )
+        _deload_pw = dict(DELOAD_FILLERS)
+        primary_pool = [s for s in deload_form_pool(False) if s in _SESSION_META]
+        complementary_pool = [
+            s for s in complementary_pool
+            if s not in _deload_pw and not (deload_finger_exposure and s == "finger_aerobic_base")
+        ]
 
     start = _parse_date(start_date)
     target_days = prefs.get("target_training_days_per_week", 4)
@@ -2193,11 +2227,55 @@ def generate_phase_week(
                                 home_equipment=home_equipment, gyms=gyms, default_gym_id=default_gym_id)
                 is not None
                 for sid in _limit_cands for o in range(7) if day_has_available_slot[o])
+    # ── PASS 1 (A328, deload only): the finger exposure ──
+    # The first valid day from Monday, never in the last DELOAD_TOUCH_LAST_DAYS
+    # days (the 72 h before a test opening the next cycle), never within the
+    # finger gap of a finger day (previous week's tail B161, lived days B390,
+    # crag days B382, the user's sessions B414 — `_near_anchor`). A tested
+    # athlete for whom no day fits gets an `unmet_stimulus` row (never silent).
+    if phase_id == "deload" and deload_finger_exposure:
+        from backend.engine.macrocycle_v1 import DELOAD_TOUCH_LAST_DAYS
+        _tmeta = _SESSION_META[DELOAD_FINGER_SESSION]
+        _touch_placed = False
+        for offset in range(0, 7 - DELOAD_TOUCH_LAST_DAYS):
+            if not day_has_available_slot[offset] or day_is_outdoor[offset]:
+                continue
+            if any(abs(offset - fo) <= finger_gap_days for fo in finger_day_offsets):
+                continue
+            if _near_anchor(offset, True, False):
+                continue
+            result = _find_best_slot(normalized[day_keys[offset]], _tmeta, locations, prefer_evening=True,
+                                     home_equipment=home_equipment, gyms=gyms, default_gym_id=default_gym_id)
+            if result is None:
+                continue
+            slot, slot_info = result
+            day_sessions[offset].append(_make_session_entry(
+                slot, DELOAD_FINGER_SESSION, _tmeta, slot_info, locations, phase_id, day_keys[offset],
+                default_gym_id, gyms or [], "pass1:deload_finger", home_equipment=home_equipment,
+            ))
+            session_count[DELOAD_FINGER_SESSION] = session_count.get(DELOAD_FINGER_SESSION, 0) + 1
+            finger_day_offsets.append(offset)
+            _touch_placed = True
+            break
+        if not _touch_placed:
+            logger.warning("unmet stimulus: deload finger exposure could not be placed in week %s", start_date)
+            _deload_unmet.append({
+                "stimulus": "finger_strength",
+                "phase_id": phase_id,
+                "reason": (
+                    "the deload's finger exposure could not be placed without breaching the "
+                    "finger gap, the last days before the next cycle or the available slots"
+                ),
+            })
 
     # ── PASS 1: Place primary sessions (climbing-first) ──
     primary_idx = 0
     primary_uses = 0
     max_primary_uses = len(primary_pool) * 2 if primary_pool else 0  # max 2 cycles
+    if phase_id == "deload":
+        # A328: the deload fills every climbing day of the week with the form —
+        # one rotation of the pool per weekday (B157's 2 cycles stopped at 4).
+        max_primary_uses = len(primary_pool) * 7
 
     # Sort day offsets: gym-available days first, then home-only, preserving weekday order within groups
     def _day_has_gym(offset: int) -> bool:
@@ -2218,6 +2296,8 @@ def generate_phase_week(
     for offset in pass1_day_order:
         if not day_has_available_slot[offset]:
             continue
+        if phase_id == "deload" and day_sessions[offset]:
+            continue  # A328: the finger exposure's day
         if not primary_pool:
             break
         if primary_uses >= max_primary_uses:
@@ -2233,7 +2313,8 @@ def generate_phase_week(
             permanent_skip = False  # B157: only permanent skips burn the uses budget
 
             # Anti-repetition: max N times per week (default 1) — PERMANENT
-            max_pw = meta.get("max_per_week", 1)
+            # (A328: the deload fillers have their own weekly limit)
+            max_pw = _deload_pw.get(sid, meta.get("max_per_week", 1))
             if session_count.get(sid, 0) >= max_pw:
                 skip = True
                 permanent_skip = True
@@ -3999,7 +4080,12 @@ def generate_phase_week(
             # (B287/R-3: a boulderer got a lead pool), and with
             # profile-conditional sessions it would make a session vanish from a
             # replanned week. Carrying it removes the divergence at the root.
-            "session_pool": list(session_pool),
+            # A328: a deload week records the pool it really used (the deload
+            # form first, then the saved pool) — A326 reads it on a venue change.
+            "session_pool": (
+                list(dict.fromkeys(deload_form_pool(deload_finger_exposure) + list(session_pool)))
+                if phase_id == "deload" else list(session_pool)
+            ),
             "intensity_cap": cap,
             "allowed_locations": locations,
             "hard_cap_per_week": effective_hard_cap,
@@ -4027,7 +4113,7 @@ def generate_phase_week(
         # the normal case. Reported rather than swallowed — an undelivered
         # "guaranteed" stimulus that fails silently is the exact bug class D263
         # took months to surface.
-        "unmet_stimulus": unmet_stimulus + _unmet_floor + _key_unmet,
+        "unmet_stimulus": unmet_stimulus + _unmet_floor + _key_unmet + _deload_unmet,
     }
 
     if retest_decisions:

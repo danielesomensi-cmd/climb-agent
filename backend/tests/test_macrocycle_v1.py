@@ -500,13 +500,23 @@ class TestPhasePoolIntegrity(unittest.TestCase):
         self.assertFalse(meta["finger"])
 
     def test_all_pool_sessions_respect_intensity_cap(self):
-        """Parametric guard: every session in every phase pool has intensity <= phase cap."""
+        """Parametric guard: every session in every phase pool has intensity <= phase cap.
+
+        A328 (D288 R3): the deload form's technique session and finger
+        exposure (DELOAD_ABOVE_CAP) sit above the deload's `low` cap on
+        purpose — never hard, never `max`."""
+        from backend.engine.macrocycle_v1 import DELOAD_ABOVE_CAP
+
         for phase_id, pool_def in _SESSION_POOL.items():
             cap = PHASE_INTENSITY_CAP.get(phase_id, "max")
             cap_val = _INTENSITY_ORDER.get(cap, 3)
             for sid in pool_def:
                 meta = _SESSION_META.get(sid)
                 self.assertIsNotNone(meta, f"{sid} in {phase_id} pool but missing from _SESSION_META")
+                if phase_id == "deload" and sid in DELOAD_ABOVE_CAP:
+                    self.assertFalse(meta["hard"])
+                    self.assertNotEqual(meta["intensity"], "max")
+                    continue
                 sess_val = _INTENSITY_ORDER.get(meta["intensity"], 0)
                 self.assertLessEqual(
                     sess_val, cap_val,

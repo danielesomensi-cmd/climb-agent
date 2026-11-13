@@ -173,6 +173,12 @@ floor core, arm lifts, toe pulls, wall hold. Every other key identical.
 C286 (catalog: Z2 lunch with floor core, barbell bench on the push lunch,
 one technique drill + finger ramp-up on the evening sessions) changed only
 the keys of the seven sessions it touches; every other key identical.
+
+A328 (D288 R3) added 6 keys, one per profile × date, for the new session
+``deload_finger_touch`` (computed with ``compute()`` under the test's
+conditions, ladder stage off); no existing key changed — the slots are not
+deload dates, so the ``deload_sets: 0.5`` of the technique drills is dropped
+unread (A312) and ``technique_focus_gym`` is byte-identical.
 """
 
 from __future__ import annotations
