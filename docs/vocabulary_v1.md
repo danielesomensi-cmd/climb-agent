@@ -325,6 +325,30 @@ Guidelines:
 
 ---
 
+### 2.5.1 Finger load (A327, D288 R1)
+
+`finger_load` — on every exercise that loads the finger flexors for `session_tags` (a finger pattern or domain, B392
+warm-ups included) and on every finger-hard id (`FINGER_FATIGUE_EXTRA_IDS`, `FINGER_HARD_LIBRARY_IDS`,
+`FINGER_HARD_CLIMB_IDS`): 57 exercises; absent everywhere else.
+
+Allowed values:
+
+- `high` — max / test hangs, limit / board / campus, `three_attempt_comp`, redpoint attempts, and every hang
+  worked to failure or above ~50 % (repeaters, IntHangs, density, 7/3, moving hangs at 3 × 5 min). Needs the 48 h
+  finger gap with another `high`.
+- `low` — ≤ 50 % of max, no set to failure, ≤ 10 min under load: ramp-ups, warm-up hangs, feet-on / bar dead hangs,
+  sub-max capacity and long-duration hangs, finger curls. Rule pinned by `test_a327_finger_load_catalog.py`: only
+  with `intensity_level` ≤ medium, `stress_tags.fingers` ≠ high, no `test` role, not a finger-hard id, not in the
+  finger_max / limit_power family, `prescription_defaults` sets × reps × work_seconds ≤ 600 s. When in doubt,
+  `high` (the conservative side: it keeps today's 48 h gap).
+
+The low list is pinned by the test: a change is deliberate. `long_interval_repeaters` and
+`repeater_sub_max_endurance` (45-55 % MVC in their notes) and `hangboard_moving_hangs` (15 min under load) stay
+`high`. The template `finger_aerobic_endurance` (only `finger_aerobic_base`) picks its main hang with
+`pattern: [hang, isometric_hang]`, so `finger_aerobic_base` never resolves to a hang above 50 %.
+
+---
+
 ### 2.6 Fatigue cost
 
 `fatigue_cost` is an integer from 0 to 10 and supports load management and multi-session interaction.

@@ -45,9 +45,13 @@
       "domain": [
         "finger_aerobic_endurance"
       ],
+      "pattern": [
+        "hang",
+        "isometric_hang"
+      ],
       "prescription": {
         "notes": [
-          "Low pump density work."
+          "Low pump density work: at most 50% of your max, never close to failure."
         ],
         "duration_min_range": [
           10,

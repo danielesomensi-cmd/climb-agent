@@ -15,6 +15,7 @@
       ],
       "pattern": "wrist_extension",
       "intensity_level": "low",
+      "finger_load": "low",
       "fatigue_cost": 1,
       "recency_group": "finger_warmup_generic",
       "equipment_required": [],
@@ -172,6 +173,7 @@
       ],
       "pattern": "pull_vertical",
       "intensity_level": "low",
+      "finger_load": "low",
       "fatigue_cost": 2,
       "recency_group": "finger_warmup_recruitment",
       "equipment_required": [
@@ -227,6 +229,7 @@
       ],
       "pattern": "isometric_hang",
       "intensity_level": "low",
+      "finger_load": "low",
       "fatigue_cost": 2,
       "recency_group": "finger_warmup_easy_hang",
       "equipment_required": [
@@ -286,6 +289,7 @@
       ],
       "pattern": "isometric_hang",
       "intensity_level": "max",
+      "finger_load": "high",
       "fatigue_cost": 9,
       "recency_group": "finger_max_hang",
       "equipment_required": [
@@ -346,6 +350,7 @@
       ],
       "pattern": "isometric_hang",
       "intensity_level": "max",
+      "finger_load": "high",
       "fatigue_cost": 9,
       "recency_group": "finger_max_hang",
       "equipment_required": [
@@ -405,6 +410,7 @@
       ],
       "pattern": "isometric_hang",
       "intensity_level": "max",
+      "finger_load": "high",
       "fatigue_cost": 9,
       "recency_group": "finger_max_hang",
       "equipment_required": [
@@ -463,6 +469,7 @@
       ],
       "pattern": "repeater_hang",
       "intensity_level": "high",
+      "finger_load": "high",
       "fatigue_cost": 7,
       "recency_group": "finger_repeaters",
       "equipment_required": [
@@ -522,6 +529,7 @@
       ],
       "pattern": "isometric_hang",
       "intensity_level": "high",
+      "finger_load": "high",
       "fatigue_cost": 8,
       "recency_group": "finger_max_hang",
       "equipment_required": [
@@ -579,6 +587,7 @@
       ],
       "pattern": "repeater_hang",
       "intensity_level": "medium",
+      "finger_load": "high",
       "fatigue_cost": 5,
       "recency_group": "finger_repeaters",
       "equipment_required": [
@@ -636,6 +645,7 @@
       ],
       "pattern": "isometric_hang",
       "intensity_level": "high",
+      "finger_load": "high",
       "fatigue_cost": 6,
       "recency_group": "finger_density_hangs",
       "equipment_required": [
@@ -694,6 +704,7 @@
       ],
       "pattern": "isometric_hang",
       "intensity_level": "medium",
+      "finger_load": "low",
       "fatigue_cost": 5,
       "recency_group": "finger_long_duration_hang",
       "equipment_required": [
@@ -750,6 +761,7 @@
       ],
       "pattern": "isometric_hang",
       "intensity_level": "max",
+      "finger_load": "high",
       "fatigue_cost": 8,
       "recency_group": "finger_min_edge",
       "equipment_required": [
@@ -808,6 +820,7 @@
       ],
       "pattern": "isometric_hang",
       "intensity_level": "high",
+      "finger_load": "high",
       "fatigue_cost": 6,
       "recency_group": "finger_pinch",
       "equipment_required": [
@@ -866,6 +879,7 @@
       ],
       "pattern": "isometric_hang",
       "intensity_level": "max",
+      "finger_load": "high",
       "fatigue_cost": 8,
       "recency_group": "finger_max_hang",
       "equipment_required": [
@@ -927,6 +941,7 @@
       ],
       "pattern": "isometric_hang",
       "intensity_level": "medium",
+      "finger_load": "high",
       "fatigue_cost": 5,
       "recency_group": "finger_submaximal_hang",
       "equipment_required": [
@@ -2105,6 +2120,7 @@
       ],
       "pattern": "pull_vertical",
       "intensity_level": "high",
+      "finger_load": "high",
       "fatigue_cost": 8,
       "recency_group": "campus_ladders",
       "equipment_required": [
@@ -2164,6 +2180,7 @@
       ],
       "pattern": "campus_ladder",
       "intensity_level": "high",
+      "finger_load": "high",
       "fatigue_cost": 8,
       "recency_group": "campus_ladders",
       "equipment_required": [
@@ -2222,6 +2239,7 @@
       ],
       "pattern": "campus_ladder",
       "intensity_level": "high",
+      "finger_load": "high",
       "fatigue_cost": 5,
       "recency_group": "campus_ladders",
       "equipment_required": [
@@ -2278,6 +2296,7 @@
       ],
       "pattern": "campus_ladder",
       "intensity_level": "high",
+      "finger_load": "high",
       "fatigue_cost": 8,
       "recency_group": "campus_bumps",
       "equipment_required": [
@@ -2338,6 +2357,7 @@
       ],
       "pattern": "campus_ladder",
       "intensity_level": "max",
+      "finger_load": "high",
       "fatigue_cost": 9,
       "recency_group": "campus_dynos",
       "equipment_required": [
@@ -2397,6 +2417,7 @@
       ],
       "pattern": "climbing_limit_boulder",
       "intensity_level": "max",
+      "finger_load": "high",
       "fatigue_cost": 9,
       "recency_group": "gym_limit_bouldering",
       "equipment_required": [],
@@ -2464,6 +2485,7 @@
       ],
       "pattern": "climbing_limit_boulder",
       "intensity_level": "max",
+      "finger_load": "high",
       "fatigue_cost": 9,
       "recency_group": "board_limit_boulders",
       "equipment_required": [],
@@ -6380,6 +6402,7 @@
       ],
       "pattern": "climbing_routes",
       "intensity_level": "high",
+      "finger_load": "high",
       "fatigue_cost": 7,
       "recency_group": "route_redpoint",
       "equipment_required": [
@@ -6954,6 +6977,7 @@
       ],
       "pattern": "isometric_hang",
       "intensity_level": "high",
+      "finger_load": "high",
       "fatigue_cost": 7,
       "recency_group": "finger_max_hang",
       "equipment_required": [
@@ -7014,6 +7038,7 @@
       ],
       "pattern": "campus_ladder",
       "intensity_level": "high",
+      "finger_load": "high",
       "fatigue_cost": 7,
       "recency_group": "campus_ladders",
       "equipment_required": [
@@ -7071,6 +7096,7 @@
       ],
       "pattern": "campus_ladder",
       "intensity_level": "high",
+      "finger_load": "high",
       "fatigue_cost": 9,
       "recency_group": "campus_ladders",
       "equipment_required": [
@@ -7129,6 +7155,7 @@
       ],
       "pattern": "campus_ladder",
       "intensity_level": "high",
+      "finger_load": "high",
       "fatigue_cost": 7,
       "recency_group": "campus_switches",
       "equipment_required": [
@@ -7186,6 +7213,7 @@
       ],
       "pattern": "campus_ladder",
       "intensity_level": "high",
+      "finger_load": "high",
       "fatigue_cost": 8,
       "recency_group": "campus_endurance",
       "equipment_required": [
@@ -7771,6 +7799,7 @@
       ],
       "pattern": "grip_transition",
       "intensity_level": "high",
+      "finger_load": "high",
       "fatigue_cost": 6,
       "recency_group": "finger_transition",
       "equipment_required": [
@@ -7882,6 +7911,7 @@
       ],
       "pattern": "tendon_glide",
       "intensity_level": "low",
+      "finger_load": "low",
       "fatigue_cost": 3,
       "recency_group": "prehab_finger_dynamic",
       "equipment_required": [
@@ -8046,6 +8076,7 @@
       ],
       "pattern": "repeater_hang",
       "intensity_level": "low",
+      "finger_load": "high",
       "fatigue_cost": 3,
       "recency_group": "hangboard_endurance",
       "equipment_required": [
@@ -8670,6 +8701,7 @@
       ],
       "pattern": "isometric_hang",
       "intensity_level": "max",
+      "finger_load": "high",
       "fatigue_cost": 5,
       "recency_group": "test_hang_duration",
       "equipment_required": [
@@ -9125,6 +9157,7 @@
       ],
       "pattern": "isometric_hang",
       "intensity_level": "max",
+      "finger_load": "high",
       "fatigue_cost": 9,
       "recency_group": "finger_max_hang",
       "equipment_required": [
@@ -9185,6 +9218,7 @@
       ],
       "pattern": "isometric_hang",
       "intensity_level": "max",
+      "finger_load": "high",
       "fatigue_cost": 9,
       "recency_group": "finger_max_hang",
       "equipment_required": [
@@ -9244,6 +9278,7 @@
       ],
       "pattern": "isometric_hang",
       "intensity_level": "high",
+      "finger_load": "high",
       "fatigue_cost": 7,
       "recency_group": "finger_max_hang",
       "equipment_required": [
@@ -9305,6 +9340,7 @@
       ],
       "pattern": "isometric_hang",
       "intensity_level": "max",
+      "finger_load": "high",
       "fatigue_cost": 8,
       "recency_group": "finger_max_hang",
       "equipment_required": [
@@ -9364,6 +9400,7 @@
       ],
       "pattern": "isometric_hang",
       "intensity_level": "medium",
+      "finger_load": "high",
       "fatigue_cost": 6,
       "recency_group": "finger_density_hangs",
       "equipment_required": [
@@ -9424,6 +9461,7 @@
       ],
       "pattern": "isometric_hang",
       "intensity_level": "medium",
+      "finger_load": "high",
       "fatigue_cost": 6,
       "recency_group": "finger_repeater",
       "equipment_required": [
@@ -9484,6 +9522,7 @@
       ],
       "pattern": "isometric_hang",
       "intensity_level": "max",
+      "finger_load": "high",
       "fatigue_cost": 8,
       "recency_group": "finger_test",
       "equipment_required": [
@@ -9541,6 +9580,7 @@
       ],
       "pattern": "repeater_lift",
       "intensity_level": "medium",
+      "finger_load": "high",
       "fatigue_cost": 7,
       "recency_group": "finger_repeaters",
       "equipment_required": [
@@ -9602,6 +9642,7 @@
       ],
       "pattern": "repeater_hang",
       "intensity_level": "medium",
+      "finger_load": "high",
       "fatigue_cost": 6,
       "recency_group": "finger_repeaters",
       "equipment_required": [
@@ -9662,6 +9703,7 @@
       ],
       "pattern": "isometric_lift",
       "intensity_level": "medium",
+      "finger_load": "high",
       "fatigue_cost": 6,
       "recency_group": "finger_endurance",
       "equipment_required": [
@@ -9776,6 +9818,7 @@
       ],
       "pattern": "isometric_hang",
       "intensity_level": "low",
+      "finger_load": "low",
       "fatigue_cost": 1,
       "recency_group": "warmup_hang_rampup",
       "equipment_required": [
@@ -9885,6 +9928,7 @@
       ],
       "pattern": "repeater_hang",
       "intensity_level": "very_low",
+      "finger_load": "low",
       "fatigue_cost": 1,
       "recency_group": "warmup_hang_rampup",
       "equipment_required": [
@@ -9989,6 +10033,7 @@
       ],
       "pattern": "campus_ladder",
       "intensity_level": "high",
+      "finger_load": "high",
       "fatigue_cost": 7,
       "recency_group": "campus_ladders",
       "equipment_required": [
@@ -10466,6 +10511,7 @@
       ],
       "pattern": "climbing_limit_boulder",
       "intensity_level": "low",
+      "finger_load": "low",
       "fatigue_cost": 1,
       "recency_group": "warmup_climbing",
       "equipment_required_any": [
@@ -10524,6 +10570,7 @@
       ],
       "pattern": "climbing_limit_boulder",
       "intensity_level": "max",
+      "finger_load": "high",
       "fatigue_cost": 9,
       "recency_group": "limit_boulder_spray",
       "equipment_required": [],
@@ -10584,6 +10631,7 @@
       ],
       "pattern": "climbing_limit_boulder",
       "intensity_level": "max",
+      "finger_load": "high",
       "fatigue_cost": 9,
       "recency_group": "limit_boulder_system",
       "equipment_required": [],
@@ -10752,6 +10800,7 @@
       ],
       "pattern": "repeater_hang",
       "intensity_level": "medium",
+      "finger_load": "low",
       "fatigue_cost": 4,
       "recency_group": "finger_endurance_sub_max",
       "equipment_required": [
@@ -10809,6 +10858,7 @@
       ],
       "pattern": "repeater_hang",
       "intensity_level": "medium",
+      "finger_load": "high",
       "fatigue_cost": 5,
       "recency_group": "finger_endurance_repeater_sub_max",
       "equipment_required": [
@@ -10867,6 +10917,7 @@
       ],
       "pattern": "repeater_hang",
       "intensity_level": "medium",
+      "finger_load": "high",
       "fatigue_cost": 5,
       "recency_group": "finger_endurance_repeater_sub_max",
       "equipment_required": [
@@ -10924,6 +10975,7 @@
       ],
       "pattern": "repeater_hang",
       "intensity_level": "low",
+      "finger_load": "high",
       "fatigue_cost": 4,
       "recency_group": "finger_endurance_sub_max",
       "equipment_required": [
@@ -14260,6 +14312,7 @@
       ],
       "pattern": "hang",
       "intensity_level": "low",
+      "finger_load": "low",
       "fatigue_cost": 2,
       "recency_group": "bar_hang",
       "equipment_required": [
@@ -18005,6 +18058,7 @@
       ],
       "pattern": "climbing_limit_boulder",
       "intensity_level": "high",
+      "finger_load": "high",
       "fatigue_cost": 6,
       "recency_group": "limit_small_feet",
       "equipment_required": [],
@@ -18431,6 +18485,7 @@
       ],
       "pattern": "technique_drill",
       "intensity_level": "high",
+      "finger_load": "high",
       "fatigue_cost": 6,
       "recency_group": "technique_tryhard",
       "equipment_required": [],
@@ -18732,6 +18787,7 @@
       ],
       "pattern": "isometric_hang",
       "intensity_level": "low",
+      "finger_load": "low",
       "fatigue_cost": 2,
       "recency_group": "finger_pocket_warmup",
       "equipment_required": [
@@ -18789,6 +18845,7 @@
       ],
       "pattern": "isometric_hang",
       "intensity_level": "low",
+      "finger_load": "low",
       "fatigue_cost": 2,
       "recency_group": "finger_pocket_warmup",
       "equipment_required": [

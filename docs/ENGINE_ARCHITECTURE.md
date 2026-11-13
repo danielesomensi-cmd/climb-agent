@@ -1193,6 +1193,11 @@ guards; nothing is rewritten and planner-generated weeks do not change.
   only, never a reason of `finger_max_ok`, so the composer pool never loses an exercise for them (decision 3).
 - The planner does not enforce them yet (step D): PASS 2.7 and the A294 proposals already reject a placement that
   adds one of these alerts (`guards_v1.new_warnings`), the other passes do not.
+- **Step B — `finger_load` in the exercise catalog:** `high | low` on the 57 exercises that load the finger flexors
+  for `session_tags` (and the finger-hard ids). `low` = ≤ 50 %, no failure, ≤ 10 min under load, by a pinned rule
+  (`docs/vocabulary_v1.md` §2.5.1); everything else `high`. `finger_aerobic_base` is made honest: the template
+  `finger_aerobic_endurance` picks its main hang with `pattern: [hang, isometric_hang]` (never the 55-65 %
+  intermittent hangs). No golden key moved.
 
 ### Completed session preservation
 
