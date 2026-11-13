@@ -17,8 +17,8 @@ from backend.tests.test_a293_athlete_context import TODAY, _outdoor, _sess, _sta
 _TECHNIQUE = [{"exercise_id": "warmup_easy_boulders"}, {"exercise_id": "small_feet_press_hold"},
               {"exercise_id": "no_readjust_drill"}, {"exercise_id": "dip"},
               {"exercise_id": "half_windshield_wiper"}]  # the 18/10 prod shape (dip + wiper)
-_STALE = {"hard": True, "finger": True}     # what the replanner stored before B392
-_CURRENT = {"hard": False, "finger": False}  # what derive_session_tags says now (B416: the core wiper no longer counts)
+_STALE = {"hard": True, "finger": True, "finger_load": "high"}  # stored before B392 (A327: tier read high)
+_CURRENT = {"hard": False, "finger": False, "finger_load": None}  # derived now (B416: the core wiper no longer counts)
 
 
 def _with(*sessions_by_date) -> dict:

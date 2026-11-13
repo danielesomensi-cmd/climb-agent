@@ -35,28 +35,31 @@ SLOTS: Tuple[str, ...] = ("morning", "lunch", "evening")
 WEEKDAYS: Tuple[str, ...] = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 
 # Session metadata — maps session_id to its properties
-# hard: counts against hard_cap; finger: needs 48h gap; intensity: max/high/medium/low
+# hard: counts against hard_cap; finger: loads the fingers; finger_load (A327,
+# D288 R1, on every finger entry): "high" needs the 48 h gap from another high,
+# "low" (finger_aerobic_base, ≤ 50 %) needs 6 h from any finger session — read
+# through stimulus.finger_load_of, never copied onto the plan; intensity: max/high/medium/low
 # climbing: True for climbing-related sessions (placed first in pass 1)
 _SESSION_META: Dict[str, Dict[str, Any]] = {
-    "strength_long": {"pulling": True, "hard": True, "finger": True, "intensity": "max", "climbing": True, "location": ("gym", "home"), "required_equipment": ["hangboard"]},
-    "power_contact_gym": {"hard": True, "finger": True, "intensity": "max", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"]},
-    "limit_boulder_gym": {"pulling": True, "hard": True, "finger": True, "intensity": "max", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"]},
+    "strength_long": {"pulling": True, "hard": True, "finger": True, "finger_load": "high", "intensity": "max", "climbing": True, "location": ("gym", "home"), "required_equipment": ["hangboard"]},
+    "power_contact_gym": {"hard": True, "finger": True, "finger_load": "high", "intensity": "max", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"]},
+    "limit_boulder_gym": {"pulling": True, "hard": True, "finger": True, "finger_load": "high", "intensity": "max", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"]},
     "power_endurance_gym": {"pulling": True, "hard": True, "finger": False, "intensity": "high", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"], "preferred_equipment": ["gym_routes"]},
     "endurance_aerobic_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",), "max_per_week": 2, "required_equipment": ["gym_routes"]},
     "technique_focus_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"]},
-    "finger_strength_home": {"pulling": True, "hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home",), "required_equipment": ["hangboard"]},
+    "finger_strength_home": {"pulling": True, "hard": True, "finger": True, "finger_load": "high", "intensity": "high", "climbing": False, "location": ("home",), "required_equipment": ["hangboard"]},
     "prehab_maintenance": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home", "gym")},
     "flexibility_full": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home", "gym"), "max_per_week": 2},
     "yoga_recovery": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home",), "max_per_week": 2},
     "handstand_practice": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("home", "gym")},
     "complementary_conditioning": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("home", "gym")},
     "regeneration_easy": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home", "gym", "outdoor"), "required_equipment": ["gym_boulder"]},
-    "finger_maintenance_home": {"pulling": True, "hard": False, "finger": True, "intensity": "medium", "climbing": True, "location": ("home",), "required_equipment": ["hangboard"]},
-    "test_max_hang_5s": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["hangboard"]},
-    "test_max_hang_7s": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["hangboard"]},
-    "test_lp_max_5s": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["loading_pin"]},
-    "test_repeater_7_3": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["hangboard"]},
-    "test_lp_repeater": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["loading_pin"]},
+    "finger_maintenance_home": {"pulling": True, "hard": False, "finger": True, "finger_load": "high", "intensity": "medium", "climbing": True, "location": ("home",), "required_equipment": ["hangboard"]},
+    "test_max_hang_5s": {"hard": True, "finger": True, "finger_load": "high", "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["hangboard"]},
+    "test_max_hang_7s": {"hard": True, "finger": True, "finger_load": "high", "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["hangboard"]},
+    "test_lp_max_5s": {"hard": True, "finger": True, "finger_load": "high", "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["loading_pin"]},
+    "test_repeater_7_3": {"hard": True, "finger": True, "finger_load": "high", "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["hangboard"]},
+    "test_lp_repeater": {"hard": True, "finger": True, "finger_load": "high", "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["loading_pin"]},
     # A319 (d): the 2RM is a weighted pull-up — without weights the resolver
     # used to fill the block with a non-test pull (B261 non-test fallback:
     # dip, archer pull-up) and the test wrote no max. dumbbell / kettlebell /
@@ -66,18 +69,18 @@ _SESSION_META: Dict[str, Dict[str, Any]] = {
     # A319 (c): both max tests in one session (PASS 3a only). Finger + hard,
     # and a pull-up test (`_RD_PULL_TEST_SIDS`); no `pulling` flag — its
     # pulling side comes from the 2RM exercise / SESSION_FALLBACK_STIMULI.
-    "test_max_hang_pullup": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["hangboard", "pullup_bar", "weight"]},
+    "test_max_hang_pullup": {"hard": True, "finger": True, "finger_load": "high", "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["hangboard", "pullup_bar", "weight"]},
     "easy_climbing_deload": {"hard": False, "finger": False, "intensity": "low", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"]},
-    "finger_maintenance_gym": {"hard": False, "finger": True, "intensity": "medium", "climbing": True, "location": ("gym",), "required_equipment": ["hangboard"]},
+    "finger_maintenance_gym": {"hard": False, "finger": True, "finger_load": "high", "intensity": "medium", "climbing": True, "location": ("gym",), "required_equipment": ["hangboard"]},
     "route_endurance_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",), "required_equipment": ["gym_routes"]},
     "pulling_strength_gym": {"pulling": True, "hard": True, "finger": False, "intensity": "high", "climbing": False, "location": ("gym",), "required_equipment": ["pullup_bar"]},
     "heavy_conditioning_gym": {"pulling": True, "hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym",), "required_equipment": ["dumbbell"]},
     "lower_body_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym",), "required_equipment": ["dumbbell"]},
-    "finger_aerobic_base": {"hard": False, "finger": True, "intensity": "low", "climbing": False, "location": ("home",), "required_equipment": ["hangboard"]},
+    "finger_aerobic_base": {"hard": False, "finger": True, "finger_load": "low", "intensity": "low", "climbing": False, "location": ("home",), "required_equipment": ["hangboard"]},
     "deload_recovery": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home", "gym"), "max_per_week": 2},
-    "finger_endurance_short": {"hard": False, "finger": True, "intensity": "medium", "climbing": False, "location": ("home",), "required_equipment": ["hangboard"]},
+    "finger_endurance_short": {"hard": False, "finger": True, "finger_load": "high", "intensity": "medium", "climbing": False, "location": ("home",), "required_equipment": ["hangboard"]},
     "boulder_circuit_gym": {"pulling": True, "hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",), "max_per_week": 2, "required_equipment": ["gym_boulder"]},
-    "route_projecting_gym": {"hard": True, "finger": True, "intensity": "max", "climbing": True, "location": ("gym",), "required_equipment": ["gym_routes"], "max_per_week": 2},
+    "route_projecting_gym": {"hard": True, "finger": True, "finger_load": "high", "intensity": "max", "climbing": True, "location": ("gym",), "required_equipment": ["gym_routes"], "max_per_week": 2},
     "upper_body_weights": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym", "home"), "required_equipment": [], "max_per_week": 2},
     "legs_strength": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym", "home"), "required_equipment": [], "max_per_week": 2},
     "core_training": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym", "home"), "required_equipment": [], "max_per_week": 3},
@@ -993,7 +996,7 @@ def _key_stimulus_pass(
         return []
 
     from backend.engine import guards_v1
-    from backend.engine.stimulus import is_test_session, session_flag
+    from backend.engine.stimulus import finger_load_of, is_test_session, session_flag
     from backend.engine.user_owned import is_preservable
 
     catalog = _load_exercise_catalog_file()
@@ -1136,6 +1139,10 @@ def _key_stimulus_pass(
     def _has(flag: str, o: int) -> bool:
         if flag in ("hard", "finger") and o in crag_set:
             return True  # B382(b)
+        if flag == "finger":
+            # A327: the 48 h gap is high–high; the 6 h rule of a low session is
+            # the ``finger_low_gap`` alert, which the pass refuses to add.
+            return any(finger_load_of(s) == "high" for s in on(o))
         return any(session_flag(s, flag) for s in on(o))
 
     def _equipment_feasible(cands: List[str]) -> bool:
@@ -1223,7 +1230,9 @@ def _key_stimulus_pass(
         if today_date is not None and day_dates[o] < today_date:
             return None
         hard = bool(meta.get("hard"))
-        finger = bool(meta.get("finger"))
+        # A327: finger-HIGH (the calendar rule); a low candidate is judged by
+        # the guard alerts below (finger_low_gap).
+        finger = bool(meta.get("finger")) and meta.get("finger_load", "high") == "high"
         climbing = bool(meta.get("climbing"))
         if day_dates[o] in pretrip_set and (hard or meta.get("intensity") == "max"):
             return None
@@ -1247,7 +1256,7 @@ def _key_stimulus_pass(
             if any(_has("hard", p) for p in range(o - hard_gap_days, o + hard_gap_days + 1) if p != o):
                 return None
         if finger:
-            if any(session_flag(e, "finger") for e in survivors):
+            if any(finger_load_of(e) == "high" for e in survivors):
                 return None
             if any(_has("finger", p) for p in range(o - finger_gap_days, o + finger_gap_days + 1) if p != o):
                 return None
@@ -1378,7 +1387,7 @@ def _key_stimulus_pass(
             cache.clear()
             if entry["tags"].get("hard") and o not in hard_day_offsets:
                 hard_day_offsets.append(o)
-            if entry["tags"].get("finger") and o not in finger_day_offsets:
+            if finger_load_of(entry) == "high" and o not in finger_day_offsets:
                 finger_day_offsets.append(o)
         have = _count(req)
         if have < target:
@@ -1687,6 +1696,74 @@ def generate_phase_week(
     hard_day_offsets: List[int] = []
     session_count: Dict[str, int] = {}  # anti-repetition: session_id → times placed this week
 
+    # A327 (D288 R1): finger-load tiers. ``finger_day_offsets`` holds the HIGH
+    # days — the 48 h calendar rule of every pass, unchanged. A LOW session
+    # (``finger_aerobic_base``, a light custom) needs ``FINGER_LOW_GAP_H`` ×
+    # recovery_multiplier from any finger session on the slot clock, at most
+    # ``FINGER_LOW_MAX_PER_DAY`` a day: ``finger_low_slots`` (offset, hour) and
+    # ``finger_high_times`` (start, end on the week clock: a crag day is high
+    # 08-18) feed ``_finger_clock_ok``, the one clock gate every placement site
+    # reads once the slot is known. ``_low_counted``: the low registrations
+    # ``targets.finger_days`` counted before A327 (the summary does not move).
+    from backend.engine.complementary_v1 import (
+        OUTDOOR_END_HOUR as _OUT_END,
+        OUTDOOR_START_HOUR as _OUT_START,
+        SLOT_HOUR as _SLOT_HOUR,
+    )
+    from backend.engine.retest_policy import FINGER_LOW_GAP_H, FINGER_LOW_MAX_PER_DAY
+    from backend.engine.stimulus import finger_load_of as _finger_load_of
+
+    _low_gap_h = FINGER_LOW_GAP_H * max(1.0, recovery_mult)
+    finger_low_slots: List[Tuple[int, int]] = []
+    finger_high_times: List[Tuple[int, int]] = []
+    _low_counted: List[int] = []
+
+    def _slot_h(slot: Any) -> int:
+        return _SLOT_HOUR.get(str(slot), 19)
+
+    def _meta_tier(meta: Optional[Dict[str, Any]]) -> Optional[str]:
+        if not meta or not meta.get("finger"):
+            return None
+        return meta.get("finger_load") or "high"
+
+    def _finger_clock_ok(offset: int, slot: Any, tier: Optional[str]) -> bool:
+        """A327: a finger session at (offset, slot) keeps 6 h × multiplier from
+        every LOW session (either tier), and a LOW one also from every high
+        session / crag day, with at most 2 low a day. High–high is the
+        calendar rule of the caller."""
+        if tier is None:
+            return True
+        t = offset * 24 + _slot_h(slot)
+        if any(abs(t - (o * 24 + h)) < _low_gap_h for o, h in finger_low_slots):
+            return False
+        if tier == "low":
+            for a, b in finger_high_times:
+                if (0 if a <= t <= b else min(abs(t - a), abs(t - b))) < _low_gap_h:
+                    return False
+            if sum(1 for o, _h in finger_low_slots if o == offset) >= FINGER_LOW_MAX_PER_DAY:
+                return False
+        return True
+
+    def _book_finger(offset: int, slot: Any, tier: Optional[str], *, counted: bool = True) -> None:
+        """A327: the clock side of a finger placement (the high DAY is booked in
+        ``finger_day_offsets`` by the caller, as before)."""
+        if tier == "high":
+            finger_high_times.append((offset * 24 + _slot_h(slot), offset * 24 + _slot_h(slot)))
+        elif tier == "low":
+            finger_low_slots.append((offset, _slot_h(slot)))
+            if counted:
+                _low_counted.append(offset)
+
+    def _unbook_low(offset: int, entry: Optional[Dict[str, Any]]) -> None:
+        """A327: a low session replaced by another one leaves the clock."""
+        if not isinstance(entry, dict) or _finger_load_of(entry) != "low":
+            return
+        key = (offset, _slot_h(entry.get("slot")))
+        if key in finger_low_slots:
+            finger_low_slots.remove(key)
+            if offset in _low_counted:
+                _low_counted.remove(offset)
+
     # B161: seed spacing constraints from previous week's trailing days.
     # Offsets are negative (e.g., Sunday of prev week = -1, Saturday = -2).
     # B415 (D287 C1): a session with no `_SESSION_META` entry (custom, coach
@@ -1709,13 +1786,20 @@ def generate_phase_week(
                         continue
                     if _pflag(s, "hard"):
                         hard_day_offsets.append(neg_offset)
-                    if _pflag(s, "finger"):
+                    # A327: the tier (``finger_load_of``: stored tier, old tags
+                    # high, stale tags with finger-hard work high).
+                    _t = _finger_load_of(s)
+                    if _t == "high":
                         finger_day_offsets.append(neg_offset)
+                    _book_finger(neg_offset, s.get("slot"), _t)
                     continue
                 if meta.get("hard") and s.get("tags", {}).get("hard", meta["hard"]):
                     hard_day_offsets.append(neg_offset)
                 if meta.get("finger") and s.get("tags", {}).get("finger", meta["finger"]):
-                    finger_day_offsets.append(neg_offset)
+                    _t = _finger_load_of(s) or "high"
+                    if _t == "high":
+                        finger_day_offsets.append(neg_offset)
+                    _book_finger(neg_offset, s.get("slot"), _t)
 
     # Reduce intensity on day after other-activity (when flagged)
     # AND on the other-activity day itself (no hard sessions alongside other sport).
@@ -1804,6 +1888,8 @@ def generate_phase_week(
     crag_offsets = sorted(set(crag_offsets))
     crag_in_week = [o for o in crag_offsets if o >= 0]
     hard_days += len(crag_in_week)
+    for _c in crag_offsets:  # A327: a crag day is finger-high 08:00-18:00
+        finger_high_times.append((_c * 24 + _OUT_START, _c * 24 + _OUT_END))
 
     # B390: the days of this week already lived. A mid-week regeneration used
     # to start the counters empty, so the remaining days could break the hard
@@ -1837,8 +1923,19 @@ def generate_phase_week(
                 hard_days += 1
                 hard_day_offsets.append(offset)
                 _past_hard_offsets.append(offset)
-            if any(_flag(s, "finger") for s in done):
+            # A327: a lived high day as before; a lived low session on the clock.
+            _tiers = [(s, _finger_load_of(s)) for s in done]
+            if any(t == "high" for _s, t in _tiers):
                 finger_day_offsets.append(offset)
+                for _s, t in _tiers:
+                    if t == "high":
+                        _book_finger(offset, _s.get("slot"), t)
+            _first_low = True
+            for _s, t in _tiers:
+                if t == "low":
+                    _book_finger(offset, _s.get("slot"), t,
+                                 counted=_first_low and not any(t2 == "high" for _x, t2 in _tiers))
+                    _first_low = False
             for s in done:
                 _sid = str(s.get("session_id") or "")
                 if _sid:
@@ -1880,8 +1977,14 @@ def generate_phase_week(
             _kept_sessions.extend(mine)  # B415 (C2)
             if any(_uflag(x, "hard") for x in mine):
                 _user_hard.append(offset)
-            if any(_uflag(x, "finger") for x in mine):
+            # A327: a high session of the user's is a calendar anchor (both
+            # sides, ``_near_anchor``); a low one sits on the clock.
+            if any(_finger_load_of(x) == "high" for x in mine):
                 _user_finger.append(offset)
+            for x in mine:
+                _t = _finger_load_of(x)
+                if _t is not None:
+                    _book_finger(offset, x.get("slot"), _t, counted=False)
     _user_hard_new = [o for o in _user_hard if o not in crag_in_week and o not in _past_hard_offsets]
     hard_days += len(_user_hard_new)
 
@@ -2009,14 +2112,16 @@ def generate_phase_week(
                 permanent_skip = True
 
             # No consecutive finger days (48h+ gap, extended by D83 recovery multiplier) — TEMPORARY
-            if not skip and meta["finger"] and finger_day_offsets:
+            # A327: high–high only.
+            tier = _meta_tier(meta)
+            if not skip and tier == "high" and finger_day_offsets:
                 last_finger_offset = finger_day_offsets[-1]
                 if (offset - last_finger_offset) <= finger_gap_days:
                     skip = True
 
             # B382(b): not next to a declared crag day — TEMPORARY
             # B414: nor next to (or on) a finger / hard session of the user's
-            if not skip and _near_anchor(offset, meta["finger"], meta["hard"]):
+            if not skip and _near_anchor(offset, tier == "high", meta["hard"]):
                 skip = True
 
             # No consecutive hard/max-intensity days (extended by D83 recovery multiplier) — TEMPORARY
@@ -2072,6 +2177,10 @@ def generate_phase_week(
                 continue  # try next session for SAME day
 
             slot, slot_info = result
+            if not _finger_clock_ok(offset, slot, tier):  # A327 — TEMPORARY
+                primary_idx += 1
+                attempts += 1
+                continue
             entry = _make_session_entry(
                 slot, sid, meta, slot_info, locations, phase_id, day_keys[offset],
                 default_gym_id, gyms or [], "pass1:primary", home_equipment=home_equipment,
@@ -2084,8 +2193,9 @@ def generate_phase_week(
             if meta["hard"]:
                 hard_days += 1
                 hard_day_offsets.append(offset)
-            if meta["finger"]:
+            if tier == "high":
                 finger_day_offsets.append(offset)
+            _book_finger(offset, slot, tier)
             placed = True
             break
 
@@ -2152,14 +2262,17 @@ def generate_phase_week(
                     continue
                 if fb_meta.get("hard") and hard_days >= effective_hard_cap:
                     continue
-                if fb_meta.get("finger") and finger_day_offsets and (offset - finger_day_offsets[-1]) <= finger_gap_days:
+                fb_tier = _meta_tier(fb_meta)
+                if fb_tier == "high" and finger_day_offsets and (offset - finger_day_offsets[-1]) <= finger_gap_days:
                     continue
-                if _near_anchor(offset, bool(fb_meta.get("finger")), bool(fb_meta.get("hard"))):
+                if _near_anchor(offset, fb_tier == "high", bool(fb_meta.get("hard"))):
                     continue
                 result = _find_best_slot(
                     day_avail, fb_meta, locations, prefer_evening=True,
                     home_equipment=home_equipment, gyms=gyms, default_gym_id=default_gym_id,
                 )
+                if result and not _finger_clock_ok(offset, result[0], fb_tier):
+                    result = None  # A327
                 if result:
                     slot, slot_info = result
                     entry = _make_session_entry(
@@ -2172,8 +2285,9 @@ def generate_phase_week(
                     if fb_meta.get("hard"):
                         hard_days += 1
                         hard_day_offsets.append(offset)
-                    if fb_meta.get("finger"):
+                    if fb_tier == "high":
                         finger_day_offsets.append(offset)
+                    _book_finger(offset, slot, fb_tier)
                     break
 
     # B382(b): from here on every pass checks spacing with ``any(abs(...))`` on
@@ -2228,13 +2342,23 @@ def generate_phase_week(
                 attempts += 1
                 continue
 
+            # A327 (D288 §1.3-1): PASS 2 used to place finger sessions with no
+            # gap and no booking — the home base week put finger_aerobic_base on
+            # Friday and finger_endurance_short on Saturday. High: the calendar
+            # rule on every side; then the clock gate once the slot is known.
+            tier = _meta_tier(meta)
+            if tier == "high" and any(abs(offset - fo) <= finger_gap_days for fo in finger_day_offsets):
+                comp_idx += 1
+                attempts += 1
+                continue  # TEMPORARY — don't burn uses
+
             day_avail = normalized[day_keys[offset]]
             result = _find_best_slot(day_avail, meta, locations, prefer_evening=False,
                                      home_equipment=home_equipment, gyms=gyms, default_gym_id=default_gym_id)
-            if result is None:
+            if result is None or not _finger_clock_ok(offset, result[0], tier):
                 comp_idx += 1
                 attempts += 1
-                continue  # location mismatch — don't burn uses
+                continue  # location mismatch (or A327 clock) — don't burn uses
 
             slot, slot_info = result
             entry = _make_session_entry(
@@ -2246,6 +2370,9 @@ def generate_phase_week(
             comp_idx += 1
             comp_uses += 1
             days_with_sessions += 1
+            if tier == "high":
+                finger_day_offsets.append(offset)
+            _book_finger(offset, slot, tier)
             break
 
     # ── PASS 2.2 (B121): Fill extra slots on multi-slot days ──
@@ -2308,7 +2435,9 @@ def generate_phase_week(
                         skip = True
 
                 # No consecutive finger days (gap extended by D83 recovery multiplier)
-                if not skip and meta["finger"] and finger_day_offsets:
+                # A327: high–high only; the clock gate below for both tiers.
+                tier = _meta_tier(meta)
+                if not skip and tier == "high" and finger_day_offsets:
                     if any(abs(offset - fo) <= finger_gap_days for fo in finger_day_offsets):
                         skip = True
 
@@ -2324,7 +2453,7 @@ def generate_phase_week(
                     home_equipment=home_equipment, gyms=gyms,
                     default_gym_id=default_gym_id, occupied_slots=occupied,
                 )
-                if result is None:
+                if result is None or not _finger_clock_ok(offset, result[0], tier):
                     extra_idx += 1
                     attempts += 1
                     continue
@@ -2341,8 +2470,9 @@ def generate_phase_week(
                 extra_idx += 1
                 extra_uses += 1
                 total_sessions_placed += 1
-                if meta["finger"]:
+                if tier == "high":
                     finger_day_offsets.append(offset)
+                _book_finger(offset, slot, tier)
                 # A283 — questo `break` limita a UNA sessione extra per giorno,
                 # cioè a due sessioni in totale. Lasciato di proposito: copre
                 # integralmente lo split pranzo+sera, mentre trasformarlo in un
@@ -2398,7 +2528,8 @@ def generate_phase_week(
                         continue
                     if any(abs(offset - ho) <= hard_gap_days for ho in hard_day_offsets):
                         continue
-                if meta.get("finger") and any(
+                tier = _meta_tier(meta)
+                if tier == "high" and any(
                     abs(offset - fo) <= finger_gap_days for fo in finger_day_offsets
                 ):
                     continue
@@ -2430,6 +2561,13 @@ def generate_phase_week(
                 if not result:
                     continue
                 slot, slot_info = result
+                if replace:
+                    _unbook_low(offset, day_sessions[offset][replace_idx])  # A327
+                if not _finger_clock_ok(offset, slot, tier):
+                    if replace:
+                        _rebook = day_sessions[offset][replace_idx]
+                        _book_finger(offset, _rebook.get("slot"), _finger_load_of(_rebook))
+                    continue
                 entry = _make_session_entry(
                     slot, sid, meta, slot_info, locations, phase_id, day_keys[offset],
                     default_gym_id, gyms or [], pass_label, home_equipment=home_equipment,
@@ -2439,8 +2577,9 @@ def generate_phase_week(
                 else:
                     day_sessions[offset].append(entry)
                     days_with_sessions += 1
-                if meta.get("finger"):
+                if tier == "high":
                     finger_day_offsets.append(offset)
+                _book_finger(offset, slot, tier)
                 # B415 (D287 C3): a hard session placed here is a hard day for
                 # every later pass (2.6, 3a, 3, 2.7) — the bookkeeping PASS 2.6
                 # does. Before B415 only the finger day was booked, and PASS 3
@@ -2619,7 +2758,8 @@ def generate_phase_week(
                         abs(offset - ho) <= hard_gap_days for ho in hard_day_offsets
                     ):
                         continue
-                    if _meta.get("finger") and any(
+                    _tier = _meta_tier(_meta)  # A327: high–high only
+                    if _tier == "high" and any(
                         abs(offset - fo) <= finger_gap_days for fo in finger_day_offsets
                     ):
                         continue
@@ -2649,6 +2789,13 @@ def generate_phase_week(
                     if not result:
                         continue
                     slot, slot_info = result
+                    if _victim is not None:
+                        _unbook_low(offset, day_sessions[offset][_victim])  # A327
+                    if not _finger_clock_ok(offset, slot, _tier):
+                        if _victim is not None:
+                            _rebook = day_sessions[offset][_victim]
+                            _book_finger(offset, _rebook.get("slot"), _finger_load_of(_rebook))
+                        continue
                     entry = _make_session_entry(
                         slot, _sid, _meta, slot_info, locations, phase_id, day_keys[offset],
                         default_gym_id, gyms or [], "pass2.6:pulling_maintenance",
@@ -2662,8 +2809,9 @@ def generate_phase_week(
                     if _meta.get("hard"):
                         hard_days += 1
                         hard_day_offsets.append(offset)
-                    if _meta.get("finger"):
+                    if _tier == "high":
                         finger_day_offsets.append(offset)
+                    _book_finger(offset, slot, _tier)
                     _placed = True
                     break
             if not _placed:
@@ -2745,6 +2893,7 @@ def generate_phase_week(
     if _rd_active:
         from backend.engine.stimulus import (
             is_finger_hard_session,
+            is_finger_high,
             is_pulling_hard_session,
             is_test_session,
             session_flag,
@@ -2842,8 +2991,9 @@ def generate_phase_week(
             meta = _SESSION_META[sid]
             day = _day_view(offset, victims)
             view = _week_view()
+            # A327: replacing a finger-HIGH session is neutral for the 48 h gap.
             victim_finger = any(
-                _SESSION_META.get(day_sessions[offset][i].get("session_id", ""), {}).get("finger")
+                _meta_tier(_SESSION_META.get(day_sessions[offset][i].get("session_id", ""), {})) == "high"
                 for i in victims
             )
             if meta.get("finger"):
@@ -2861,7 +3011,7 @@ def generate_phase_week(
                 if not victim_finger:
                     fo_all = list(_prev_finger) + list(crag_offsets) + [
                         o for o in range(7) if o != offset
-                        and any(session_flag(e, "finger") for e in view[o])
+                        and any(is_finger_high(e) for e in view[o])  # A327: high–high
                     ]
                     if any(abs(offset - o) <= finger_gap_days for o in fo_all):
                         return False
@@ -2877,6 +3027,21 @@ def generate_phase_week(
                 if any(0 < offset - o < _pull_block_d for o in hp):
                     return False
             return True
+
+        def _test_clock_ok(offset: int, slot: str, sid: str, victims: set) -> bool:
+            """A327: a finger test (high) keeps 6 h × multiplier from every LOW
+            session of the week as the merge saves it (the victims excluded)
+            and of the previous week (B161 seeds)."""
+            if _meta_tier(_SESSION_META[sid]) is None:
+                return True
+            t = offset * 24 + _slot_h(slot)
+            view = _week_view()
+            lows = [o * 24 + h for o, h in finger_low_slots if o < 0]
+            for o in range(7):
+                for e in (_day_view(offset, victims) if o == offset else view[o]):
+                    if _finger_load_of(e) == "low":
+                        lows.append(o * 24 + _slot_h(e.get("slot")))
+            return not any(abs(t - lt) < _low_gap_h for lt in lows)
 
         def _hard_ok(offset: int, victims: set) -> bool:
             if any(session_flag(e, "hard") for e in _day_view(offset, victims)):
@@ -2950,6 +3115,8 @@ def generate_phase_week(
                     if not _hard_ok(offset, victims):
                         return
                     if not all(_test_day_ok(offset, sid, victims) for sid in sids):
+                        return
+                    if not all(_test_clock_ok(offset, s_, sid, victims) for (s_, _i, _v), sid in zip(chosen, sids)):
                         return
                     if not _pair_order_ok(offset, chosen, sids, victims):
                         return
@@ -3029,6 +3196,8 @@ def generate_phase_week(
                         entry["explain"].append(f"paired_with={req['paired_with']}")
                 new_entries.append(entry)
             victims = {v for _s, _i, v in plan if v is not None}
+            for v in victims:  # A327: a replaced low session leaves the clock
+                _unbook_low(offset, day_sessions[offset][v])
             kept = [e for i, e in enumerate(day_sessions[offset]) if i not in victims]
             kept.extend(new_entries)
             kept.sort(key=lambda e: _slot_rank.get(e.get("slot"), 99))
@@ -3036,8 +3205,9 @@ def generate_phase_week(
             _rd_views.clear()  # B400: the merge preview reads day_sessions
             for e in new_entries:
                 meta = _SESSION_META[e["session_id"]]
-                if meta.get("finger") and offset not in finger_day_offsets:
+                if _meta_tier(meta) == "high" and offset not in finger_day_offsets:
                     finger_day_offsets.append(offset)
+                _book_finger(offset, e.get("slot"), _meta_tier(meta))
                 if meta.get("hard") and offset not in hard_day_offsets:
                     hard_day_offsets.append(offset)
             hard_days = sum(1 for o in range(7) if o not in _past_hard_offsets
@@ -3347,7 +3517,10 @@ def generate_phase_week(
                 # Respect finger spacing (extended by D83 recovery multiplier).
                 # B359: misurato sulla sessione che si sostituisce davvero — se è
                 # già una sessione dita, lo scambio è neutro per la spaziatura.
-                if test_meta["finger"] and not old_meta.get("finger") and finger_day_offsets:
+                # A327: neutro solo se è già dita-HIGH (una low non apre il giorno high).
+                _test_tier = _meta_tier(test_meta)
+                _old_high = _meta_tier(old_meta) == "high"
+                if _test_tier == "high" and not _old_high and finger_day_offsets:
                     if any(abs(offset - fo) <= finger_gap_days for fo in finger_day_offsets):
                         continue
                 # Respect hard-day spacing (extended by D83 recovery multiplier)
@@ -3370,6 +3543,11 @@ def generate_phase_week(
                                          home_equipment=home_equipment, gyms=gyms,
                                          default_gym_id=default_gym_id,
                                          occupied_slots=occupied_by_survivors)
+                if result is not None:  # A327: the clock gate, the victim off it
+                    _unbook_low(offset, old_entry)
+                    if not _finger_clock_ok(offset, result[0], _test_tier):
+                        _book_finger(offset, old_entry.get("slot"), _finger_load_of(old_entry))
+                        continue
                 if result is None:
                     if test_sid == "test_max_weighted_pullup" and _bw_day is None:
                         _bw_slot = _find_best_slot(day_avail, _SESSION_META["test_pullup_bw"], locations,
@@ -3390,8 +3568,9 @@ def generate_phase_week(
                 if test_meta["hard"] and not old_meta.get("hard"):
                     hard_days += 1
                     hard_day_offsets.append(offset)
-                if test_meta["finger"] and not old_meta.get("finger"):
+                if _test_tier == "high" and not _old_high:
                     finger_day_offsets.append(offset)
+                _book_finger(offset, slot, _test_tier)
                 test_placed_offsets.add(offset)
                 placed = True
             if not placed and _bw_day is not None:
@@ -3406,6 +3585,7 @@ def generate_phase_week(
                 offset, replace_idx, (slot, slot_info) = _bw_day
                 _bw_meta = _SESSION_META["test_pullup_bw"]
                 old_meta = _SESSION_META.get(day_sessions[offset][replace_idx].get("session_id", ""), {})
+                _unbook_low(offset, day_sessions[offset][replace_idx])  # A327
                 day_sessions[offset][replace_idx] = _make_session_entry(
                     slot, "test_pullup_bw", _bw_meta, slot_info, locations,
                     phase_id, day_keys[offset],
@@ -3415,7 +3595,7 @@ def generate_phase_week(
                 if _bw_meta["hard"] and not old_meta.get("hard"):
                     hard_days += 1
                     hard_day_offsets.append(offset)
-                if _bw_meta["finger"] and not old_meta.get("finger"):
+                if _meta_tier(_bw_meta) == "high" and _meta_tier(old_meta) != "high":
                     finger_day_offsets.append(offset)
                 test_placed_offsets.add(offset)
                 placed = True
@@ -3447,7 +3627,7 @@ def generate_phase_week(
                         continue
                     if day_dates[offset] in pretrip_set:
                         continue  # tests are hard/max work — never on pre-trip deload days
-                    if test_meta["finger"] and finger_day_offsets and any(
+                    if _meta_tier(test_meta) == "high" and finger_day_offsets and any(
                         abs(offset - fo) <= finger_gap_days for fo in finger_day_offsets
                     ):
                         continue
@@ -3460,7 +3640,7 @@ def generate_phase_week(
                     day_avail = normalized[day_keys[offset]]
                     result = _find_best_slot(day_avail, test_meta, locations, prefer_evening=True,
                                              home_equipment=home_equipment, gyms=gyms, default_gym_id=default_gym_id)
-                    if result is None:
+                    if result is None or not _finger_clock_ok(offset, result[0], _meta_tier(test_meta)):
                         continue
                     slot, slot_info = result
                     test_entry = _make_session_entry(
@@ -3473,8 +3653,9 @@ def generate_phase_week(
                     if test_meta["hard"]:
                         hard_days += 1
                         hard_day_offsets.append(offset)
-                    if test_meta["finger"]:
+                    if _meta_tier(test_meta) == "high":
                         finger_day_offsets.append(offset)
+                    _book_finger(offset, slot, _meta_tier(test_meta))
                     test_placed_offsets.add(offset)
                     placed = True
             if not placed:
@@ -3583,7 +3764,9 @@ def generate_phase_week(
             day_entry["prev_other_activity_reduce"] = True
         plan_days.append(day_entry)
 
-    finger_days_count = len([o for o in finger_day_offsets if o not in _crag_seeded_finger])
+    # A327: the high days plus the low registrations the count held before the
+    # tiers (a low session was booked in finger_day_offsets) — unchanged summary.
+    finger_days_count = len([o for o in finger_day_offsets if o not in _crag_seeded_finger]) + len(_low_counted)
 
     # Compute weekly load summary
     total_load = sum(

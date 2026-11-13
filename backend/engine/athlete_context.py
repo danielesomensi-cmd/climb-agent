@@ -76,13 +76,15 @@ from backend.engine.outdoor_attempt import (
     route_clean_non_lead,
     route_lead_sent,
 )
-from backend.engine.session_tags import derive_session_tags
+from backend.engine.session_tags import derive_finger_load, derive_session_tags
 from backend.engine.stimulus import (
     FAMILY_LIMIT_POWER,
     counted_entries,
     finger_hard_days,
+    finger_load_of,
     is_finger_hard_exposure,
     is_finger_hard_session,
+    is_finger_high,
     is_hiit_like,
     is_max_for_hiit,
     is_max_hang_session,
@@ -412,6 +414,8 @@ def _session_view(d: str, s: Mapping[str, Any]) -> Dict[str, Any]:
         **_session_ref(d, s),
         "hard": session_flag(s, "hard"),
         "finger": session_flag(s, "finger"),
+        # A327: high | low | None (stimulus.finger_load_of).
+        "finger_load": finger_load_of(s),
         "pulling": session_flag(s, "pulling"),
         "finger_hard": is_finger_hard_session(s),
         "intensity": s.get("intensity"),
@@ -435,7 +439,8 @@ def _upcoming(state: Mapping[str, Any], today: date, archived_weeks: ArchivedWee
 
 
 #: B395: the tags a custom session's guards read. ``add_custom_session`` derives
-#: them once, at insertion, and stores them in the week plan.
+#: them once, at insertion, and stores them in the week plan. A327 compares the
+#: ``finger_load`` tier too (``stored`` / ``current`` carry it).
 _DERIVED_TAG_KEYS = ("hard", "finger")
 
 
@@ -470,6 +475,10 @@ def _stale_custom_tags(state: Mapping[str, Any], today: date, archived_weeks: Ar
             stored_raw = s.get("tags") if isinstance(s.get("tags"), Mapping) else {}
             stored = {t: bool(stored_raw.get(t)) for t in _DERIVED_TAG_KEYS}
             current = {t: bool(derived.get(t)) for t in _DERIVED_TAG_KEYS}
+            # A327: the finger-load tier — absent with finger True reads high
+            # (a custom stored before A327), so a high custom is never stale.
+            stored["finger_load"] = (stored_raw.get("finger_load") or "high") if stored["finger"] else None
+            current["finger_load"] = derive_finger_load(exercises, catalog=catalog)
             if stored != current:
                 out.append({**_session_ref(d, s), "stored": stored, "current": current})
     return out
@@ -669,7 +678,9 @@ def _guards(
         for s in sessions_on(d):
             if rp.is_heavy_pulling_session(state, s, d) or (bw_heavy and _bw.carries_heavy_bw_pull(s, bw_heavy)):
                 heavy.setdefault(d.isoformat(), []).append(str(s.get("session_id")))
-            if session_flag(s, "finger"):
+            # A327: the 48 h spacing is high–high — a low session (≤ 50 %, no
+            # failure) never makes the next day «NO dita max».
+            if is_finger_high(s):
                 finger_tagged.setdefault(d.isoformat(), []).append(str(s.get("session_id")))
             if is_max_hang_session(s):
                 max_hang.setdefault(d.isoformat(), []).append(str(s.get("session_id")))
@@ -1292,8 +1303,9 @@ def _warnings(ctx: Mapping[str, Any]) -> List[Dict[str, Any]]:
         if a and a.get("ceiling_note"):
             out.append({"code": "AT_CEILING", "exercise_id": ex, "message": a["ceiling_note"]})
     for row in ctx.get("stale_custom_tags") or []:
-        diff = ", ".join(f"{t} {row['stored'][t]}→{row['current'][t]}" for t in _DERIVED_TAG_KEYS
-                         if row["stored"][t] != row["current"][t])
+        diff = ", ".join(f"{t} {row['stored'].get(t)}→{row['current'].get(t)}"
+                         for t in (*_DERIVED_TAG_KEYS, "finger_load")
+                         if row["stored"].get(t) != row["current"].get(t))
         out.append({"code": "STALE_CUSTOM_TAGS", "date": row["date"], "session_id": row["session_id"],
                     "message": f"tag obsoleti su {row['session_id']} del {row['date']} {row['slot']} "
                                f"({diff}): salvati all'inserimento con regole vecchie; riallinearla con "
@@ -1892,7 +1904,8 @@ def render_text(ctx: Mapping[str, Any], *, plan_notes: Optional[str] = None,
     L.append(f"## Prossimi {UPCOMING_DAYS} giorni")
     rows: List[Tuple[str, int, str]] = []
     for i, s in enumerate(ctx.get("upcoming") or []):
-        flags = [f for f, on in (("hard", s["hard"]), ("dita", s["finger"]), ("tirata", s["pulling"]),
+        flags = [f for f, on in (("hard", s["hard"]), ("dita", s["finger"]),
+                                 ("dita-leggere", s.get("finger_load") == "low"), ("tirata", s["pulling"]),
                                  ("dita-hard", s["finger_hard"]), ("test", s["is_test"]),
                                  ("HIIT?", s["hiit"])) if on]
         rows.append((s["date"], i, f"  {s['date']} {s.get('slot') or '-':8} {_session_label(s, names)} "

@@ -1173,6 +1173,8 @@ Defined once in `backend/engine/stimulus.py` and `backend/engine/retest_policy.p
 - `evidence`: `measured` (logged entry that is done by `stimulus.row_done`, §4.8 "Done") | `planned` (done session without logged entries).
 - Exposures are counted in distinct **days**. Outdoor days are not family exposures.
 
+**Finger load tier** (A327, `stimulus.finger_load_of(session)` → `high` | `low` | None): stored `tags.finger_load` (custom / generated sessions since A327, `session_tags.derive_finger_load`, only when `finger` is True) → `_SESSION_META[sid].finger_load` (catalog sessions are read by id; the plan never carries the field) unless `tags.finger` is an explicit False → `finger` True without a tier = `high` (sessions stored before A327) → finger-hard exercises under stale tags = `high` → None. Week-plan session `tags` may now hold `finger_load` next to `hard` / `finger` / `test`.
+
 **Finger-hard exposure** (A327, `stimulus.is_finger_hard_exposure`): the unit of the weekly finger cap — a session whose exercise list carries a finger_max / limit_power stimulus or a `FINGER_FATIGUE_EXTRA_IDS` / `FINGER_HARD_LIBRARY_IDS` / `FINGER_HARD_CLIMB_IDS` exercise; without a list (a planned catalog slot), finger AND hard flags. A session finger + hard only through its tags (repeaters, intermittent hangs at 60-80 % to failure) is not one. **Max-hang session** (A327, `stimulus.is_max_hang_session`): delivers the finger_max family.
 
 **Finger-hard day** (`stimulus.finger_hard_days`), `reason`: `finger_hard_session` (tags/`_SESSION_META` finger+hard, or a session delivering `finger_max`/`limit_power` — custom sessions included — or carrying a `FINGER_FATIGUE_EXTRA_IDS` hang: min_edge_hang, max_hang_10s, lp_max_lift_10s, which are finger-hard but not `finger_max` exposures, a `FINGER_HARD_LIBRARY_IDS` drill — `three_attempt_comp` — or, A327, a `FINGER_HARD_CLIMB_IDS` exercise — `route_redpoint_attempt`, indoor rope redpoint attempts, finger-high by Daniele's answer 4) | `outdoor_hard` (a route with no discipline in a `both`/unset outing is classified by grade scale: uppercase Font letter = boulder) | `free_limit` (finished free sessions only: `finished_at: None` is skipped). Logged entries count only when really done (`stimulus.counted_entries`), for heavy pulling too.
@@ -1703,6 +1705,11 @@ GuardWarning (backend/engine/guards_v1.py, computed at read, NEVER persisted):
     with: [{date, slot, session_id}], message, …code-specific }
   code ∈ finger_gap        session tagged finger within ceil(recovery_multiplier) days of an earlier finger
                            day (prev week seeded); + gap_days
+       | finger_low_gap    (A327) a finger session < FINGER_LOW_GAP_H (6 h) × recovery_multiplier from another
+                           one when at least one of the two is LOW (stimulus.finger_load_of), on the SLOT_HOUR clock
+                           (no slot = 19:00; a crag day that counts is high 08:00-18:00) — the later one flagged —
+                           or a low session past FINGER_LOW_MAX_PER_DAY (2) on its day; + detail (gap | per_day),
+                           gap_h, low_count. finger_gap is high–high only since A327
        | finger_test_72h   finger-hard session ≤ 72 h before a finger max test (RETEST_BLOCK_H)
        | heavy_pull_7d     > 2 heavy-pull days (≥ 85 % 1RM, key_sessions_v1._is_heavy_pull) in 7 days;
                            + count, limit

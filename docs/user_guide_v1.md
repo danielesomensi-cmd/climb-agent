@@ -794,13 +794,14 @@ Changing a day's intent replaces **one session**: the one you opened the dialog 
 
 When you change the plan yourself — quick-add, replan a day, move a session, add a custom or coach session, change gym, log an outdoor day — the app never rewrites anything you did not touch, not even its own sessions next to yours. It checks the week instead and tells you what the recovery rules object to:
 
-- **Finger gap** — two finger sessions closer than the recovery gap (48 hours, more with slower recovery), Sunday of the previous week included.
+- **Finger gap** — two hard finger sessions closer than the recovery gap (48 hours, more with slower recovery), Sunday of the previous week included. Hard here means max hangs, limit, board or campus work, but also repeaters and intermittent hangs worked close to failure.
+- **Light finger work too close** — a light finger session (easy hangs at 50 % of your max or less, never close to failure: ramp-ups, bar dead hangs, sub-max capacity hangs, the app's Finger Aerobic Base) less than 6 hours from another finger session, or more than two light ones in a day. Light finger work can sit the day after a hard finger day, at lunch before an evening limit session (6 hours), the evening before or the morning after a crag day — not on the crag day itself. A custom session is light or hard according to its exercises; one made only of easy hangs no longer puts "no max finger work" on the days around it.
 - **Before a finger test** — finger-hard work in the 72 hours before a max hang test.
 - **Heavy pulling** — more than two heavy pulling days (weighted pull-ups at 85 % of your max or more) in 7 days.
 - **HIIT next to a max day** — HIIT less than 24 hours before a max finger or pulling session, or on or less than 24 hours before a day at the crag. A lunch 4x4 the day before an evening max session (about 30 hours) is fine, and power endurance does not count as a max session.
 - **Hard-day cap** — more hard days in the week than your cap.
 - **Before a trip** — a hard session in the no-hard days before a trip.
-- **After an outdoor day** — a hard or finger session the day after a day at the crag.
+- **After an outdoor day** — a hard session or hard finger session the day after a day at the crag (light finger work is fine).
 - **Finger-hard cap** — more than three finger-hard days in the week (Monday to Sunday). Finger-hard means max hangs and hang tests, limit, board and campus sessions, comp-style boulders at your limit, redpoint attempts on a rope (indoors too) and a hard day at the crag. Repeaters and intermittent hangs below max do not count here (they still need the 48-hour finger gap). The alert sits on the latest finger-hard session past the cap.
 - **Max-hang cap** — more than two max-hang days in the week (hang tests included).
 - **After a crag block** — after two or more hard days at the crag in a row: the next day should be a true rest day (a lunch extra such as HIIT or legs, or recovery / prehab, is fine), the day after should not be hard, and the next finger session waits 72 hours from the end of the last crag day — after a Saturday-Sunday block, Wednesday evening is fine, Wednesday lunch is not. Only an alert: the week after a crag weekend is not rebuilt.

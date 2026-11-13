@@ -483,11 +483,70 @@ def session_flag(session: Mapping[str, Any], flag: str) -> bool:
     return bool(_session_meta(str(session.get("session_id") or "")).get(flag))
 
 
+#: A327 (D288 R1): the two finger-load tiers. ``high`` needs the 48 h gap with
+#: another ``high`` (unchanged calendar rule); ``low`` (≤ 50 % of max, no
+#: failure, ≤ 10 min under load) needs ``retest_policy.FINGER_LOW_GAP_H`` from
+#: any finger session, at most ``FINGER_LOW_MAX_PER_DAY`` a day.
+FINGER_LOAD_HIGH = "high"
+FINGER_LOAD_LOW = "low"
+FINGER_LOADS = (FINGER_LOAD_HIGH, FINGER_LOAD_LOW)
+
+
+def _carries_finger_hard_exercise(session: Mapping[str, Any]) -> bool:
+    """The exercise part of the finger-hard rules: a finger_max / limit_power
+    stimulus or a finger-hard id among the counted entries."""
+    stimuli = session_stimuli(session)
+    if FAMILY_FINGER_MAX in stimuli or FAMILY_LIMIT_POWER in stimuli:
+        return True
+    entries, _origin = counted_entries(session)
+    extra = set(FINGER_FATIGUE_EXTRA_IDS) | set(FINGER_HARD_LIBRARY_IDS) | set(FINGER_HARD_CLIMB_IDS)
+    return any(str(e.get("exercise_id") or "") in extra for e in entries)
+
+
+def finger_load_of(session: Mapping[str, Any]) -> Optional[str]:
+    """A327 (D288 R1) — THE finger-load tier of a session: ``"high"``,
+    ``"low"`` or ``None`` (no finger load). One reading for every consumer
+    (guards, athlete context, planner, replanner, key sessions), in order:
+
+    1. the stored ``tags.finger_load`` (customs / generated sessions added
+       since A327, ``session_tags.derive_finger_load``);
+    2. unless ``tags.finger`` is an explicit False, the catalog
+       ``_SESSION_META[session_id].finger_load`` (catalog sessions are read by
+       id: the plan does not carry the field);
+    3. ``finger`` True (own tags or meta) without a tier → ``high``: a session
+       stored before A327 keeps the gap it always had;
+    4. a finger-hard exercise despite stale tags (``finger: False`` stored
+       before a rule change, e.g. a comp custom of 26/10) → ``high``;
+    5. else ``None``.
+    """
+    tags = session.get("tags") or {}
+    stored = tags.get("finger_load")
+    if stored in FINGER_LOADS:
+        return stored
+    explicit_false = "finger" in tags and tags.get("finger") is not None and not bool(tags.get("finger"))
+    if not explicit_false:
+        meta = _session_meta(str(session.get("session_id") or ""))
+        if meta.get("finger") and meta.get("finger_load") in FINGER_LOADS:
+            return meta["finger_load"]
+    if session_flag(session, "finger"):
+        return FINGER_LOAD_HIGH
+    if _carries_finger_hard_exercise(session):
+        return FINGER_LOAD_HIGH
+    return None
+
+
+def is_finger_high(session: Mapping[str, Any]) -> bool:
+    """A327: ``finger_load_of(session) == "high"``."""
+    return finger_load_of(session) == FINGER_LOAD_HIGH
+
+
 def is_finger_hard_session(session: Mapping[str, Any]) -> bool:
     """A session that loads the fingers hard.
 
     True when the session is tagged (or catalogued in ``_SESSION_META``) both
-    ``finger`` and ``hard``, OR when it delivers a finger_max / limit_power
+    ``finger`` and ``hard`` — A327: and its finger load is not ``low`` (a hard
+    custom whose finger work is only ramp-ups / easy hangs next to weighted
+    pulls is not finger-hard: D288 §1.3-2) — OR when it delivers a finger_max / limit_power
     stimulus — the second clause is what makes custom sessions visible
     (``_SESSION_META`` has no entry for ``custom_*``) — OR when it carries a
     ``FINGER_FATIGUE_EXTRA_IDS`` hang (min-edge / 10 s max hangs: not a
@@ -495,14 +554,10 @@ def is_finger_hard_session(session: Mapping[str, Any]) -> bool:
     ``FINGER_HARD_LIBRARY_IDS`` drill (near-limit comp bouldering, C272) OR a
     ``FINGER_HARD_CLIMB_IDS`` exercise (indoor redpoint attempts, A327).
     """
-    if session_flag(session, "finger") and session_flag(session, "hard"):
+    if (session_flag(session, "finger") and session_flag(session, "hard")
+            and finger_load_of(session) != FINGER_LOAD_LOW):
         return True
-    stimuli = session_stimuli(session)
-    if FAMILY_FINGER_MAX in stimuli or FAMILY_LIMIT_POWER in stimuli:
-        return True
-    entries, _origin = counted_entries(session)
-    extra = set(FINGER_FATIGUE_EXTRA_IDS) | set(FINGER_HARD_LIBRARY_IDS) | set(FINGER_HARD_CLIMB_IDS)
-    return any(str(e.get("exercise_id") or "") in extra for e in entries)
+    return _carries_finger_hard_exercise(session)
 
 
 def is_finger_hard_exposure(session: Mapping[str, Any]) -> bool:
@@ -523,14 +578,11 @@ def is_finger_hard_exposure(session: Mapping[str, Any]) -> bool:
     to failure, a ramp-up next to weighted pulls — is high for the 48 h
     spacing but not an exposure of the cap (Daniele, answer 2, 2026-11-13).
     """
-    stimuli = session_stimuli(session)
-    if FAMILY_FINGER_MAX in stimuli or FAMILY_LIMIT_POWER in stimuli:
-        return True
-    entries, origin = counted_entries(session)
-    if origin == "none":
-        return session_flag(session, "finger") and session_flag(session, "hard")
-    extra = set(FINGER_FATIGUE_EXTRA_IDS) | set(FINGER_HARD_LIBRARY_IDS) | set(FINGER_HARD_CLIMB_IDS)
-    return any(str(e.get("exercise_id") or "") in extra for e in entries)
+    _entries, origin = counted_entries(session)
+    if origin == "none" and not session_stimuli(session):
+        return (session_flag(session, "finger") and session_flag(session, "hard")
+                and finger_load_of(session) != FINGER_LOAD_LOW)
+    return _carries_finger_hard_exercise(session)
 
 
 def is_max_hang_session(session: Mapping[str, Any]) -> bool:

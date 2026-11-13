@@ -132,7 +132,8 @@ class TestPrevWeekSeed:
     def test_sunday_hard_finger_custom_keeps_monday_free(self, prev_week):
         prev = _with_custom(prev_week, PREV_SUN, status="done")
         sunday = next(s for s in _day(prev, PREV_SUN)["sessions"] if s.get("is_custom"))
-        assert sunday["session_id"] == "custom_cs_hang" and sunday["tags"] == {"hard": True, "finger": True}
+        assert sunday["session_id"] == "custom_cs_hang" and sunday["tags"] == {
+            "hard": True, "finger": True, "finger_load": "high"}  # A327: the tier is stored too
         wp = gen(prev=prev)
         assert not _flag(wp, MON, "finger") and not _flag(wp, MON, "hard")
         # The engine's own Monday no longer raises the alerts it used to.

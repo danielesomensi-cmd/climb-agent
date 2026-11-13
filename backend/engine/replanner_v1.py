@@ -22,7 +22,7 @@ from backend.engine.planner_v2 import (
     _intensity_allowed,
     _is_primary_session,
 )
-from backend.engine.session_tags import derive_session_tags, merge_declared_tags
+from backend.engine.session_tags import derive_session_tags, merge_declared_tags, tags_with_finger_load
 from backend.engine import user_owned as _uo
 from backend.engine.other_activity_v1 import (
     ensure_other_activities_list,
@@ -224,15 +224,19 @@ def _stimulus_replacement(
     phase_id = snapshot.get("phase_id") or session.get("phase_id")
     if not phase_id:
         return None
+    from backend.engine.stimulus import finger_load_of
+
     sid = str(session.get("session_id") or "")
-    load = (session_flag(session, "hard"), session_flag(session, "finger"))
+    # A327: "same load" = (hard, finger-load tier): a low finger session is not
+    # replaced by a high one, nor the reverse.
+    load = (session_flag(session, "hard"), finger_load_of(session))
 
     def usable(c: str) -> bool:
         return c in _SESSION_META and c != sid and not _SESSION_META[c].get("test") and fits(c)
 
     def same_load(c: str) -> bool:
         m = _SESSION_META[c]
-        return (bool(m.get("hard")), bool(m.get("finger"))) == load
+        return (bool(m.get("hard")), m.get("finger_load") if m.get("finger") else None) == load
 
     # 1. A key the session carries, delivered by another session at the new place.
     reqs = {r["key"]: r for r in _ks.phase_requirements(phase_id)}
@@ -623,6 +627,8 @@ def suggest_sessions(
             if s.get("status") not in ("done", "skipped"):
                 scheduled.add(s.get("session_id", ""))
 
+    from backend.engine.stimulus import is_finger_high
+
     # Determine hard cap
     hard_cap = _safe_hard_cap(plan.get("profile_snapshot"))
     hard_count = 0
@@ -630,12 +636,13 @@ def suggest_sessions(
     for day in (plan.get("weeks") or [{}])[0].get("days", []):
         if any((s.get("tags") or {}).get("hard") and s.get("status") != "done" for s in day.get("sessions", [])):
             hard_count += 1
-        # Check if adjacent day has finger session
+        # Check if adjacent day has a finger-HIGH session (A327: the 48 h gap
+        # is high–high; a low finger session never pushes a suggestion down)
         try:
             target_d = _parse_date(target_date)
             day_d = _parse_date(day["date"])
             if abs((target_d - day_d).days) <= _recovery_gap(plan) and day["date"] != target_date:
-                if any((s.get("tags") or {}).get("finger") for s in day.get("sessions", [])):
+                if any(is_finger_high(s) for s in day.get("sessions", [])):
                     finger_adjacent = True
         except (KeyError, ValueError):
             logger.warning("Failed to check finger adjacency for target_date=%s", target_date)
@@ -675,8 +682,8 @@ def suggest_sessions(
         if meta.get("hard") and hard_count >= hard_cap:
             score -= 1000
 
-        # -1000 if finger and adjacent day has finger
-        if meta.get("finger") and finger_adjacent:
+        # -1000 if finger-high and adjacent day has finger-high (A327)
+        if meta.get("finger") and meta.get("finger_load", "high") == "high" and finger_adjacent:
             score -= 1000
 
         # Reason string for UX
@@ -1915,6 +1922,9 @@ def apply_events(
                 )
 
             _cs_tags, _cs_intensity = derive_session_tags(cs.get("exercises"))
+            # A327: the finger-load tier (high | low), derived once like the
+            # tags — only on a session that loads the fingers.
+            _cs_tags = tags_with_finger_load(_cs_tags, cs.get("exercises"))
             new_session = {
                 "slot": slot,
                 "session_id": f"custom_{cs_id}",
@@ -2115,6 +2125,10 @@ def apply_events(
                 session_payload.get("intensity"),
                 *derive_session_tags(session_payload.get("exercises")),
             )
+            # A327: the finger-load tier, raised to a declared one (upwards only).
+            _gen_tags = tags_with_finger_load(
+                _gen_tags, session_payload.get("exercises"),
+                declared=(session_payload.get("tags") or {}).get("finger_load"))
             new_session = {
                 **session_payload,
                 "tags": _gen_tags,

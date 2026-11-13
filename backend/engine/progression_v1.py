@@ -800,6 +800,9 @@ def _load_catalog_cache() -> Dict[str, Dict[str, Any]]:
                 "loading_pin": "loading_pin" in (
                     (e.get("equipment_required") or []) + (e.get("equipment_required_any") or [])
                 ),
+                # A327: additive — session_tags.derive_finger_load reads the
+                # finger-load tier (high | low) of the finger exercises.
+                "finger_load": e.get("finger_load"),
             }
             for e in data.get("exercises", [])
         }

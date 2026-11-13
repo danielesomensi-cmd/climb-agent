@@ -431,7 +431,10 @@ class TestIdentity:
         except the 65 A305 regenerated on purpose (PASS 2.7 key stimuli, for
         every user — decision 1, 2026-10-06): each of them places a key session
         (``explain`` ``pass2.7:key_stimulus``) or reports an ``unmet_stimulus``
-        row with ``source: key_stimulus_pass``; nothing else moved."""
+        row with ``source: key_stimulus_pass``; nothing else moved. A327 (D288
+        R1) moved one key, ``split|1|base|lead|None``: finger_aerobic_base is
+        LOW, so PASS 2.2 may put it on Thursday morning between two high
+        finger days (≥ 6 h) — pinned by test_a327_finger_load_tiers."""
         golden = json.loads(DIGESTS.read_text())
         got = {k: _digest(generate_phase_week(**kw)) for k, kw in _identity_matrix()}
         assert set(got) == set(golden)

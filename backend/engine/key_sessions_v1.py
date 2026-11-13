@@ -1043,7 +1043,10 @@ def _propose_for(
         for (rep_slot, rep_session), sid in [(t_, c_) for t_ in targets for c_ in candidates]:
             occupied = (occupied_all - {rep_slot}) if replace_mode else occupied_all
             meta = _SESSION_META[sid]
-            finger = bool(meta.get("finger")) or primary.get("finger_hard")
+            # A327: the 48 h gap is high–high (a low candidate's 6 h rule is the
+            # ``finger_low_gap`` alert, checked with the other guard alerts).
+            finger = (bool(meta.get("finger")) and meta.get("finger_load", "high") == "high") \
+                or primary.get("finger_hard")
             hard = bool(meta.get("hard"))
             # Finger gap against the unified timeline (plan + outdoor + free,
             # previous and next week included).

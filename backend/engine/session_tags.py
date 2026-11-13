@@ -308,6 +308,73 @@ def derive_session_tags(
     return {"hard": hard, "finger": finger}, intensity
 
 
+def derive_finger_load(
+    exercises: Optional[Sequence[Dict[str, Any]]],
+    *,
+    catalog: Optional[Dict[str, Dict[str, Any]]] = None,
+) -> Optional[str]:
+    """A327 (D288 R1): the finger-load tier of a list of exercises — ``"high"``,
+    ``"low"`` or ``None`` exactly when ``derive_session_tags`` says ``finger``
+    False.
+
+    The same exercises count as for the ``finger`` tag: light warm-ups are
+    ignored (B392), the sub-max hangs after PE intervals count only next to
+    other finger load (B414 E2). A finger-hard id (B405 / A327) → ``high``;
+    otherwise the highest catalog ``finger_load`` of the counted exercises, a
+    finger exercise without the field reading ``high`` (conservative). Stored
+    once, at insertion, as ``tags.finger_load`` (``replanner_v1``)."""
+    cat = catalog if catalog is not None else _catalog()
+    main: List[str] = []
+    sub_max: List[str] = []
+    has_pe_intervals = False
+    finger_hard = False
+    for ex in exercises or []:
+        if not isinstance(ex, dict):
+            continue
+        eid = str(ex.get("exercise_id") or "")
+        entry = cat.get(eid)
+        if not entry:
+            continue
+        if eid in _FINGER_HARD_IDS:
+            finger_hard = True
+        if _is_pe_interval(entry):
+            has_pe_intervals = True
+        patterns = _patterns_of(entry)
+        domains = [str(d) for d in (entry.get("domain") or [])]
+        if not _is_light_warmup(entry) and (
+            any(p in _FINGER_LOAD_PATTERNS for p in patterns)
+            or any(d in _FINGER_LOAD_DOMAINS for d in domains)
+        ):
+            level = str(entry.get("finger_load") or "high")
+            (sub_max if _is_sub_max_hang(eid, entry) else main).append(level)
+    if finger_hard:
+        return "high"
+    counted = main + (sub_max if (main or not has_pe_intervals) else [])
+    if not counted:
+        return None
+    return "high" if any(lv != "low" for lv in counted) else "low"
+
+
+def tags_with_finger_load(
+    tags: Dict[str, Any],
+    exercises: Optional[Sequence[Dict[str, Any]]],
+    *,
+    declared: Optional[Any] = None,
+    catalog: Optional[Dict[str, Dict[str, Any]]] = None,
+) -> Dict[str, Any]:
+    """A327: *tags* plus ``finger_load`` when they say ``finger`` — the tier
+    ``derive_finger_load`` reads in *exercises*, raised to a *declared* tier
+    (only upwards, as ``merge_declared_tags``); a declared ``finger`` with no
+    finger exercise to read is ``high``. A session without finger load gets no
+    key (its tags stay as they were)."""
+    if not tags.get("finger"):
+        return tags
+    derived = derive_finger_load(exercises, catalog=catalog)
+    levels = [lv for lv in (derived, declared) if lv in ("high", "low")]
+    tier = "high" if not levels or "high" in levels else "low"
+    return {**tags, "finger_load": tier}
+
+
 def merge_declared_tags(
     declared_tags: Optional[Dict[str, Any]],
     declared_intensity: Optional[str],

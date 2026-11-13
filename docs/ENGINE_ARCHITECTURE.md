@@ -238,7 +238,8 @@ Computed once, before PASS 1:
 
 - **Intensity cap:** `intensity_cap`, else `PHASE_INTENSITY_CAP[phase_id]` (base `medium`, strength_power `max`, power_endurance `high`, performance `max`, deload `low`), filters the pool; what is left is split into `primary_pool` (`hard` or `climbing`, `_is_primary_session`) and `complementary_pool`. Tests and the phase-declared candidates of PASS 2.7 bypass it.
 - **Hard-day cap:** `effective_hard_cap = min(hard_cap_per_week, planning_prefs.hard_day_cap_per_week)` — the argument defaults to 3 and `week.py` passes the same preference — and `0` in deload. Declared crag days (B382), lived hard days (B390) and the user's own hard sessions (B414) count against it before PASS 1.
-- **Gaps are calendar days, not hours:** `hard_gap_days = finger_gap_days = ceil(1 × planning_prefs.recovery_multiplier)` (D83; default 1.0 → 1). A placement is refused when the distance in days from a hard (resp. finger) day is `<= gap`: by default never on consecutive days. The slots are not read, so this is not a 48 h guarantee — an evening session and a morning one two days later are allowed. PASS 1 / 1.5 look backwards at the last hard / finger day (and at the anchors on both sides, `_near_anchor`); the later passes check any distance.
+- **Gaps are calendar days, not hours:** `hard_gap_days = finger_gap_days = ceil(1 × planning_prefs.recovery_multiplier)` (D83; default 1.0 → 1). A placement is refused when the distance in days from a hard (resp. finger-HIGH) day is `<= gap`: by default never on consecutive days. The slots are not read, so this is not a 48 h guarantee — an evening session and a morning one two days later are allowed. PASS 1 / 1.5 look backwards at the last hard / finger day (and at the anchors on both sides, `_near_anchor`); the later passes check any distance.
+- **Finger-load tiers (A327, D288 R1):** `_SESSION_META.finger_load` (`high` on every finger entry, `low` on `finger_aerobic_base`; `finger ⇔ finger_load` pinned). `finger_day_offsets` holds the HIGH days only — the calendar rule above, unchanged. A LOW session needs `retest_policy.FINGER_LOW_GAP_H` (6 h) × `recovery_multiplier` from any finger session on the `complementary_v1.SLOT_HOUR` clock (a crag day is high 08:00-18:00), at most `FINGER_LOW_MAX_PER_DAY` (2) a day: one gate, `_finger_clock_ok(offset, slot, tier)`, read by every placement site once its slot is known (PASS 1, 1.5, 2, 2.2, the floors, 2.6, 3a through `_test_clock_ok` on the merged week, legacy PASS 3), against `finger_low_slots` / `finger_high_times`; a replaced low session leaves the clock (`_unbook_low`). Seeds read `stimulus.finger_load_of` (previous week, lived days, the user's sessions: a high user session is a calendar anchor, a low one sits on the clock). PASS 2.7 reads high for its calendar check and refuses any `finger_low_gap` through its alert check. **PASS 2 fix (D288 §1.3-1):** it placed finger sessions with no gap and no booking; it now applies the high calendar rule, the clock gate and books what it places. `targets.finger_days` still counts high + low.
 - **Training days vs sessions:** `target_training_days_per_week` (default 4; under 18 capped at 4, D81) is how many **days** are kept — the others are pruned by *Day scoring for cap* (`day_pruned_but_available`). `target_sessions_per_week` (A283: an int 1–21, else ignored; raised to the target days; under 18 = the target days) is how many **sessions**, and only PASS 2.2 reads it.
 
 ### The multi-pass algorithm
@@ -269,7 +270,7 @@ Stages of `generate_phase_week` in execution order (the pass numbers are histori
 2. **Other-activity intensity reduction:** No hard sessions on days with other sports.
 3. **Pre-trip deload:** No hard/max sessions on pretrip dates.
 4. **Hard day cap:** `hard_days >= effective_hard_cap` (permanent skip).
-5. **Finger spacing:** Not within `finger_gap_days` of the last finger day.
+5. **Finger spacing:** A finger-high session not within `finger_gap_days` of the last finger-high day; once the slot is known, the A327 clock gate (6 h around a low session).
 6. **Anchors (B382 / B414):** Not within the gaps of a declared crag day or of a finger / hard session of the user's, on either side (`_near_anchor`).
 7. **Hard spacing:** Not within `hard_gap_days` of the last hard day.
 8. **Preferred equipment deferral (B160d):** If a session has `preferred_equipment` and this day's gym lacks it, check if a later day has it — if yes, defer.
@@ -1193,6 +1194,19 @@ guards; nothing is rewritten and planner-generated weeks do not change.
   only, never a reason of `finger_max_ok`, so the composer pool never loses an exercise for them (decision 3).
 - The planner does not enforce them yet (step D): PASS 2.7 and the A294 proposals already reject a placement that
   adds one of these alerts (`guards_v1.new_warnings`), the other passes do not.
+- **Step C — tiers and the 6 h spacing:** `stimulus.finger_load_of(session)` is THE tier reading (stored
+  `tags.finger_load` → `_SESSION_META[sid].finger_load` unless `tags.finger` is an explicit False → old `finger`
+  tags = high → finger-hard exercises under stale tags = high → None). `session_tags.derive_finger_load`
+  (same exercises as the `finger` tag: B392 warm-ups ignored, B414 E2 sub-max hangs after PE intervals only next
+  to other finger load; a finger-hard id → high; else the highest catalog tier, missing = high) is stored once at
+  insertion (`add_custom_session`, `add_generated_session` raised to a declared tier) via
+  `tags_with_finger_load`. `finger_gap` is high–high; `finger_low_gap` (new) covers low–high / low–low < 6 h ×
+  multiplier and > 2 low a day (`detail` gap | per_day, `gap_h`, `low_count`); `post_outdoor`, the crag-block 72 h
+  and `hard_back_to_back`'s crag side read high; `is_finger_hard_session`'s finger ∧ hard clause skips a low tier
+  (a ramp-up + weighted-pull custom no longer blocks the 72 h test). `athlete_context`: `_session_view.finger_load`,
+  the spacing reasons read high only, B395 compares the tier (absent with finger True = high).
+  `suggest_sessions` −1000 only high next to high; `_stimulus_replacement` keeps (hard, tier); key proposals check
+  the gap for a high candidate. The composer's pool is unchanged.
 - **Step B — `finger_load` in the exercise catalog:** `high | low` on the 57 exercises that load the finger flexors
   for `session_tags` (and the finger-hard ids). `low` = ≤ 50 %, no failure, ≤ 10 min under load, by a pinned rule
   (`docs/vocabulary_v1.md` §2.5.1); everything else `high`. `finger_aerobic_base` is made honest: the template

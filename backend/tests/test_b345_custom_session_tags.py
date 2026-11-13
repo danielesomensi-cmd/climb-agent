@@ -196,7 +196,7 @@ def test_custom_session_lands_with_derived_tags():
     )
     day = next(d for d in out["weeks"][0]["days"] if d["date"] == "2026-09-08")
     session = day["sessions"][0]
-    assert session["tags"] == {"hard": True, "finger": True}
+    assert session["tags"] == {"hard": True, "finger": True, "finger_load": "high"}  # A327: the tier
     assert session["intensity"] == "max"
 
 
@@ -263,5 +263,5 @@ def test_generated_session_without_tags_is_not_untagged():
     )
     day = next(d for d in out["weeks"][0]["days"] if d["date"] == "2026-09-08")
     session = day["sessions"][0]
-    assert session["tags"] == {"hard": True, "finger": True}
+    assert session["tags"] == {"hard": True, "finger": True, "finger_load": "high"}  # A327: the tier
     assert session["intensity"] == "max"

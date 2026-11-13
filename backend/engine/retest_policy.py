@@ -107,6 +107,13 @@ HANG_PCT_PER_S = 0.015
 
 #: Finger days need this gap (aligned with the planner's no-consecutive-finger rule).
 FINGER_GAP_H = 48
+#: A327 (D288 R1) — ENGINEERING CONSTANTS (Gilmore 2024's app advice, never
+#: measured; confidence low): a LOW finger session (≤ 50 %, no failure) needs
+#: this many hours × recovery_multiplier from any other finger session, on the
+#: ``complementary_v1.SLOT_HOUR`` clock; at most this many low sessions a day.
+#: high–high stays the 48 h calendar rule (``FINGER_GAP_H``).
+FINGER_LOW_GAP_H = 6
+FINGER_LOW_MAX_PER_DAY = 2
 #: A327 (D288 R1) — ENGINEERING CONSTANT (no study counted weekly finger-hard
 #: exposures; confidence low): at most this many finger-hard days per calendar
 #: week (Mon-Sun), a hard crag day included (Daniele, 2026-11-13). The unit is

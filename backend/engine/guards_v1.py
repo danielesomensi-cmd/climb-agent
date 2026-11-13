@@ -25,10 +25,20 @@ Contract — pure and deterministic:
 
 Codes (one warning per flagged session):
 
-- ``finger_gap`` — a session tagged ``finger`` within the replanner's own
-  spacing (``ceil(recovery_multiplier)`` days, i.e. the 48 h finger gap) of an
-  earlier finger day. The rule ``_enforce_no_consecutive_finger`` enforced;
-  the previous week's trailing days (``prev_days``) seed it.
+- ``finger_gap`` — a finger-HIGH session (A327: ``stimulus.finger_load_of``)
+  within the replanner's own spacing (``ceil(recovery_multiplier)`` days, i.e.
+  the 48 h finger gap) of an earlier finger-high day. The rule
+  ``_enforce_no_consecutive_finger`` enforced; the previous week's trailing
+  days (``prev_days``) seed it. A327: high–high only, the calendar rule as
+  before; a low session is ``finger_low_gap``'s.
+- ``finger_low_gap`` (A327, D288 R1) — a finger session less than
+  ``retest_policy.FINGER_LOW_GAP_H`` (6 h) × ``recovery_multiplier`` from
+  another one when at least one of the two is LOW (low–high either way,
+  low–low), on the ``complementary_v1.SLOT_HOUR`` clock (no slot = 19:00; a
+  crag day that counts is high from 08:00 to 18:00) — the later one is
+  flagged; or a low session past ``FINGER_LOW_MAX_PER_DAY`` (2) on its day.
+  With three slots only morning + lunch (5 h) breaks it; lunch → evening (6 h)
+  is fine. ``detail`` ∈ ``gap`` | ``per_day``, ``gap_h``, ``low_count``.
 - ``finger_test_72h`` — a finger-hard session (``stimulus.is_finger_hard_session``)
   within ``athlete_context.RETEST_BLOCK_H`` (72 h) before a finger max test.
 - ``heavy_pull_7d`` — more than ``athlete_context.HEAVY_PULL_MAX_PER_7D``
@@ -117,8 +127,11 @@ from datetime import date, datetime, timedelta
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 from backend.engine.stimulus import (
+    FINGER_LOAD_LOW,
+    finger_load_of,
     is_finger_hard_exposure,
     is_finger_hard_session,
+    is_finger_high,
     is_hiit_like,
     is_max_for_hiit,
     is_max_hang_session,
@@ -129,6 +142,7 @@ from backend.engine.stimulus import (
 VERSION = "a327.1"
 
 CODE_FINGER_GAP = "finger_gap"
+CODE_FINGER_LOW_GAP = "finger_low_gap"
 CODE_FINGER_TEST = "finger_test_72h"
 CODE_HEAVY_PULL = "heavy_pull_7d"
 CODE_HIIT_NEAR_MAX = "hiit_near_max"
@@ -142,7 +156,7 @@ CODE_MAX_HANG_CAP = "max_hang_cap"
 CODE_CRAG_BLOCK = "crag_block"
 
 CODES = (
-    CODE_FINGER_GAP, CODE_FINGER_TEST, CODE_HEAVY_PULL, CODE_HIIT_NEAR_MAX,
+    CODE_FINGER_GAP, CODE_FINGER_LOW_GAP, CODE_FINGER_TEST, CODE_HEAVY_PULL, CODE_HIIT_NEAR_MAX,
     CODE_HARD_CAP, CODE_FINGER_HARD_CAP, CODE_MAX_HANG_CAP, CODE_PRE_TRIP,
     CODE_POST_OUTDOOR, CODE_CRAG_BLOCK, CODE_HARD_BACK_TO_BACK,
     CODE_LOW_REST_DAYS,
@@ -320,15 +334,16 @@ def _outdoor_info(o: Mapping[str, Any]) -> Dict[str, Any]:
 
 
 def _finger_gap(tl: _Timeline, em: _Emitter, gap: int) -> None:
+    # A327: high–high only (the calendar rule, unchanged); low is finger_low_gap's.
     for d_iso in tl.plan_dates:
         d = _parse(d_iso)
-        here = [s for s in tl.on(d) if session_flag(s, "finger")]
+        here = [s for s in tl.on(d) if is_finger_high(s)]
         if not here:
             continue
         before: List[Dict[str, Any]] = []
         for k in range(1, gap + 1):
             prev = d - timedelta(days=k)
-            before.extend(_ref(prev.isoformat(), x) for x in tl.on(prev) if session_flag(x, "finger"))
+            before.extend(_ref(prev.isoformat(), x) for x in tl.on(prev) if is_finger_high(x))
         # B372: an outdoor day on either side. The day right after a crag day
         # is ``post_outdoor``'s. One alert per session: sessions and crag days
         # all go in ``with``.
@@ -359,6 +374,76 @@ def _finger_gap(tl: _Timeline, em: _Emitter, gap: int) -> None:
                     f"{_label(s)} on {d_iso} loads the fingers within {gap} day(s) {side} {msg_tail}: "
                     f"the finger gap asks for {24 * (gap + 1)} h between them.",
                     gap_days=gap, **extra)
+
+
+def _recovery_mult(plan: Mapping[str, Any]) -> float:
+    raw = (plan.get("profile_snapshot") or {}).get("recovery_multiplier", 1.0)
+    try:
+        return max(1.0, float(raw))
+    except (TypeError, ValueError):
+        return 1.0
+
+
+def _finger_low_gap(tl: _Timeline, em: _Emitter, mult: float) -> None:
+    """A327 (D288 R1) — ``finger_low_gap``: the 6 h rule around a LOW finger
+    session and the 2-low-a-day cap. Sessions on the slot clock, a crag day
+    that counts as high on [OUTDOOR_START_HOUR, OUTDOOR_END_HOUR]."""
+    from backend.engine.complementary_v1 import OUTDOOR_END_HOUR, OUTDOOR_START_HOUR
+    from backend.engine.retest_policy import FINGER_LOW_GAP_H, FINGER_LOW_MAX_PER_DAY
+
+    gap_h = FINGER_LOW_GAP_H * mult
+    # (start, end, order, tier, date, session | None)
+    events: List[Tuple[int, int, int, str, str, Optional[Mapping[str, Any]]]] = []
+    n = 0
+    for d_iso in sorted(tl.by_date):
+        d = _parse(d_iso)
+        for s in sorted(tl.on(d), key=lambda x: _slot_index(x.get("slot"))):
+            tier = finger_load_of(s)
+            if tier is None:
+                continue
+            t = _clock(d, s.get("slot"), 19)
+            events.append((t, t, n, tier, d_iso, s))
+            n += 1
+    for o_iso in sorted(tl.outdoor):
+        o = _parse(o_iso)
+        if o is None:
+            continue
+        events.append((o.toordinal() * 24 + OUTDOOR_START_HOUR, o.toordinal() * 24 + OUTDOOR_END_HOUR,
+                       -1, "high", o_iso, None))
+    for b in events:
+        b_start, _b_end, b_order, b_tier, b_iso, b_s = b
+        if b_s is None or b_iso not in tl.plan_dates:
+            continue
+        partners = []
+        for a in events:
+            a_start, a_end, a_order, a_tier, a_iso, a_s = a
+            if a is b or FINGER_LOAD_LOW not in (a_tier, b_tier):
+                continue
+            if (a_start, a_order) > (b_start, b_order):
+                continue  # the later of the pair is flagged
+            if max(0, b_start - a_end) < gap_h:
+                partners.append(a)
+        lows_today = [x for x in events if x[4] == b_iso and x[5] is not None and x[3] == FINGER_LOAD_LOW]
+        over = b_tier == FINGER_LOAD_LOW and lows_today.index(b) >= FINGER_LOW_MAX_PER_DAY
+        if not partners and not over:
+            continue
+        if not em.flaggable(b_iso, b_s):
+            continue
+        with_ = [_ref(a[4], a[5]) if a[5] is not None else _outdoor_ref(a[4]) for a in partners]
+        if over:
+            with_ += [_ref(x[4], x[5]) for x in lows_today if x is not b and _ref(x[4], x[5]) not in with_]
+        what = "light" if b_tier == FINGER_LOAD_LOW else "finger-high"
+        if partners:
+            p = partners[-1]
+            other = (f"{p[5].get('session_id')} on {p[4]}" if p[5] is not None
+                     else f"the outdoor day on {p[4]}")
+            msg = (f"{_label(b_s)} on {b_iso} is a {what} finger session less than {gap_h:g} h after {other}: "
+                   f"a light finger session needs {gap_h:g} h from any other finger session.")
+        else:
+            msg = (f"{_label(b_s)} on {b_iso} is light finger session {lows_today.index(b) + 1} of the day: "
+                   f"at most {FINGER_LOW_MAX_PER_DAY}.")
+        em.emit(CODE_FINGER_LOW_GAP, b_iso, b_s, with_, msg,
+                detail="gap" if partners else "per_day", gap_h=gap_h, low_count=len(lows_today))
 
 
 def _is_finger_test(s: Mapping[str, Any]) -> bool:
@@ -545,8 +630,9 @@ def _finger_caps(plan: Mapping[str, Any], tl: _Timeline, em: _Emitter) -> None:
 
 
 def _finger_high(s: Mapping[str, Any]) -> bool:
-    """A327: the sessions the crag-block 72 h reads as finger load."""
-    return session_flag(s, "finger")
+    """A327: the sessions the crag-block 72 h reads as finger load — the
+    finger-HIGH ones (a low session waits 6 h only, ``finger_low_gap``)."""
+    return is_finger_high(s)
 
 
 def crag_runs(outdoor: Mapping[str, Any]) -> List[List[str]]:
@@ -659,7 +745,9 @@ def _post_outdoor(tl: _Timeline, em: _Emitter, skip: Iterable[str] = ()) -> None
         elif o.get("reason") == "outdoor_hard" and o.get("grade"):
             why = f"logged hard, {o['grade']}"
         for s in tl.by_date.get(d_iso, []):
-            if not (session_flag(s, "hard") or session_flag(s, "finger")) or not em.flaggable(d_iso, s):
+            # A327: hard or finger-HIGH (a light finger session the day after a
+            # crag day is fine: 14 h from its end).
+            if not (session_flag(s, "hard") or is_finger_high(s)) or not em.flaggable(d_iso, s):
                 continue
             em.emit(CODE_POST_OUTDOOR, d_iso, s, [_outdoor_ref(prev)],
                     f"{_label(s)} on {d_iso} follows {_outdoor_label(o)} ({why}).",
@@ -704,7 +792,9 @@ def _hard_back_to_back(tl: _Timeline, em: _Emitter) -> None:
         if o is None:
             continue
         for s in tl.on(d):
-            if not _is_hard(s) or session_flag(s, "finger") or not em.flaggable(d_iso, s):
+            # A327: a finger-HIGH session is finger_gap's; a hard one with light
+            # finger work is flagged here (finger_gap no longer sees it).
+            if not _is_hard(s) or is_finger_high(s) or not em.flaggable(d_iso, s):
                 continue
             em.emit(CODE_HARD_BACK_TO_BACK, d_iso, s, [_outdoor_ref(o["date"])],
                     f"{_label(s)} on {d_iso} is a hard session the day before {_outdoor_label(o)} "
@@ -811,6 +901,7 @@ def evaluate(
     gap = max(1, int(_recovery_gap(dict(plan))))
 
     _finger_gap(tl, em, gap)
+    _finger_low_gap(tl, em, _recovery_mult(plan))
     _finger_test(tl, em, RETEST_BLOCK_H // 24)
     _heavy_pull(tl, em, st, HEAVY_PULL_MAX_PER_7D)
     _hiit_near_max(tl, em)
