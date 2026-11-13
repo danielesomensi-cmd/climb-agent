@@ -154,6 +154,19 @@ FINGER_HARD_LIBRARY_IDS: Tuple[str, ...] = (
     "three_attempt_comp",
 )
 
+# A327 (D288, Daniele's answer 4, 2026-11-13): indoor rope redpoint attempts
+# are finger-high like a hard crag day — attempts at the redpoint grade are
+# above the RP−2 OUTDOOR-HARD rule by definition, and the catalog
+# ``route_projecting_gym`` is already finger + hard. A custom built on them
+# (D-Summit 25/10) used to count as no finger load at all. Read by
+# ``is_finger_hard_session`` (so the weekly finger cap and every finger-hard
+# reader see it) and by ``session_tags`` (the B405 rule: finger AND hard on its
+# own). NOT read by the composer's pool exclusions (``athlete_context.
+# _finger_hard_ids``): A327 adds no restriction to what the composer may pick.
+FINGER_HARD_CLIMB_IDS: Tuple[str, ...] = (
+    "route_redpoint_attempt",
+)
+
 EXERCISE_FAMILY: Dict[str, str] = {
     **{eid: FAMILY_FINGER_MAX for eid in _FINGER_MAX_IDS},
     **{eid: FAMILY_PULLING_MAX for eid in _PULLING_MAX_IDS},
@@ -479,7 +492,8 @@ def is_finger_hard_session(session: Mapping[str, Any]) -> bool:
     (``_SESSION_META`` has no entry for ``custom_*``) — OR when it carries a
     ``FINGER_FATIGUE_EXTRA_IDS`` hang (min-edge / 10 s max hangs: not a
     finger_max exposure, but a max-intensity finger load all the same) OR a
-    ``FINGER_HARD_LIBRARY_IDS`` drill (near-limit comp bouldering, C272).
+    ``FINGER_HARD_LIBRARY_IDS`` drill (near-limit comp bouldering, C272) OR a
+    ``FINGER_HARD_CLIMB_IDS`` exercise (indoor redpoint attempts, A327).
     """
     if session_flag(session, "finger") and session_flag(session, "hard"):
         return True
@@ -487,8 +501,45 @@ def is_finger_hard_session(session: Mapping[str, Any]) -> bool:
     if FAMILY_FINGER_MAX in stimuli or FAMILY_LIMIT_POWER in stimuli:
         return True
     entries, _origin = counted_entries(session)
-    extra = set(FINGER_FATIGUE_EXTRA_IDS) | set(FINGER_HARD_LIBRARY_IDS)
+    extra = set(FINGER_FATIGUE_EXTRA_IDS) | set(FINGER_HARD_LIBRARY_IDS) | set(FINGER_HARD_CLIMB_IDS)
     return any(str(e.get("exercise_id") or "") in extra for e in entries)
+
+
+def is_finger_hard_exposure(session: Mapping[str, Any]) -> bool:
+    """A327 (D288 R1): a session that is one of the week's finger-hard
+    EXPOSURES — the unit of the weekly finger cap
+    (``retest_policy.FINGER_HARD_WEEKLY_MAX``, crag days added by the caller).
+
+    The exercises decide when the session carries a list (logged, custom /
+    generated, resolved): a finger_max or limit_power stimulus, or a
+    ``FINGER_FATIGUE_EXTRA_IDS`` / ``FINGER_HARD_LIBRARY_IDS`` /
+    ``FINGER_HARD_CLIMB_IDS`` exercise (max / test hangs, limit, board,
+    campus, ``three_attempt_comp``, indoor redpoint attempts). A session
+    without a list (a planned catalog slot) falls back on its flags: finger
+    AND hard (``_SESSION_META`` or own tags).
+
+    Narrower than ``is_finger_hard_session`` on purpose: a session finger +
+    hard only through its tags — repeaters or intermittent hangs at 60-80 %
+    to failure, a ramp-up next to weighted pulls — is high for the 48 h
+    spacing but not an exposure of the cap (Daniele, answer 2, 2026-11-13).
+    """
+    stimuli = session_stimuli(session)
+    if FAMILY_FINGER_MAX in stimuli or FAMILY_LIMIT_POWER in stimuli:
+        return True
+    entries, origin = counted_entries(session)
+    if origin == "none":
+        return session_flag(session, "finger") and session_flag(session, "hard")
+    extra = set(FINGER_FATIGUE_EXTRA_IDS) | set(FINGER_HARD_LIBRARY_IDS) | set(FINGER_HARD_CLIMB_IDS)
+    return any(str(e.get("exercise_id") or "") in extra for e in entries)
+
+
+def is_max_hang_session(session: Mapping[str, Any]) -> bool:
+    """A327 (D288 R1): a session that delivers the finger_max family — max
+    hangs, the max-hang tests (``SESSION_FALLBACK_STIMULI`` when unresolved:
+    ``strength_long``, ``finger_strength_home``, ``test_max_hang_*``,
+    ``test_lp_max_5s``, ``test_max_hang_pullup``). The unit of the weekly
+    max-hang cap (``retest_policy.MAX_HANG_WEEKLY_MAX``)."""
+    return FAMILY_FINGER_MAX in session_stimuli(session)
 
 
 # ---------------------------------------------------------------------------

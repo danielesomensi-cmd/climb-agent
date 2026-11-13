@@ -1143,7 +1143,8 @@ alert") no user action rewrites a session the user did not touch. `apply_day_add
 `_protected_neighbor_guard` are gone. What the guards object to is computed at read time by
 **`guards_v1.evaluate(plan, prev_days, today, state)`** (pure, deterministic, never persisted) and returned as a
 `guard_warnings[]` sibling of `week_plan` on `GET /api/week` and every replanner response (codes `finger_gap`,
-`finger_test_72h`, `heavy_pull_7d`, `hiit_near_max`, `hard_cap`, `pre_trip`, `post_outdoor`, `hard_back_to_back`).
+`finger_test_72h`, `heavy_pull_7d`, `hiit_near_max`, `hard_cap`, `pre_trip`, `post_outdoor`, `hard_back_to_back`;
+A327 adds `finger_hard_cap`, `max_hang_cap`, `crag_block` — see below).
 The week-level `low_rest_days` of A305 is NOT in that list: `evaluate(..., include_week=True)` /
 `guards_v1.evaluate_week()` return it, and `GET /api/week` sends it as a separate `week_guard_warnings[]`
 sibling — the client matches `guard_warnings` per session with a null slot as a wildcard. See
@@ -1166,6 +1167,32 @@ guards; nothing is rewritten and planner-generated weeks do not change.
   those proposals automatically after a write that lost a key (toast + Undo) — see §8.3: nothing is rewritten
   in reaction to a guard, and the replaced session (never the user's, never a key) comes back on Undo.
 - `_recovery_gap(plan)`: Helper (B165b) — reads `profile_snapshot.recovery_multiplier` and returns `ceil(1 * multiplier)`. Same formula used by the planner.
+
+**Weekly finger caps and crag blocks (A327 step A, D288 R1 + R2).** Three alerts, ENGINEERING CONSTANTS in
+`retest_policy` (low confidence, `docs/audit/D288_kb_research_r1_r8.md` Q1 / Q2):
+- `finger_hard_cap` — more than `FINGER_HARD_WEEKLY_MAX` (3) finger-hard days in the calendar week, a crag day that
+  counts (B372) included (Daniele, 2026-11-13). Unit: `stimulus.is_finger_hard_exposure` — the exercises decide
+  when the session has a list (finger_max / limit_power family, `FINGER_FATIGUE_EXTRA_IDS`,
+  `FINGER_HARD_LIBRARY_IDS`, `FINGER_HARD_CLIMB_IDS`), a planned catalog slot its finger + hard flags. Narrower than
+  `is_finger_hard_session`: repeaters / intermittent hangs at 60-80 % to failure stay in the 48 h spacing but are not
+  an exposure (answer 2). Flagged like `hard_cap` (latest sessions past the cap; `count`, `cap`; a count code).
+- `max_hang_cap` — more than `MAX_HANG_WEEKLY_MAX` (2) max-hang days (`stimulus.is_max_hang_session`: finger_max
+  family, the max-hang tests through `SESSION_FALLBACK_STIMULI`).
+- `crag_block` — a run of ≥ `CRAG_BLOCK_MIN_DAYS` (2) consecutive crag days that count (`guards_v1.crag_runs` over the
+  B372 days, across the week boundary): c+1 a true rest day (`is_rest_day_session`: a complementary lunch — HIIT,
+  legs — or recovery keeps it), c+2 no hard session, no finger session before `CRAG_BLOCK_FINGER_H` (72 h) after
+  the last crag day ends at `complementary_v1.OUTDOOR_END_HOUR` (18:00) on the `SLOT_HOUR` clock. `detail` ∈
+  `rest_day | no_hard | finger_72h` (one alert per session, that precedence), `crag_days`, `finger_ok_from`;
+  `post_outdoor` leaves c+1 to it. After a crag weekend nothing is regenerated (answer 3).
+- **Indoor redpoint attempts are finger-high (answer 4):** `stimulus.FINGER_HARD_CLIMB_IDS`
+  (`route_redpoint_attempt`) is read by `is_finger_hard_session` / `is_finger_hard_exposure` and by
+  `session_tags` (finger + hard on its own, the B405 rule) — a redpoint custom counts like the catalog
+  `route_projecting_gym`. The composer's pool lists (`athlete_context._finger_hard_ids`) do not read it.
+- `athlete_context` gives the same rules as `guards.days[].day_warnings` / `day_warning_codes` (codes
+  `finger_hard_cap | max_hang_cap | crag_block`), plus `guards.finger_cap` and `guards.crag_blocks` — advisories
+  only, never a reason of `finger_max_ok`, so the composer pool never loses an exercise for them (decision 3).
+- The planner does not enforce them yet (step D): PASS 2.7 and the A294 proposals already reject a placement that
+  adds one of these alerts (`guards_v1.new_warnings`), the other passes do not.
 
 ### Completed session preservation
 

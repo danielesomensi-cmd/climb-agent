@@ -100,6 +100,12 @@ LEGS_SESSIONS = frozenset(FAMILY_SESSIONS["legs"])
 
 SLOT_HOUR: Dict[str, int] = {"morning": 8, "lunch": 13, "evening": 19}
 OUTDOOR_START_HOUR = 8
+#: A327 (D288 R2) — ENGINEERING CONSTANT: a crag day loads the fingers from
+#: ``OUTDOOR_START_HOUR`` to this hour. The 72 h after a crag block
+#: (``retest_policy.CRAG_BLOCK_FINGER_H``) count from here: after a
+#: Saturday-Sunday block the next finger session may start on Wednesday
+#: evening (Sunday 18:00 + 72 h), not at Wednesday lunch.
+OUTDOOR_END_HOUR = 18
 BICEPS_WINDOW_H = 24
 LEGS_WINDOW_H = 48
 #: B405 — HIIT before a max in hours, not calendar days. Panissa et al. 2016

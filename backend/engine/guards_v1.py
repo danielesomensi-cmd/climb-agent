@@ -55,6 +55,33 @@ Codes (one warning per flagged session):
   days" warning, now an alert. A pair the planner made on its own is not
   flagged (the planner's spacing is its own business).
 
+- ``finger_hard_cap`` (A327, D288 R1) — the week holds more finger-hard days
+  than ``retest_policy.FINGER_HARD_WEEKLY_MAX`` (3): the finger-hard
+  exposures (``stimulus.is_finger_hard_exposure``: max / test hangs, limit /
+  board / campus, ``three_attempt_comp``, indoor redpoint attempts; a planned
+  catalog slot by its finger + hard flags) plus the crag days that count
+  (B372). Repeaters at 60-80 % are not in it (Daniele, answer 2).
+  Flagged like ``hard_cap``: the latest finger-hard sessions past the cap (a
+  crag day has no session to flag); ``count``, ``cap``.
+- ``max_hang_cap`` (A327, D288 R1) — more than
+  ``retest_policy.MAX_HANG_WEEKLY_MAX`` (2) max-hang days in the week
+  (``stimulus.is_max_hang_session``: the finger_max family, tests included);
+  the latest ones past the cap are flagged; ``count``, ``cap``.
+- ``crag_block`` (A327, D288 R2) — after a run of at least
+  ``retest_policy.CRAG_BLOCK_MIN_DAYS`` (2) consecutive crag days that count
+  (B372 ``outdoor_fatigue_days``, the same reading as every outdoor alert;
+  across the week boundary): the day after the last one (c+1) is a true rest
+  day (``is_rest_day_session``: a complementary lunch, HIIT and legs included,
+  or recovery / prehab do not break it — Daniele, decision 2); the day after
+  (c+2) holds no hard session; no finger session starts before
+  ``CRAG_BLOCK_FINGER_H`` (72 h) after the last crag day ends
+  (``complementary_v1.OUTDOOR_END_HOUR``, 18:00): after a Saturday-Sunday
+  block, Wednesday evening is fine, Wednesday lunch is not. One alert per
+  session, ``detail`` ∈ ``rest_day`` | ``no_hard`` | ``finger_72h`` (in that
+  order of precedence), ``crag_days``, ``finger_ok_from``. ``post_outdoor``
+  leaves c+1 to it. Alert only: after a crag weekend the following week is
+  never regenerated nor rewritten (Daniele, answer 3).
+
 - ``low_rest_days`` (A305) — WEEK-level: fewer than ``MIN_REST_DAYS`` true
   rest days in the week (a day with only a complementary lunch or recovery /
   prehab counts as rest; an outdoor or other-sport day does not). One warning,
@@ -90,14 +117,16 @@ from datetime import date, datetime, timedelta
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 from backend.engine.stimulus import (
+    is_finger_hard_exposure,
     is_finger_hard_session,
     is_hiit_like,
     is_max_for_hiit,
+    is_max_hang_session,
     is_test_session,
     session_flag,
 )
 
-VERSION = "a305.1"
+VERSION = "a327.1"
 
 CODE_FINGER_GAP = "finger_gap"
 CODE_FINGER_TEST = "finger_test_72h"
@@ -108,12 +137,21 @@ CODE_PRE_TRIP = "pre_trip"
 CODE_POST_OUTDOOR = "post_outdoor"
 CODE_HARD_BACK_TO_BACK = "hard_back_to_back"
 CODE_LOW_REST_DAYS = "low_rest_days"
+CODE_FINGER_HARD_CAP = "finger_hard_cap"
+CODE_MAX_HANG_CAP = "max_hang_cap"
+CODE_CRAG_BLOCK = "crag_block"
 
 CODES = (
     CODE_FINGER_GAP, CODE_FINGER_TEST, CODE_HEAVY_PULL, CODE_HIIT_NEAR_MAX,
-    CODE_HARD_CAP, CODE_PRE_TRIP, CODE_POST_OUTDOOR, CODE_HARD_BACK_TO_BACK,
+    CODE_HARD_CAP, CODE_FINGER_HARD_CAP, CODE_MAX_HANG_CAP, CODE_PRE_TRIP,
+    CODE_POST_OUTDOOR, CODE_CRAG_BLOCK, CODE_HARD_BACK_TO_BACK,
     CODE_LOW_REST_DAYS,
 )
+
+#: A327: ``crag_block`` details, in order of precedence (one alert per session).
+CRAG_DETAIL_REST_DAY = "rest_day"
+CRAG_DETAIL_NO_HARD = "no_hard"
+CRAG_DETAIL_FINGER_72H = "finger_72h"
 
 #: A305 — the density alert (decision 6, 2026-10-06; athlete_plan §5 "≥ 2 true
 #: rest days"): a week with fewer true rest days than this raises one
@@ -129,7 +167,7 @@ REST_DAY_SESSION_IDS = frozenset({
 
 #: Codes whose ``with`` lists every other day of a weekly / rolling count:
 #: adding a session elsewhere changes ``with`` without changing the alert.
-_COUNT_CODES = (CODE_HARD_CAP, CODE_HEAVY_PULL)
+_COUNT_CODES = (CODE_HARD_CAP, CODE_HEAVY_PULL, CODE_FINGER_HARD_CAP, CODE_MAX_HANG_CAP)
 
 _SLOTS = ("morning", "lunch", "evening")
 
@@ -467,6 +505,119 @@ def _hard_cap(plan: Mapping[str, Any], em: _Emitter, outdoor: Optional[Mapping[s
                     count=len(hard_days), cap=cap)
 
 
+def _week_count_cap(plan: Mapping[str, Any], tl: _Timeline, em: _Emitter, code: str, cap: int,
+                    counts: Any, with_crag: bool, noun: str) -> None:
+    """A327: a weekly count cap on the plan's days (``finger_hard_cap`` /
+    ``max_hang_cap``), flagged like ``_hard_cap``: the days with a counted
+    session, latest first, past the cap. A crag day (``with_crag``) counts but
+    has no session to flag."""
+    counted: List[Tuple[str, List[Mapping[str, Any]], bool]] = []
+    for day in _days_of(plan):
+        d_iso = str(day["date"])[:10]
+        ss = [s for s in tl.by_date.get(d_iso, []) if counts(s)]
+        crag = with_crag and d_iso in tl.outdoor
+        if ss or crag:
+            counted.append((d_iso, ss, crag))
+    if len(counted) <= cap:
+        return
+    all_refs = [_ref(d, s) for d, ss, _c in counted for s in ss]
+    all_refs += [_outdoor_ref(d) for d, _ss, c in counted if c]
+    with_session = [(d, ss) for d, ss, _c in counted if ss]
+    excess = len(counted) - cap
+    for d_iso, ss in with_session[max(0, len(with_session) - excess):]:
+        for s in ss:
+            if not em.flaggable(d_iso, s):
+                continue
+            em.emit(code, d_iso, s, [r for r in all_refs if r["date"] != d_iso],
+                    f"The week has {len(counted)} {noun}, the cap is {cap}: {_label(s)} on {d_iso} is past it.",
+                    count=len(counted), cap=cap)
+
+
+def _finger_caps(plan: Mapping[str, Any], tl: _Timeline, em: _Emitter) -> None:
+    """A327 (D288 R1): ``finger_hard_cap`` (finger-hard days + crag days that
+    count) and ``max_hang_cap`` (max-hang days)."""
+    from backend.engine.retest_policy import FINGER_HARD_WEEKLY_MAX, MAX_HANG_WEEKLY_MAX
+
+    _week_count_cap(plan, tl, em, CODE_FINGER_HARD_CAP, FINGER_HARD_WEEKLY_MAX, is_finger_hard_exposure,
+                    True, "finger-hard days (crag days included)")
+    _week_count_cap(plan, tl, em, CODE_MAX_HANG_CAP, MAX_HANG_WEEKLY_MAX, is_max_hang_session,
+                    False, "max-hang days")
+
+
+def _finger_high(s: Mapping[str, Any]) -> bool:
+    """A327: the sessions the crag-block 72 h reads as finger load."""
+    return session_flag(s, "finger")
+
+
+def crag_runs(outdoor: Mapping[str, Any]) -> List[List[str]]:
+    """A327 (D288 R2): the runs of at least ``CRAG_BLOCK_MIN_DAYS``
+    consecutive crag days among *outdoor* (``{date: …}``, the B372 days that
+    count), each a sorted list of ISO dates."""
+    from backend.engine.retest_policy import CRAG_BLOCK_MIN_DAYS
+
+    runs: List[List[str]] = []
+    cur: List[str] = []
+    for d_iso in sorted(outdoor):
+        d = _parse(d_iso)
+        if d is None:
+            continue
+        if cur and d - _parse(cur[-1]) == timedelta(days=1):
+            cur.append(d_iso)
+            continue
+        if len(cur) >= CRAG_BLOCK_MIN_DAYS:
+            runs.append(cur)
+        cur = [d_iso]
+    if len(cur) >= CRAG_BLOCK_MIN_DAYS:
+        runs.append(cur)
+    return runs
+
+
+def crag_finger_ok_hour(last_crag_day: date) -> int:
+    """A327: the clock hour (``day * 24 + hour``) from which a finger session
+    may start after a crag block ending on *last_crag_day*."""
+    from backend.engine.complementary_v1 import OUTDOOR_END_HOUR
+    from backend.engine.retest_policy import CRAG_BLOCK_FINGER_H
+
+    return last_crag_day.toordinal() * 24 + OUTDOOR_END_HOUR + CRAG_BLOCK_FINGER_H
+
+
+def _crag_block(tl: _Timeline, em: _Emitter) -> set:
+    """A327 (D288 R2) — ``crag_block``. Returns the c+1 days, which
+    ``post_outdoor`` leaves to this alert."""
+    rest_after: set = set()
+    for run in crag_runs(tl.outdoor):
+        c = _parse(run[-1])
+        ok_t = crag_finger_ok_hour(c)
+        ok_day = date.fromordinal(ok_t // 24)
+        ok_from = f"{ok_day.isoformat()}T{ok_t % 24:02d}:00"
+        span = f"{run[0]}..{run[-1]}"
+        with_ = [_outdoor_ref(x) for x in run]
+        info = {"crag_days": list(run), "finger_ok_from": ok_from, "outdoor": _outdoor_info(tl.outdoor[run[-1]])}
+        rest_after.add((c + timedelta(days=1)).isoformat())
+        for k in range(1, (ok_day - c).days + 1):
+            d = c + timedelta(days=k)
+            d_iso = d.isoformat()
+            for s in tl.on(d):
+                if k == 1 and not is_rest_day_session(s):
+                    detail = CRAG_DETAIL_REST_DAY
+                    msg = (f"{_label(s)} on {d_iso} is the day after a {len(run)}-day crag block ({span}): "
+                           "after two or more hard days out, the next day is a true rest day.")
+                elif k == 2 and _is_hard(s):
+                    detail = CRAG_DETAIL_NO_HARD
+                    msg = (f"{_label(s)} on {d_iso} is a hard session two days after a {len(run)}-day crag "
+                           f"block ({span}): that day should not be hard.")
+                elif _finger_high(s) and _clock(d, s.get("slot"), 19) < ok_t:
+                    detail = CRAG_DETAIL_FINGER_72H
+                    msg = (f"{_label(s)} on {d_iso} loads the fingers less than 72 h after a {len(run)}-day crag "
+                           f"block ({span}): the next finger session waits until {ok_day.isoformat()} evening.")
+                else:
+                    continue
+                if not em.flaggable(d_iso, s):
+                    continue
+                em.emit(CODE_CRAG_BLOCK, d_iso, s, with_, msg, detail=detail, **info)
+    return rest_after
+
+
 def _pre_trip(plan: Mapping[str, Any], em: _Emitter, state: Mapping[str, Any]) -> None:
     trips = state.get("trips") or []
     days = _days_of(plan)
@@ -490,10 +641,14 @@ def _pre_trip(plan: Mapping[str, Any], em: _Emitter, state: Mapping[str, Any]) -
                         f"{_label(s)} on {d_iso} is a hard session in the days before a trip.")
 
 
-def _post_outdoor(tl: _Timeline, em: _Emitter) -> None:
+def _post_outdoor(tl: _Timeline, em: _Emitter, skip: Iterable[str] = ()) -> None:
     """B372: every outdoor day that counts (``tl.outdoor``), not only a
-    completed one past the load threshold."""
+    completed one past the load threshold. A327: the day after a crag block
+    (*skip*) is ``crag_block``'s — one alert per session."""
+    skip = set(skip)
     for d_iso in tl.plan_dates:
+        if d_iso in skip:
+            continue
         o = tl.outdoor_on(_parse(d_iso) - timedelta(days=1))
         if o is None:
             continue
@@ -660,9 +815,11 @@ def evaluate(
     _heavy_pull(tl, em, st, HEAVY_PULL_MAX_PER_7D)
     _hiit_near_max(tl, em)
     _hard_cap(plan, em, tl.outdoor)
+    _finger_caps(plan, tl, em)
     if st:
         _pre_trip(plan, em, st)
-    _post_outdoor(tl, em)
+    rest_after_crag = _crag_block(tl, em)
+    _post_outdoor(tl, em, rest_after_crag)
     _hard_back_to_back(tl, em)
     if include_week:
         _low_rest_days(plan, tl, em)
@@ -718,4 +875,5 @@ def new_warnings(before: Sequence[Mapping[str, Any]], after: Sequence[Mapping[st
     return [dict(w) for w in after if key(w) not in seen]
 
 
-__all__ = ["CODES", "MIN_REST_DAYS", "VERSION", "evaluate", "evaluate_week", "involves", "is_rest_day_session", "new_warnings"]
+__all__ = ["CODES", "MIN_REST_DAYS", "VERSION", "crag_finger_ok_hour", "crag_runs", "evaluate", "evaluate_week",
+           "involves", "is_rest_day_session", "new_warnings"]

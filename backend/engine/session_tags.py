@@ -68,6 +68,9 @@ the session ``finger`` AND ``hard`` on their own, whatever their pattern or
 intensity level. ``is_finger_hard_session`` already counted them, the stored
 tags did not: a try-hard custom built on ``three_attempt_comp`` came out
 ``{hard: False, finger: False}`` and was invisible to the 48 h finger gap.
+A327 (D288, Daniele's answer 4): ``FINGER_HARD_CLIMB_IDS``
+(``route_redpoint_attempt``, indoor rope redpoint attempts) joins them — a
+redpoint custom is finger + hard, like the catalog ``route_projecting_gym``.
 
 Deliberately EXCLUDED from the finger set: ``finger_extension``,
 ``tendon_glide``, ``grip_transition`` and the ``prehab_finger`` domain. The 48h
@@ -81,7 +84,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
-from backend.engine.stimulus import FINGER_FATIGUE_EXTRA_IDS, FINGER_HARD_LIBRARY_IDS
+from backend.engine.stimulus import FINGER_FATIGUE_EXTRA_IDS, FINGER_HARD_CLIMB_IDS, FINGER_HARD_LIBRARY_IDS
 
 # Ordered weakest → strongest. Shared with planner_v2's intensity vocabulary.
 INTENSITY_ORDER: List[str] = ["low", "medium", "high", "max"]
@@ -128,7 +131,8 @@ _FINGER_LOAD_PATTERNS = frozenset({
 })
 
 # B405: exercises that are finger-hard by themselves (see the module docstring).
-_FINGER_HARD_IDS = frozenset(FINGER_FATIGUE_EXTRA_IDS) | frozenset(FINGER_HARD_LIBRARY_IDS)
+_FINGER_HARD_IDS = (frozenset(FINGER_FATIGUE_EXTRA_IDS) | frozenset(FINGER_HARD_LIBRARY_IDS)
+                    | frozenset(FINGER_HARD_CLIMB_IDS))
 
 # Exercise domains that count as finger loading even if the pattern is unusual.
 # `prehab_finger` is NOT here on purpose — see the module docstring.

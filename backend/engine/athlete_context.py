@@ -81,9 +81,11 @@ from backend.engine.stimulus import (
     FAMILY_LIMIT_POWER,
     counted_entries,
     finger_hard_days,
+    is_finger_hard_exposure,
     is_finger_hard_session,
     is_hiit_like,
     is_max_for_hiit,
+    is_max_hang_session,
     is_test_session,
     iter_plan_days,
     iter_plan_sessions,
@@ -96,7 +98,7 @@ from backend.engine.stimulus import (
 DateLike = Union[date, str]
 ArchivedWeeks = Optional[Union[Mapping[str, Any], Sequence[Mapping[str, Any]]]]
 
-VERSION = "d287.1"
+VERSION = "a327.1"
 
 # ---------------------------------------------------------------------------
 # Constants. Shared with the engine, never copied: the command and the docs
@@ -109,6 +111,13 @@ VERSION = "d287.1"
 FINGER_GAP_H = rp.FINGER_GAP_H
 #: A hang test is blocked 72 h after a finger-hard day (retest only).
 RETEST_BLOCK_H = rp.RETEST_BLOCK_H
+#: A327 (D288 R1/R2): finger-hard days per week (crag days included), max-hang
+#: days per week, the crag-block 72 h. ADVISORIES here (``day_warnings``),
+#: never a reason of ``finger_max_ok``: the composer would turn them into a
+#: refusal (Daniele, decision 3).
+FINGER_HARD_WEEKLY_MAX = rp.FINGER_HARD_WEEKLY_MAX
+MAX_HANG_WEEKLY_MAX = rp.MAX_HANG_WEEKLY_MAX
+CRAG_BLOCK_FINGER_H = rp.CRAG_BLOCK_FINGER_H
 #: A pull-up test is blocked 48 h after a heavy pulling session.
 PULL_TEST_BLOCK_H = rp.PULL_TEST_BLOCK_H
 #: Max heavy (≥ 85 % 1RM) pulling sessions per 7 days (decision 2026-10-04).
@@ -607,7 +616,18 @@ def _guards(
 
     B372: an outdoor day that counts (``stimulus.outdoor_fatigue_days`` —
     planned, logged hard, big load, or completed without a route log) is a
-    finger-hard day, a hard day of its week and a max day for HIIT."""
+    finger-hard day, a hard day of its week and a max day for HIIT.
+
+    A327 (D288 R1/R2): ``day_warnings`` / ``day_warning_codes`` — the weekly
+    finger-hard cap (3, crag days included), the weekly max-hang cap (2) and
+    the crag block (after ≥ 2 consecutive crag days: a true rest day, then a
+    non-hard day, no finger session before 72 h after the last one ends). The
+    same rules as the ``guards_v1`` alerts ``finger_hard_cap`` /
+    ``max_hang_cap`` / ``crag_block``. ADVISORIES: they never touch
+    ``finger_max_ok`` / ``heavy_pull_ok`` / ``hiit_ok``, so the composer's pool
+    never loses an exercise for them. ``finger_cap`` and ``crag_blocks``
+    summarise them."""
+    from backend.engine.guards_v1 import crag_finger_ok_hour, crag_runs, is_rest_day_session
     from backend.engine.replanner_v1 import OUTDOOR_RIPPLE_THRESHOLD
 
     lo = today - timedelta(days=8)
@@ -630,6 +650,15 @@ def _guards(
 
     heavy: Dict[str, List[str]] = {}
     finger_tagged: Dict[str, List[str]] = {}
+    # A327: max-hang days (finger_max family) and finger-hard EXPOSURE days
+    # (the cap unit, ``is_finger_hard_exposure``), planned and done, not skipped.
+    max_hang: Dict[str, List[str]] = {}
+    exposure: Dict[str, List[str]] = {}
+    for r in fh_rows:
+        if r.get("reason") != "finger_hard_session":  # outdoor hard, free limit
+            exposure.setdefault(r["date"], []).append(str(r.get("session_id") or r["reason"]))
+    for o_d, o in outdoor.items():
+        exposure.setdefault(o_d, []).append(o["reason"])
     # C272 review: the ladder heavy pulls (every front-lever level and variant,
     # one-arm pull-up from L3) count as heavy-pull days — decision 2026-10-04,
     # and what the rendered ladder line promises. TESTED athletes only: an
@@ -642,6 +671,10 @@ def _guards(
                 heavy.setdefault(d.isoformat(), []).append(str(s.get("session_id")))
             if session_flag(s, "finger"):
                 finger_tagged.setdefault(d.isoformat(), []).append(str(s.get("session_id")))
+            if is_max_hang_session(s):
+                max_hang.setdefault(d.isoformat(), []).append(str(s.get("session_id")))
+            if is_finger_hard_exposure(s):
+                exposure.setdefault(d.isoformat(), []).append(str(s.get("session_id")))
         if d.isoformat() in outdoor:
             finger_tagged.setdefault(d.isoformat(), []).append(outdoor[d.isoformat()]["reason"])
 
@@ -679,6 +712,25 @@ def _guards(
         return sorted({(ws_ + timedelta(days=j)).isoformat() for j in range(7)
                        if any(session_flag(s, "hard") for s in sessions_on(ws_ + timedelta(days=j)))
                        or (ws_ + timedelta(days=j)).isoformat() in outdoor})
+
+    def finger_hard_days_of_week(ws_: date) -> List[str]:
+        """A327: the finger-hard exposure days of the week of ``ws_`` (crag
+        days that count, logged hard outdoor days and free limit sessions
+        included) — the ``finger_hard_cap`` unit."""
+        return sorted(x for x in exposure if ws_.isoformat() <= x <= (ws_ + timedelta(days=6)).isoformat())
+
+    def max_hang_days_of_week(ws_: date) -> List[str]:
+        return sorted(x for x in max_hang if ws_.isoformat() <= x <= (ws_ + timedelta(days=6)).isoformat())
+
+    # A327 (D288 R2): crag blocks, from the same B372 days (plan + log).
+    blocks: List[Dict[str, Any]] = []
+    for run in crag_runs(outdoor):
+        c = _parse(run[-1])
+        ok_t = crag_finger_ok_hour(c)
+        blocks.append({"crag_days": run, "rest_day": (c + timedelta(days=1)).isoformat(),
+                       "no_hard_day": (c + timedelta(days=2)).isoformat(),
+                       "finger_ok_from": f"{date.fromordinal(ok_t // 24).isoformat()}T{ok_t % 24:02d}:00",
+                       "_ok_t": ok_t})
 
     def heavy_window(d: date) -> List[str]:
         """The fullest rolling 7-day window containing ``d`` (``d`` excluded)
@@ -765,6 +817,38 @@ def _guards(
         reasons_pull.extend(common)
         codes_finger.extend(codes_common)
         codes_pull.extend(codes_common)
+        # A327: advisories — never in the *_ok verdicts above.
+        warns: List[str] = []
+        codes_warn: List[Dict[str, str]] = []
+        fhw = finger_hard_days_of_week(wk)
+        if d_iso not in fhw and len(fhw) >= FINGER_HARD_WEEKLY_MAX:
+            warns.append(f"tetto dita-hard della settimana raggiunto ({len(fhw)}/{FINGER_HARD_WEEKLY_MAX}: "
+                         f"{', '.join(x[5:] for x in fhw)}, falesia compresa): un'altra sessione dita-hard "
+                         "lo supera (solo avviso)")
+            codes_warn.append({"code": "finger_hard_cap",
+                               "detail": f"{len(fhw)}/{FINGER_HARD_WEEKLY_MAX}: {', '.join(fhw)}"})
+        mhw = max_hang_days_of_week(wk)
+        if d_iso not in mhw and len(mhw) >= MAX_HANG_WEEKLY_MAX:
+            warns.append(f"tetto max-hang della settimana raggiunto ({len(mhw)}/{MAX_HANG_WEEKLY_MAX}: "
+                         f"{', '.join(x[5:] for x in mhw)}): un'altra sessione di max hang lo supera (solo avviso)")
+            codes_warn.append({"code": "max_hang_cap",
+                               "detail": f"{len(mhw)}/{MAX_HANG_WEEKLY_MAX}: {', '.join(mhw)}"})
+        for b in blocks:
+            span = f"{b['crag_days'][0]}..{b['crag_days'][-1]}"
+            ok_day = b["finger_ok_from"][:10]
+            if d_iso == b["rest_day"]:
+                warns.append(f"giorno dopo il blocco di falesia {span}: riposo vero (solo un pranzo "
+                             "complementare o recupero)")
+                codes_warn.append({"code": "crag_block", "detail": f"rest_day {span}"})
+            elif d_iso == b["no_hard_day"]:
+                warns.append(f"secondo giorno dopo il blocco di falesia {span}: niente sessioni hard")
+                codes_warn.append({"code": "crag_block", "detail": f"no_hard {span}"})
+            if b["rest_day"] <= d_iso and d.toordinal() * 24 < b["_ok_t"]:
+                ok_h = b["finger_ok_from"][11:]
+                when = f"oggi solo dalle {ok_h}" if d_iso == ok_day else f"dal {ok_day} alle {ok_h}"
+                warns.append(f"niente sessioni dita prima di {CRAG_BLOCK_FINGER_H} h dalla fine del blocco di "
+                             f"falesia {span}: {when}")
+                codes_warn.append({"code": "crag_block", "detail": f"finger_72h {span} (from {b['finger_ok_from']})"})
         reasons_hiit: List[str] = []
         codes_hiit: List[Dict[str, str]] = []
         blockers = hiit_blockers(d)
@@ -789,12 +873,16 @@ def _guards(
             "hiit_ok": not reasons_hiit,
             "hiit_reasons": reasons_hiit,
             "hiit_codes": codes_hiit,
+            "day_warnings": warns,
+            "day_warning_codes": codes_warn,
         })
 
     # Weekly hard cap: hard days of the current week vs the plan snapshot cap.
     ws = _monday(today)
     cap = _hard_cap_of_week(state, ws)
     hard_days = hard_days_of_week(ws)
+    fh_week = finger_hard_days_of_week(ws)
+    mh_week = max_hang_days_of_week(ws)
     return {
         "finger_gap_h": FINGER_GAP_H,
         "retest_block_h": RETEST_BLOCK_H,
@@ -803,6 +891,14 @@ def _guards(
         "heavy_pull_days": {d: v for d, v in sorted(heavy.items())},
         "hard_cap": {"week_start": ws.isoformat(), "cap": cap, "hard_days": hard_days,
                      "count": len(hard_days), "at_cap": cap is not None and len(hard_days) >= cap},
+        # A327 (D288 R1): the current week against the finger caps.
+        "finger_cap": {"week_start": ws.isoformat(), "cap": FINGER_HARD_WEEKLY_MAX,
+                       "finger_hard_days": fh_week, "count": len(fh_week),
+                       "at_cap": len(fh_week) >= FINGER_HARD_WEEKLY_MAX,
+                       "max_hang_cap": MAX_HANG_WEEKLY_MAX, "max_hang_days": mh_week,
+                       "max_hang_count": len(mh_week), "max_hang_at_cap": len(mh_week) >= MAX_HANG_WEEKLY_MAX},
+        # A327 (D288 R2): the crag blocks of the window.
+        "crag_blocks": [{k: v for k, v in b.items() if not k.startswith("_")} for b in blocks],
     }
 
 
@@ -1768,6 +1864,17 @@ def render_text(ctx: Mapping[str, Any], *, plan_notes: Optional[str] = None,
              f"tirata pesante max {g.get('heavy_pull_max_per_7d')}/7 gg)")
     L.append(f"  Giorni hard settimana: {hc.get('count')}/{hc.get('cap')} ({', '.join(d[5:] for d in hc.get('hard_days') or []) or '—'})"
              + (" — AL CAP" if hc.get("at_cap") else ""))
+    fc = g.get("finger_cap") or {}
+    if fc:
+        L.append(f"  Giorni dita-hard settimana (falesia compresa): {fc.get('count')}/{fc.get('cap')} "
+                 f"({', '.join(d[5:] for d in fc.get('finger_hard_days') or []) or '—'})"
+                 + (" — AL TETTO" if fc.get("at_cap") else "")
+                 + f"; max hang {fc.get('max_hang_count')}/{fc.get('max_hang_cap')}"
+                 + (" — AL TETTO" if fc.get("max_hang_at_cap") else ""))
+    for b in g.get("crag_blocks") or []:
+        L.append(f"  Blocco falesia {', '.join(x[5:] for x in b['crag_days'])}: {b['rest_day'][5:]} riposo vero, "
+                 f"{b['no_hard_day'][5:]} niente hard, dita dal {b['finger_ok_from'][5:10]} "
+                 f"alle {b['finger_ok_from'][11:]}")
     for d in g.get("days") or []:
         bits = []
         bits.append("dita max OK" if d["finger_max_ok"] else "NO dita max (" + "; ".join(d["finger_reasons"]) + ")")
@@ -1776,6 +1883,9 @@ def render_text(ctx: Mapping[str, Any], *, plan_notes: Optional[str] = None,
         bits.append("tirata pesante OK" if d["heavy_pull_ok"] else "NO tirata ≥85% (" + "; ".join(d["pull_reasons"]) + ")")
         if not d["hiit_ok"]:
             bits.append("NO HIIT")
+        # A327: advisories (alert only — they never make a NO).
+        if d.get("day_warnings"):
+            bits.append("AVVISO: " + "; ".join(d["day_warnings"]))
         L.append(f"  {d['date']} {d['weekday']}: " + " | ".join(bits))
 
     L.append("")
@@ -1943,6 +2053,28 @@ _GUARD_EN = {
     "hard_cap": "weekly hard-day cap reached ({detail})",
     "max_session_adjacent": "max session less than 24 h after a lunch HIIT ({detail})",
 }
+
+#: A327 (D288 R1/R2): the advisories of ``day_warning_codes`` — alert only,
+#: never a restriction of the pool.
+_WARN_EN = {
+    "finger_hard_cap": "the week's finger-hard cap is reached ({detail}, crag days included): another finger-hard "
+                       "session goes past it",
+    "max_hang_cap": "the week's max-hang cap is reached ({detail}): another max-hang session goes past it",
+    "crag_block": "after a multi-day crag block ({detail}): rest day first, then no hard day, no finger session "
+                  "for 72 h",
+}
+
+
+def _warn_en(codes: Iterable[Mapping[str, Any]]) -> str:
+    seen: List[str] = []
+    for c in codes or []:
+        tpl = _WARN_EN.get(str(c.get("code")))
+        if not tpl:
+            continue
+        txt = tpl.format(detail=str(c.get("detail") or "").strip()).replace(" ()", "")
+        if txt not in seen:
+            seen.append(txt)
+    return "; ".join(seen)
 
 _AXIS_EN = {AXIS_FINGER: "fingers", AXIS_PULLING: "pulling"}
 
@@ -2185,6 +2317,8 @@ def _restricted_days_en(ctx: Mapping[str, Any], limit: int) -> List[str]:
             bits.append("no pulling ≥85% 1RM or front lever (" + _codes_en(d.get("pull_codes") or []) + ")")
         if not d.get("hiit_ok"):
             bits.append("no HIIT")
+        if d.get("day_warning_codes"):
+            bits.append("advisory, alert only (" + _warn_en(d["day_warning_codes"]) + ")")
         if bits:
             out.append(f"- {d['date']} {d.get('weekday')}: " + "; ".join(bits))
         if len(out) >= limit:
@@ -2311,6 +2445,9 @@ def render_composer_block(
                          + _codes_en(g.get("pull_codes") or []) + ". Moderate pulling is fine.")
         if not g.get("hiit_ok"):
             L.append("- Avoid HIIT / VO2 intervals: a max session is the same day or the next.")
+        if g.get("day_warning_codes"):
+            L.append("- Advisory (an alert the athlete will see, not a restriction): "
+                     + _warn_en(g["day_warning_codes"]) + ".")
     for line in _load_flags_lines_en(ctx):
         L.append(line)
     ks = ctx.get("key_sessions") or {}

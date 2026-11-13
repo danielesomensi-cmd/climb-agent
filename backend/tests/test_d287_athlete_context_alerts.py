@@ -188,7 +188,7 @@ class TestStaleWeek:
         assert shown == stored
 
     def test_version_moved_with_the_new_section(self):
-        assert ac.VERSION == "d287.1" and _ctx(_state())["version"] == "d287.1"
+        assert ac.VERSION == "a327.1" and _ctx(_state())["version"] == "a327.1"
 
 
 # ---------------------------------------------------------------------------

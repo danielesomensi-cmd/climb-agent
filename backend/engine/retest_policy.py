@@ -107,6 +107,24 @@ HANG_PCT_PER_S = 0.015
 
 #: Finger days need this gap (aligned with the planner's no-consecutive-finger rule).
 FINGER_GAP_H = 48
+#: A327 (D288 R1) — ENGINEERING CONSTANT (no study counted weekly finger-hard
+#: exposures; confidence low): at most this many finger-hard days per calendar
+#: week (Mon-Sun), a hard crag day included (Daniele, 2026-11-13). The unit is
+#: the A288 finger-hard day (``stimulus.is_finger_hard_session`` + the crag
+#: days of ``outdoor_fatigue_days``): repeaters / intermittent hangs at
+#: 60-80 % are high for the 48 h spacing only, never in this count (answer 2).
+FINGER_HARD_WEEKLY_MAX = 3
+#: A327 (D288 R1) — ENGINEERING CONSTANT: of those, at most this many max-hang
+#: days (``stimulus.is_max_hang_session``; no hangboard RCT used more than 2).
+MAX_HANG_WEEKLY_MAX = 2
+#: A327 (D288 R2) — ENGINEERING CONSTANT (every recovery study covers one day;
+#: confidence low): a run of at least this many consecutive hard crag days
+#: (``outdoor_fatigue_days``) is a crag BLOCK — the next day a true rest day,
+#: the one after non-hard, and the next finger session no earlier than
+#: ``CRAG_BLOCK_FINGER_H`` after the last crag day ends
+#: (``complementary_v1.OUTDOOR_END_HOUR``).
+CRAG_BLOCK_MIN_DAYS = 2
+CRAG_BLOCK_FINGER_H = 72
 #: A hang test is blocked this long after a finger-hard day (max hang family,
 #: limit, outdoor-hard).
 RETEST_BLOCK_H = 72
