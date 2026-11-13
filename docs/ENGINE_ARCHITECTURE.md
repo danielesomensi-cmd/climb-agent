@@ -1109,9 +1109,9 @@ Processes event lists. Supported event types:
 - `change_gym` — equipment-aware session replacement via `_find_gym_change_replacement()` (A319: a 2RM test moved to a gym without weights is replaced too; B414: the combined keeps its max hang where the hangboard is — see the A319 notes of §8.2). B414: to home it checks the event's `home_equipment`, else the saved kit `apply_events(home_equipment=state.equipment.home)` (None = unknown, not checked; a list, even empty, is what is there); the /events dry run (`check_insertion`, `_simulate_add`) passes the same gyms and home kit as the write
 - `set_availability` — **retired in B367**: `ValueError` in the engine, 422 at `/events`. It regenerated the week with a fraction of the `GET /api/week` inputs (no tests, retest decisions, taper, finger device) and overwrote the snapshot; availability changes go through settings / `PUT /api/weekly-override/{week_start}`
 
-**Tags of a user-authored session (B345, B392, B405, B414).** `add_custom_session` stores the tags
+**Tags of a user-authored session (B345, B392, B405, B414, B416).** `add_custom_session` stores the tags
 `session_tags.derive_session_tags` computes once from the exercises (`add_generated_session` merges them with the
-declared ones, only escalating). `finger` comes from the finger-loading patterns / domains (not a light warm-up);
+declared ones, only escalating). `hard` = a finger-hard id (B405), or any `max` exercise, or two `high` exercises that are climbing, pulling or pushing load — B416: core / conditioning / complementary / prehab / mobility exercises, handstand skill work and leg patterns (squat, lunge, hinge, calf raise, hip isolation) count as medium, while the heavy-pull ladder ids (front lever family, `bw_ladders.heavy_pull_exercise_ids`) always count. `finger` comes from the finger-loading patterns / domains (not a light warm-up);
 B414 (rule E2): a sub-max hang (pattern `repeater_hang` / `isometric_hang` / `hang`, intensity ≤ medium, not
 finger-hard by itself, not a test, catalog finger stress not `high` — so `test_repeater_7_3_to_failure` is not one) does **not** make the session `finger` when it has PE intervals (role main,
 `climbing_intervals`, PE / anaerobic domain) and no other finger load — the custom then equals `power_endurance_gym`

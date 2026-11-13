@@ -16,9 +16,9 @@ from backend.tests.test_a293_athlete_context import TODAY, _outdoor, _sess, _sta
 
 _TECHNIQUE = [{"exercise_id": "warmup_easy_boulders"}, {"exercise_id": "small_feet_press_hold"},
               {"exercise_id": "no_readjust_drill"}, {"exercise_id": "dip"},
-              {"exercise_id": "half_windshield_wiper"}]  # the 18/10 prod shape: hard from dip + wiper
+              {"exercise_id": "half_windshield_wiper"}]  # the 18/10 prod shape (dip + wiper)
 _STALE = {"hard": True, "finger": True}     # what the replanner stored before B392
-_CURRENT = {"hard": True, "finger": False}  # what derive_session_tags says now
+_CURRENT = {"hard": False, "finger": False}  # what derive_session_tags says now (B416: the core wiper no longer counts)
 
 
 def _with(*sessions_by_date) -> dict:
@@ -50,7 +50,8 @@ def test_planned_custom_with_stale_finger_tag_is_flagged():
     assert rows == [{"date": "2026-10-06", "slot": "evening", "session_id": "custom_cs_tech",
                      "name": "Tecnica piedi", "status": "planned", "stored": _STALE, "current": _CURRENT}]
     [w] = _codes(ctx)
-    assert "finger True→False" in w["message"] and "hard" not in w["message"].split("(")[1].split(")")[0]
+    # B416: the core wiper no longer counts, so hard drifts too.
+    assert "finger True→False" in w["message"] and "hard True→False" in w["message"]
 
 
 def test_render_shows_the_warning_by_name():

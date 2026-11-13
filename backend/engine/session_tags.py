@@ -49,6 +49,18 @@ the first draft of this module got it wrong:
   Checked against 18 real sessions: it separates the finger/pulling work from
   the core-and-legs work the way a coach would. It remains a tunable threshold,
   not a measurement.
+* B416 (D287 T1, Daniele 2026-11-07: «una sessione di solo core non è un giorno
+  duro»): a ``high`` exercise counts toward ``_HIGH_COUNT_FOR_HARD`` only when it
+  is climbing, pulling or pushing load. Core / conditioning / complementary /
+  prehab / mobility exercises, handstand skill work and leg patterns (squat,
+  lunge, hinge, calf raise, hip isolation) count as ``medium``: two core
+  exercises at ``high`` (``toes_to_bar`` + ``half_windshield_wiper``, the
+  02/11 custom that took the week to 5/5 hard days) no longer make a hard day.
+  Exception: the heavy-pull ladder ids (``bw_ladders.heavy_pull_exercise_ids``:
+  front lever and one-arm families, decision of 2026-10-04) keep counting —
+  three front-lever holds are still a hard session. ``max`` is unchanged:
+  any ``max`` exercise (``dragon_flag``, ``front_lever_full``) still makes the
+  session hard.
 
 B405: the finger-hard ids of ``stimulus`` (``FINGER_FATIGUE_EXTRA_IDS``: 10 s and
 min-edge max hangs; ``FINGER_HARD_LIBRARY_IDS``: ``three_attempt_comp``) make
@@ -79,6 +91,32 @@ _INTENSITY_RANK = {name: i for i, name in enumerate(INTENSITY_ORDER)}
 # is enough by itself. See the module docstring: this is the tunable heuristic,
 # and lowering it to 1 is exactly the mistake this module documents.
 _HIGH_COUNT_FOR_HARD = 2
+
+# B416: `high` exercises outside these never count toward _HIGH_COUNT_FOR_HARD
+# (see the module docstring); the heavy-pull ladder ids always count.
+_NON_LOAD_CATEGORIES = frozenset({"core", "conditioning", "complementary", "prehab",
+                                  "flexibility", "mobility"})
+_NON_LOAD_DOMAINS = frozenset({"handstand_skill"})
+_LEG_PATTERNS = frozenset({"squat", "lunge", "hinge", "calf_raise", "hip_isolation"})
+
+
+def _heavy_pull_ids() -> frozenset:
+    """Heavy-pull ladder ids (front lever & co.), cached by bw_ladders' loader."""
+    from backend.engine.bw_ladders import heavy_pull_exercise_ids
+
+    return heavy_pull_exercise_ids()
+
+
+def _high_counts_for_hard(eid: str, entry: Dict[str, Any], heavy_pull: frozenset) -> bool:
+    """B416: does this ``high`` exercise count toward ``_HIGH_COUNT_FOR_HARD``?"""
+    if eid in heavy_pull:
+        return True
+    if str(entry.get("category") or "") in _NON_LOAD_CATEGORIES:
+        return False
+    if any(str(d) in _NON_LOAD_DOMAINS for d in (entry.get("domain") or [])):
+        return False
+    return not any(p in _LEG_PATTERNS for p in _patterns_of(entry))
+
 
 # Exercise patterns that load the finger flexors hard enough to need the 48h gap.
 _FINGER_LOAD_PATTERNS = frozenset({
@@ -212,6 +250,7 @@ def derive_session_tags(
     the tendons are loaded by the max hang regardless of what surrounds it.
     """
     cat = catalog if catalog is not None else _catalog()
+    heavy_pull = _heavy_pull_ids()
     finger = False  # finger load other than a sub-max hang (B414)
     finger_sub_max = False
     has_pe_intervals = False
@@ -244,9 +283,9 @@ def derive_session_tags(
         level = str(entry.get("intensity_level") or "low")
         if level == "max":
             n_max += 1
-        elif level == "high":
+        elif level == "high" and _high_counts_for_hard(eid, entry, heavy_pull):
             n_high += 1
-        elif level == "medium":
+        elif level in ("high", "medium"):
             n_medium += 1
 
     # B414 (E2): sub-max hangs count as finger load unless they follow PE
