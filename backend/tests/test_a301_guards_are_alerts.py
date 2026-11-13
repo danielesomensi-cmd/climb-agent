@@ -701,6 +701,11 @@ class TestApiReview:
         mon = _current_monday()
         plan = _plan({1: [_sess(LIMIT)]}, start=mon)
         _seed(plan)
+        # A326: with a hangboard at home the limit evening keeps its finger
+        # load (finger_strength_home) — a home kit without one loses it.
+        state = deps.load_state(None)
+        state["equipment"] = dict(state.get("equipment") or {}, home=["pullup_bar", "band"])
+        deps.save_state(state, None)
         r = client.post("/api/replanner/events", json={
             "week_plan": plan, "today": mon,
             "events": [{"event_type": "change_gym", "date": _d(1, mon), "location": "home"}],

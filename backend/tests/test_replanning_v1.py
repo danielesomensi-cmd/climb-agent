@@ -935,7 +935,13 @@ def test_change_gym_incompatible_replaces_session():
 
 
 def test_change_gym_to_home_replaces_gym_only_sessions():
-    """Changing to Home should replace gym-only sessions with home-compatible ones."""
+    """Changing to Home should replace gym-only sessions with home-compatible ones.
+
+    A326 (D287 E2): was complementary_conditioning. A base week has no key a
+    home session can deliver (technique only), so the hard evening becomes the
+    home strength maintenance session (finger_maintenance_home) — the home kit
+    is unknown here (no ``home_equipment``), read as "assume it is there", as
+    the planner reads it."""
     plan = _gym_plan()
     # Force a gym-only session
     day = plan["weeks"][0]["days"][0]
@@ -953,7 +959,8 @@ def test_change_gym_to_home_replaces_gym_only_sessions():
 
     updated_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == target_date)
     session = updated_day["sessions"][0]
-    assert session["session_id"] == "complementary_conditioning"
+    assert session["session_id"] == "finger_maintenance_home"
+    assert session["explain"][2:] == ["strength_maintenance"]
     assert session["location"] == "home"
     assert session["gym_id"] is None
 

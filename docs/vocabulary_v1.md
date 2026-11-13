@@ -1781,6 +1781,13 @@ Other A301 semantics:
   without a hangboard, `complementary_conditioning` + `lost_finger` as before (never the 2RM alone). To home:
   the event's `home_equipment`, else the saved `state.equipment.home` (the router passes it; None = not checked,
   a list — even empty — is the kit).
+  A326 (stimulus-aware replacement, tests excluded): the third `explain` entry of a replaced session names why
+  it was chosen — **`kept_key=<key>`** (a key the session carried, another carrier of it fits the new place),
+  **`same_load`** (a primary phase-pool session with the same hard / finger tags), **`open_key=<key>[+<key>]`**
+  (home: a key still open this week; `+` when one session covers several, e.g. `finger_max+pulling_max` →
+  `strength_long`), **`strength_maintenance`** (home, nothing open: `finger_maintenance_home`). No note = the B414
+  chain (`complementary_conditioning` / `regeneration_easy`). The warning string is unchanged
+  (`"<old> → <new> (<reason>)"`).
 - **`blocked:no_paired_slot`** (`retest_policy.SKIP_NO_PAIRED_SLOT`): the pull-up test waits for its next
   turn — PASS 3a found no slot next to the hang, or (B414) a change of gym kept the combined's hang alone
   (`_generated_week_skip`: pulling row `combined` + a finger-only test at its `placed_date`/`placed_slot`).

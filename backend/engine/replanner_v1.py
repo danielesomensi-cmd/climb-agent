@@ -9,12 +9,19 @@ from copy import deepcopy
 
 from backend.engine.equipment_utils import expand_equipment
 from datetime import datetime, timedelta
-from typing import Any, Dict, Iterable, List, Optional, Sequence
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple
 
 logger = logging.getLogger(__name__)
 
-from backend.engine.macrocycle_v1 import _build_session_pool
-from backend.engine.planner_v2 import _COMBINED_TEST_SID, _INTENSITY_TO_LOAD, _SESSION_META
+from backend.engine.macrocycle_v1 import PHASE_INTENSITY_CAP, _build_session_pool
+from backend.engine.planner_v2 import (
+    _COMBINED_TEST_SID,
+    _INTENSITY_TO_LOAD,
+    _SESSION_META,
+    _expand_session_locations,
+    _intensity_allowed,
+    _is_primary_session,
+)
 from backend.engine.session_tags import derive_session_tags, merge_declared_tags
 from backend.engine import user_owned as _uo
 from backend.engine.other_activity_v1 import (
@@ -66,32 +73,255 @@ def _get_required_equipment(session_id: str) -> tuple:
     return tuple(eq)
 
 
-def _find_gym_change_replacement(
-    original_sid: str,
+def _gym_equipment(gym: Dict[str, Any]) -> set:
+    """A326: what a saved gym offers, read as planner_v2 reads it
+    (``_equipment_for_location``): its equipment plus the pull-up bar every gym
+    has implicitly (commit 6bf5e75), expanded (B159). Before A326 ``change_gym``
+    left the bar out, so a pull-up session moved to a gym whose list names
+    neither a bar nor a hangboard (which implies one, B159) was replaced
+    although the planner places it there."""
+    equip = list(gym.get("equipment") or [])
+    if "pullup_bar" not in equip:
+        equip.append("pullup_bar")
+    return set(expand_equipment(equip))
+
+
+def _venue_check(
+    session_id: str,
     new_location: str,
     gym_equipment: set,
-    is_finger_session: bool,
-) -> str:
-    """Find replacement session when changing gym/location makes original incompatible.
+    home_kit: Optional[Sequence[str]],
+    home_eq: Optional[set],
+) -> Tuple[bool, set]:
+    """A326: the ONE fit check of ``change_gym`` — for the session that moves
+    and for every session that could take its place. ``(location_ok,
+    missing)``: the catalog location widened like planner_v2 widens it
+    (``_expand_session_locations``: a home wall / board makes a wall session
+    doable at home, B137/B208 — before A326 the branch read the bare catalog
+    location), then the catalog ``required_equipment`` against the new place's
+    expanded equipment; ``missing`` is what the place lacks (empty when it
+    fits, and at home when the kit is unknown — None, not checked, as before)."""
+    meta = _meta_for(session_id)
+    req = list(_get_required_equipment(session_id))
+    locations = _expand_session_locations(tuple(meta.get("location", ("gym", "home"))), req,
+                                          list(home_kit) if home_kit is not None else None)
+    if new_location not in locations:
+        return False, set()
+    if not req:
+        return True, set()
+    if new_location == "gym":
+        return True, set(req) - gym_equipment
+    if new_location == "home" and home_eq is not None:
+        return True, set(req) - home_eq
+    return True, set()
 
-    Fallback chain:
+
+def _fmt_missing(missing: set) -> str:
+    """``{'a', 'b'}`` like a set's repr, in sorted order (A326: a set of
+    several strings printed in hash order differed from run to run)."""
+    return "{" + ", ".join(repr(x) for x in sorted(missing)) + "}"
+
+
+#: A326 (D287 E2): the "strength maintenance" session of a change to home when
+#: no key the phase still needs this week can be delivered there — submaximal
+#: repeaters (70-80 % of the max), two heavy pull-up sets and core: the finger
+#: and pulling strength kept, nothing maximal. Before complementary_conditioning.
+_HOME_STRENGTH_MAINTENANCE = "finger_maintenance_home"
+
+
+def _ordered_unique(items: Iterable[str]) -> List[str]:
+    out: List[str] = []
+    for x in items:
+        if x not in out:
+            out.append(x)
+    return out
+
+
+def _keys_open_this_week(
+    plan: Dict[str, Any],
+    phase_id: str,
+    displaced: Dict[str, Any],
+    today: Optional[str],
+    catalog: Dict[str, Dict[str, Any]],
+    date_iso: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """A326 (D287 E2): the key requirements of *phase_id* still open in the
+    week (Monday-Sunday) of *date_iso* once *displaced* is gone — fewer days
+    carrying the stimulus (``key_sessions_v1.session_delivers``, presence: the
+    dose and the outdoor / free-limit days of the key status need the athlete's
+    state, which the replanner does not have) than the weekly target. A done
+    session counts, a planned one from *today* on (every one when *today* is
+    None), a skipped one never. Priority order, catalog order among equals;
+    try-hard excluded (it rides on its host key, ``session_keys``)."""
+    from backend.engine import key_sessions_v1 as _ks
+
+    lo, hi = "", "9999-12-31"
+    try:
+        d0 = _parse_date(str(date_iso)[:10])
+        lo = (d0 - timedelta(days=d0.weekday())).isoformat()
+        hi = (d0 - timedelta(days=d0.weekday()) + timedelta(days=6)).isoformat()
+    except (TypeError, ValueError):
+        pass  # no date: the plan's days (one week)
+    week = [(str(day.get("date") or "")[:10], s)
+            for wb in plan.get("weeks") or [] for day in wb.get("days") or []
+            if lo <= str(day.get("date") or "")[:10] <= hi
+            for s in day.get("sessions") or [] if s is not displaced]
+    out: List[Dict[str, Any]] = []
+    for req in _ks.phase_requirements(phase_id):
+        if req["key"] == "try_hard":
+            continue
+        days = {d for d, s in week
+                if s.get("status") != "skipped"
+                and (s.get("status") == "done" or not today or d >= today)
+                and _ks.session_delivers(req, s, catalog)}
+        if len(days) < int(req.get("target_per_week") or 1):
+            out.append(req)
+    return sorted(out, key=lambda r: r.get("priority") or 9)
+
+
+def _stimulus_replacement(
+    session: Dict[str, Any],
+    new_location: str,
+    plan: Dict[str, Any],
+    fits: Callable[[str], bool],
+    today: Optional[str],
+    date_iso: Optional[str] = None,
+) -> Optional[Tuple[str, str]]:
+    """A326 (D287 E1/E2): a session that keeps the training stimulus of
+    *session* at the new place, with the note for its ``explain``; None when
+    there is none (the caller falls back to the B414 chain).
+
+    1. ``kept_key=<key>`` — a key of the phase the session carries
+       (``key_sessions_v1.session_keys``, on the session as it is: its
+       resolved exercises when it has some): the first of that requirement's
+       ``floor_candidates`` then ``session_ids`` (key_stimuli.json) that fits
+       the new place;
+    2. ``same_load`` — for a primary session (hard or climbing, the planner's
+       ``_is_primary_session``): the first primary session of the week's
+       phase pool (``profile_snapshot.session_pool``, else
+       ``_build_session_pool``) with the same hard / finger tags, within the
+       phase intensity cap, that fits — a rope evening at a boulder gym stays
+       a climbing evening;
+    3. home only, primary session: ``open_key=<keys>`` — a home session for a
+       key still open this week (``_keys_open_this_week``; candidates in the
+       requirement's ``propose`` / ``floor_candidates`` / ``session_ids`` order,
+       the one covering most open keys wins: strength_long when finger max and
+       max pulling are both owed), within the cap; else ``strength_maintenance``
+       (``_HOME_STRENGTH_MAINTENANCE``).
+
+    A test is never replaced here: it measures, and the retest policy owns it
+    (the combined keeps its hang in the branch, B414; otherwise the B414
+    chain). No phase on the plan or the session → None. The guards are not
+    consulted (A301: the finger gap, the heavy pulls and the hard cap are
+    alerts at read time). Pure and deterministic: catalog and pool order only.
+    """
+    from backend.engine import key_sessions_v1 as _ks
+    from backend.engine.stimulus import is_test_session, session_flag
+
+    if is_test_session(session):
+        return None
+    snapshot = plan.get("profile_snapshot") or {}
+    phase_id = snapshot.get("phase_id") or session.get("phase_id")
+    if not phase_id:
+        return None
+    sid = str(session.get("session_id") or "")
+    load = (session_flag(session, "hard"), session_flag(session, "finger"))
+
+    def usable(c: str) -> bool:
+        return c in _SESSION_META and c != sid and not _SESSION_META[c].get("test") and fits(c)
+
+    def same_load(c: str) -> bool:
+        m = _SESSION_META[c]
+        return (bool(m.get("hard")), bool(m.get("finger"))) == load
+
+    # 1. A key the session carries, delivered by another session at the new place.
+    reqs = {r["key"]: r for r in _ks.phase_requirements(phase_id)}
+    for key in _ks.session_keys(session, phase_id):
+        req = reqs.get(key) or {}
+        for c in _ordered_unique(list(req.get("floor_candidates") or []) + list(req.get("session_ids") or [])):
+            if usable(c):
+                return c, f"kept_key={key}"
+
+    if not (load[0] or _meta_for(sid).get("climbing")):
+        return None  # 2-3 are for the primary sessions of the week only
+    cap = snapshot.get("intensity_cap") or PHASE_INTENSITY_CAP.get(phase_id, "max")
+
+    def in_cap(c: str) -> bool:
+        return _intensity_allowed(_SESSION_META[c].get("intensity", "medium"), cap)
+
+    # 2. The same load from the phase pool.
+    pool = list(snapshot.get("session_pool") or []) or _build_session_pool(phase_id)
+    for c in pool:
+        if usable(c) and _is_primary_session(_SESSION_META[c]) and same_load(c) and in_cap(c):
+            return c, "same_load"
+
+    if new_location != "home":
+        return None
+    # 3. Home: a key still open this week, else strength maintenance.
+    catalog = _ks.load_exercise_catalog()
+    open_reqs = _keys_open_this_week(plan, phase_id, session, today, catalog, date_iso)
+    cands: List[str] = []
+    for req in open_reqs:
+        for c in _ordered_unique(list(req.get("propose") or []) + list(req.get("floor_candidates") or [])
+                                 + list(req.get("session_ids") or [])):
+            if c not in cands and usable(c) and in_cap(c):
+                cands.append(c)
+    best: Optional[Tuple[str, List[str]]] = None
+    for c in cands:
+        covers = [r["key"] for r in open_reqs if _ks.session_delivers(r, {"session_id": c}, catalog)]
+        if covers and (best is None or len(covers) > len(best[1])):
+            best = (c, covers)
+    if best is not None:
+        return best[0], "open_key=" + "+".join(best[1])
+    if usable(_HOME_STRENGTH_MAINTENANCE) and in_cap(_HOME_STRENGTH_MAINTENANCE):
+        return _HOME_STRENGTH_MAINTENANCE, "strength_maintenance"
+    return None
+
+
+def _find_gym_change_replacement(
+    session: Dict[str, Any],
+    new_location: str,
+    gym_equipment: set,
+    *,
+    plan: Optional[Dict[str, Any]] = None,
+    home_kit: Optional[Sequence[str]] = None,
+    home_eq: Optional[set] = None,
+    today: Optional[str] = None,
+    date_iso: Optional[str] = None,
+) -> Tuple[str, Optional[str]]:
+    """The session that takes the place of *session* when its new place
+    cannot host it, and the ``explain`` note of the choice (None for the
+    fallback chain).
+
+    A326 (D287 E1/E2): first a session that keeps the stimulus
+    (``_stimulus_replacement``: a key it carries, the same load from the phase
+    pool, at home a key still open this week or strength maintenance), all
+    checked with ``_venue_check``; then the B414 chain, unchanged:
+
     1. complementary_conditioning (home+gym, no required_equipment)
     2. regeneration_easy (universal final fallback)
 
     B414 (A319-CHANGE-GYM): the combined test is not handled here — the
     ``change_gym`` branch keeps its max hang (``_CHANGE_GYM_HANG_SID``) where
-    the new place has a hangboard but not the rest. Before B414 this docstring
-    also promised a ``finger_strength_home`` step the code never had.
+    the new place has a hangboard but not the rest.
     """
+    def fits(c: str) -> bool:
+        location_ok, missing = _venue_check(c, new_location, gym_equipment, home_kit, home_eq)
+        return location_ok and not missing
+
+    kept = _stimulus_replacement(session, new_location, plan or {}, fits, today, date_iso)
+    if kept is not None:
+        return kept
+
     # First fallback: complementary_conditioning
     cc_meta = _meta_for("complementary_conditioning")
     if new_location in cc_meta.get("location", ()):
         cc_eq = set(_get_required_equipment("complementary_conditioning"))
         if not cc_eq or (new_location != "gym") or cc_eq.issubset(gym_equipment):
-            return "complementary_conditioning"
+            return "complementary_conditioning", None
 
     # Universal fallback
-    return "regeneration_easy"
+    return "regeneration_easy", None
 
 
 #: B414 (A319-CHANGE-GYM): what the combined test (max hang 7 s + 2RM,
@@ -1190,7 +1420,14 @@ def apply_events(
     compensation after a change of gym. What the guards object to is computed
     at read time by ``guards_v1.evaluate`` and returned next to the plan.
     *prev_days* and *today* are kept in the signature for the callers (they
-    feed those alerts on the router side); they no longer change the plan.
+    feed those alerts on the router side); *prev_days* no longer changes the
+    plan.
+
+    A326: ``change_gym`` keeps the stimulus of a session its new place cannot
+    host (``_find_gym_change_replacement``); at home it reads the keys still
+    open this week, where a planned session counts from *today* on (every
+    planned session when *today* is None) — the write and the /events dry run
+    pass the same *today*.
     """
     # A301: alerts only, computed by the caller. A315: *today* still bounds
     # undo_auto_reschedule (a past re-schedule is never taken back).
@@ -1518,7 +1755,8 @@ def apply_events(
             if new_location == "gym" and gyms and new_gym_id:
                 for g in (gyms or []):
                     if g.get("gym_id") == new_gym_id:
-                        gym_equipment = set(expand_equipment(g.get("equipment", [])))
+                        # A326: with the implicit pull-up bar, as planner_v2.
+                        gym_equipment = _gym_equipment(g)
                         break
                 else:
                     logger.warning(
@@ -1544,42 +1782,37 @@ def apply_events(
                 sid = s.get("session_id", "")
                 meta = _meta_for(sid)
 
-                # Check location compatibility
-                location_ok = new_location in meta.get("location", ("gym", "home"))
+                # A326: location (widened as planner_v2 widens it) and equipment
+                # in one check, the same one the candidates go through.
+                location_ok, missing = _venue_check(sid, new_location, gym_equipment, _home_kit, home_eq)
 
-                # Check equipment compatibility (gym and home)
-                equipment_ok = True
-                if location_ok:
-                    req_eq = set(_get_required_equipment(sid))
-                    if req_eq:
-                        if new_location == "gym":
-                            if not req_eq.issubset(gym_equipment):
-                                equipment_ok = False
-                                missing = req_eq - gym_equipment
-                        elif new_location == "home":
-                            if home_eq is not None and not req_eq.issubset(home_eq):
-                                equipment_ok = False
-                                missing = req_eq - home_eq
-
-                if not location_ok or not equipment_ok:
+                if not location_ok or missing:
                     # B414 (A319-CHANGE-GYM): the combined test keeps its max
                     # hang where the new place has the hangboard (equipment
                     # only, never the catalog location); the pull-up waits.
                     avail = gym_equipment if new_location == "gym" else home_eq
                     keeps_hang = (
-                        sid == _COMBINED_TEST_SID and equipment_ok is False and avail is not None
+                        sid == _COMBINED_TEST_SID and location_ok and avail is not None
                         and set(_get_required_equipment(_CHANGE_GYM_HANG_SID)).issubset(avail)
                     )
+                    why: Optional[str] = None
                     if keeps_hang:
                         replacement = _CHANGE_GYM_HANG_SID
                     else:
-                        replacement = _find_gym_change_replacement(
-                            sid, new_location, gym_equipment, meta.get("finger", False),
+                        # A326 (D287 E1/E2): a session that keeps the stimulus
+                        # first (a key it carries, the same load, at home a key
+                        # still open or strength maintenance), then the B414
+                        # chain. Read on the session BEFORE it is rewritten.
+                        replacement, why = _find_gym_change_replacement(
+                            s, new_location, gym_equipment,
+                            plan=updated, home_kit=_home_kit, home_eq=home_eq, today=today,
+                            date_iso=event["date"],
                         )
                     if meta.get("finger") and not _meta_for(replacement).get("finger"):
                         lost_finger = True
                     rep_meta = _meta_for(replacement)
-                    reason = f"incompatible_location={new_location}" if not location_ok else f"missing_equipment={missing}"
+                    reason = (f"incompatible_location={new_location}" if not location_ok
+                              else f"missing_equipment={_fmt_missing(missing)}")
                     stamps = _finger_stamps_of_combined(s.get("explain")) if keeps_hang else []
                     s["session_id"] = replacement
                     s["location"] = new_location
@@ -1587,7 +1820,14 @@ def apply_events(
                     s["intensity"] = rep_meta["intensity"]
                     s["estimated_load_score"] = _INTENSITY_TO_LOAD.get(rep_meta["intensity"], 40)
                     s["tags"] = {"hard": rep_meta["hard"], "finger": rep_meta["finger"], **({"test": True} if rep_meta.get("test") else {})}
-                    s["explain"] = [f"gym_change: {sid} → {replacement}", reason] + stamps
+                    s["explain"] = [f"gym_change: {sid} → {replacement}", reason] + ([why] if why else []) + stamps
+                    # A326: the engine constraints of the session that left
+                    # (a downshift, an undone skip, an automatic re-schedule)
+                    # do not describe its replacement; the user's markers stay
+                    # (``carry_user_markers``, as every in-place rewrite here —
+                    # marker semantics unchanged: a moved session stays the user's).
+                    if "constraints_applied" in s:
+                        s["constraints_applied"] = _uo.carry_user_markers(s, [])
                     s.pop("resolved", None)
                     if keeps_hang:
                         change_warnings.append(
