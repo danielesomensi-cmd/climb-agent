@@ -222,7 +222,7 @@ Hardcoded dict in `planner_v2.py`. Maps every `session_id` to its planning prope
 | `test` | bool? | Assessment session — bypasses intensity cap in Pass 3 |
 | `supplementary` | bool? | (In session JSON, not META.) Excluded from auto-planning, quick-add only |
 
-`_SESSION_META` is the source of the planning flags of the engine's own sessions: PASS 1 – 2.6 and the legacy PASS 3 read `hard`, `finger`, `pulling`, `climbing`, `intensity` from it and nowhere else. A session with no entry (a custom session) is seen only by the code that reads `stimulus.session_flag` — the session's own `tags` first, else `_SESSION_META`: PASS 3a, PASS 2.7, the user / crag / lived-day anchors and `guards_v1`. Session JSONs may carry their own `supplementary` flag.
+`_SESSION_META` is the source of the planning flags of the engine's own sessions: PASS 1 – 2.6 and the legacy PASS 3 read `hard`, `finger`, `pulling`, `climbing`, `intensity` from it to choose and place them. A session with no entry (a custom session) is seen only by the code that reads `stimulus.session_flag` — the session's own `tags` first, else `_SESSION_META`: PASS 3a, PASS 2.7, the user / crag / lived-day anchors, the previous-week seed (B161, since B415), the presence check of the PASS 2.5 / 2.6 floors (B415) and `guards_v1`. Session JSONs may carry their own `supplementary` flag.
 
 ### `_INTENSITY_TO_LOAD`
 
@@ -276,7 +276,7 @@ Stages of `generate_phase_week` in execution order (the pass numbers are histori
 
 On success: `_find_best_slot()` finds the best available slot (evening > morning > lunch for primary; a slot with `max_minutes` refuses a longer session), `_make_session_entry()` builds the plan entry.
 
-**B161:** Previous week's trailing sessions seed the spacing constraints (negative offsets -7 to -1).
+**B161:** Previous week's trailing sessions seed the spacing constraints (negative offsets -7 to -1). A catalog session seeds with its meta AND its stored tags (unchanged); a session with no `_SESSION_META` entry — custom, coach ad-hoc, generated add — seeds with its own tags (`stimulus.session_flag`, as guards_v1 / B390 / B414 read it) unless it is `skipped` (B415, D287 C1: before, it was dropped, and a Sunday max-hang custom left Monday to limit_boulder_gym, which the guards then flagged).
 
 #### PASS 1.5 — Climbing fallback
 
@@ -292,16 +292,18 @@ When total sessions < `session_target` = `min(target_sessions_per_week or target
 
 #### PASS 2.5 — Finger quality floor (A282)
 
-Outside deload, when the phase's `domain_weights.finger_strength` ≥ `QUALITY_FLOOR_WEIGHT` (0.10) and no placed session is tagged `finger`: places one, trying `finger_maintenance_home`, `finger_maintenance_gym`, then the other non-test finger sessions of the pool. `_place_quality_floor` goes from the least invasive option:
+Outside deload, when the phase's `domain_weights.finger_strength` ≥ `QUALITY_FLOOR_WEIGHT` (0.10) and the week carries no `finger` session: places one, trying `finger_maintenance_home`, `finger_maintenance_gym`, then the other non-test finger sessions of the pool. `_place_quality_floor` goes from the least invasive option:
 1. an empty day among those kept;
 2. in place of a non-primary session that does not carry the tag, on a kept day;
 3. a day the target-days pruning dropped (`day_pruned_but_available`), non-hard sessions only — a deliberate day beyond `target_training_days_per_week` (decided 2026-09-05).
 
-The hard cap, the hard gap and the finger gap always hold, and outdoor days are skipped. Nothing placeable → `unmet_stimulus` row `{stimulus: "finger_strength", phase_id, weight, reason}`. (Until A282 this was a `power_endurance`-only guarantee.)
+The hard cap, the hard gap and the finger gap always hold, and outdoor days are skipped. A hard session the floor places is a hard day for the passes after it (`hard_days`, `hard_day_offsets`), as for every other pass (B415, D287 C3: before, only its finger day was booked, and PASS 2.6 / PASS 3 could open a hard day next to it or past the cap). Nothing placeable → `unmet_stimulus` row `{stimulus: "finger_strength", phase_id, weight, reason}`. (Until A282 this was a `power_endurance`-only guarantee.)
+
+**What the week already carries (B415, D287 C2).** The presence check of both floors (`_week_carries`) reads the week as the B369 merge will save it: this run's placements, the days already lived (B390: `done` sessions up to `today`) and the user's own sessions from `today` on (B414: not skipped) — `_kept_sessions`. Finger: `session_flag(s, "finger")`. Pulling: the catalog `pulling` flag for a catalog id; a session with no meta (custom, generated) counts with a `pulling` tag or a `pulling_max` stimulus (weighted pull-ups among its exercises, `session_stimuli`), else it stays unseen. A declared crag day satisfies neither floor. A floor met that way places nothing and writes no `unmet_stimulus` row. Before B415 the check read this run's placements only: the user's finger custom got a second finger dose, and a week whose finger / pulling work was already done said it "didn't fit" (UnmetStimulusCard; key_sessions_v1 turned the finger key unplaceable). Consequence, in line with A282 (the extra day exists only to keep the finger quality off zero): step 3's extra day is no longer opened when the finger work is already in the week, so a key stimulus PASS 2.7 used to put on that day can now be reported unmet instead; likewise a pulling row can appear when the dose the floor no longer adds was the week's only `pulling` session (`finger_maintenance_home`). Weeks without a plan of the same week being regenerated: the same check as before.
 
 #### PASS 2.6 — Weekly pulling stimulus (B308)
 
-Outside deload, when no placed session is tagged `pulling` (no weight threshold): places one non-test `pulling` session of the pool on a kept day — an empty one, or in place of a non-primary session. It does not use the cascade above (never a pruned day). Hard cap, hard gap and finger gap hold; nothing placeable → `unmet_stimulus` row `{stimulus: "pulling", phase_id, reason}`.
+Outside deload, when the week carries no `pulling` session (no weight threshold; read like PASS 2.5's, B415): places one non-test `pulling` session of the pool on a kept day — an empty one, or in place of a non-primary session. It does not use the cascade above (never a pruned day). Hard cap, hard gap and finger gap hold; nothing placeable → `unmet_stimulus` row `{stimulus: "pulling", phase_id, reason}`. The check runs before PASS 2.7, so a pulling session PASS 2.7 places later (`boulder_circuit_gym` as a power-endurance carrier) does not cancel a row already written.
 
 #### PASS 3a — Tests decided by the retest policy (A289)
 

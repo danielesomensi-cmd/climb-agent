@@ -1689,7 +1689,15 @@ def generate_phase_week(
 
     # B161: seed spacing constraints from previous week's trailing days.
     # Offsets are negative (e.g., Sunday of prev week = -1, Saturday = -2).
+    # B415 (D287 C1): a session with no `_SESSION_META` entry (custom, coach
+    # ad-hoc, generated add) used to be dropped here, so after a Sunday
+    # max-hang custom PASS 1 put limit_boulder_gym on Monday and guards_v1
+    # flagged it (finger_gap + hard_back_to_back). It now seeds with its own
+    # stored tags — the reading of guards_v1, B390 and B414 (`session_flag`:
+    # own tags, else `_SESSION_META`) — unless skipped (it never happened).
+    # Catalog sessions keep their reading (meta AND tags), byte for byte.
     if prev_week_plan:
+        from backend.engine.stimulus import session_flag as _pflag
         prev_days = (prev_week_plan.get("weeks") or [{}])[0].get("days", [])
         for i, pd in enumerate(prev_days):
             neg_offset = i - 7  # Mon=-7 … Sun=-1
@@ -1697,6 +1705,12 @@ def generate_phase_week(
                 sid = s.get("session_id", "")
                 meta = _SESSION_META.get(sid)
                 if meta is None:
+                    if s.get("status") == "skipped":
+                        continue
+                    if _pflag(s, "hard"):
+                        hard_day_offsets.append(neg_offset)
+                    if _pflag(s, "finger"):
+                        finger_day_offsets.append(neg_offset)
                     continue
                 if meta.get("hard") and s.get("tags", {}).get("hard", meta["hard"]):
                     hard_day_offsets.append(neg_offset)
@@ -1803,6 +1817,10 @@ def generate_phase_week(
     # else ``_SESSION_META``). Ascending offsets, after B161's negatives: PASS
     # 1's backwards gap check reads the last element.
     _past_hard_offsets: List[int] = []
+    # B415 (D287 C2): the sessions the merge puts back in this week — the lived
+    # done ones (here) and the user's own from today on (B414, below). Read by
+    # the floors' presence check (`_week_carries`, PASS 2.5 / 2.6).
+    _kept_sessions: List[Dict[str, Any]] = []
     if _same_week and today_date is not None:
         from backend.engine.stimulus import session_flag as _flag
         _lived_by = {str(d.get("date"))[:10]: d for d in _plan_days_list(existing_week_plan)}
@@ -1814,6 +1832,7 @@ def generate_phase_week(
                     if isinstance(s, dict) and s.get("status") == "done"]
             if not done:
                 continue
+            _kept_sessions.extend(done)
             if any(_flag(s, "hard") for s in done):
                 hard_days += 1
                 hard_day_offsets.append(offset)
@@ -1858,6 +1877,7 @@ def generate_phase_week(
                     if isinstance(x, dict) and (
                         (_owned(x) and x.get("status") not in ("done", "skipped"))
                         or (_ahead and x.get("status") == "done"))]
+            _kept_sessions.extend(mine)  # B415 (C2)
             if any(_uflag(x, "hard") for x in mine):
                 _user_hard.append(offset)
             if any(_uflag(x, "finger") for x in mine):
@@ -2364,7 +2384,7 @@ def generate_phase_week(
         nonlocal days_with_sessions
 
         def _try(offset: int, *, allow_hard: bool, replace: bool) -> bool:
-            nonlocal days_with_sessions
+            nonlocal days_with_sessions, hard_days
             if day_is_outdoor[offset]:
                 return False
             day_avail = normalized[day_keys[offset]]
@@ -2421,6 +2441,14 @@ def generate_phase_week(
                     days_with_sessions += 1
                 if meta.get("finger"):
                     finger_day_offsets.append(offset)
+                # B415 (D287 C3): a hard session placed here is a hard day for
+                # every later pass (2.6, 3a, 3, 2.7) — the bookkeeping PASS 2.6
+                # does. Before B415 only the finger day was booked, and PASS 3
+                # could open a fourth hard day under a cap of 3. The victim of
+                # `replace` is never hard (not primary), so nothing to undo.
+                if meta.get("hard"):
+                    hard_days += 1
+                    hard_day_offsets.append(offset)
                 return True
             return False
 
@@ -2445,6 +2473,39 @@ def generate_phase_week(
                 )
                 return True
         return False
+
+    # B415 (D287 C2): does the week already carry the floor's stimulus? Read on
+    # the week as the B369 merge will save it: this run's placements, the days
+    # already lived (B390: done sessions up to today) and the user's own
+    # sessions from today on (B414: not skipped) — `_kept_sessions`. Before
+    # B415 the floors read this run's placements only: a max-hang custom on
+    # Wednesday still got a finger_maintenance_gym (a second dose), and a week
+    # whose finger / pulling work was already done said "didn't fit"
+    # (UnmetStimulusCard; key_sessions_v1 turns the finger key unplaceable).
+    # Finger: `session_flag` (own tags, else `_SESSION_META` — the engine's
+    # entries carry the meta's own value). Pulling: the catalog flag for a
+    # catalog id; a session with no meta (custom, generated) counts with a
+    # pulling tag or a pulling_max stimulus (weighted pull-ups among its
+    # exercises, `session_stimuli`) — with neither it stays unseen, as before.
+    # A crag day satisfies neither floor (unchanged). No plan of this week
+    # being regenerated → `_kept_sessions` is empty: the same check as before.
+    from backend.engine.stimulus import (
+        FAMILY_PULLING_MAX,
+        session_flag as _week_flag,
+        session_stimuli as _week_stimuli,
+    )
+
+    def _carries(s: Dict[str, Any], flag: str) -> bool:
+        if flag != "pulling":
+            return _week_flag(s, flag)
+        meta = _SESSION_META.get(str(s.get("session_id") or ""))
+        if meta is not None:
+            return bool(meta.get("pulling"))
+        return _week_flag(s, "pulling") or FAMILY_PULLING_MAX in _week_stimuli(s)
+
+    def _week_carries(flag: str) -> bool:
+        return any(_carries(s, flag) for day_list in day_sessions for s in day_list) \
+            or any(_carries(s, flag) for s in _kept_sessions)
 
     # ── PASS 2.5 (NEW-F9, generalizzato da A282): pavimento sulla forza dita ──
     #
@@ -2477,10 +2538,8 @@ def generate_phase_week(
         # Il tag, non il prefisso dell'id: in strength_power le dita le carica
         # limit_boulder_gym, e un pavimento che non lo vedesse aggiungerebbe una
         # dose superflua. Stessa semantica di `_has_pulling` in PASS 2.6.
-        _has_finger = any(
-            _SESSION_META.get(s.get("session_id", ""), {}).get("finger")
-            for day_list in day_sessions for s in day_list
-        )
+        # B415: sulla settimana come la salva il merge (`_week_carries`).
+        _has_finger = _week_carries("finger")
         if not _has_finger:
             # Le sessioni di mantenimento vengono prima: sono la dose minima,
             # non uno stimolo che consuma il cap dei giorni hard.
@@ -2534,10 +2593,8 @@ def generate_phase_week(
     # Deload is exempt by design (KB: zero pulling in a deload week is correct).
     unmet_stimulus: list = []
     if phase_id != "deload":
-        _has_pulling = any(
-            _SESSION_META.get(s.get("session_id", ""), {}).get("pulling")
-            for day_list in day_sessions for s in day_list
-        )
+        # B415: the week as the merge saves it, as PASS 2.5 (`_week_carries`).
+        _has_pulling = _week_carries("pulling")
         if not _has_pulling:
             _pull_candidates = [
                 (sid, _SESSION_META.get(sid))
