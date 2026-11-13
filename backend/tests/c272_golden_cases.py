@@ -165,6 +165,10 @@ stripped output against the HEAD session file (ladder off and on, every
 profile and slot): with the instances sorted by ``exercise_id``, and
 ``session_version`` / ``source.order`` set aside, the outputs are identical —
 no id, dose, load or rest moved. Every other key and the pools unchanged.
+
+B417 (``order: last`` on the handstand pair, ``after_warmup`` back on the
+press only) changed the same keys of that session, order only: press,
+floor core, arm lifts, toe pulls, wall hold. Every other key identical.
 """
 
 from __future__ import annotations

@@ -78,6 +78,10 @@ golden (instances sorted by ``exercise_id``, ``session_version`` and
 ``source.order`` set aside: stripped output identical). Daniele's order is now
 the four lifts, Copenhagen dynamic, L-sit, toe pulls, wall handstand hold.
 Every other key identical; :data:`CHANGED_BY_D4` is still the same 40 keys.
+
+B417 (``order: last`` on the handstand pair, ``after_warmup`` back on the
+press only) changed the same keys of that session, order only: press,
+floor core, arm lifts, toe pulls, wall hold. Every other key identical.
 """
 
 from __future__ import annotations

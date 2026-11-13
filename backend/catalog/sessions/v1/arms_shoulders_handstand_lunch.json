@@ -1,14 +1,14 @@
 {
   "id": "arms_shoulders_handstand_lunch",
   "name": "Arms, Shoulders + Handstand (Lunch)",
-  "version": "1.2",
+  "version": "1.3",
   "supplementary": true,
   "intent": {
     "primary_goal": "strength_general",
     "secondary_goals": [
       "handstand_skill"
     ],
-    "notes": "Lunch-break session at a weights gym, about 55 min: shoulders (overhead press 4x8, lateral raise 4x12), triceps 4x10 and biceps 4x8, then floor core (side plank, hollow hold) and handstand practice last. The handstand closes the session on purpose: it needs a free wall and room around it, and by the end of the lunch hour the crowd has usually thinned out. By then shoulders and triceps are already worked, so it stays practice and never a set to failure: both drills are chest to the wall, keep every hold well short of failure and come down as soon as the elbows soften or the shoulders sink, while you can still walk the feet down under control. Loaded lifts at RIR 1-2 (one or two clean reps left in the tank); loads come from your working loads and move with your feedback. For a dumbbell exercise the load is per dumbbell (one hand). No finger load, no hanging, no heavy pull. The curl is elbow-flexor work: keep it away from the 24 h before a heavy pulling session. The four lifts appear in the engine's generic order: any order among them works, and the overhead press can go first if you want your best numbers on it. After the lifts the floor core and the toe pulls follow the same generic order, and the wall handstand hold is always the last exercise. In a deload week the app already drops one set from every lift and floor core exercise (the handstand practice keeps its sets): stop every lift at RIR 3."
+    "notes": "Lunch-break session at a weights gym, about 55 min: shoulders (overhead press 4x8, lateral raise 4x12), triceps 4x10 and biceps 4x8, then floor core (side plank, hollow hold) and handstand practice last. The handstand closes the session on purpose: it needs a free wall and room around it, and by the end of the lunch hour the crowd has usually thinned out. By then shoulders and triceps are already worked, so it stays practice and never a set to failure: both drills are chest to the wall, keep every hold well short of failure and come down as soon as the elbows soften or the shoulders sink, while you can still walk the feet down under control. Loaded lifts at RIR 1-2 (one or two clean reps left in the tank); loads come from your working loads and move with your feedback. For a dumbbell exercise the load is per dumbbell (one hand). No finger load, no hanging, no heavy pull. The curl is elbow-flexor work: keep it away from the 24 h before a heavy pulling session. Order: the overhead press right after the warm-up (the heaviest lift, on fresh shoulders), then the floor core and the arm lifts, the two handstand drills last (toe pulls, then the wall hold). In a deload week the app already drops one set from every lift and floor core exercise (the handstand practice keeps its sets): stop every lift at RIR 3."
   },
   "compatibility": {
     "slot": [
@@ -85,6 +85,7 @@
     },
     {
       "block_id": "handstand_balance",
+      "order": "last",
       "required": false,
       "priority": 100,
       "module_role": "primary",
@@ -114,6 +115,7 @@
     },
     {
       "block_id": "handstand_hold",
+      "order": "last",
       "required": true,
       "priority": 98,
       "module_role": "primary",
@@ -147,7 +149,7 @@
       "priority": 95,
       "module_role": "secondary",
       "order": "after_warmup",
-      "notes": "Vertical press for the shoulders, the heaviest lift of the session: the app may list it after the curl and the lateral raise, do it first of the four lifts if you want your best numbers on it. The same movement every time so the load can progress from feedback.",
+      "notes": "Vertical press for the shoulders, the heaviest lift of the session: first after the warm-up, on fresh shoulders. The same movement every time so the load can progress from feedback.",
       "selection": {
         "primary": {
           "exercise_id": "overhead_press",
@@ -178,8 +180,7 @@
       "required": false,
       "priority": 90,
       "module_role": "secondary",
-      "order": "after_warmup",
-      "notes": "Lateral raise for the side of the shoulder, which climbing barely trains.",
+            "notes": "Lateral raise for the side of the shoulder, which climbing barely trains.",
       "selection": {
         "primary": {
           "exercise_id": "lateral_raise",
@@ -210,8 +211,7 @@
       "required": true,
       "priority": 85,
       "module_role": "secondary",
-      "order": "after_warmup",
-      "notes": "Triceps in the stretched position: an overhead extension with one dumbbell, so the long head works where the cable pushdown of the push lunch does not reach.",
+            "notes": "Triceps in the stretched position: an overhead extension with one dumbbell, so the long head works where the cable pushdown of the push lunch does not reach.",
       "selection": {
         "primary": {
           "exercise_id": "overhead_tricep_extension",
@@ -245,8 +245,7 @@
       "required": true,
       "priority": 80,
       "module_role": "secondary",
-      "order": "after_warmup",
-      "notes": "Elbow flexion with a neutral grip: the hammer curl puts the brachialis and brachioradialis to work, the flexors that hold a lock-off (the push lunch has the supinated curl). Never a weighted pull-up or chin-up.",
+            "notes": "Elbow flexion with a neutral grip: the hammer curl puts the brachialis and brachioradialis to work, the flexors that hold a lock-off (the push lunch has the supinated curl). Never a weighted pull-up or chin-up.",
       "selection": {
         "primary": {
           "exercise_id": "hammer_curl",

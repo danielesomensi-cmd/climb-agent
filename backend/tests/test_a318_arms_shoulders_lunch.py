@@ -53,28 +53,28 @@ WORK = ["barbell", "cable_machine", "leg_press", "bench", "dumbbell", "pullup_ba
 EXPECTED = [
     "general_pulse_raise",
     "mobility_thoracic_shoulders_flow",
-    # D287: the four lifts declare after_warmup — generic order among them
-    # (ties broken by id) ...
+    # B417: the press declares after_warmup (heaviest lift, fresh shoulders) ...
+    "overhead_press",
+    # ... the floor core (C279) and the arm lifts follow the generic order ...
+    "core_hollow_hold",
+    "side_plank",
     "hammer_curl",
     "lateral_raise",
-    "overhead_press",
     "overhead_tricep_extension",
-    # ... so the floor core (C279) and the handstand come after them. The two
-    # share a sort category and are ordered by id: the wall hold is the last
-    # row, the toe pulls can sit between two core rows (here the side plank).
-    "core_hollow_hold",
+    # ... and the handstand pair declares `order: last` (Daniele, 2026-10-25:
+    # «Handstand solo alla fine»): toe pulls, then the wall hold.
     "heel_pulls_chest_to_wall",
-    "side_plank",
     "wall_handstand_hold",
 ]
-#: D287 — the blocks pinned after the warm-up (catalog order), and what
-#: follows them: the floor core and the handstand pair.
-LIFT_BLOCKS = ("shoulder_press", "lateral_delts", "triceps", "biceps")
+#: B417 — the press right after the warm-up, the handstand pair last, the
+#: floor core and the arm lifts in between.
+PRESS_BLOCK = "shoulder_press"
+ARM_BLOCKS = ("lateral_delts", "triceps", "biceps")
+LIFT_BLOCKS = (PRESS_BLOCK,) + ARM_BLOCKS
 CORE_BLOCKS = ("core_lateral", "core_anti_extension")
 HANDSTAND_BLOCKS = ("handstand_balance", "handstand_hold")
 #: Daniele (B413 golden profile): Copenhagen dynamic and L-sit from his ladder.
-DANIELE_EXPECTED = EXPECTED[:6] + [
-    "copenhagen_dynamic", "core_l_sit", "heel_pulls_chest_to_wall", "wall_handstand_hold"]
+DANIELE_EXPECTED = EXPECTED[:3] + ["copenhagen_dynamic", "core_l_sit"] + EXPECTED[5:]
 #: block_id → (exercise_id, sets, deload_sets) of every loaded lift.
 LOADED = {
     # C279 (2026-10-30): 4 sets each to fill a 55' lunch, still one less in deload.
@@ -173,16 +173,13 @@ class TestCatalog:
             assert "per dumbbell" in notes or "that one dumbbell" in notes, block_id
 
     def test_handstand_blocks_close_the_session(self):
-        """D287: the handstand moves from right after the warm-up to the end.
-        The catalog says it with the only order value the resolver carries:
-        the four lifts declare ``after_warmup``; the handstand pair and the
-        floor core declare nothing and therefore come after them."""
-        assert _session()["version"] == "1.2"
-        declared = [m["block_id"] for m in _session()["modules"] if m.get("order")]
-        assert declared == list(LIFT_BLOCKS)
-        for block_id in LIFT_BLOCKS:
-            assert _module(block_id)["order"] == "after_warmup", block_id
-        for block_id in HANDSTAND_BLOCKS + CORE_BLOCKS:
+        """D287 + B417: the handstand moves from right after the warm-up to the
+        end (``order: last``) and the press stays first (``after_warmup``);
+        the floor core and the arm lifts declare nothing."""
+        assert _session()["version"] == "1.3"
+        declared = {m["block_id"]: m["order"] for m in _session()["modules"] if m.get("order")}
+        assert declared == {PRESS_BLOCK: "after_warmup", "handstand_balance": "last", "handstand_hold": "last"}
+        for block_id in ARM_BLOCKS + CORE_BLOCKS:
             assert "order" not in _module(block_id), block_id
         # Required flags and doses are the A318/C279 ones.
         assert _module("handstand_hold")["required"] is True
@@ -270,10 +267,10 @@ class TestResolution:
         assert _resolve() == _resolve()
 
     @pytest.mark.parametrize("date,phase", lg.DANIELE_SLOTS)
-    def test_daniele_gets_lifts_then_core_then_the_handstand(self, date, phase):
-        """D287: with Daniele's B413 ladder levels (Copenhagen dynamic, L-sit)
-        the session reads lifts → floor core → handstand in every phase: the
-        handstand pair is the last two rows."""
+    def test_daniele_gets_the_press_first_and_the_handstand_last(self, date, phase):
+        """B417: with Daniele's B413 ladder levels (Copenhagen dynamic, L-sit)
+        the session reads press → floor core → arm lifts → handstand in every
+        phase: the handstand pair is the last two rows."""
         r = resolve_session(
             str(REPO), f"backend/catalog/sessions/v1/{SID}.json", "backend/catalog/templates", EXERCISES, "",
             user_state_override=lg.daniele_state(date), write_output=False, phase=phase,
@@ -284,15 +281,11 @@ class TestResolution:
 
     @pytest.mark.parametrize("lateral", range(4))
     @pytest.mark.parametrize("l_sit", range(6))
-    def test_lifts_first_and_wall_hold_last_at_every_core_level(self, lateral, l_sit):
+    def test_press_first_and_handstand_pair_last_at_every_core_level(self, lateral, l_sit):
         """What holds whatever the B413 ladder picks for the two core blocks:
-        the four lifts right after the warm-up, then floor core and handstand,
-        the wall hold as the last row. The toe pulls share the sort category of
-        the floor core and are ordered with it by id, so a core id after
-        ``heel_pulls…`` (side_plank, straddle_l_sit, tuck_l_sit, v_sit_45…)
-        lands after them: the known limit of a catalog-only order, pinned here
-        so it cannot move silently (a strict "pair last" needs a new order
-        value in the resolver)."""
+        the press right after the warm-up, the toe pulls and the wall hold as
+        the last two rows (B417 ``order: last`` — the D287 catalog-only order
+        let a core id after ``heel_pulls…`` land between them)."""
         levels = copy.deepcopy(lg.DANIELE_LEVELS)
         levels["lateral"]["level_idx"] = lateral
         levels["compression_floor"]["level_idx"] = l_sit
@@ -302,10 +295,9 @@ class TestResolution:
         )
         assert r["resolution_status"] == "success"
         blocks = [i["source"]["block_id"] for i in _insts(r)]
-        assert blocks[:2] == ["pulse_raise", "shoulder_wrist_prep"]
-        assert sorted(blocks[2:6]) == sorted(LIFT_BLOCKS)
-        assert sorted(blocks[6:]) == sorted(CORE_BLOCKS + HANDSTAND_BLOCKS)
-        assert blocks[-1] == "handstand_hold"
+        assert blocks[:3] == ["pulse_raise", "shoulder_wrist_prep", PRESS_BLOCK]
+        assert sorted(blocks[3:-2]) == sorted(CORE_BLOCKS + ARM_BLOCKS)
+        assert blocks[-2:] == list(HANDSTAND_BLOCKS)
         assert _ids(r)[-1] == "wall_handstand_hold"
 
 

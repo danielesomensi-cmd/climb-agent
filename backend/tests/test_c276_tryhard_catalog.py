@@ -216,15 +216,14 @@ class TestResolution:
             for m in json.loads(p.read_text(encoding="utf-8")).get("modules") or []:
                 if m.get("order"):
                     found.append((p.stem, m["block_id"], m["order"]))
-        # A318 + D287: in the arms lunch the four lifts declare it, so the floor
-        # core and the handstand come after them (Daniele, 2026-10-25: handstand
-        # only at the end; it used to be the handstand pair + the press). File order.
+        # A318 + D287 + B417: in the arms lunch the handstand pair declares
+        # `last` (Daniele, 2026-10-25: handstand only at the end) and the press
+        # `after_warmup`. File order.
         # A319: the combined test session — the finger warm-up, the max hang,
         # then the 2RM, ahead of every secondary measurement.
-        assert found == [("arms_shoulders_handstand_lunch", "shoulder_press", "after_warmup"),
-                         ("arms_shoulders_handstand_lunch", "lateral_delts", "after_warmup"),
-                         ("arms_shoulders_handstand_lunch", "triceps", "after_warmup"),
-                         ("arms_shoulders_handstand_lunch", "biceps", "after_warmup"),
+        assert found == [("arms_shoulders_handstand_lunch", "handstand_balance", "last"),
+                         ("arms_shoulders_handstand_lunch", "handstand_hold", "last"),
+                         ("arms_shoulders_handstand_lunch", "shoulder_press", "after_warmup"),
                          ("lead_tryhard_gym", "falls_block", "after_warmup"),
                          ("route_projecting_gym", "falls_primer", "after_warmup"),
                          ("test_max_hang_pullup", "finger_warmup", "after_warmup"),
@@ -271,6 +270,16 @@ class TestAfterWarmupOrdering:
         out = enforce_ordering_constraints(exs, "performance", self.LOOKUP)
         assert [e["exercise_id"] for e in out] == ["general_pulse_raise", "fall_practice",
                                                    "route_redpoint_attempt", "side_plank"]
+
+    def test_declared_last_instance_moves_to_the_end_before_cooldown(self):
+        """B417: `order: last` closes the work, a trailing cooldown stays last."""
+        lookup = dict(self.LOOKUP, cooldown_walk={"role": ["cooldown"], "domain": ["mobility"]})
+        exs = [{"exercise_id": "general_pulse_raise"},
+               {"exercise_id": "side_plank", "source": {"order": "last"}},
+               {"exercise_id": "route_redpoint_attempt"}, {"exercise_id": "cooldown_walk"}]
+        out = enforce_ordering_constraints(exs, "performance", lookup)
+        assert [e["exercise_id"] for e in out] == ["general_pulse_raise", "route_redpoint_attempt",
+                                                   "side_plank", "cooldown_walk"]
 
     def test_undeclared_instance_does_not_move(self):
         exs = [{"exercise_id": "general_pulse_raise"}, {"exercise_id": "route_redpoint_attempt"},

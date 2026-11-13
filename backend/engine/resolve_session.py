@@ -1559,10 +1559,12 @@ def _resolve_inline_block(
             inst["hr_target"] = dict(selected_ex["hr_target"])
         # C276: a catalog block may ask to sit right after the warm-up
         # (`"order": "after_warmup"` — the falls of route_projecting_gym /
-        # lead_tryhard_gym). Carried on the instance only when declared, so no
-        # other session's output changes; exercise_ordering applies it.
-        if mod.get("order") == "after_warmup":
-            inst["source"]["order"] = "after_warmup"
+        # lead_tryhard_gym) or, B417, at the end of the work (`"order": "last"`
+        # — the handstand pair of arms_shoulders_handstand_lunch). Carried on
+        # the instance only when declared, so no other session's output
+        # changes; exercise_ordering applies it.
+        if mod.get("order") in ("after_warmup", "last"):
+            inst["source"]["order"] = mod["order"]
         if ex_attrs.get("intensity_pct") is not None:
             sug = suggest_max_hang_load(user_state, merged, exercise_attrs=ex_attrs)
             if sug:

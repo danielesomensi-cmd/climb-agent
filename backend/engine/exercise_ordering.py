@@ -414,6 +414,22 @@ def enforce_ordering_constraints(
             head += 1
         result = others[:head] + pinned + others[head:]
 
+    # --- Constraint 7 (B417): catalog-declared "last" blocks ---
+    # `"order": "last"` moves the declared instances to the end of the work, in
+    # their sorted order, ahead of any trailing cooldown (constraint 2 holds):
+    # the handstand of the arms lunch closes the session (Daniele, 2026-10-25:
+    # «Handstand solo alla fine»). Only instances that declare it move.
+    def _last(ex):
+        return ((ex.get("source") or {}).get("order") == "last")
+
+    if any(_last(ex) for ex in result):
+        tail = [ex for ex in result if _last(ex)]
+        others = [ex for ex in result if not _last(ex)]
+        end = len(others)
+        while end > 0 and _cat(others[end - 1]) == "cooldown":
+            end -= 1
+        result = others[:end] + tail + others[end:]
+
     # P0 INVARIANT: never lose exercises
     ids_after = set(ex.get("exercise_id", id(ex)) for ex in result)
     if ids_before != ids_after:
