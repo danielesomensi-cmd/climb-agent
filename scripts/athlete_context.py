@@ -31,6 +31,11 @@ replaced): what the guards object to is listed as ``guard_alerts`` (the alerts
 the insertion ADDS, ``guards_v1``), each marked when it touches a KEY session.
 Nothing is written.
 
+Stale weeks (D287): a week flagged ``_stale`` (B369) is regenerated only by
+``GET /api/week``, which this script never calls. The context names it in the
+``STALE_WEEK`` warning and ``--simulate`` says when it ran on such a week: what
+is printed is the stored copy and may change at the next GET.
+
 Exit codes: 0 ok, 1 bad arguments / fetch error, 3 no state for the user.
 """
 from __future__ import annotations
@@ -288,6 +293,15 @@ def simulate(state: Dict[str, Any], draft: Dict[str, Any], target_date: str, slo
     if plan is None:
         result["error"] = "settimana non generata: nessun week_plan per quella data"
         return result
+    if plan.get(ac.STALE_WEEK_KEY):
+        # D287: the week waits for a regeneration (B369). The simulation is
+        # faithful to the stored copy; the generated sessions around the draft
+        # may be different after the next GET /api/week.
+        result["warnings"].append(
+            f"settimana {plan.get('start_date')} marcata _stale (B369): la simulazione gira sulla copia salvata; "
+            "il prossimo GET /api/week la rigenera e le sessioni generate intorno possono cambiare — guardie e "
+            "conflitti di questa simulazione valgono per la copia salvata"
+        )
     pos = position_on(state.get("macrocycle"), target) or {}
     phase_id = pos.get("phase_id")
 

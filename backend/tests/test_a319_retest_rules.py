@@ -924,7 +924,7 @@ class TestCombinedGuards:
         assert "hang_test_soon" in {c["code"] for c in thu["finger_codes"]}
         assert "pull_test_soon" in {c["code"] for c in thu["pull_codes"]}
         assert thu["finger_max_ok"] is False and thu["heavy_pull_ok"] is False
-        assert ctx["version"] == ac.VERSION == "b414.2"
+        assert ctx["version"] == ac.VERSION == "d287.1"
 
     def test_composer_guard_excludes_finger_and_pulling(self):
         from backend.tests.test_a294_key_sessions import _sess, _state

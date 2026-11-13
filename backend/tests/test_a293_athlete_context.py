@@ -579,9 +579,12 @@ class TestReviewFixes:
         _set_day(st, "2026-10-05", "2026-10-09", [])  # no strength_long
         sat = _day(ac.build_athlete_context(st, TODAY), "2026-10-10")
         # finger_maintenance_gym on Sunday is tagged finger (not hard): a max-hang
-        # custom on Saturday would make the replanner downgrade it.
+        # custom on Saturday sits inside the finger spacing. D287: since A301 that
+        # is the ``finger_gap`` ALERT — the reason no longer says the replanner
+        # «la declasserebbe a regeneration_easy» (nothing is rewritten).
         assert sat["finger_max_ok"] is False
-        assert any("finger_maintenance_gym" in r and "declasserebbe" in r for r in sat["finger_reasons"])
+        assert any("finger_maintenance_gym" in r and "alert finger_gap" in r for r in sat["finger_reasons"])
+        assert not any("declasserebbe" in r for r in sat["finger_reasons"])
 
     def test_finger_spacing_follows_recovery_multiplier(self):
         st = _state()

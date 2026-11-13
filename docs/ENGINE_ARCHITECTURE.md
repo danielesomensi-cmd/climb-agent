@@ -1,6 +1,6 @@
 # ENGINE_ARCHITECTURE.md — How the Engine Works
 
-> **Last verified:** 2026-03-27 (D163)
+> **Last verified:** 2026-03-27 (D163); §3 Macrocycle and §4 Weekly Planner re-verified against the code on 2026-11-12 (D287)
 > This doc explains the **implementation** of the engine — the "how and where."
 > For methodology and rationale → see `DESIGN_GOAL_MACROCICLO_v1.1.md`
 > For canonical enum values and schemas → see `vocabulary_v1.md`
@@ -106,42 +106,56 @@ apply_feedback()                      ← progression_v1.py
 **Entry point:** `generate_macrocycle(goal, assessment_profile, user_state, start_date, total_weeks, *, from_phase) → Dict`
 
 ### What it reads
-- `goal.goal_type`, `goal.discipline` (lead/boulder), `goal.target_grade`, `goal.current_grade`
-- `assessment_profile` — 5-axis scores (0-100)
-- `user_state.trips` — for pre-trip deload windows
+- `goal.goal_type`, `goal.discipline` (`lead` / `boulder` / `all_round` / `both`; missing → `lead` with a warning), `goal.target_grade`, `goal.target_boulder_grade`, `goal.current_grade`, `goal.deadline`
+- `assessment_profile` — 5-axis scores (0-100); durations and weights read four of them (`technique` is no longer an input, A270)
+- `user_state.planning_prefs.phase_weeks` — per-phase week counts the athlete asked for (A284)
+- `user_state.trips` — only for the `pretrip_deload` annotation of a phase (see *Deload and trips*)
 - `user_state.macrocycle` — when `from_phase` is set (incremental regeneration)
 
 ### What it produces
 A macrocycle dict with:
+- `macrocycle_version`, `generated_at`, `start_date`, `end_date`, `total_weeks`
 - `phases[]` — ordered list of 5 phase dicts
-- Each phase: `{phase_id, phase_name, start_week, end_week, duration_weeks, energy_system, domain_weights, session_pool, intensity_cap, notes}`
+- Each phase: `{phase_id, phase_name, start_week, end_week, duration_weeks, energy_system, domain_weights, session_pool, intensity_cap, notes}` (+ `pretrip_deload` when a trip starts in or near it)
 - `goal_snapshot`, `assessment_snapshot` — frozen copies at generation time
+- `warnings` — only when `_validate_goal` returns some
 
 ### Phase duration logic
 
-**Base durations** (hardcoded, `macrocycle_v1.py:_BASE_DURATIONS`):
-- Lead: `base:4, strength_power:3, power_endurance:2, performance:2, deload:1` = 12 weeks
-- Boulder: `base:2, strength_power:4, power_endurance:1, performance:2, deload:1` = 10 weeks
+`_compute_phase_durations(profile, total_weeks, discipline, *, phases, phase_overrides)`. Hardcoded tables in `macrocycle_v1.py` — `boulder` has its own, every other discipline uses the lead ones:
 
-**Weakness adjustment** (`_WEAKNESS_ADJUSTMENTS`): If the weakest axis scores < 50, the relevant phase gets +1 week and another phase gets -1 week:
-```python
-"power_endurance" → extend power_endurance, shrink strength_power
-"endurance"       → extend base, shrink strength_power
-"finger_strength" → extend strength_power, shrink base
-"pulling_strength" → extend strength_power, shrink base
-"technique"       → extend base, shrink performance
-```
+| | base | strength_power | power_endurance | performance | deload |
+|---|---|---|---|---|---|
+| Lead default (`_BASE_DURATIONS_LEAD`, 12 weeks) | 4 | 3 | 2 | 2 | 1 |
+| Lead cap (`_PHASE_CAPS_LEAD`) | 4 | 4 | 3 | 3 | 2 |
+| Lead floor (`_PHASE_FLOORS_LEAD`) | 2 | 2 | 2 | 2 | 1 |
+| Boulder default (`_BASE_DURATIONS_BOULDER`, 10 weeks) | 2 | 4 | 1 | 2 | 1 |
+| Boulder cap (`_PHASE_CAPS_BOULDER`) | 4 | 5 | 3 | 3 | 2 |
+| Boulder floor (`_PHASE_FLOORS_BOULDER`) | 2 | 2 | 1 | 2 | 1 |
 
-**Flex scaling:** After adjustment, the total is scaled to `total_weeks`. The flex phase absorbs the surplus/deficit (lead: `base`; boulder: `strength_power`).
+For a full cycle `total_weeks` must be at least 11 for lead (`_MIN_TOTAL_WEEKS_LEAD`) and 8 for boulder (`_MIN_TOTAL_WEEKS_BOULDER`); in every scope it must lie between the sum of the floors and the sum of the caps of the phases in scope (a pinned phase counts for its fixed size) and never exceed 16 (`_MAX_TOTAL_WEEKS`) — otherwise `ValueError`.
 
-**Floor enforcement:** Min 2 weeks per non-deload phase (lead), min 1 (boulder), min 1 for deload.
+Steps, in order:
+1. **Defaults** for the phases in scope.
+2. **Overrides (A284):** `planning_prefs.phase_weeks` = `{phase_id: weeks}`, each an int within [floor, cap] (else `ValueError`). An overridden phase is **locked**: steps 3–4 never move it.
+3. **Weakness shift** (`_WEAKNESS_ADJUSTMENTS`): `_find_weakest_axis` reads `power_endurance`, `endurance`, `finger_strength`, `pulling_strength` (missing = 50). If the weakest scores < 50, one phase gets +1 week and another −1:
+   ```python
+   "power_endurance"  → extend power_endurance, shrink strength_power
+   "endurance"        → extend base, shrink strength_power
+   "finger_strength"  → extend strength_power, shrink base
+   "pulling_strength" → extend strength_power, shrink base
+   ```
+   Only when both phases are in scope and unlocked, the extended one stays ≤ its cap and the shrunk one ≥ its **auto floor** (`_AUTO_FLOORS_*` = the floors, except lead `base` = 4: the athlete may ask for a 2-week base, the engine never shortens it by itself). Otherwise a clean no-op — on lead only the `power_endurance` shift can apply, because `base` sits at both its cap and its auto floor. The table still carries a `technique` row that nothing reaches (A270).
+4. **Surplus / shortfall:** the weeks missing to `total_weeks` are handed out in `_SURPLUS_PRIORITY_*` order up to the caps (lead: performance, strength_power, power_endurance, deload — never `base`; boulder: performance, strength_power, power_endurance, base, deload); weeks in excess are taken back in the reverse order down to the auto floors. There is no flex phase; `ValueError` when it does not fit.
 
 ### from_phase="current" behavior
 
-When regenerating from a specific phase:
-1. Phases before `from_phase` are **kept verbatim** from the existing macrocycle.
-2. `_compute_remaining_durations()` allocates the remaining weeks among the phases from `from_phase` onward.
+When regenerating from a specific phase (the router `backend/api/routers/macrocycle.py` resolves `"current"` to the phase in progress with `current_phase_and_week()`; the engine receives a phase id):
+1. Phases before `from_phase` (in `PHASE_ORDER`) are **kept verbatim** from the existing macrocycle.
+2. `_compute_phase_durations(..., phases=<from_phase onward>, phase_overrides=...)` allocates `total_weeks` minus the weeks of the kept phases — the same steps as above, restricted to the phases in scope.
 3. The start week continues from where kept phases ended.
+
+`ValueError` when there is no existing macrocycle or the phase id is unknown.
 
 ### Monday invariant
 
@@ -154,29 +168,31 @@ This happens in both `generate_macrocycle()` and `generate_phase_week()`.
 
 ### Domain weight adjustment
 
-`_adjust_domain_weights(base_weights, profile)` modifies the phase's base weights:
-- Score < 50 → +0.05 to the relevant domain
+`_adjust_domain_weights(base_weights, profile)` modifies the phase's base weights (`_BASE_WEIGHTS`; `_BASE_WEIGHTS_BOULDER` for `boulder`), per axis (missing = 50):
+- Score < 35 → +0.10 to the relevant domain
+- Score 35–49 → +0.05
 - Score > 75 → -0.03 (min 0.02)
-- Then renormalize to sum = 1.0
+- Then renormalize to sum = 1.0 (3 decimals)
 
-Axis-to-weight mapping (`macrocycle_v1.py:line ~390`):
+Axis-to-weight mapping:
 ```python
 "finger_strength"  → "finger_strength"
 "pulling_strength" → "pulling_strength"
 "power_endurance"  → "power_endurance"
-"technique"        → "technique"
 "endurance"        → "volume_climbing"
 ```
+The `technique` and `core_prehab` weights are fixed per phase — only the renormalization moves them. The technique axis stopped driving the weights with A270 / D266.
 
 ### Session pool construction
 
-`_build_session_pool(phase_id, discipline)` returns an ordered list: **primary** sessions (sorted alphabetically) first, then **available** sessions. The pool definitions are hardcoded in `_SESSION_POOL` (lead) and `_SESSION_POOL_BOULDER` (`macrocycle_v1.py:lines 69-208`).
+`_build_session_pool(phase_id, discipline, assessment_profile)` returns an ordered list: **primary** sessions (sorted alphabetically) first, then **available** sessions (same order). The pool definitions are hardcoded in `_SESSION_POOL` (lead) and `_SESSION_POOL_BOULDER`; `all_round` / `both` merge the two (primary in either stays primary). A258 (`_PROFILE_CONDITIONAL_SESSIONS`): `pulling_strength_gym` joins the `strength_power` pool as primary when `pulling_strength` < `WEAK_AXIS_THRESHOLD` (50), in every discipline.
 
 ### Deload and trips
 
-- `apply_deload_week()` strips hard/max sessions, caps at 5 sessions total.
-- `compute_pretrip_dates()` computes which dates in a week fall within the 5-day pre-trip window.
-- `should_extend_phase()` / `should_trigger_adaptive_deload()` provide feedback-driven phase extension and emergency deload triggers.
+- `apply_deload_week(week_plan)` — called by `generate_phase_week` when `phase_id == "deload"`. Walks the days in order: drops every session tagged `hard`, keeps the first 5 of the others and drops the rest, sets `phase = "deload"` and `targets = {hard_days: 0, finger_days: 0}`. Nothing replaces a dropped session (the docstring says otherwise; `DELOAD_SESSION_POOL` is not read by it) and the test is the `hard` tag, not the intensity.
+- **Trip taper (A281)** — `compute_taper_windows(trips, week_start, week_end)` → `{"volume": {date: multiplier}, "no_hard": [dates]}`: volume ×0.6 on T-14..T-8 and ×0.4 on T-7..T-1 (`TAPER_WEEK1_VOLUME` / `TAPER_WEEK2_VOLUME`; the lower multiplier wins when trips overlap), no hard / max session on T-2..T (`TAPER_NO_HARD_DAYS` = 3). `backend/api/routers/week.py` passes `no_hard` to the planner as `pretrip_dates` and `volume` as `taper_volume`; the multiplier travels on the day (`taper_volume_multiplier`) and scales the sets of training work at resolution (`week.py::_apply_taper_volume`).
+- The older 5-day helpers — `compute_pretrip_dates()`, `check_pretrip_deload()` and the `pretrip_deload` annotation `generate_macrocycle` puts on a phase (`_check_pretrip_overlap`) — are still in the module but no longer feed the planner.
+- No adaptive phase duration: there is no feedback-driven phase extension or emergency deload. Overreach is handled per exercise by the closed loop (§8).
 
 **Cross-ref:** `DESIGN_GOAL_MACROCICLO_v1.1.md §4` for Hörst 4-3-2-1 rationale, `§8` for deload model.
 
@@ -190,12 +206,13 @@ The most complex module. Generates a 7-day plan for a single macrocycle week.
 
 ### `_SESSION_META` — The session metadata registry
 
-Hardcoded dict at `planner_v2.py:lines 38-72`. Maps every `session_id` to its planning properties:
+Hardcoded dict in `planner_v2.py`. Maps every `session_id` to its planning properties:
 
 | Field | Type | Meaning |
 |-------|------|---------|
-| `hard` | bool | Counts against `hard_cap_per_week`; subject to spacing constraints |
-| `finger` | bool | Requires 48h gap from other finger sessions |
+| `hard` | bool | Counts against the weekly hard-day cap; subject to the hard gap |
+| `finger` | bool | Subject to the finger gap from other finger sessions (calendar days, see *Limits shared by the passes*) |
+| `pulling` | bool? | Trains pulling — read by PASS 2.6 |
 | `intensity` | str | `"low"` / `"medium"` / `"high"` / `"max"` — gated by phase cap |
 | `climbing` | bool | **Hardcoded.** True = placed in Pass 1 alongside hard sessions |
 | `location` | tuple | Allowed locations, e.g. `("gym",)`, `("home", "gym")` |
@@ -205,64 +222,107 @@ Hardcoded dict at `planner_v2.py:lines 38-72`. Maps every `session_id` to its pl
 | `test` | bool? | Assessment session — bypasses intensity cap in Pass 3 |
 | `supplementary` | bool? | (In session JSON, not META.) Excluded from auto-planning, quick-add only |
 
-`_SESSION_META` is the **sole source of truth** for planning flags. Session JSONs may carry their own `supplementary` flag, but the planner reads `hard`, `finger`, `climbing`, `intensity` exclusively from `_SESSION_META`.
+`_SESSION_META` is the source of the planning flags of the engine's own sessions: PASS 1 – 2.6 and the legacy PASS 3 read `hard`, `finger`, `pulling`, `climbing`, `intensity` from it and nowhere else. A session with no entry (a custom session) is seen only by the code that reads `stimulus.session_flag` — the session's own `tags` first, else `_SESSION_META`: PASS 3a, PASS 2.7, the user / crag / lived-day anchors and `guards_v1`. Session JSONs may carry their own `supplementary` flag.
 
 ### `_INTENSITY_TO_LOAD`
 
-Fallback load scores for unresolved sessions (`planner_v2.py:line 77`):
+Fallback load scores for unresolved sessions:
 ```python
 {"low": 20, "medium": 40, "high": 65, "max": 85}
 ```
 Used in `_make_session_entry()` to set `estimated_load_score` before resolution.
 
+### Limits shared by the passes
+
+Computed once, before PASS 1:
+
+- **Intensity cap:** `intensity_cap`, else `PHASE_INTENSITY_CAP[phase_id]` (base `medium`, strength_power `max`, power_endurance `high`, performance `max`, deload `low`), filters the pool; what is left is split into `primary_pool` (`hard` or `climbing`, `_is_primary_session`) and `complementary_pool`. Tests and the phase-declared candidates of PASS 2.7 bypass it.
+- **Hard-day cap:** `effective_hard_cap = min(hard_cap_per_week, planning_prefs.hard_day_cap_per_week)` — the argument defaults to 3 and `week.py` passes the same preference — and `0` in deload. Declared crag days (B382), lived hard days (B390) and the user's own hard sessions (B414) count against it before PASS 1.
+- **Gaps are calendar days, not hours:** `hard_gap_days = finger_gap_days = ceil(1 × planning_prefs.recovery_multiplier)` (D83; default 1.0 → 1). A placement is refused when the distance in days from a hard (resp. finger) day is `<= gap`: by default never on consecutive days. The slots are not read, so this is not a 48 h guarantee — an evening session and a morning one two days later are allowed. PASS 1 / 1.5 look backwards at the last hard / finger day (and at the anchors on both sides, `_near_anchor`); the later passes check any distance.
+- **Training days vs sessions:** `target_training_days_per_week` (default 4; under 18 capped at 4, D81) is how many **days** are kept — the others are pruned by *Day scoring for cap* (`day_pruned_but_available`). `target_sessions_per_week` (A283: an int 1–21, else ignored; raised to the target days; under 18 = the target days) is how many **sessions**, and only PASS 2.2 reads it.
+
 ### The multi-pass algorithm
+
+Stages of `generate_phase_week` in execution order (the pass numbers are historical, not the order):
+
+| # | Stage | `explain` label | What it does |
+|---|-------|-----------------|--------------|
+| 1 | PASS 1 | `pass1:primary` | One primary session per kept day |
+| 2 | PASS 1.5 | `pass1.5:climbing_fallback` | Climbing fallback on gym days without routes |
+| 3 | PASS 2 | `pass2:complementary` | Complementary session on the empty kept days |
+| 4 | PASS 2.2 | `pass2.2:extra_slot` | A second, non-hard session on multi-slot days |
+| 5 | PASS 2.5 | `pass2.5:finger_floor` | Finger quality floor |
+| 6 | PASS 2.6 | `pass2.6:pulling_maintenance` | Weekly pulling stimulus |
+| 7 | PASS 3a | `pass3:retest_policy` | Tests decided by the retest policy (§8.2) |
+| 8 | PASS 3 | `pass3:test_session`, `pass3:test_session_empty_day` | Legacy test injection |
+| 9 | PASS 2.7 | `pass2.7:key_stimulus` | Key stimuli |
+| 10 | A281 sweep | — | Drops hard / max sessions on pre-trip no-hard days |
+| 11 | Plan build, deload | — | Day entries and summary; `apply_deload_week` in deload |
+| 12 | Complementary pass | — | Fills the `role: "complementary"` slots (A300) |
 
 #### PASS 1 — Primary sessions (hard + climbing)
 
 **Day ordering:** Gym-available days first, then home-only, preserving weekday order within groups. This ensures climbing sessions (which need gym) get placed before home-only days are considered.
 
-**Session iteration:** Round-robin through `primary_pool` with constraint checks per session × day:
+**Session iteration:** Round-robin through `primary_pool` (at most two cycles, one session per day) with constraint checks per session × day:
 1. **Anti-repetition:** `max_per_week` cap (permanent skip, burns uses).
 2. **Other-activity intensity reduction:** No hard sessions on days with other sports.
 3. **Pre-trip deload:** No hard/max sessions on pretrip dates.
 4. **Hard day cap:** `hard_days >= effective_hard_cap` (permanent skip).
-5. **Finger spacing:** 48h gap from last finger session (extended by `recovery_multiplier`).
-6. **Hard spacing:** No consecutive hard/max days (extended by `recovery_multiplier`).
-7. **Preferred equipment deferral (B160d):** If a session has `preferred_equipment` and this day's gym lacks it, check if a later day has it — if yes, defer.
+5. **Finger spacing:** Not within `finger_gap_days` of the last finger day.
+6. **Anchors (B382 / B414):** Not within the gaps of a declared crag day or of a finger / hard session of the user's, on either side (`_near_anchor`).
+7. **Hard spacing:** Not within `hard_gap_days` of the last hard day.
+8. **Preferred equipment deferral (B160d):** If a session has `preferred_equipment` and this day's gym lacks it, check if a later day has it — if yes, defer.
 
-On success: `_find_best_slot()` finds the best available slot (evening > morning > lunch for primary), `_make_session_entry()` builds the plan entry.
+On success: `_find_best_slot()` finds the best available slot (evening > morning > lunch for primary; a slot with `max_minutes` refuses a longer session), `_make_session_entry()` builds the plan entry.
 
 **B161:** Previous week's trailing sessions seed the spacing constraints (negative offsets -7 to -1).
 
 #### PASS 1.5 — Climbing fallback
 
-Triggers only when the pool has climbing sessions that all require `gym_routes` but the day's gym only has `gym_boulder`. Injects fallback sessions from `_CLIMBING_FALLBACKS` = `("technique_focus_gym", "easy_climbing_deload")`.
+Triggers only when the pool has climbing sessions that all require `gym_routes` but the day's gym only has `gym_boulder`, on a day PASS 1 left empty. Injects fallback sessions from `_CLIMBING_FALLBACKS` = `("technique_focus_gym", "easy_climbing_deload")`.
 
 #### PASS 2 — Complementary sessions
 
-Fills remaining empty days (up to `target_training_days_per_week`) with non-primary sessions. Slot preference is reversed: lunch > morning > evening.
+Fills remaining empty days (up to `target_training_days_per_week`) with non-primary sessions (round-robin through `complementary_pool`, `max_per_week` and slot fit only). Slot preference is reversed: lunch > morning > evening.
 
-#### PASS 2.2 — Extra slot filling (B121)
+#### PASS 2.2 — Extra slot filling (B121 / A283)
 
-When total sessions < target AND a day has unused slots, places additional **non-hard** sessions in the extra slots. This handles multi-slot days (e.g., lunch + evening available).
+When total sessions < `session_target` = `min(target_sessions_per_week or target days, available slots on the kept days)` AND a day that already has a session has an unused slot, places an additional **non-hard** session there (`max_per_week`, finger gap). At most one extra session per day: it covers the lunch + evening split, not three sessions a day.
 
-#### PASS 2.5 — PE finger maintenance guarantee
+#### PASS 2.5 — Finger quality floor (A282)
 
-In `power_endurance` phase: if no `finger_maintenance_*` session was placed, forcibly injects one — either replacing a complementary session or filling an empty day.
+Outside deload, when the phase's `domain_weights.finger_strength` ≥ `QUALITY_FLOOR_WEIGHT` (0.10) and no placed session is tagged `finger`: places one, trying `finger_maintenance_home`, `finger_maintenance_gym`, then the other non-test finger sessions of the pool. `_place_quality_floor` goes from the least invasive option:
+1. an empty day among those kept;
+2. in place of a non-primary session that does not carry the tag, on a kept day;
+3. a day the target-days pruning dropped (`day_pruned_but_available`), non-hard sessions only — a deliberate day beyond `target_training_days_per_week` (decided 2026-09-05).
 
-#### PASS 3 — Test session injection
+The hard cap, the hard gap and the finger gap always hold, and outdoor days are skipped. Nothing placeable → `unmet_stimulus` row `{stimulus: "finger_strength", phase_id, weight, reason}`. (Until A282 this was a `power_endurance`-only guarantee.)
 
-Triggers on the last week of `base` or `strength_power` phase, or when `inject_tests=True`.
+#### PASS 2.6 — Weekly pulling stimulus (B308)
+
+Outside deload, when no placed session is tagged `pulling` (no weight threshold): places one non-test `pulling` session of the pool on a kept day — an empty one, or in place of a non-primary session. It does not use the cascade above (never a pruned day). Hard cap, hard gap and finger gap hold; nothing placeable → `unmet_stimulus` row `{stimulus: "pulling", phase_id, reason}`.
+
+#### PASS 3a — Tests decided by the retest policy (A289)
+
+Active when `retest_decisions` is passed and `inject_tests` is false: places the tests the policy requires on the week as the B369 merge will save it (`_merge_preview`). The policy, the day rules and the reporting are in §8.2. The axes it owns are skipped by PASS 3.
+
+#### PASS 3 — Test session injection (legacy)
+
+Runs when `inject_tests=True`, on the last week of `base` or `strength_power`, or when a `test_queue` entry is due (`recommended_by_date` within the week, B346).
 
 **Test schedule:**
-1. `test_max_hang_5s` (or `test_lp_max_5s` if `finger_device == "loading_pin"`) — finger test
-2. Pulling test — `test_max_weighted_pullup` or `test_pullup_bw` (B128: routed by `_pick_pulling_test_session()`; A319: when no day takes the 2RM with weights, `test_pullup_bw` on the first day the 2RM passed every pass-1 rule but found no weights — where it went before A319)
-3. `test_repeater_7_3` (or `test_lp_repeater`) — finger test, 48h gap from #1
+1. `test_max_hang_7s` (or `test_lp_max_5s` if `finger_device == "loading_pin"`) — finger test, required
+2. `test_repeater_7_3` (or `test_lp_repeater`) — repeater test, required
+3. Pulling test, optional — `test_max_weighted_pullup` or `test_pullup_bw` (B128: routed by `_pick_pulling_test_session()`; A319: when no day takes the 2RM with weights, `test_pullup_bw` on the first day the 2RM passed every pass-1 rule but found no weights — where it went before A319)
+4. Queued tests not already listed (`_TEST_QUEUE_SESSION`), required
 
-**Freshness filter (B128):** Tests completed within `TEST_FRESHNESS_DAYS` = 42 days are skipped.
+**Phase gate (D92 / B191):** `_PHASE_TEST_MAP` — `base` and `power_endurance` test the repeater only, `strength_power` all three axes, `performance` and `deload` none. Bypassed by `inject_tests`, by a queued test, and for an axis last tested `MAX_WEEKS_UNTESTED` (12) weeks ago or more; a gated test goes to `skipped_tests`.
+
+**Freshness filter (B128):** Tests completed within `TEST_FRESHNESS_DAYS` = 42 days are skipped (not with `inject_tests`, B210).
 
 Tests bypass the phase intensity cap. Placement is **two-pass** (B297 / D211-F9):
-- **Pass 1 — replace:** a test replaces an existing session (prefer complementary targets, fall back to last session on the day). This is the historical path, unchanged.
+- **Pass 1 — replace:** a test replaces an existing session (prefer complementary targets, fall back to last session on the day). The victim is chosen before the slot (B359); the finger / hard gap is checked unless the victim already carries that flag, then the hard cap.
 - **Pass 2 — empty-day fill (`required` only):** a `required` test that Pass 1 could not place may occupy an empty available day (adds a session, +1 weekly volume), still honoring finger/hard spacing, the hard cap, and outdoor/pre-trip exclusions. Optional tests stay replace-only.
 
 Any test that still cannot be placed is recorded in `week_plan.skipped_tests` with `reason="no_placement_slot"` (plus `required`), instead of being silently dropped. The `/week` view surfaces the `required` ones so the user can free up a day.
@@ -304,6 +364,14 @@ no new `guards_v1` alert. A requirement still short → `unmet_stimulus` row
 can carry with the equipment (or the pool's discipline) is left to A294's hint. Entries carry
 `explain: ["pass2.7:key_stimulus", "key:<key>", "replaced:<victim>"]`.
 
+#### A281 no-hard sweep
+
+After every placement pass above: on each `pretrip_dates` day, any session tagged `hard` or with `intensity == "max"` is dropped, without replacement. PASS 1 already refuses those sessions; the sweep catches what the later passes (floors, tests, key stimuli) put back.
+
+#### Plan build and deload transform
+
+Day entries carry `outdoor_slot` (outdoor availability), `pretrip_deload` (a `pretrip_dates` day), `taper_volume_multiplier` (from `taper_volume`, when < 1.0), `other_activities` and `prev_other_activity_reduce`. The plan carries `profile_snapshot` (phase, weights, pool, intensity cap, locations, `hard_cap_per_week` = the effective cap, `recovery_multiplier`, and `retest_decisions` when passed), `weekly_load_summary`, `weeks[0].targets = {hard_days: effective_hard_cap, finger_days}`, `skipped_tests` and `unmet_stimulus` (the rows of PASS 2.5, 2.6 and 2.7). In the `deload` phase `apply_deload_week()` (§3) then runs on the built plan and the load summary is recomputed.
+
 #### Complementary pass (A300, `complementary_v1.place_complementary`)
 
 Runs **last**, after the deload transform. A slot with `role: "complementary"` is hidden from every pass above
@@ -321,7 +389,7 @@ no-op, plan byte-identical. See vocabulary §5.7.3.
 
 ### Availability normalization
 
-`_normalize_availability()` handles 13 input cases (`planner_v2.py:lines 237-326`):
+`_normalize_availability()` handles 13 input cases:
 - Missing day → rest
 - `day: True` → available with home fallback
 - `{available: False}` → rest
@@ -339,11 +407,13 @@ no-op, plan byte-identical. See vocabulary §5.7.3.
 
 ### Day scoring for cap
 
-When available days exceed `target_training_days_per_week`, days are scored and the top N kept:
+When available days exceed `target_training_days_per_week`, days are scored (summed over the day's available slots) and the top N kept, ties to the earlier weekday:
 - Gym preferred: +100
 - Gym available: +50
 - Evening slot: +10
 - Home-only: +1
+
+A day dropped here is remembered as `day_pruned_but_available` — the day the last step of the PASS 2.5 cascade may use.
 
 ### Youth cap (D81)
 
@@ -351,11 +421,11 @@ Users under 18: `target_days = min(target_days, 4)`.
 
 ### Recovery multiplier (D83)
 
-`recovery_multiplier` from `planning_prefs` extends the minimum gaps between hard and finger sessions: `hard_gap_days = ceil(1 * recovery_multiplier)`.
+`recovery_multiplier` from `planning_prefs` extends the minimum gaps between hard and finger sessions: `hard_gap_days = finger_gap_days = ceil(1 * recovery_multiplier)`, in calendar days (see *Limits shared by the passes*).
 
 ### Homewall expansion (B137/B159)
 
-`_expand_session_locations()` adds `"home"` to a session's locations if the user's home equipment satisfies all required equipment (e.g., homewall with `gym_boulder`).
+`_expand_session_locations()` adds `"home"` to a session's locations if the user's home equipment satisfies all required equipment (e.g., homewall with `gym_boulder`). B208: only for sessions that require a wall surface (`BOULDER_SURFACES` or `gym_routes`) — a gym session that needs only a hangboard, a bar or weights stays at the gym.
 
 ---
 
@@ -632,7 +702,7 @@ separate adaptation module.
 > have double-penalised after a `fail`: the load cut from `apply_feedback` **and**
 > a cluster substitution/×0.9 downshift), the mechanism was removed to simplify
 > the P0 resolver. The reactive-recovery need it targeted is already covered by
-> the proactive schedule (finger 48h hard gap, DUP spacing, hard caps) and the
+> the proactive schedule (finger gap in calendar days, DUP spacing, hard caps) and the
 > live load progression; injury spacing for fingers lives in
 > `replanner_v1._enforce_finger_gap` and is untouched.
 >
@@ -1136,7 +1206,7 @@ Applied **after** the phase sort. Auto-fix with logging when violated:
 3. **ARC before pump** — `aerobic_pure` before `threshold`/`pe_intervals`
 4. **Max hangs before pulling** — `strength_neural` before `pulling_supplementary`
 5. **Accessories after main** — `core`/`antagonist_prehab` after all main work categories
-6. **Declared "after warm-up" blocks (C276)** — an instance whose catalog block declares `"order": "after_warmup"` (`source.order`, set by the resolver only where declared) moves right after the leading warm-up / activation exercises. Applied last. Today only the fall blocks of `lead_tryhard_gym` and `route_projecting_gym` (falls while fresh, athlete_plan §5) — without it the phase sort put them after the redpoint attempts.
+6. **Declared "after warm-up" blocks (C276)** — an instance whose catalog block declares `"order": "after_warmup"` (`source.order`, set by the resolver only where declared) moves right after the leading warm-up / activation exercises. Applied last. Declared today by the fall blocks of `lead_tryhard_gym` and `route_projecting_gym` (falls while fresh, athlete_plan §5 — without it the phase sort put them after the redpoint attempts), by the four lift blocks of `arms_shoulders_handstand_lunch` (A318; since D287 the handstand blocks carry no `order`, so the wall hold closes the session) and by the finger warm-up, max hang and 2RM blocks of `test_max_hang_pullup` (A319).
 
 ### P0 invariant
 

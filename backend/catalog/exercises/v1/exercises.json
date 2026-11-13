@@ -14523,7 +14523,7 @@
         "work_seconds": 1800,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": null,
-        "notes": "Walk, do not run. Incline 10-12% at 5-5.5 km/h. No treadmill: any sustained uphill walk works."
+        "notes": "Walk, do not run. The target is the heart-rate band (60-70% of max HR), not a speed. Starting point: about 10% incline at 5 km/h; give the heart rate 5 min to settle, then adjust. Above the band: lower the speed first, then the incline. Below it: raise the incline. The heart rate creeps up during a long walk: slow down again when it does. No treadmill: any sustained uphill walk works."
       },
       "stress_tags": {
         "fingers": "none",
@@ -14533,9 +14533,9 @@
       },
       "description": "Steady-state Zone 2 aerobic work on an inclined treadmill. The most climber-friendly cardio option: walking uphill delivers the same aerobic stimulus as running with a fraction of the joint impact and almost no calf soreness, so it does not compete with the next climbing session. It also rehearses the exact demand of a long crag approach. Aerobic base supports recovery between redpoint attempts and across consecutive days on a climbing trip — it does not build finger strength, and it is not meant to.",
       "cues": [
-        "Incline 10-12%, speed 5-5.5 km/h. Walking, not running — impact is the thing being avoided",
+        "The heart-rate band is the target; incline and speed are the knobs. Start around 10% and 5 km/h; above the band slow down first, then lower the incline. Walking, not running — impact is the thing being avoided",
         "Target 60-70% of max heart rate. Use a measured max heart rate (Settings, profile): the age formula can be off by 10 bpm or more",
-        "Note: the default Zone 2 on most sport watches sits below the physiological aerobic threshold — aim for the top of that band, not the middle",
+        "Note: sport watches define Zone 2 in different ways — follow this band (60-70% of your max heart rate; its upper half is fine), never above its top",
         "Talk test: you must be able to say a full sentence without breaking the breath",
         "Do not hold the handrails — it offloads the legs and voids the incline",
         "No treadmill? A hill, a stair machine or a loaded pack on any slope all work"
@@ -14591,7 +14591,7 @@
         "cns": "medium",
         "skin": "none"
       },
-      "description": "The classic 4x4 interval protocol (Helgerud 2007) run on an inclined treadmill: four 4-minute bouts close to maximal aerobic power, separated by 3 minutes of active recovery. It is the most time-efficient way to raise VO2max, which supports recovery between redpoint attempts and long days at the crag. Zero finger and elbow load, but it is a genuinely hard systemic session: one per week is enough, never on the day of or the day before a maximal climbing session.",
+      "description": "The classic 4x4 interval protocol (Helgerud 2007) run on an inclined treadmill: four 4-minute bouts close to maximal aerobic power, separated by 3 minutes of active recovery. It is the most time-efficient way to raise VO2max, which supports recovery between redpoint attempts and long days at the crag. Zero finger and elbow load, but it is a genuinely hard systemic session: one per week is enough, never in the 24 h before a maximal climbing session.",
       "cues": [
         "Intervals at 90-95% of max heart rate: hard but sustainable for the full 4 minutes, not a sprint",
         "Set the incline at 4-8% and choose the speed that holds the target heart rate, not the other way round",
@@ -18273,7 +18273,7 @@
         "work_seconds": 5,
         "rest_between_reps_seconds": 20,
         "rest_between_sets_seconds": 60,
-        "notes": "Big toe presses down into a bathroom scale at about 90% effort for 5 s, then the lesser toes. Per foot. Monthly reference reading."
+        "notes": "Sit on a chair with a bathroom scale on the floor in front of one foot. Heel on the floor, only the pad of the big toe on the edge of the scale (the ball of the foot stays off it). Press the pad straight down at about 90% effort for 5 s, toe flat (no curl), then relax for the rest shown: each rep is one press. The sets shown are the whole dose per foot: big toe first, the last set with the four lesser toes together. No scale: press into the floor at the same effort (no reading)."
       },
       "stress_tags": {
         "fingers": "none",
@@ -18283,9 +18283,12 @@
       },
       "description": "Cheap, low-fatigue toe flexor strength (Goldmann 2013 used near-maximal isometrics). Supports the pressure skill on small feet; it does not replace it — transfer to climbing is plausible but weakly evidenced.",
       "cues": [
-        "Press with the toe pad, no claw",
-        "Heel down",
-        "Near-max, never painful"
+        "Seated, heel on the floor, only the toe pad on the edge of the scale",
+        "Press straight down with a flat toe: no claw",
+        "The heel stays down, the knee does not push forward and you do not lean on it",
+        "About 90% effort for 5 s, never painful — if the arch cramps, stop and pull the toes back",
+        "Reading: the kg the scale shows during the big-toe press, per foot — note the best one once a month, same chair and same setup",
+        "No scale? Press into the floor at the same effort: it works, you just cannot measure it"
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
@@ -18295,7 +18298,7 @@
         "https://fis.dshs-koeln.de/en/publications/the-potential-of-toe-flexor-muscles-to-enhance-performance/"
       ],
       "progression": "Monthly retest; at +10% keep the same dose.",
-      "measure": "Scale reading (kg) once a month."
+      "measure": "Scale reading (kg) of the big-toe press, per foot, once a month."
     },
     {
       "id": "edge_calf_raise_bigtoe",

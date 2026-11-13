@@ -40,7 +40,9 @@ A293 fallback is gone). A failure is reported as ``source: "error"`` and the
 warning ``KEY_SESSIONS_ERROR`` — never an empty section.
 
 Read-only by construction: nothing here writes tests, baselines, working loads
-or week plans. Past sessions are only read.
+or week plans. Past sessions are only read. A week flagged stale (B369) is read
+as stored and named (``stale_weeks`` / warning ``STALE_WEEK``, D287): only
+``GET /api/week`` regenerates it, never this module.
 """
 
 from __future__ import annotations
@@ -94,14 +96,16 @@ from backend.engine.stimulus import (
 DateLike = Union[date, str]
 ArchivedWeeks = Optional[Union[Mapping[str, Any], Sequence[Mapping[str, Any]]]]
 
-VERSION = "b414.2"
+VERSION = "d287.1"
 
 # ---------------------------------------------------------------------------
 # Constants. Shared with the engine, never copied: the command and the docs
 # read them from here.
 # ---------------------------------------------------------------------------
 
-#: 48 h between finger-hard days (planner ``_enforce_no_consecutive_finger``).
+#: 48 h between finger-hard days. Since A301 the rule is the ``finger_gap``
+#: ALERT of ``guards_v1`` — nothing is rewritten (the replanner's
+#: ``_enforce_no_consecutive_finger`` has no engine caller left).
 FINGER_GAP_H = rp.FINGER_GAP_H
 #: A hang test is blocked 72 h after a finger-hard day (retest only).
 RETEST_BLOCK_H = rp.RETEST_BLOCK_H
@@ -117,6 +121,9 @@ VARIETY_WEEKS = 3
 #: Look-ahead of the upcoming / guards sections.
 UPCOMING_DAYS = 14
 GUARD_DAYS = 8
+#: D287: B369's flag on a cached week that the next ``GET /api/week``
+#: regenerates (``deps.STALE_KEY``; the engine never imports the API layer).
+STALE_WEEK_KEY = rp._STALE_KEY
 #: Try-hard outcome window (TECH logging decision: 4 weeks).
 TRYHARD_WINDOW_D = 28
 #: PE phase: max gap between two limit sessions (decision 2026-10-04).
@@ -459,6 +466,39 @@ def _stale_custom_tags(state: Mapping[str, Any], today: date, archived_weeks: Ar
     return out
 
 
+def _stale_weeks(state: Mapping[str, Any], today: date) -> List[Dict[str, Any]]:
+    """D287: the stored weeks of the reported window that carry B369's stale flag.
+
+    ``deps.mark_weeks_stale`` flags a cached current / future week when a
+    setting changes (availability, planning prefs, weekly override, new cycle,
+    resume, test request). The week is regenerated — through the preserving
+    merge — only inside the next ``GET /api/week/{n}``. Until then every
+    section here (upcoming, guards, key sessions) reads the OLD copy without
+    saying so, and the coach re-checked 14 days by hand. This names the weeks.
+
+    Window: the weeks the ``upcoming`` section covers (this Monday's week up to
+    the week of ``today + UPCOMING_DAYS - 1``). A past week is never
+    regenerated, so a leftover flag on one is not reported. The plan looked at
+    is the one the other sections read (``stimulus.iter_plan_days``) and the
+    one GET /api/week would regenerate: the ``week_plans`` entry, else the
+    legacy ``current_week_plan`` when it is that week.
+
+    Read-only: nothing is regenerated here and the flag is not cleared."""
+    plans = state.get("week_plans") or {}
+    cur = state.get("current_week_plan")
+    ws, last = _monday(today), _monday(today + timedelta(days=UPCOMING_DAYS - 1))
+    out: List[Dict[str, Any]] = []
+    while ws <= last:
+        key = ws.isoformat()
+        plan = plans.get(key)
+        if not isinstance(plan, Mapping):
+            plan = cur if isinstance(cur, Mapping) and str(cur.get("start_date") or "")[:10] == key else None
+        if plan is not None and plan.get(STALE_WEEK_KEY):
+            out.append({"week_start": key, "week_end": (ws + timedelta(days=6)).isoformat()})
+        ws += timedelta(days=7)
+    return out
+
+
 def _recent(state: Mapping[str, Any], today: date, archived_weeks: ArchivedWeeks,
             outdoor_rows: Optional[Sequence[Mapping[str, Any]]]) -> Dict[str, Any]:
     days = _plan_days(state, archived_weeks)
@@ -537,8 +577,10 @@ def _hard_cap_of_week(state: Mapping[str, Any], week_start: date) -> Optional[in
 
 
 def _finger_spacing_gap(state: Mapping[str, Any], d: date) -> int:
-    """Days of finger spacing the replanner enforces around ``d``: its own
-    ``_recovery_gap`` (``ceil(recovery_multiplier)`` of the week's snapshot)."""
+    """Days of finger spacing around ``d``: the replanner's ``_recovery_gap``
+    (``ceil(recovery_multiplier)`` of the week's snapshot) — the same gap the
+    ``finger_gap`` alert of ``guards_v1`` reads. A301: an alert, not an
+    enforcement."""
     from backend.engine.replanner_v1 import _recovery_gap
 
     plan = (state.get("week_plans") or {}).get(_monday(d).isoformat()) or {}
@@ -553,9 +595,11 @@ def _guards(
     (tags, stimuli, tests, outdoor-hard rule) — never from a load score.
 
     Finger: 48 h from finger-hard days, the 72 h hang-test block, AND the
-    replanner's own spacing (``_enforce_no_consecutive_finger``): any session
+    finger spacing of the ``finger_gap`` alert (``guards_v1``): any session
     tagged ``finger`` within ``ceil(recovery_multiplier)`` days — a max-hang
-    custom next to a finger_maintenance would downgrade it. Heavy pulling: every
+    custom next to a finger_maintenance raises that alert. A301 / D287: it is
+    an ALERT, nothing is moved or downgraded (``_enforce_no_consecutive_finger``
+    has no engine caller left), and the reason says so. Heavy pulling: every
     rolling 7-day window that contains the day, past AND planned days. Both also
     respect the week's hard cap (0 in deload) and the deload phase. HIIT (B405):
     a lunch HIIT is not ok less than 24 h before a max session
@@ -648,6 +692,14 @@ def _guards(
                 worst = inwin
         return worst
 
+    def spacing_reason(other: str, gap: int) -> str:
+        """D287: the real consequence of a finger day inside the spacing of the
+        finger-tagged day ``other`` — the ``finger_gap`` alert of guards_v1
+        (A301). The text used to say the neighbour «la declasserebbe a
+        regeneration_easy»: nothing rewrites a session any more."""
+        return (f"sessione con tag dita il {other} ({', '.join(finger_tagged[other])}) entro lo spacing dita "
+                f"di {gap} gg: scatterebbe l'alert finger_gap (solo alert, nulla viene spostato né declassato)")
+
     mc = state.get("macrocycle")
     rows: List[Dict[str, Any]] = []
     for k in range(GUARD_DAYS):
@@ -668,15 +720,11 @@ def _guards(
         for j in range(1, gap + 1):
             before, after = (d - timedelta(days=j)).isoformat(), (d + timedelta(days=j)).isoformat()
             if before in finger_tagged and not (j == 1 and before in fh):
-                reasons_finger.append(
-                    f"sessione con tag dita il {before} ({', '.join(finger_tagged[before])}): giorni dita "
-                    f"entro lo spacing del replanner ({gap} gg)")
+                reasons_finger.append(spacing_reason(before, gap))
                 codes_finger.append({"code": "finger_spacing",
                                      "detail": f"{before} {', '.join(finger_tagged[before])} ({gap} d)"})
             if after in finger_tagged and not (j == 1 and after in fh):
-                reasons_finger.append(
-                    f"sessione con tag dita il {after} ({', '.join(finger_tagged[after])}): spacing del "
-                    f"replanner {gap} gg, la declasserebbe a regeneration_easy")
+                reasons_finger.append(spacing_reason(after, gap))
                 codes_finger.append({"code": "finger_spacing",
                                      "detail": f"{after} {', '.join(finger_tagged[after])} ({gap} d)"})
         hang_tests = tests_within(d, RETEST_BLOCK_H // 24, "test_max_hang")
@@ -1154,6 +1202,13 @@ def _warnings(ctx: Mapping[str, Any]) -> List[Dict[str, Any]]:
                     "message": f"tag obsoleti su {row['session_id']} del {row['date']} {row['slot']} "
                                f"({diff}): salvati all'inserimento con regole vecchie; riallinearla con "
                                f"remove_session + add_custom_session (dry run, OK di Daniele)"})
+    for row in ctx.get("stale_weeks") or []:
+        # D287: one line per week — the plan printed above is the stored copy.
+        out.append({"code": "STALE_WEEK", "week_start": row["week_start"],
+                    "message": f"settimana {row['week_start']} → {row['week_end']} marcata _stale (B369): il piano "
+                               "mostrato qui è la copia salvata e può cambiare al prossimo GET /api/week, che la "
+                               "rigenera (restano fatte, saltate e sessioni dell'utente); il contesto è in sola "
+                               "lettura e non la rigenera"})
     out.extend(ctx.get("work_checks") or [])
     return out
 
@@ -1206,6 +1261,7 @@ def build_athlete_context(
         "key_sessions_next_week": None,
         "upcoming": _upcoming(st, td, arch),
         "stale_custom_tags": _stale_custom_tags(st, td, arch, cat),
+        "stale_weeks": _stale_weeks(st, td),
         "recent": _recent(st, td, arch, rows),
         "recent_exercises": recent_exercises(st, td, archived_weeks=arch, catalog=cat),
         "athlete_notes": _athlete_notes(st, td, arch),
@@ -2506,7 +2562,7 @@ def drop_heavy_pulls(
 
 __all__ = [
     "VERSION", "FINGER_GAP_H", "RETEST_BLOCK_H", "PULL_TEST_BLOCK_H", "HEAVY_PULL_MAX_PER_7D",
-    "OVERUSED_MIN", "VARIETY_WEEKS",
+    "OVERUSED_MIN", "VARIETY_WEEKS", "STALE_WEEK_KEY",
     "ATHLETE_PLAN_PATH", "NOTES_BEGIN", "NOTES_END",
     "build_athlete_context", "render_text", "extract_plan_notes", "load_exercise_catalog",
     "key_requirements_for", "key_matches", "WARMUP_TECHNIQUE_DRILLS",

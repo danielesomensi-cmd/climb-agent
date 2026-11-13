@@ -1,14 +1,14 @@
 {
   "id": "arms_shoulders_handstand_lunch",
   "name": "Arms, Shoulders + Handstand (Lunch)",
-  "version": "1.1",
+  "version": "1.2",
   "supplementary": true,
   "intent": {
     "primary_goal": "strength_general",
     "secondary_goals": [
       "handstand_skill"
     ],
-    "notes": "Lunch-break session at a weights gym, about 55 min: handstand practice first, then shoulders (overhead press 4x8, lateral raise 4x12), triceps 4x10 and biceps 4x8, then floor core (side plank, hollow hold). The handstand goes first on purpose, right after the warm-up: it is a balance skill, it needs fresh shoulders and triceps to keep the elbows locked, and an upside-down fall with pre-fatigued deltoids is the risk this order avoids. Its dose is low-fatigue practice (never to failure), so the lifts after it lose very little. Loaded lifts at RIR 1-2 (one or two clean reps left in the tank); loads come from your working loads and move with your feedback. For a dumbbell exercise the load is per dumbbell (one hand). No finger load, no hanging, no heavy pull. The curl is elbow-flexor work: keep it away from the 24 h before a heavy pulling session. After the overhead press, the isolation exercises appear in the engine's generic order: any order among them works. In a deload week the app already drops one set from every exercise: stop every set at RIR 3."
+    "notes": "Lunch-break session at a weights gym, about 55 min: shoulders (overhead press 4x8, lateral raise 4x12), triceps 4x10 and biceps 4x8, then floor core (side plank, hollow hold) and handstand practice last. The handstand closes the session on purpose: it needs a free wall and room around it, and by the end of the lunch hour the crowd has usually thinned out. By then shoulders and triceps are already worked, so it stays practice and never a set to failure: both drills are chest to the wall, keep every hold well short of failure and come down as soon as the elbows soften or the shoulders sink, while you can still walk the feet down under control. Loaded lifts at RIR 1-2 (one or two clean reps left in the tank); loads come from your working loads and move with your feedback. For a dumbbell exercise the load is per dumbbell (one hand). No finger load, no hanging, no heavy pull. The curl is elbow-flexor work: keep it away from the 24 h before a heavy pulling session. The four lifts appear in the engine's generic order: any order among them works, and the overhead press can go first if you want your best numbers on it. After the lifts the floor core and the toe pulls follow the same generic order, and the wall handstand hold is always the last exercise. In a deload week the app already drops one set from every lift and floor core exercise (the handstand practice keeps its sets): stop every lift at RIR 3."
   },
   "compatibility": {
     "slot": [
@@ -36,7 +36,7 @@
       "required": true,
       "priority": 110,
       "module_role": "general_warmup",
-      "notes": "Short pulse raise before going upside down.",
+      "notes": "Short pulse raise before the lifts.",
       "selection": {
         "primary": {
           "exercise_id": "general_pulse_raise",
@@ -88,8 +88,7 @@
       "required": false,
       "priority": 100,
       "module_role": "primary",
-      "order": "after_warmup",
-      "notes": "Balance first, while the nervous system is fresh: toe pulls from a chest-to-wall handstand, the bridge to a freestanding handstand.",
+      "notes": "Balance practice at the end of the session: toe pulls from a chest-to-wall handstand, the bridge to a freestanding handstand. The shoulders are already worked: stop well before failure.",
       "selection": {
         "primary": {
           "exercise_id": "heel_pulls_chest_to_wall",
@@ -97,7 +96,7 @@
             "sets": 3,
             "reps": 3,
             "rest_between_sets_seconds": 60,
-            "notes": "3 x 3 attempts: walk up chest to the wall (only the toes touch it), pull the toes of one foot off, then the other, and hunt for the balance line for a few seconds. Correct with finger pressure, not with the shoulders. Stop the set when the line gets sloppy: this is practice, not a set to failure."
+            "notes": "Wrists first: 30 s of rocks on flat palms, fingers forward then backward (the warm-up was about 40 min ago). Then 3 x 3 attempts: walk up chest to the wall (only the toes touch it), pull the toes of one foot off, then the other, and hunt for the balance line for a few seconds. Correct with finger pressure, not with the shoulders. The shoulders are tired from the lifts: stop the set when the line gets sloppy or the elbows soften. This is practice, not a set to failure."
           },
           "filters": {
             "role": [
@@ -118,8 +117,7 @@
       "required": true,
       "priority": 98,
       "module_role": "primary",
-      "order": "after_warmup",
-      "notes": "Chest-to-wall handstand hold: the foundation of every other handstand drill, and the measurable target of this block (a clean 30 s hold also opens the next level of the vertical-push ladder).",
+      "notes": "Chest-to-wall handstand hold, always the last exercise of the session: the foundation of every other handstand drill, and the measurable target of this block (a clean 30 s hold also opens the next level of the vertical-push ladder).",
       "selection": {
         "primary": {
           "exercise_id": "wall_handstand_hold",
@@ -127,7 +125,7 @@
             "sets": 4,
             "work_seconds": 30,
             "rest_between_sets_seconds": 60,
-            "notes": "Target: 4 x 30 s clean, belly to the wall, hands 15-20 cm from it. Push the floor away, ribs closed, glutes tight. Come down when the shoulders sink or the back arches, and log the seconds of your weakest hold."
+            "notes": "If the toe pulls were skipped, start with 30 s of wrist rocks on flat palms. Target: 4 x 30 s clean, belly to the wall, hands 15-20 cm from it. Push the floor away, ribs closed, glutes tight. Walk the feet down as soon as the shoulders sink, the elbows soften or the back arches, while you can still do it under control: after the lifts a clean shorter hold is worth more than a sagging 30 s. Log the seconds of your weakest hold."
           },
           "filters": {
             "role": [
@@ -149,7 +147,7 @@
       "priority": 95,
       "module_role": "secondary",
       "order": "after_warmup",
-      "notes": "Vertical press for the shoulders, the heaviest lift of the session, done right after the handstand while you are still fresh. The same movement every time so the load can progress from feedback.",
+      "notes": "Vertical press for the shoulders, the heaviest lift of the session: the app may list it after the curl and the lateral raise, do it first of the four lifts if you want your best numbers on it. The same movement every time so the load can progress from feedback.",
       "selection": {
         "primary": {
           "exercise_id": "overhead_press",
@@ -180,6 +178,7 @@
       "required": false,
       "priority": 90,
       "module_role": "secondary",
+      "order": "after_warmup",
       "notes": "Lateral raise for the side of the shoulder, which climbing barely trains.",
       "selection": {
         "primary": {
@@ -211,6 +210,7 @@
       "required": true,
       "priority": 85,
       "module_role": "secondary",
+      "order": "after_warmup",
       "notes": "Triceps in the stretched position: an overhead extension with one dumbbell, so the long head works where the cable pushdown of the push lunch does not reach.",
       "selection": {
         "primary": {
@@ -245,6 +245,7 @@
       "required": true,
       "priority": 80,
       "module_role": "secondary",
+      "order": "after_warmup",
       "notes": "Elbow flexion with a neutral grip: the hammer curl puts the brachialis and brachioradialis to work, the flexors that hold a lock-off (the push lunch has the supinated curl). Never a weighted pull-up or chin-up.",
       "selection": {
         "primary": {
@@ -314,7 +315,7 @@
       "required": false,
       "priority": 70,
       "module_role": "accessory",
-      "notes": "Floor core to close: hollow hold, the line the handstand needs; a tested athlete gets his L-sit or rollout ladder level instead (else his hollow ladder). No hanging, no front lever.",
+      "notes": "Floor core before the handstand hold: hollow hold, the line the handstand needs; a tested athlete gets his L-sit or rollout ladder level instead (else his hollow ladder). No hanging, no front lever.",
       "ladder_pin": {
         "families": [
           "compression_floor",

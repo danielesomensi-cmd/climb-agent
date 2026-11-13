@@ -41,7 +41,7 @@ def _codes(ctx: dict) -> dict:
 
 class TestAthleteContext:
     def test_version(self):
-        assert ac.VERSION == "b414.2"
+        assert ac.VERSION == "d287.1"
 
     def test_valid_far_from_the_expiry_says_only_the_date(self):
         ctx = _ctx(a289._daniele(), "2026-11-07")

@@ -157,6 +157,14 @@ pick of ``pe_boulder`` disappears (``rfd_explosive_pulls`` /
 ``one_arm_pullup_assisted`` instead of ``pullup``). Finger blocks unchanged
 here (already ≤ medium); the cue is free text (stripped). Every other key and
 the pools unchanged.
+
+D287 (handstand at the end of ``arms_shoulders_handstand_lunch``: the
+``order: after_warmup`` flag moves from the handstand pair + the press to the
+four lifts) changed the 6 keys of that session, order only. Raw diff of the
+stripped output against the HEAD session file (ladder off and on, every
+profile and slot): with the instances sorted by ``exercise_id``, and
+``session_version`` / ``source.order`` set aside, the outputs are identical —
+no id, dose, load or rest moved. Every other key and the pools unchanged.
 """
 
 from __future__ import annotations

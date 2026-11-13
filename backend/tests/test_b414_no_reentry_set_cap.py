@@ -87,7 +87,7 @@ class TestSetsAfterAGap:
 class TestAthleteContextAndLegacy:
     def test_anchor_rows_carry_no_ramp(self):
         ctx = ac.build_athlete_context(_daniele(), GAP_DAY, with_proposals=False, include_next_week=False)
-        assert ctx["version"] == ac.VERSION == "b414.2"
+        assert ctx["version"] == ac.VERSION == "d287.1"
         rows = [r for r in ((ctx.get("anchors") or {}).get("exercises") or {}).values() if r]
         assert rows and all("ramp" not in r for r in rows)
         assert "reentry_sets" not in ac.render_text(ctx) + ac.render_coach_block(ctx)

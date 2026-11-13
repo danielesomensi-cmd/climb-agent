@@ -1,17 +1,17 @@
 {
  "advanced|2026-10-07|arms_shoulders_handstand_lunch": {
-  "digest": "3970974469d6ce315ea50bde6c3af1b37b09edf385d0be04199799b70f971a29",
+  "digest": "cfdedef7f07f6136605f16928dc9019f78bc88c817dee93936c5e68ecc587355",
   "exercise_ids": [
    "general_pulse_raise",
    "mobility_thoracic_shoulders_flow",
-   "heel_pulls_chest_to_wall",
-   "wall_handstand_hold",
-   "overhead_press",
-   "core_hollow_hold",
-   "side_plank",
    "hammer_curl",
    "lateral_raise",
-   "overhead_tricep_extension"
+   "overhead_press",
+   "overhead_tricep_extension",
+   "core_hollow_hold",
+   "heel_pulls_chest_to_wall",
+   "side_plank",
+   "wall_handstand_hold"
   ]
  },
  "advanced|2026-10-07|boulder_circuit_gym": {
@@ -512,18 +512,18 @@
   ]
  },
  "advanced|2026-10-21|arms_shoulders_handstand_lunch": {
-  "digest": "cbb211e5e50447713eb82d68a1dde5055b7369f35cb0d2a998afbbed525f022d",
+  "digest": "05118cd1f989ddf9e94f0fdfa95f1bcc3e4b072038ebb3b42c721b968439351f",
   "exercise_ids": [
    "general_pulse_raise",
    "mobility_thoracic_shoulders_flow",
-   "heel_pulls_chest_to_wall",
-   "wall_handstand_hold",
-   "overhead_press",
-   "core_hollow_hold",
-   "side_plank",
    "hammer_curl",
    "lateral_raise",
-   "overhead_tricep_extension"
+   "overhead_press",
+   "overhead_tricep_extension",
+   "core_hollow_hold",
+   "heel_pulls_chest_to_wall",
+   "side_plank",
+   "wall_handstand_hold"
   ]
  },
  "advanced|2026-10-21|boulder_circuit_gym": {
@@ -1015,18 +1015,18 @@
   ]
  },
  "daniele|2026-10-13|base|arms_shoulders_handstand_lunch": {
-  "digest": "ec03a8a9d9ec0878f03297837c3162529da23a0edd17ab1898f54796b5beb697",
+  "digest": "95f471a60ac2baf7777fce3c161a2f7d6aaf5bf5519f14994a801c68a3e3a9fb",
   "exercise_ids": [
    "general_pulse_raise",
    "mobility_thoracic_shoulders_flow",
-   "heel_pulls_chest_to_wall",
-   "wall_handstand_hold",
-   "overhead_press",
-   "copenhagen_dynamic",
-   "core_l_sit",
    "hammer_curl",
    "lateral_raise",
-   "overhead_tricep_extension"
+   "overhead_press",
+   "overhead_tricep_extension",
+   "copenhagen_dynamic",
+   "core_l_sit",
+   "heel_pulls_chest_to_wall",
+   "wall_handstand_hold"
   ]
  },
  "daniele|2026-10-13|base|legs_maintenance_lunch": {
@@ -1066,18 +1066,18 @@
   ]
  },
  "daniele|2026-10-13|strength_power|arms_shoulders_handstand_lunch": {
-  "digest": "ec03a8a9d9ec0878f03297837c3162529da23a0edd17ab1898f54796b5beb697",
+  "digest": "95f471a60ac2baf7777fce3c161a2f7d6aaf5bf5519f14994a801c68a3e3a9fb",
   "exercise_ids": [
    "general_pulse_raise",
    "mobility_thoracic_shoulders_flow",
-   "heel_pulls_chest_to_wall",
-   "wall_handstand_hold",
-   "overhead_press",
-   "copenhagen_dynamic",
-   "core_l_sit",
    "hammer_curl",
    "lateral_raise",
-   "overhead_tricep_extension"
+   "overhead_press",
+   "overhead_tricep_extension",
+   "copenhagen_dynamic",
+   "core_l_sit",
+   "heel_pulls_chest_to_wall",
+   "wall_handstand_hold"
   ]
  },
  "daniele|2026-10-13|strength_power|legs_maintenance_lunch": {
@@ -1117,18 +1117,18 @@
   ]
  },
  "daniele|2026-10-27|power_endurance|arms_shoulders_handstand_lunch": {
-  "digest": "ec03a8a9d9ec0878f03297837c3162529da23a0edd17ab1898f54796b5beb697",
+  "digest": "95f471a60ac2baf7777fce3c161a2f7d6aaf5bf5519f14994a801c68a3e3a9fb",
   "exercise_ids": [
    "general_pulse_raise",
    "mobility_thoracic_shoulders_flow",
-   "heel_pulls_chest_to_wall",
-   "wall_handstand_hold",
-   "overhead_press",
-   "copenhagen_dynamic",
-   "core_l_sit",
    "hammer_curl",
    "lateral_raise",
-   "overhead_tricep_extension"
+   "overhead_press",
+   "overhead_tricep_extension",
+   "copenhagen_dynamic",
+   "core_l_sit",
+   "heel_pulls_chest_to_wall",
+   "wall_handstand_hold"
   ]
  },
  "daniele|2026-10-27|power_endurance|legs_maintenance_lunch": {
@@ -1168,18 +1168,18 @@
   ]
  },
  "daniele|2026-11-10|performance|arms_shoulders_handstand_lunch": {
-  "digest": "ec03a8a9d9ec0878f03297837c3162529da23a0edd17ab1898f54796b5beb697",
+  "digest": "95f471a60ac2baf7777fce3c161a2f7d6aaf5bf5519f14994a801c68a3e3a9fb",
   "exercise_ids": [
    "general_pulse_raise",
    "mobility_thoracic_shoulders_flow",
-   "heel_pulls_chest_to_wall",
-   "wall_handstand_hold",
-   "overhead_press",
-   "copenhagen_dynamic",
-   "core_l_sit",
    "hammer_curl",
    "lateral_raise",
-   "overhead_tricep_extension"
+   "overhead_press",
+   "overhead_tricep_extension",
+   "copenhagen_dynamic",
+   "core_l_sit",
+   "heel_pulls_chest_to_wall",
+   "wall_handstand_hold"
   ]
  },
  "daniele|2026-11-10|performance|legs_maintenance_lunch": {
@@ -1219,18 +1219,18 @@
   ]
  },
  "daniele|2026-11-17|performance|arms_shoulders_handstand_lunch": {
-  "digest": "ec03a8a9d9ec0878f03297837c3162529da23a0edd17ab1898f54796b5beb697",
+  "digest": "95f471a60ac2baf7777fce3c161a2f7d6aaf5bf5519f14994a801c68a3e3a9fb",
   "exercise_ids": [
    "general_pulse_raise",
    "mobility_thoracic_shoulders_flow",
-   "heel_pulls_chest_to_wall",
-   "wall_handstand_hold",
-   "overhead_press",
-   "copenhagen_dynamic",
-   "core_l_sit",
    "hammer_curl",
    "lateral_raise",
-   "overhead_tricep_extension"
+   "overhead_press",
+   "overhead_tricep_extension",
+   "copenhagen_dynamic",
+   "core_l_sit",
+   "heel_pulls_chest_to_wall",
+   "wall_handstand_hold"
   ]
  },
  "daniele|2026-11-17|performance|legs_maintenance_lunch": {
@@ -1270,18 +1270,18 @@
   ]
  },
  "daniele|2026-12-01|deload|arms_shoulders_handstand_lunch": {
-  "digest": "e6f62057ea30c47a3f3dcb1c80e773721335a7c9e44e60645a7c3e825edc4fde",
+  "digest": "78001e0786b6f78c6ccded13db61826249aef054c222758eaa060fe089932ced",
   "exercise_ids": [
    "general_pulse_raise",
    "mobility_thoracic_shoulders_flow",
-   "heel_pulls_chest_to_wall",
-   "wall_handstand_hold",
-   "overhead_press",
-   "copenhagen_dynamic",
-   "core_l_sit",
    "hammer_curl",
    "lateral_raise",
-   "overhead_tricep_extension"
+   "overhead_press",
+   "overhead_tricep_extension",
+   "copenhagen_dynamic",
+   "core_l_sit",
+   "heel_pulls_chest_to_wall",
+   "wall_handstand_hold"
   ]
  },
  "daniele|2026-12-01|deload|legs_maintenance_lunch": {
@@ -1321,18 +1321,18 @@
   ]
  },
  "intermediate|2026-10-07|arms_shoulders_handstand_lunch": {
-  "digest": "99b59622e7b2a93d3c28e98ccb5034248bccae706df4228eb7de8a5f36ccd6fa",
+  "digest": "a31d3fa9d7bcd585398f10214928aa3586230cc45bd620aed8d0a120f26226dd",
   "exercise_ids": [
    "general_pulse_raise",
    "mobility_thoracic_shoulders_flow",
-   "heel_pulls_chest_to_wall",
-   "wall_handstand_hold",
-   "overhead_press",
-   "core_hollow_hold",
-   "side_plank",
    "hammer_curl",
    "lateral_raise",
-   "overhead_tricep_extension"
+   "overhead_press",
+   "overhead_tricep_extension",
+   "core_hollow_hold",
+   "heel_pulls_chest_to_wall",
+   "side_plank",
+   "wall_handstand_hold"
   ]
  },
  "intermediate|2026-10-07|boulder_circuit_gym": {
@@ -1833,18 +1833,18 @@
   ]
  },
  "intermediate|2026-10-21|arms_shoulders_handstand_lunch": {
-  "digest": "1caadb2156cbd6f30132fa00a8bfb4b38c1c4a08163542001a22706fd3334ff4",
+  "digest": "bb6718cc6ea7d0bb526ba28d3213aa46591fa4221baba971f7dcd12f63912a87",
   "exercise_ids": [
    "general_pulse_raise",
    "mobility_thoracic_shoulders_flow",
-   "heel_pulls_chest_to_wall",
-   "wall_handstand_hold",
-   "overhead_press",
-   "core_hollow_hold",
-   "side_plank",
    "hammer_curl",
    "lateral_raise",
-   "overhead_tricep_extension"
+   "overhead_press",
+   "overhead_tricep_extension",
+   "core_hollow_hold",
+   "heel_pulls_chest_to_wall",
+   "side_plank",
+   "wall_handstand_hold"
   ]
  },
  "intermediate|2026-10-21|boulder_circuit_gym": {

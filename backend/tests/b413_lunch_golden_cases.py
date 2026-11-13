@@ -70,6 +70,14 @@ instances sorted by ``instance_id``, stripped output identical). The lunches
 B414 (step 16, one PE block) changed 4 keys: ``power_endurance_gym`` × the
 two slots × ``advanced`` / ``intermediate`` — the same PE-block change as in
 the C272 golden (one PE drill instead of two). Lunches unchanged.
+
+D287 (handstand at the end of ``arms_shoulders_handstand_lunch``) changed 10
+keys, order only: that session × ``advanced`` / ``intermediate`` × the two
+slots (4) and × ``daniele`` × the six slots (6). Same check as in the C272
+golden (instances sorted by ``exercise_id``, ``session_version`` and
+``source.order`` set aside: stripped output identical). Daniele's order is now
+the four lifts, Copenhagen dynamic, L-sit, toe pulls, wall handstand hold.
+Every other key identical; :data:`CHANGED_BY_D4` is still the same 40 keys.
 """
 
 from __future__ import annotations
