@@ -145,6 +145,8 @@ profile without an account — nothing entered there is stored.
 
 The lunch strength sessions keep their lifts in a deload week, with one set fewer already in the plan (squat 4 sets, Romanian deadlift 3, split squat 2, dumbbell bench press 4, fly, triceps and curl 3, and the push-up block 2 when the gym has no rings — with rings, the ring push-up follows its ladder, which drops a set as well) — stop every set at RIR 3.
 
+**A reduced week inside the cycle (only when you need it).** There is no scheduled easy week in the middle of the cycle. If you rate two sessions *very hard* within 7 days, or you have an active pain report, the coach suggests one reduced week — same climbing days, half the sets, one short finger session, no intervals and no tests — and you can also ask the coach for one. It is only a suggestion: your plan does not change unless you decide it. It is not suggested in the five weeks after a trip taper, nor right before or during the deload.
+
 ---
 
 ## 3. Your Weekly Routine

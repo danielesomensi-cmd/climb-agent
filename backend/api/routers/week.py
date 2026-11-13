@@ -1081,6 +1081,19 @@ def get_week(
     # per-session matching would read their null slot as a wildcard.
     result["week_guard_warnings"] = build_week_guard_warnings(state, week_plan, today, user_id=user_id)
 
+    # A328 (b) — D288 R3-b: the reduced-week alert of the current week, a
+    # sibling of week_plan like the guards (never persisted, never applied).
+    # Present only when a reduced week is suggested.
+    if is_current_week:
+        try:
+            from backend.engine.reduced_week import alert_text, suggestion
+
+            _rw = suggestion(state, _client_today(today))
+            if _rw.get("suggested"):
+                result["reduced_week"] = dict(_rw, message=alert_text(_rw))
+        except Exception:
+            logger.warning("A328: reduced-week alert failed — omitted", exc_info=True)
+
     return result
 
 

@@ -1322,8 +1322,42 @@ def _warnings(ctx: Mapping[str, Any]) -> List[Dict[str, Any]]:
                                "mostrato qui è la copia salvata e può cambiare al prossimo GET /api/week, che la "
                                "rigenera (restano fatte, saltate e sessioni dell'utente); il contesto è in sola "
                                "lettura e non la rigenera"})
+    rw = ctx.get("reduced_week") or {}
+    if rw.get("suggested"):
+        out.append({"code": "REDUCED_WEEK_SUGGESTED", "week_start": rw.get("week_start"),
+                    "reasons": list(rw.get("reasons") or []),
+                    "message": f"settimana ridotta suggerita dal {rw.get('week_start')} "
+                               f"({', '.join(_REDUCED_WEEK_IT.get(r, r) for r in rw.get('reasons') or [])}): "
+                               "stessi giorni, serie × 0,5, una esposizione dita a −10 %, limit corto o tecnica, "
+                               "niente PE né test. Solo un avviso: si applica solo con l'OK di Daniele "
+                               "(custom / rimozioni), il motore non la applica"})
+    elif rw.get("reasons") and rw.get("skipped"):
+        out.append({"code": "REDUCED_WEEK_SKIPPED", "skipped": rw["skipped"],
+                    "reasons": list(rw.get("reasons") or []),
+                    "message": f"settimana ridotta NON suggerita ({_REDUCED_WEEK_IT.get(rw['skipped'], rw['skipped'])}) "
+                               f"nonostante: {', '.join(_REDUCED_WEEK_IT.get(r, r) for r in rw.get('reasons') or [])}"})
     out.extend(ctx.get("work_checks") or [])
     return out
+
+
+#: A328 (b): Italian labels of the reduced-week reasons / skips.
+_REDUCED_WEEK_IT: Dict[str, str] = {
+    "very_hard_7d": "2+ sedute very_hard negli ultimi 7 giorni",
+    "pain_block": "blocco dolore attivo",
+    "athlete_request": "richiesta dell'atleta",
+    "recent_taper": "taper di un viaggio nelle ultime 5 settimane",
+    "deload_soon": "il deload è questa settimana o la prossima",
+}
+
+
+def _reduced_week(state: Mapping[str, Any], today: date, requested: bool) -> Dict[str, Any]:
+    """A328 (b): ``reduced_week.suggestion`` — never fatal for the context."""
+    from backend.engine import reduced_week as _rw
+
+    try:
+        return _rw.suggestion(state, today, requested=requested)
+    except Exception as exc:  # pragma: no cover - defensive: the context must render
+        return {"suggested": False, "reasons": [], "skipped": None, "error": str(exc)}
 
 
 # ---------------------------------------------------------------------------
@@ -1339,12 +1373,17 @@ def build_athlete_context(
     catalog: Optional[Mapping[str, Mapping[str, Any]]] = None,
     with_proposals: bool = True,
     include_next_week: bool = True,
+    reduced_week_request: bool = False,
 ) -> Dict[str, Any]:
     """The read-only athlete context on ``today``. See the module docstring.
 
     ``with_proposals`` / ``include_next_week`` (A297): the in-app composer
     needs neither the catch-up proposals (each one is a replanner simulation)
-    nor next week's key view, so it turns them off to stay fast."""
+    nor next week's key view, so it turns them off to stay fast.
+
+    ``reduced_week_request`` (A328 b): the athlete asked the coach for a
+    reduced week — the R3-b alert then lists ``athlete_request``; nothing is
+    written or applied."""
     st: Dict[str, Any] = copy.deepcopy(dict(state or {}))
     arch = copy.deepcopy(archived_weeks) if archived_weeks is not None else None
     rows = copy.deepcopy(list(outdoor_rows)) if outdoor_rows is not None else None
@@ -1388,6 +1427,8 @@ def build_athlete_context(
         "trips": _trips(st, td),
         "bw_ladders": _bw_ladders(st, td, arch),
         "technique_library": _technique_library(cat),
+        # A328 (b): the R3-b reduced-week alert (alert only, never applied).
+        "reduced_week": _reduced_week(st, td, reduced_week_request),
     }
     if position.get("available") and include_next_week:
         # Planning view: the next week too (no proposals: they are only made
@@ -2379,6 +2420,11 @@ def render_coach_block(ctx: Mapping[str, Any], *, max_chars: int = COACH_BLOCK_M
     flags = _load_flags_lines_en(ctx)
     if flags:
         L.extend(flags)
+    rw = ctx.get("reduced_week") or {}
+    if rw.get("suggested"):  # A328 (b): R3-b alert, never applied by the engine
+        from backend.engine.reduced_week import alert_text
+
+        L.append("- Reduced week (suggestion only, the athlete decides): " + (alert_text(rw) or ""))
     notes = ctx.get("athlete_notes") or []
     if notes:
         L.append("The athlete's own notes on recent exercises (his words, newest first — take them into "

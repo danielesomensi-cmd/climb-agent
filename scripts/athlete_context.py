@@ -502,6 +502,8 @@ def _parse_args(argv: Optional[List[str]]) -> argparse.Namespace:
     p.add_argument("--replace", action="store_true", help="simula remove_session dello slot occupato")
     p.add_argument("--location", help="location della custom simulata (default home)")
     p.add_argument("--gym-id", help="gym_id della custom simulata")
+    p.add_argument("--reduced-week", action="store_true",
+                   help="A328 (b): l'atleta chiede una settimana ridotta (solo avviso, non scrive niente)")
     return p.parse_args(argv)
 
 
@@ -529,7 +531,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         return EXIT_NO_STATE
 
     ctx = ac.build_athlete_context(state, today, archived_weeks=data.get("archived_weeks"),
-                                   outdoor_rows=data.get("outdoor_rows"))
+                                   outdoor_rows=data.get("outdoor_rows"),
+                                   reduced_week_request=bool(args.reduced_week))
     sim = None
     if args.simulate:
         sim = simulate(state, _read_json(args.simulate) or {}, args.target_date, args.slot,
