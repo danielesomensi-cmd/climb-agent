@@ -869,6 +869,27 @@ def get_week(
                 logger.warning("A289: retest decisions failed — legacy PASS 3", exc_info=True)
                 _retest_decisions = None
 
+            # A327 step D (D288 R2): the hard crag days of the previous week
+            # and this one, read like the alerts (``outdoor_fatigue_days``:
+            # declared ahead, logged hard / big load, done without a log). The
+            # planner's crag block and finger caps read them; None (a failed
+            # read) falls back on its declared reading (B382(b)).
+            _crag_hard_dates = None
+            try:
+                from backend.engine.replanner_v1 import OUTDOOR_RIPPLE_THRESHOLD as _ORT
+                from backend.engine.stimulus import outdoor_fatigue_days as _ofd
+
+                _we = (datetime.strptime(ctx["start_date"], "%Y-%m-%d") + timedelta(days=6)).strftime("%Y-%m-%d")
+                _crag_days = [d for p in (_prev_week_plan, old_plan) if isinstance(p, dict)
+                              for w in p.get("weeks") or [] for d in w.get("days") or [] if isinstance(d, dict)]
+                _crag_hard_dates = sorted(_ofd(
+                    state, _crag_days, load_threshold=_ORT,
+                    outdoor_rows=_retest_outdoor_rows(user_id, ctx["start_date"]),
+                    since=prev_start, until=_we, today=datetime.now().strftime("%Y-%m-%d")))
+            except Exception:
+                logger.warning("A327: crag days unavailable — declared reading", exc_info=True)
+                _crag_hard_dates = None
+
             week_plan = generate_phase_week(
                 phase_id=ctx["phase_id"],
                 domain_weights=ctx["domain_weights"],
@@ -908,6 +929,7 @@ def get_week(
                 next_week_plan=week_plans.get(
                     (datetime.strptime(ctx["start_date"], "%Y-%m-%d") + timedelta(weeks=1)).strftime("%Y-%m-%d")
                 ),
+                crag_hard_dates=_crag_hard_dates,
             )
         except Exception as e:
             logger.error("Week generation failed: %s", e, exc_info=True)

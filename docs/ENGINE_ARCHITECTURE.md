@@ -1192,8 +1192,20 @@ guards; nothing is rewritten and planner-generated weeks do not change.
 - `athlete_context` gives the same rules as `guards.days[].day_warnings` / `day_warning_codes` (codes
   `finger_hard_cap | max_hang_cap | crag_block`), plus `guards.finger_cap` and `guards.crag_blocks` — advisories
   only, never a reason of `finger_max_ok`, so the composer pool never loses an exercise for them (decision 3).
-- The planner does not enforce them yet (step D): PASS 2.7 and the A294 proposals already reject a placement that
-  adds one of these alerts (`guards_v1.new_warnings`), the other passes do not.
+- **Step D — the planner enforces them on its own placements** (never on the user's: they count and are never
+  moved). Crag days: `generate_phase_week(crag_hard_dates=)` — GET /api/week passes the alerts' log reading
+  (`stimulus.outdoor_fatigue_days` over the previous week + this one, `outdoor_logs` rows); `None` falls back on
+  B382(b)'s declared reading. **Caps:** `_fh_cap_ok(offset, sid, victim)` counts the finger-hard exposure days and
+  max-hang days of the week (engine sessions, lived days, the user's own sessions, the crag days); a day already
+  holding one adds nothing, replacing one is neutral; read by PASS 1, 1.5, 2, 2.2, the floors, 2.6, 2.7 (callback)
+  and legacy PASS 3; PASS 3a uses `_test_cap_ok` on the merged week. **Answer 1:** in strength_power, when the crag
+  days / the user's finger-hard days leave ONE finger-hard day and the pool holds a limit_power session the equipment
+  can host, that day is reserved for it (`_reserve_for_limit`: max hangs wait). **R2:** `guards_v1.crag_runs` over
+  the hard crag days (previous week included): c+1 leaves the engine's days before the pruning (`day_crag_rest`;
+  a complementary lunch is still placed — decision 2), c+2 is a no-hard day (`_no_hard`: PASS 1, 1.5, 2.7, 3a, the
+  floors, 2.6, legacy PASS 3), and `crag_windows` (c 18:00 → +72 h) block a finger-high placement in
+  `_finger_clock_ok` / `_test_clock_ok` / PASS 2.7. After a crag weekend nothing regenerates the next week (answer
+  3): the anchor acts when the week is generated after it. Weeks without crag days or user sessions: unchanged.
 - **Step C — tiers and the 6 h spacing:** `stimulus.finger_load_of(session)` is THE tier reading (stored
   `tags.finger_load` → `_SESSION_META[sid].finger_load` unless `tags.finger` is an explicit False → old `finger`
   tags = high → finger-hard exercises under stale tags = high → None). `session_tags.derive_finger_load`

@@ -924,6 +924,8 @@ def _key_stimulus_pass(
     hard_day_offsets: List[int],
     finger_day_offsets: List[int],
     crag_offsets: Sequence[int] = (),
+    finger_cap_ok: Optional[Any] = None,
+    finger_clock_ok: Optional[Any] = None,
 ) -> List[Dict[str, Any]]:
     """PASS 2.7 (A305) — place the key stimuli the week is missing.
 
@@ -1282,6 +1284,13 @@ def _key_stimulus_pass(
         if res is None:
             return None
         slot, slot_info = res
+        # A327 step D: the weekly finger caps (crag days of the log reading
+        # included) and the crag-block 72 h, with the planner's own counters —
+        # the alert check below sees only the declared crag days.
+        if finger_cap_ok is not None and not finger_cap_ok(o, sid, victim):
+            return None
+        if finger_clock_ok is not None and not finger_clock_ok(o, slot, sid):
+            return None
         entry = _make_session_entry(
             slot, sid, meta, slot_info, locations, phase_id, day_keys[o],
             default_gym_id, gyms or [], "pass2.7:key_stimulus", home_equipment=home_equipment,
@@ -1441,6 +1450,7 @@ def generate_phase_week(
     existing_week_plan: Optional[Dict[str, Any]] = None,
     trip_start_dates: Optional[List[str]] = None,
     next_week_plan: Optional[Dict[str, Any]] = None,
+    crag_hard_dates: Optional[Sequence[str]] = None,
 ) -> Dict[str, Any]:
     """Generate a single week plan within a macrocycle phase.
 
@@ -1717,6 +1727,9 @@ def generate_phase_week(
     finger_low_slots: List[Tuple[int, int]] = []
     finger_high_times: List[Tuple[int, int]] = []
     _low_counted: List[int] = []
+    # A327 step D (D288 R2): after a crag BLOCK no finger-high session starts
+    # before the last crag day's 18:00 + 72 h — (end, ok) on the week clock.
+    crag_windows: List[Tuple[int, int]] = []
 
     def _slot_h(slot: Any) -> int:
         return _SLOT_HOUR.get(str(slot), 19)
@@ -1734,6 +1747,8 @@ def generate_phase_week(
         if tier is None:
             return True
         t = offset * 24 + _slot_h(slot)
+        if tier == "high" and any(end < t < ok for end, ok in crag_windows):
+            return False  # A327 step D: R2, 72 h after a crag block
         if any(abs(t - (o * 24 + h)) < _low_gap_h for o, h in finger_low_slots):
             return False
         if tier == "low":
@@ -1903,6 +1918,15 @@ def generate_phase_week(
     # else ``_SESSION_META``). Ascending offsets, after B161's negatives: PASS
     # 1's backwards gap check reads the last element.
     _past_hard_offsets: List[int] = []
+    # A327 step D (D288 R1): the finger-hard / max-hang days the engine did not
+    # place (lived days, the user's own sessions) — they count in the weekly
+    # caps and are never moved.
+    from backend.engine.stimulus import (
+        is_finger_hard_exposure as _fh_exposure,
+        is_max_hang_session as _mh_session,
+    )
+    _cap_fixed_fh: set = set()
+    _cap_fixed_mh: set = set()
     # B415 (D287 C2): the sessions the merge puts back in this week — the lived
     # done ones (here) and the user's own from today on (B414, below). Read by
     # the floors' presence check (`_week_carries`, PASS 2.5 / 2.6).
@@ -1923,6 +1947,11 @@ def generate_phase_week(
                 hard_days += 1
                 hard_day_offsets.append(offset)
                 _past_hard_offsets.append(offset)
+            # A327 step D: the lived finger-hard / max-hang days count in the caps.
+            if any(_fh_exposure(s) for s in done):
+                _cap_fixed_fh.add(offset)
+            if any(_mh_session(s) for s in done):
+                _cap_fixed_mh.add(offset)
             # A327: a lived high day as before; a lived low session on the clock.
             _tiers = [(s, _finger_load_of(s)) for s in done]
             if any(t == "high" for _s, t in _tiers):
@@ -1985,6 +2014,10 @@ def generate_phase_week(
                 _t = _finger_load_of(x)
                 if _t is not None:
                     _book_finger(offset, x.get("slot"), _t, counted=False)
+            if any(_fh_exposure(x) for x in mine):
+                _cap_fixed_fh.add(offset)
+            if any(_mh_session(x) for x in mine):
+                _cap_fixed_mh.add(offset)
     _user_hard_new = [o for o in _user_hard if o not in crag_in_week and o not in _past_hard_offsets]
     hard_days += len(_user_hard_new)
 
@@ -1998,6 +2031,102 @@ def generate_phase_week(
             for c in crag_offsets
         ) or any(finger and abs(offset - u) <= finger_gap_days for u in _user_finger) \
             or any(hard and abs(offset - u) <= hard_gap_days for u in _user_hard)
+
+    # ── A327 step D (D288 R1 + R2): the engine's own placements only ──
+    # The hard crag days: the log reading of the alerts (``crag_hard_dates``,
+    # ``stimulus.outdoor_fatigue_days`` computed by GET /api/week) when given,
+    # else B382(b)'s declared reading. Previous week included (negative offsets).
+    from backend.engine.guards_v1 import crag_runs as _crag_runs
+    from backend.engine.retest_policy import (
+        CRAG_BLOCK_FINGER_H,
+        FINGER_HARD_WEEKLY_MAX,
+        MAX_HANG_WEEKLY_MAX,
+    )
+
+    if crag_hard_dates is not None:
+        _hard_crag: List[int] = []
+        for _cd in crag_hard_dates:
+            try:
+                _co = (_parse_date(str(_cd)[:10]) - start).days
+            except (TypeError, ValueError):
+                continue
+            if -7 <= _co < 7:
+                _hard_crag.append(_co)
+        _hard_crag = sorted(set(_hard_crag))
+    else:
+        _hard_crag = list(crag_offsets)
+    _hard_crag_in_week = [o for o in _hard_crag if 0 <= o < 7]
+    # R2: after a run of ≥ 2 crag days, c+1 is a true rest day (no engine
+    # session; a complementary lunch is placed later and keeps it a rest day —
+    # Daniele, decision 2), c+2 holds no hard session, no finger-high session
+    # before c's 18:00 + 72 h (``crag_windows``, read by ``_finger_clock_ok``).
+    day_crag_rest: List[bool] = [False] * 7
+    day_crag_no_hard: List[bool] = [False] * 7
+    for _run in _crag_runs({(start + timedelta(days=o)).isoformat(): True for o in _hard_crag}):
+        _c = (_parse_date(_run[-1]) - start).days
+        _end = _c * 24 + _OUT_END
+        crag_windows.append((_end, _end + CRAG_BLOCK_FINGER_H))
+        _r1, _r2 = _c + 1, _c + 2
+        if 0 <= _r1 < 7 and not day_is_outdoor[_r1] and (today_date is None or day_dates[_r1] >= today_date):
+            day_crag_rest[_r1] = True
+            day_has_available_slot[_r1] = False
+        if 0 <= _r2 < 7:
+            day_crag_no_hard[_r2] = True
+
+    def _no_hard(o: int) -> bool:
+        """No hard session on day ``o``: other-sport day (as before) or the
+        second day after a crag block (A327)."""
+        return bool(day_intensity_reduced[o] or day_crag_no_hard[o])
+
+    def _probe(sid: str) -> Dict[str, Any]:
+        m = _SESSION_META.get(sid) or {}
+        return {"session_id": sid, "tags": {"hard": bool(m.get("hard")), "finger": bool(m.get("finger"))}}
+
+    def _cap_days(skip: Optional[Tuple[int, int]] = None) -> Tuple[set, set]:
+        fh = set(_hard_crag_in_week) | _cap_fixed_fh
+        mh = set(_cap_fixed_mh)
+        for o in range(7):
+            for i, e in enumerate(day_sessions[o]):
+                if skip == (o, i) or not isinstance(e, dict):
+                    continue
+                if _fh_exposure(e):
+                    fh.add(o)
+                if _mh_session(e):
+                    mh.add(o)
+        return fh, mh
+
+    from backend.engine.stimulus import FAMILY_LIMIT_POWER, session_stimuli as _stimuli_of
+
+    def _is_limit(sid: str) -> bool:
+        return FAMILY_LIMIT_POWER in _stimuli_of(_probe(sid))
+
+    # Answer 1 (Daniele, 2026-11-13): a strength-power week whose crag days /
+    # the user's own finger-hard days leave ONE finger-hard day to the engine
+    # gives it to the limit session (not max hangs) — when the pool holds one
+    # the athlete's equipment can host. Decided before PASS 1, cleared once a
+    # limit session is in the week.
+    _reserve_for_limit = False
+
+    def _fh_cap_ok(offset: int, sid: str, victim: Optional[int] = None) -> bool:
+        """A327 step D: ≤ FINGER_HARD_WEEKLY_MAX finger-hard days (crag days
+        included) and ≤ MAX_HANG_WEEKLY_MAX max-hang days in the week. A day
+        that already holds one adds nothing; replacing one is neutral (the
+        victim is not counted), like ``_hard_ok``."""
+        pr = _probe(sid)
+        exp, mh = _fh_exposure(pr), _mh_session(pr)
+        if not exp and not mh:
+            return True
+        fh_days, mh_days = _cap_days((offset, victim) if victim is not None else None)
+        if exp and offset not in fh_days:
+            if len(fh_days) >= FINGER_HARD_WEEKLY_MAX:
+                return False
+            if (_reserve_for_limit and len(fh_days) == FINGER_HARD_WEEKLY_MAX - 1 and not _is_limit(sid)
+                    and not any(_is_limit(str(e.get("session_id") or "")) for o in range(7)
+                                for e in day_sessions[o] if isinstance(e, dict))):
+                return False
+        if mh and offset not in mh_days and len(mh_days) >= MAX_HANG_WEEKLY_MAX:
+            return False
+        return True
 
     # Cap available days to target_training_days_per_week
     available_day_count = sum(day_has_available_slot)
@@ -2054,6 +2183,17 @@ def generate_phase_week(
                 day_available_slots[offset].append(s)
     total_available_slots = sum(len(sl) for sl in day_available_slots)
 
+    # A327 answer 1: the reservation for the limit session (see above).
+    if phase_id == "strength_power":
+        _budget = FINGER_HARD_WEEKLY_MAX - len(set(_hard_crag_in_week) | _cap_fixed_fh)
+        _limit_cands = [sid for sid in primary_pool if _is_limit(sid)]
+        if _budget == 1 and _limit_cands:
+            _reserve_for_limit = any(
+                _find_best_slot(normalized[day_keys[o]], _SESSION_META[sid], locations, prefer_evening=True,
+                                home_equipment=home_equipment, gyms=gyms, default_gym_id=default_gym_id)
+                is not None
+                for sid in _limit_cands for o in range(7) if day_has_available_slot[o])
+
     # ── PASS 1: Place primary sessions (climbing-first) ──
     primary_idx = 0
     primary_uses = 0
@@ -2099,7 +2239,8 @@ def generate_phase_week(
                 permanent_skip = True
 
             # Other-activity intensity reduction: no hard sessions on reduced day — TEMPORARY
-            if not skip and day_intensity_reduced[offset] and meta["hard"]:
+            # A327: nor on the second day after a crag block.
+            if not skip and _no_hard(offset) and meta["hard"]:
                 skip = True
 
             # Pre-trip deload: no hard/max sessions on pretrip dates — TEMPORARY
@@ -2110,6 +2251,11 @@ def generate_phase_week(
             if not skip and meta["hard"] and hard_days >= effective_hard_cap:
                 skip = True
                 permanent_skip = True
+
+            # A327: weekly finger-hard / max-hang caps (+ answer 1's limit
+            # reservation) — TEMPORARY (the day / the order may change it)
+            if not skip and not _fh_cap_ok(offset, sid):
+                skip = True
 
             # No consecutive finger days (48h+ gap, extended by D83 recovery multiplier) — TEMPORARY
             # A327: high–high only.
@@ -2262,6 +2408,10 @@ def generate_phase_week(
                     continue
                 if fb_meta.get("hard") and hard_days >= effective_hard_cap:
                     continue
+                if fb_meta.get("hard") and _no_hard(offset):
+                    continue  # A327: the second day after a crag block
+                if not _fh_cap_ok(offset, fb_sid):
+                    continue  # A327: weekly finger caps
                 fb_tier = _meta_tier(fb_meta)
                 if fb_tier == "high" and finger_day_offsets and (offset - finger_day_offsets[-1]) <= finger_gap_days:
                     continue
@@ -2347,7 +2497,8 @@ def generate_phase_week(
             # Friday and finger_endurance_short on Saturday. High: the calendar
             # rule on every side; then the clock gate once the slot is known.
             tier = _meta_tier(meta)
-            if tier == "high" and any(abs(offset - fo) <= finger_gap_days for fo in finger_day_offsets):
+            if (tier == "high" and any(abs(offset - fo) <= finger_gap_days for fo in finger_day_offsets)) \
+                    or not _fh_cap_ok(offset, sid) or (meta.get("hard") and _no_hard(offset)):
                 comp_idx += 1
                 attempts += 1
                 continue  # TEMPORARY — don't burn uses
@@ -2440,6 +2591,8 @@ def generate_phase_week(
                 if not skip and tier == "high" and finger_day_offsets:
                     if any(abs(offset - fo) <= finger_gap_days for fo in finger_day_offsets):
                         skip = True
+                if not skip and not _fh_cap_ok(offset, sid):  # A327: weekly finger caps
+                    skip = True
 
                 if skip:
                     extra_idx += 1
@@ -2526,6 +2679,8 @@ def generate_phase_week(
                         continue
                     if hard_days >= effective_hard_cap:
                         continue
+                    if _no_hard(offset):
+                        continue  # A327: other-sport day / second day after a crag block
                     if any(abs(offset - ho) <= hard_gap_days for ho in hard_day_offsets):
                         continue
                 tier = _meta_tier(meta)
@@ -2561,6 +2716,8 @@ def generate_phase_week(
                 if not result:
                     continue
                 slot, slot_info = result
+                if not _fh_cap_ok(offset, sid, replace_idx if replace else None):
+                    continue  # A327 step D: weekly finger caps
                 if replace:
                     _unbook_low(offset, day_sessions[offset][replace_idx])  # A327
                 if not _finger_clock_ok(offset, slot, tier):
@@ -2754,6 +2911,8 @@ def generate_phase_week(
                     # Never breach the hard-day cap to satisfy a maintenance dose.
                     if _meta.get("hard") and hard_days >= effective_hard_cap:
                         continue
+                    if _meta.get("hard") and _no_hard(offset):
+                        continue  # A327: other-sport day / second day after a crag block
                     if _meta.get("hard") and any(
                         abs(offset - ho) <= hard_gap_days for ho in hard_day_offsets
                     ):
@@ -2789,6 +2948,8 @@ def generate_phase_week(
                     if not result:
                         continue
                     slot, slot_info = result
+                    if not _fh_cap_ok(offset, _sid, _victim):
+                        continue  # A327 step D: weekly finger caps
                     if _victim is not None:
                         _unbook_low(offset, day_sessions[offset][_victim])  # A327
                     if not _finger_clock_ok(offset, slot, _tier):
@@ -3035,6 +3196,8 @@ def generate_phase_week(
             if _meta_tier(_SESSION_META[sid]) is None:
                 return True
             t = offset * 24 + _slot_h(slot)
+            if _meta_tier(_SESSION_META[sid]) == "high" and any(end < t < ok for end, ok in crag_windows):
+                return False  # A327 step D: R2
             view = _week_view()
             lows = [o * 24 + h for o, h in finger_low_slots if o < 0]
             for o in range(7):
@@ -3042,6 +3205,28 @@ def generate_phase_week(
                     if _finger_load_of(e) == "low":
                         lows.append(o * 24 + _slot_h(e.get("slot")))
             return not any(abs(t - lt) < _low_gap_h for lt in lows)
+
+        def _test_cap_ok(offset: int, sids: List[str], victims: set) -> bool:
+            """A327 step D: the weekly finger caps on the week as the merge
+            saves it (lived days and the user's sessions in it) plus the crag
+            days. A day that already holds a finger-hard / max-hang session
+            adds nothing; replacing one is neutral (``_hard_ok``'s rule)."""
+            probes = [_probe(sid) for sid in sids]
+            exp = any(_fh_exposure(p) for p in probes)
+            mh = any(_mh_session(p) for p in probes)
+            if not exp and not mh:
+                return True
+            view = _week_view()
+            day = _day_view(offset, victims)
+            fh = set(_hard_crag_in_week) | {o for o in range(7) if o != offset
+                                             and any(_fh_exposure(e) for e in view[o])}
+            mhd = {o for o in range(7) if o != offset and any(_mh_session(e) for e in view[o])}
+            if exp and not any(_fh_exposure(e) for e in day) and offset not in fh \
+                    and len(fh) >= FINGER_HARD_WEEKLY_MAX:
+                return False
+            if mh and not any(_mh_session(e) for e in day) and len(mhd) >= MAX_HANG_WEEKLY_MAX:
+                return False
+            return True
 
         def _hard_ok(offset: int, victims: set) -> bool:
             if any(session_flag(e, "hard") for e in _day_view(offset, victims)):
@@ -3118,6 +3303,8 @@ def generate_phase_week(
                         return
                     if not all(_test_clock_ok(offset, s_, sid, victims) for (s_, _i, _v), sid in zip(chosen, sids)):
                         return
+                    if not _test_cap_ok(offset, sids, victims):
+                        return
                     if not _pair_order_ok(offset, chosen, sids, victims):
                         return
                     cost = sum(
@@ -3153,8 +3340,8 @@ def generate_phase_week(
                     continue
                 if day_is_outdoor[o] or day_dates[o] in pretrip_set:
                     continue
-                if day_intensity_reduced[o]:
-                    continue  # B400: other-sport day — no hard session there (PASS 1)
+                if _no_hard(o) or day_crag_rest[o]:
+                    continue  # B400: other-sport day — no hard session there (PASS 1); A327: crag block
                 if o in _rd_placed_offsets:
                     continue
                 if day_dates[o].isoformat() in _rd_locked_dates:
@@ -3485,6 +3672,8 @@ def generate_phase_week(
                     continue
                 if test_meta["finger"] and _rd_blocks_finger_test(offset):
                     continue  # A289 review: 72 h before a policy hang test
+                if test_meta["hard"] and (_no_hard(offset) or day_crag_rest[offset]):
+                    continue  # A327: crag block (c+1 rest, c+2 no hard), other-sport day
 
                 # B359 — la vittima si sceglie PRIMA dello slot, non dopo.
                 #
@@ -3530,6 +3719,8 @@ def generate_phase_week(
                 # Hard cap check
                 if test_meta["hard"] and hard_days >= effective_hard_cap:
                     continue
+                if not _fh_cap_ok(offset, test_sid, replace_idx):
+                    continue  # A327 step D: weekly finger caps
 
                 day_avail = normalized[day_keys[offset]]
                 # B359 — gli slot delle sessioni che RESTANO sul giorno sono
@@ -3627,6 +3818,10 @@ def generate_phase_week(
                         continue
                     if day_dates[offset] in pretrip_set:
                         continue  # tests are hard/max work — never on pre-trip deload days
+                    if day_crag_rest[offset] or (test_meta["hard"] and _no_hard(offset)):
+                        continue  # A327: crag block
+                    if not _fh_cap_ok(offset, test_sid):
+                        continue  # A327 step D: weekly finger caps
                     if _meta_tier(test_meta) == "high" and finger_day_offsets and any(
                         abs(offset - fo) <= finger_gap_days for fo in finger_day_offsets
                     ):
@@ -3689,7 +3884,8 @@ def generate_phase_week(
         planning_prefs=planning_prefs,
         day_has_available_slot=day_has_available_slot,
         day_is_outdoor=day_is_outdoor,
-        day_intensity_reduced=day_intensity_reduced,
+        # A327: the second day after a crag block is a no-hard day too.
+        day_intensity_reduced=[_no_hard(o) for o in range(7)],
         pretrip_set=pretrip_set,
         session_pool=session_pool,
         locations=locations,
@@ -3707,6 +3903,10 @@ def generate_phase_week(
         hard_day_offsets=hard_day_offsets,
         finger_day_offsets=finger_day_offsets,
         crag_offsets=crag_offsets,
+        finger_cap_ok=_fh_cap_ok,
+        finger_clock_ok=(lambda o, slot, sid: not (
+            _meta_tier(_SESSION_META.get(sid)) == "high"
+            and any(end < o * 24 + _slot_h(slot) < ok for end, ok in crag_windows))),
     )
 
     # ── A281: no-hard sweep (closes B-PRETRIP-PASS1-ONLY) ──

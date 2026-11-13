@@ -1745,6 +1745,9 @@ GuardWarning (backend/engine/guards_v1.py, computed at read, NEVER persisted):
                            include_week=True) / evaluate_week(), sent as GET /api/week `week_guard_warnings[]`
                            (never in `guard_warnings`, A305 review).
   Only sessions that can still change are flagged (not done/skipped, not before `today`); history counts.
+  A327 step D: the planner (`generate_phase_week`, new optional input `crag_hard_dates: [ISO]` — GET /api/week
+  passes the outdoor_fatigue_days of the previous week + this one; None = the declared B382(b) reading) respects
+  finger_hard_cap / max_hang_cap / crag_block on its own placements, so an engine-built week raises none of them.
 
   B372 — outdoor days (stimulus.outdoor_fatigue_days(state, days, load_threshold=OUTDOOR_RIPPLE_THRESHOLD,
   outdoor_rows=, since=, until=, today=) → {date: {date, status, reason, spot, load, grade, route}}). A day
