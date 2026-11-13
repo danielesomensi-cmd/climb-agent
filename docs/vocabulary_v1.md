@@ -1284,6 +1284,7 @@ Top-level keys: `version` (`a293.1`), `as_of`, `constants`, `athlete_plan`, `pos
 `backend/engine/key_sessions_v1.compute_key_status(state, today, archived_weeks=, outdoor_rows=, week_start=, with_proposals=True)` — pure, derived at read, **never persisted**. Returned as `key_status`, a **sibling** of `week_plan`, by `GET /api/week/{n}`, `POST /api/replanner/events|quick-add|override`. Catalog: `backend/catalog/key_stimuli/v1/key_stimuli.json` (`stimuli` + `phases`).
 
 - **Stimulus** (`KeyStimulus`): `finger_max` | `finger_maintenance` | `limit_power` | `pulling_max` | `power_endurance` | `project` | `technique` | `try_hard`. Per phase: SP `finger_max` p1, `limit_power` p1, `pulling_max` p3 (max severity warning); PE `power_endurance` p1, `finger_maintenance` p2, `limit_power` p3 with `max_gap_days` 12; performance `project` p1; `technique` in every phase (deload: max severity `info`); A328: deload `finger_maintenance` p2, max severity `info`, row-level `session_ids` / `propose` = `["deload_finger_touch"]` (the planner places it for a tested athlete); `try_hard` in SP, PE and performance only — it rides on its host key (`attached_to`: `limit_power`, `project` in performance) and goes `not_due` with it (A294 review: removed from base, no limit key there).
+- **`outdoor_target_counts`** (A329, D288 R8 — stimulus flag, `technique` only): an outdoor day counts for the key ONLY with a valid `technique_target` (`key_sessions_v1._outdoor_technique_days`: one row per date, a day of several crags counts once, the first crag by name with a target; no outdoor rows → no credit). The `done[]` row: `{date, slot: null, session_id: null, name: "outdoor <spot>", status: "done", dose: "full", evidence: "outdoor: 2 scivolate di piede/giro (Isatis L1)", technique_target}`; it also makes a past phase week non-empty for the escalation (`_phase_history`) and closes the A325 top-up. It replaces the dead `outdoor_counts` branch (no row used it since the A294 review). Untouched: `outdoor_hard_counts` (project, try-hard) and the outdoor days excluded from the proposals (`_outdoor_any`).
 - **Planner floor fields (A305)** on a phase row of `key_stimuli.json`, read ONLY by `planner_v2._key_stimulus_pass` (PASS 2.7), ignored by A294: `floor_candidates[]` (sessions the planner may place for that key, pool sessions first), `floor_target` (int, default `target_per_week`; PE `power_endurance` = 2), `floor_alternate` (bool: rotate the candidates by `key_pass_week_index % 2`; PE `limit_power`). A key the pass cannot place → `unmet_stimulus[]` row `{stimulus: <key>, label, phase_id, target, placed, source: "key_stimulus_pass", reason}` (B308/A282 rows have no `source`). A328: a tested athlete's deload finger exposure that fits no day → `{stimulus: "finger_strength", phase_id: "deload", reason}`.
 - **Requirement row**: `{key, label, why, priority, max_severity, target, status, resolution, severity, debt, done[], partial[], planned[], skipped[], lost[], exposures_21d?, last_full_date?, due_by?, next_key?, hint?, rejections?}`. `debt = max(0, target − full-dose done days − valid planned days)`.
   - `status`: `done` | `planned` | `partial` (only partial-dose sessions: no ✓, debt stays, severity ≤ warning) | `missing` | `not_due` (max-gap requirement due after the week) | `unplaceable` (`unmet_stimulus` finger_strength: debt 0, the B361 card speaks).
@@ -1564,6 +1565,20 @@ Outdoor session logging conditions:
 `wind`, `temperature`, `condition_band`, … — so `conditions` is free-form; only `temperature` (number)
 and `condition_band` (`prime | ok | poor_hot_humid | poor_cold_dry`) are validated. Contract:
 `backend/data/schemas/outdoor_session_entry.v1.json`, also read by climb-watch.)
+
+**`technique_target`** (A329, D288 R8 — optional, top level of the outdoor entry, one per crag):
+`{metric: "foot_slips_per_go" | "sample_readjust", value: number 0-30, sample?: string ≤ 80}` —
+`foot_slips_per_go` = foot slips per go on the project (athlete_plan §7, catalog `outdoor_technique_day`),
+`sample_readjust` = foot readjustments on one sample pitch (the A298 FEET ladder measure); `value` may be a
+per-go mean (decimal); `sample` = the route / pitch measured. The only reading is
+`outdoor_log.technique_target_of(entry)` (normalised `{metric, value: float, sample?}` or None when absent or
+invalid), used by `validate_outdoor_entry` (422 / rejected import) and `key_sessions_v1`. Request models:
+`OutdoorTechniqueTarget` (`extra: forbid`) on `OutdoorSessionLog` (POST, PUT by inheritance) and
+`OutdoorSessionFinishRequest`. PUT: absent keeps the stored one (A324), `null` clears it. B412 merge: not a
+merge-owned key — the stored target stays, filled from a second session only when missing; a correction goes
+through the PUT. It never moves the FEET ladder (A298) in this step. Proposed UI (R8-b): a box «Technique
+(counts for the key)» — metric picker «Foot slips per go» / «Foot readjustments on a sample pitch», a number,
+an optional route / pitch; the card line «Technique — done outdoors: 2 foot slips per go (Isatis L1)».
 
 ### 5.6.1 Outdoor attempt: result and rope role (A324)
 

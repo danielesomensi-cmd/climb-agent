@@ -51,6 +51,16 @@ VALID_ROUTE_PROFILE = {
 }
 VALID_CONDITION_BANDS = {"prime", "ok", "poor_hot_humid", "poor_cold_dry"}
 
+# A329 (D288 R8): the measurable technique target of an outdoor day — the day
+# counts for the weekly technique key only with one. Names from the catalog
+# (bw_ladders.json outdoor_technique_day: «Foot slips per go on the project»)
+# and A298 (the FEET ladder's `sample_readjust`). The VALUE is what counts,
+# not whether it is "good": the key is the stimulus, the question was
+# verifiability (D288 §Q8).
+TECHNIQUE_TARGET_METRICS = ("foot_slips_per_go", "sample_readjust")
+TECHNIQUE_TARGET_MAX = 30
+TECHNIQUE_TARGET_SAMPLE_MAX = 80
+
 # ---------------------------------------------------------------------------
 # Outdoor load score helpers
 # ---------------------------------------------------------------------------
@@ -335,6 +345,43 @@ def derive_outdoor_duration(
     return {"minutes": raw, "capped": False, "raw_minutes": None, "source": "timer"}
 
 
+def technique_target_errors(value: Any) -> List[str]:
+    """A329: what is wrong with a ``technique_target`` (empty = valid)."""
+    if not isinstance(value, dict):
+        return ["technique_target must be a dict"]
+    errors: List[str] = []
+    unknown = sorted(set(value) - {"metric", "value", "sample"})
+    if unknown:
+        errors.append(f"Unknown technique_target keys: {unknown}")
+    if value.get("metric") not in TECHNIQUE_TARGET_METRICS:
+        errors.append(f"Invalid technique_target.metric: {value.get('metric')!r} "
+                      f"(expected one of {list(TECHNIQUE_TARGET_METRICS)})")
+    v = value.get("value")
+    if isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(float(v)) \
+            or not 0 <= float(v) <= TECHNIQUE_TARGET_MAX:
+        errors.append(f"Invalid technique_target.value: {v!r} (a number 0-{TECHNIQUE_TARGET_MAX})")
+    sample = value.get("sample")
+    if sample is not None and (not isinstance(sample, str) or len(sample) > TECHNIQUE_TARGET_SAMPLE_MAX):
+        errors.append(f"Invalid technique_target.sample (a string of at most {TECHNIQUE_TARGET_SAMPLE_MAX} chars)")
+    return errors
+
+
+def technique_target_of(entry: Any) -> Optional[Dict[str, Any]]:
+    """A329 (D288 R8): the VALID technique target of an outdoor entry,
+    normalised ``{metric, value, sample?}``, or None (absent or invalid — an
+    invalid one never counts). The one reading of the field:
+    ``validate_outdoor_entry`` and ``key_sessions_v1`` both use it."""
+    if not isinstance(entry, dict):
+        return None
+    tt = entry.get("technique_target")
+    if tt is None or technique_target_errors(tt):
+        return None
+    out: Dict[str, Any] = {"metric": tt["metric"], "value": float(tt["value"])}
+    if isinstance(tt.get("sample"), str) and tt["sample"].strip():
+        out["sample"] = tt["sample"].strip()
+    return out
+
+
 def validate_outdoor_entry(entry: Dict[str, Any]) -> List[str]:
     """Validate an outdoor session entry. Returns list of error strings (empty = valid)."""
     errors: List[str] = []
@@ -371,6 +418,10 @@ def validate_outdoor_entry(entry: Dict[str, Any]) -> List[str]:
                         f"Invalid route_profile.{key}: {value} "
                         f"(expected one of {sorted(VALID_ROUTE_PROFILE[key])})"
                     )
+
+    # A329: the technique target, when present (script imports included).
+    if entry.get("technique_target") is not None:
+        errors.extend(technique_target_errors(entry["technique_target"]))
 
     conditions = entry.get("conditions")
     if isinstance(conditions, dict):

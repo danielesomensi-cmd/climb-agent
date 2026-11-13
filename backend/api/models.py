@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 # --------------------------------------------------------------------------- #
@@ -357,6 +357,22 @@ class OutdoorRouteProfile(BaseModel):
     target_grade_relative: Optional[Literal["within_limit", "at_or_above_limit"]] = None
 
 
+class OutdoorTechniqueTarget(BaseModel):
+    """A329 (D288 R8): the measurable technique target of an outdoor day.
+
+    The day counts for the weekly technique key only with one
+    (``key_sessions_v1``). ``metric``: ``foot_slips_per_go`` (foot slips per
+    go on the project) | ``sample_readjust`` (foot readjustments on one sample
+    pitch, the A298 FEET ladder measure); ``value`` 0-30; ``sample`` the
+    route / pitch measured. Same rules as ``outdoor_log.technique_target_of``.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    metric: Literal["foot_slips_per_go", "sample_readjust"]
+    value: float = Field(ge=0, le=30)
+    sample: Optional[str] = Field(default=None, max_length=80)
+
+
 class OutdoorSessionLog(BaseModel):
     """Body for POST /api/outdoor/log.
 
@@ -377,6 +393,8 @@ class OutdoorSessionLog(BaseModel):
     # outdoor.v2 (A225) — all optional
     day_type: Optional[Literal["project", "onsight_flash", "volume", "scout_easy"]] = None
     route_profile: Optional[OutdoorRouteProfile] = None
+    # A329 (D288 R8) — optional; PUT: absent keeps the stored one (A324), null clears it.
+    technique_target: Optional[OutdoorTechniqueTarget] = None
 
 
 class OutdoorSessionUpdate(OutdoorSessionLog):
@@ -423,6 +441,7 @@ class OutdoorSessionFinishRequest(BaseModel):
     overall_feeling: Optional[str] = None
     day_type: Optional[Literal["project", "onsight_flash", "volume", "scout_easy"]] = None
     route_profile: Optional[OutdoorRouteProfile] = None
+    technique_target: Optional[OutdoorTechniqueTarget] = None  # A329
 
 
 class OutdoorClimbLogRequest(BaseModel):

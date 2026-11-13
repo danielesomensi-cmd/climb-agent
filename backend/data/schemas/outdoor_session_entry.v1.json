@@ -48,6 +48,17 @@
       },
       "additionalProperties": false
     },
+    "technique_target": {
+      "type": "object",
+      "description": "A329 (D288 R8): the measurable technique target logged for this crag day — the day counts for the weekly technique key only with it. metric: foot_slips_per_go (foot slips per go on the project, athlete_plan §7) | sample_readjust (foot readjustments on one sample pitch, the A298 FEET ladder measure). value: 0-30 (a per-go mean may be decimal). sample: the route / pitch measured (optional). Optional for climb-watch.",
+      "required": ["metric", "value"],
+      "properties": {
+        "metric": { "type": "string", "enum": ["foot_slips_per_go", "sample_readjust"] },
+        "value": { "type": "number", "minimum": 0, "maximum": 30 },
+        "sample": { "type": "string", "maxLength": 80 }
+      },
+      "additionalProperties": false
+    },
     "conditions": {
       "type": "object",
       "description": "Free-form conditions: the weather auto-fill (A225) stores its whole payload (wind, humidity, dew_point, feels_like, …). Only temperature and condition_band are checked.",

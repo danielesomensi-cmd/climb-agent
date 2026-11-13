@@ -574,6 +574,44 @@ def _outdoor_any(state: Mapping[str, Any], outdoor_rows: Optional[Sequence[Mappi
     return [seen[k] for k in sorted(seen)]
 
 
+#: A329: Italian label of each outdoor technique metric (evidence text).
+_TECHNIQUE_METRIC_IT = {
+    "foot_slips_per_go": "scivolate di piede/giro",
+    "sample_readjust": "aggiustamenti di piede sul tiro campione",
+}
+
+
+def _outdoor_technique_days(state: Mapping[str, Any], outdoor_rows: Optional[Sequence[Mapping[str, Any]]],
+                            since: date, until: date) -> List[Dict[str, Any]]:
+    """A329 (D288 R8): the outdoor days in range with a VALID logged technique
+    target (``outdoor_log.technique_target_of``) — one row per date (a day of
+    several crags counts once: the first crag by name that carries one).
+    Read like ``_outdoor_any``; no outdoor rows (a failed read → only the
+    state's summary rows, which carry no target) → no credit, the prudent
+    direction."""
+    from backend.engine.outdoor_log import technique_target_of
+
+    found: Dict[str, Dict[str, Any]] = {}
+    rows = []
+    for row in list(outdoor_rows or []) + list(state.get("outdoor_log") or []):
+        if not isinstance(row, Mapping):
+            continue
+        entry = row.get("entry") if isinstance(row.get("entry"), Mapping) else row
+        d = _parse(entry.get("date"))
+        if d is None or not (since <= d <= until):
+            continue
+        tt = technique_target_of(dict(entry))
+        if tt is not None:
+            rows.append((d.isoformat(), str(entry.get("spot_name") or ""), tt))
+    for d_iso, spot, tt in sorted(rows, key=lambda r: (r[0], r[1])):
+        if d_iso in found:
+            continue
+        label = _TECHNIQUE_METRIC_IT.get(tt["metric"], tt["metric"])
+        evidence = f"outdoor: {tt['value']:g} {label}" + (f" ({tt['sample']})" if tt.get("sample") else "")
+        found[d_iso] = {"date": d_iso, "spot_name": spot or None, "technique_target": tt, "evidence": evidence}
+    return [found[k] for k in sorted(found)]
+
+
 def _last_full_before(state: Mapping[str, Any], req: Mapping[str, Any], until: date,
                       archived_weeks: ArchivedWeeks, catalog: Mapping[str, Mapping[str, Any]],
                       lookback_d: int = 60) -> Optional[str]:
@@ -624,8 +662,8 @@ def _phase_history(state: Mapping[str, Any], req: Mapping[str, Any], ws: date,
         if not hit and req.get("outdoor_hard_counts") and outdoor_hard_days(
                 state, since=wk, until=we, outdoor_rows=outdoor_rows):
             hit = True
-        if not hit and req.get("outdoor_counts") and _outdoor_any(state, outdoor_rows, wk, we):
-            hit = True
+        if not hit and req.get("outdoor_target_counts") and _outdoor_technique_days(state, outdoor_rows, wk, we):
+            hit = True  # A329: an outdoor day with a logged technique target
         elapsed += 1
         empty += 0 if hit else 1
         wk += timedelta(days=7)
@@ -1425,7 +1463,6 @@ def compute_key_status(
         for s in days.get(d, []):
             week_sessions.append((d, s))
     hard_outdoor = outdoor_hard_days(st, since=ws, until=we, outdoor_rows=rows)
-    any_outdoor = _outdoor_any(st, rows, ws, we)
     free_limit = _free_limit_dates(st, ws, we)
     skipped_all = _skipped_refs(st, week_sessions, ws, we)
     unmet = {str((u or {}).get("stimulus")) for u in ((plan or {}).get("unmet_stimulus") or []) if isinstance(u, Mapping)}
@@ -1456,12 +1493,16 @@ def compute_key_status(
                 if d < td.isoformat():
                     ref["unmarked"] = True  # in the past, never marked done/skipped
                 planned.append(ref)
-        if req.get("outdoor_counts"):
-            for e in any_outdoor:
+        if req.get("outdoor_target_counts"):
+            # A329 (D288 R8): an outdoor day counts for the technique key ONLY
+            # with a logged measurable target (it replaces the dead
+            # `outdoor_counts` branch: "outdoor, rules not verifiable").
+            for e in _outdoor_technique_days(st, rows, ws, we):
                 if not any(x["date"] == e["date"] for x in done):
                     done.append({"date": e["date"], "slot": None, "session_id": None,
                                  "name": f"outdoor {e.get('spot_name') or ''}".strip(), "status": "done",
-                                 "dose": "full", "evidence": "outdoor (regole tecniche non verificabili)"})
+                                 "dose": "full", "evidence": e["evidence"],
+                                 "technique_target": e["technique_target"]})
         if req.get("outdoor_hard_counts"):
             for o in hard_outdoor:
                 if not any(x["date"] == o["date"] for x in done):

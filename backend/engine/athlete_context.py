@@ -1503,7 +1503,10 @@ def _render_keys(L: List[str], ks: Mapping[str, Any], label: str) -> None:
     def _refs(items: Iterable[Mapping[str, Any]]) -> str:
         return ", ".join(f"{x['date'][5:]} {x.get('session_id') or x.get('name')}"
                          + (" (passata, non segnata)" if x.get("unmarked") else "")
-                         + (" (dose parziale)" if x.get("dose") == "partial" else "") for x in items) or "—"
+                         + (" (dose parziale)" if x.get("dose") == "partial" else "")
+                         # A329: the outdoor technique target that made the day count.
+                         + (f" [{x['evidence']}]" if x.get("technique_target") and x.get("evidence") else "")
+                         for x in items) or "—"
 
     for r in ks.get("requirements") or []:
         line = (f"  [{str(r.get('status', '')).upper():7}] {r.get('label')}: fatte {_refs(r.get('done') or [])} | "
