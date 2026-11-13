@@ -53,7 +53,7 @@ climb-agent builds your training plan through a pipeline:
 
 3. **Macrocycle**: A periodized plan (typically 10–13 weeks, minimum 9) is generated, divided into phases. Each phase has a specific physiological purpose. The plan is tailored to your weaknesses — if your finger strength is low relative to your goal, the plan allocates more time and intensity to finger training.
 
-4. **Weekly Plan**: Each week, the planner selects sessions based on your current phase, available days, locations, and equipment. It runs several passes: primary sessions first, then complementary work, quality floors (fingers, pulling), tests when due and the key stimuli of the phase.
+4. **Weekly Plan**: Each week, the planner selects sessions based on your current phase, available days, locations, and equipment. It runs several passes: primary sessions first, then complementary work, quality floors (fingers, pulling), tests when due and the key stimuli of the phase. The quality floors count what is already in the week — sessions you did, your own custom sessions and the ones you planned yourself — so a week where your fingers or pulling are already covered gets no extra dose and no "no room" warning; and after a hard or finger custom on Sunday, Monday does not open with a limit or finger session.
 
 5. **Session Resolution**: Each session is resolved into concrete exercises with sets, reps, load, rest times, and tempo — all calculated from your current working loads and progression state.
 
