@@ -169,6 +169,10 @@ no id, dose, load or rest moved. Every other key and the pools unchanged.
 B417 (``order: last`` on the handstand pair, ``after_warmup`` back on the
 press only) changed the same keys of that session, order only: press,
 floor core, arm lifts, toe pulls, wall hold. Every other key identical.
+
+C286 (catalog: Z2 lunch with floor core, barbell bench on the push lunch,
+one technique drill + finger ramp-up on the evening sessions) changed only
+the keys of the seven sessions it touches; every other key identical.
 """
 
 from __future__ import annotations

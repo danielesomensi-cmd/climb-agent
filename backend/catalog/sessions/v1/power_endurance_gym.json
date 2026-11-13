@@ -1,7 +1,7 @@
 {
   "id": "power_endurance_gym",
   "name": "Power Endurance (Gym — Lead Focus)",
-  "version": "2.0",
+  "version": "2.1",
   "intent": {
     "primary_goal": "power_endurance",
     "secondary_goals": [
@@ -33,6 +33,22 @@
       "required": true,
       "priority": 100,
       "module_role": "general_warmup"
+    },
+    {
+      "block_id": "technique_drill",
+      "required": false,
+      "priority": 65,
+      "module_role": "secondary",
+      "order": "after_warmup",
+      "notes": "One technique drill with one measurable target, right after the warm-up while fresh (Daniele, 2026-10-04: every session that is not pure recovery has a technique or try-hard block with a measurable target; limiters: feet, then positioning).",
+      "selection": {
+        "primary": {
+          "exercise_id": "tap_and_place",
+          "prescription_overrides": {
+            "notes": "3 x 4 easy problems: tap the foothold gently with the toe, lift away, then place it precisely. Target: no foot slips or re-placements on the last set."
+          }
+        }
+      }
     },
     {
       "block_id": "pe_boulder",

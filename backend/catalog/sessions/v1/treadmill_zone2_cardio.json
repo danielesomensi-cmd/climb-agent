@@ -1,7 +1,7 @@
 {
   "id": "treadmill_zone2_cardio",
-  "name": "Treadmill Zone 2 Cardio + Hip Mobility",
-  "version": "1.1",
+  "name": "Treadmill Zone 2 Cardio + Core",
+  "version": "1.2",
   "supplementary": true,
   "intent": {
     "primary_goal": "conditioning",
@@ -9,7 +9,7 @@
       "aerobic_capacity",
       "mobility"
     ],
-    "notes": "Lunch-break aerobic base: 45 min steady Zone 2 on an inclined treadmill, then optional hip mobility. About 55 min. No finger or elbow load and a low recovery cost, so it fits next to any climbing day."
+    "notes": "Lunch-break aerobic base, about 55 min: 35 min steady Zone 2 on an inclined treadmill, then floor core (hollow hold, arch hold) and optional hip mobility. On the walk the heart rate is the target; speed and incline are only the way to get there: start easy and adjust them to stay inside the band shown on the exercise. The core is two short floor holds, front and back of the trunk, with no equipment; a tested athlete gets his own hollow and posterior-chain ladder levels instead. No finger or elbow load and a low recovery cost, so it fits next to any climbing day."
   },
   "compatibility": {
     "slot": [
@@ -37,12 +37,12 @@
       "required": true,
       "priority": 100,
       "module_role": "primary",
-      "notes": "Steady Zone 2 incline walk. The first 5 min are the warm-up: start slow and let the heart rate settle into the zone. Hold the heart-rate band, not a speed: slow down if you drift above it.",
+      "notes": "Steady Zone 2 incline walk, 35 min. The heart rate is the target, speed and incline are the knobs. The first 5 min are the warm-up: start slow and let the heart rate settle into the zone. Hold the heart-rate band, not a speed: slow down if you drift above it.",
       "selection": {
         "primary": {
           "exercise_id": "treadmill_incline_walk",
           "prescription_overrides": {
-            "work_seconds": 2700
+            "work_seconds": 2100
           },
           "filters": {
             "role": [
@@ -55,6 +55,78 @@
               "locomotion"
             ],
             "intensity_max": "low"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "core_anti_extension",
+      "required": false,
+      "priority": 70,
+      "module_role": "accessory",
+      "notes": "Floor core after the walk, front of the trunk: hollow hold; a tested athlete gets his hollow ladder level instead. A family no other lunch pins: the lunches next to it in the rotation (HIIT, push) carry the rollout or the L-sit. No hanging.",
+      "ladder_pin": {
+        "families": [
+          "hollow_plank"
+        ]
+      },
+      "selection": {
+        "primary": {
+          "exercise_id": "core_hollow_hold",
+          "prescription_overrides": {
+            "sets": 3,
+            "deload_sets": 2,
+            "work_seconds": 30,
+            "rest_between_sets_seconds": 45,
+            "notes": "3 x 30 s hollow hold: lower back pressed to the floor, arms by the ears, heels a hand off the floor. Shorten the lever (knees bent) before the back lifts."
+          },
+          "filters": {
+            "role": [
+              "accessory"
+            ],
+            "domain": [
+              "core"
+            ],
+            "pattern": [
+              "anti_extension"
+            ],
+            "intensity_max": "high"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "core_posterior",
+      "required": false,
+      "priority": 68,
+      "module_role": "accessory",
+      "notes": "Floor core, back of the trunk: arch hold, the antagonist of the hollow, on the floor so a gym with only a treadmill has it too; a tested athlete gets his posterior-chain ladder level instead (back extension where there is a bench). No side plank or Copenhagen here on purpose: the HIIT lunch next to it in the rotation carries the lateral chain.",
+      "ladder_pin": {
+        "families": [
+          "posterior_chain"
+        ]
+      },
+      "selection": {
+        "primary": {
+          "exercise_id": "arch_hold",
+          "prescription_overrides": {
+            "sets": 3,
+            "deload_sets": 2,
+            "work_seconds": 15,
+            "rest_between_sets_seconds": 45,
+            "notes": "3 x 15 s arch hold: face down, arms overhead, glutes squeezed, chest and thighs a few centimetres off the floor, eyes on the floor. Lift low and long, not high: no pinch in the lower back."
+          },
+          "filters": {
+            "role": [
+              "accessory"
+            ],
+            "domain": [
+              "core"
+            ],
+            "pattern": [
+              "hinge"
+            ],
+            "intensity_max": "high"
           }
         }
       }

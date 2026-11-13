@@ -8,6 +8,10 @@ dumbbells (34 per hand). Decision (Daniele, 2026-10-17, option 4): pin
 ``dumbbell_bench_press`` for everyone. Its equipment stays ``dumbbell`` only —
 adding ``bench`` would drop it again at every gym or home that lists dumbbells
 without declaring a bench. A per-block ``fallback_exercise_ids`` is postponed.
+
+C286 (Daniele, 2026-11-13, D287 decision 3): back to the barbell where there is
+one — ``bench_press`` with ``fallback_exercise_ids: [dumbbell_bench_press]``
+(the B414 pin chain), so a dumbbell-only gym keeps the dumbbell bench.
 """
 
 from __future__ import annotations
@@ -25,9 +29,9 @@ def _chest(equipment):
 
 
 class TestPin:
-    def test_gym_with_barbell_prescribes_the_dumbbell_bench(self):
+    def test_gym_with_barbell_prescribes_the_barbell_bench(self):
         chest = _chest(WORK)
-        assert chest["exercise_id"] == "dumbbell_bench_press"
+        assert chest["exercise_id"] == "bench_press"  # C286
         assert (chest["prescription"]["sets"], chest["prescription"]["reps"]) == (5, 6)  # C279: 5 sets
 
     def test_dumbbells_without_a_declared_bench_still_get_it(self):

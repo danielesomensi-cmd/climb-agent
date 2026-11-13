@@ -1,7 +1,7 @@
 {
   "id": "limit_boulder_gym",
   "name": "Limit Bouldering (Projecting)",
-  "version": "2.0",
+  "version": "2.1",
   "intent": {
     "primary_goal": "limit_projecting",
     "secondary_goals": [
@@ -27,6 +27,38 @@
       "required": true,
       "priority": 100,
       "module_role": "general_warmup"
+    },
+    {
+      "block_id": "finger_rampup",
+      "required": false,
+      "priority": 88,
+      "module_role": "general_warmup",
+      "order": "after_warmup",
+      "notes": "Finger ramp-up on the hangboard after the easy boulders of the warm-up, before the limit work: progressive hangs from big holds to the edge you will pull on, never to failure. Where the gym has no hangboard the block is skipped (pin_exhausted: skip).",
+      "selection": {
+        "primary": {
+          "exercise_id": "hang_rampup_progressive",
+          "pin_exhausted": "skip"
+        }
+      }
+    },
+    {
+      "block_id": "technique_drill",
+      "required": false,
+      "priority": 65,
+      "module_role": "secondary",
+      "order": "after_warmup",
+      "notes": "One technique drill with one measurable target, right after the warm-up while fresh (Daniele, 2026-10-04: every session that is not pure recovery has a technique or try-hard block with a measurable target; limiters: feet, then positioning).",
+      "selection": {
+        "primary": {
+          "exercise_id": "no_readjust_drill",
+          "prescription_overrides": {
+            "sets": 1,
+            "work_seconds": 600,
+            "notes": "10 min on boulders 3-4 grades below your max: every foot goes on once and stays — no readjusting, no sliding, no tapping. Target: zero readjustments on your last 3 problems (count them)."
+          }
+        }
+      }
     },
     {
       "block_id": "limit_projecting",

@@ -1,7 +1,7 @@
 {
   "id": "route_endurance_gym",
   "name": "Route Endurance (Gym — Lead Aerobic Base)",
-  "version": "1.0",
+  "version": "1.1",
   "intent": {
     "primary_goal": "aerobic_capacity",
     "secondary_goals": ["power_endurance", "technique_lead"],
@@ -23,6 +23,25 @@
       "required": true,
       "priority": 100,
       "module_role": "general_warmup"
+    },
+    {
+      "block_id": "technique_drill",
+      "required": false,
+      "priority": 65,
+      "module_role": "secondary",
+      "order": "after_warmup",
+      "notes": "One technique drill with one measurable target, right after the warm-up while fresh (Daniele, 2026-10-04: every session that is not pure recovery has a technique or try-hard block with a measurable target; limiters: feet, then positioning). Without rope routes the block is skipped (pin_exhausted: skip).",
+      "selection": {
+        "primary": {
+          "exercise_id": "lead_precision_feet_above_bolt",
+          "pin_exhausted": "skip",
+          "prescription_overrides": {
+            "sets": 1,
+            "reps": 1,
+            "notes": "1 route 2-3 grades below your onsight before the volume: every foot loaded and still for 3 s before a hand moves. Target: zero feet moved after placement on the whole route."
+          }
+        }
+      }
     },
     {
       "block_id": "threshold_main",

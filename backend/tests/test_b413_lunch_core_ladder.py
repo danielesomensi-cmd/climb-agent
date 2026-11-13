@@ -19,6 +19,17 @@ Never a hanging or heavy-pull level, one family per session, R12 caps, the
 pin level exempt from the phase affinity (nothing else is), the catalog dose
 as a floor of a SEEDED level on the pinned exercise, the chosen exercise's
 own notes. Untested athletes and athletes with no entry: bit for bit.
+
+D287 — the Zone 2 lunch (``treadmill_zone2_cardio``) gets a floor core too
+(Daniele, 2026-10-13 and 2026-10-28), with the same mechanism and two families
+no other lunch pins, so the day after the HIIT (rollout / L-sit / Copenhagen)
+never repeats its core:
+
+| lunch | hollow block | posterior block |
+|---|---|---|
+| Z2 | his hollow level (``hollow_plank``) | his ``posterior_chain`` level |
+
+Untested: hollow hold 3x30 s and arch hold 3x15 s, both on the floor.
 """
 
 from __future__ import annotations
@@ -46,6 +57,7 @@ EXERCISES = "backend/catalog/exercises/v1/exercises.json"
 GOLDEN = Path(__file__).parent / "fixtures" / "b413_lunch_ladder_golden.json"
 
 ARMS, HIIT, LEGS, PUSH = lg.LUNCHES
+Z2 = "treadmill_zone2_cardio"  # D287: not in lg.LUNCHES (the D4 golden keys)
 PHASES = ("base", "strength_power", "power_endurance", "performance", "deload")
 DATES = ("2026-11-10", "2026-11-17")  # performance, two A/B weeks
 
@@ -57,6 +69,9 @@ PINS = {
     (HIIT, "core_lateral"): {"families": ["lateral"], "level_offset": -1},
     (LEGS, "core_anti_extension"): {"families": ["rollout"]},
     (PUSH, "core_anti_extension"): {"families": ["compression_floor"]},
+    # D287: the Z2 lunch. Two families no other lunch pins.
+    (Z2, "core_anti_extension"): {"families": ["hollow_plank"]},
+    (Z2, "core_posterior"): {"families": ["posterior_chain"]},
 }
 #: The filters of the pinned blocks before D4 (the "without ladder_pin" catalog).
 PRE_D4_FILTERS = {
@@ -486,9 +501,10 @@ def _all_modules():
 
 
 class TestCatalogContract:
-    def test_ladder_pin_only_on_the_six_lunch_blocks(self):
+    def test_ladder_pin_only_on_the_eight_lunch_blocks(self):
+        # six of B413 (D4) + the two of the Z2 lunch (D287)
         found = {(d["id"], m["block_id"]): m["ladder_pin"] for d, m in _all_modules() if "ladder_pin" in m}
-        assert found == PINS
+        assert found == PINS and len(PINS) == 8
 
     def test_never_in_selection_nor_in_templates(self):
         for _d, m in _all_modules():
@@ -531,7 +547,7 @@ class TestCatalogContract:
                 assert "pullup_bar" not in (e.get("equipment_required") or []), lv["exercise_id"]
                 assert (e.get("stress_tags") or {}).get("fingers") in ("none", None), lv["exercise_id"]
 
-    @pytest.mark.parametrize("sid", lg.LUNCHES)
+    @pytest.mark.parametrize("sid", lg.LUNCHES + (Z2,))
     def test_core_blocks_of_a_session_never_share_a_family(self, sid):
         doc = json.loads((SESSIONS / f"{sid}.json").read_text(encoding="utf-8"))
         groups = []
@@ -546,6 +562,110 @@ class TestCatalogContract:
         for i, a in enumerate(groups):
             for b in groups[i + 1:]:
                 assert not a & b, (sid, a, b)
+
+
+# ---------------------------------------------------------------------------
+# D287 — the Zone 2 lunch: shorter walk + floor core on two families of its own
+# ---------------------------------------------------------------------------
+
+#: Daniele's production levels of 2026-11-11 in the two Z2 families.
+Z2_HOLLOW = {"level_idx": 2, "sets": 3, "target": 35, "source": "feedback"}
+Z2_POSTERIOR = {"level_idx": 1, "sets": 3, "target": 12, "source": "user_edit"}
+
+
+def _minutes(r: dict, catalog: dict) -> int:
+    rows = []
+    for inst in _insts(r):
+        rx = dict(inst["prescription"])
+        rx["alt_sides"] = bool(catalog[inst["exercise_id"]].get("alt_sides"))
+        rows.append(rx)
+    return estimate_custom_session_duration(rows)
+
+
+class TestZone2Core:
+    @pytest.mark.parametrize("phase", PHASES)
+    def test_untested_gets_the_catalog_pins(self, phase):
+        r = _resolve(Z2, _untested("2026-11-10"), phase)
+        assert [i["source"]["block_id"] for i in _insts(r)] == [
+            "zone2_main", "core_posterior", "core_anti_extension", "hip_mobility"]
+        assert _block(r, "zone2_main")["prescription"]["work_seconds"] == 2100
+        assert _rx(_block(r, "core_anti_extension")) == ("core_hollow_hold", 3, 30)
+        assert _rx(_block(r, "core_posterior")) == ("arch_hold", 3, 15)
+        for b in ("core_anti_extension", "core_posterior"):
+            assert _block(r, b)["source"]["picked_by"] == "resolver_v0.2/explicit_exercise_id"
+        assert _block(r, "core_anti_extension")["prescription"]["notes"].startswith(HOLLOW_NOTE)
+
+    @pytest.mark.parametrize("date,phase", lg.DANIELE_SLOTS)
+    def test_a_tested_athlete_gets_his_two_levels(self, date, phase):
+        st = _state(date, _levels(hollow_plank=Z2_HOLLOW, posterior_chain=Z2_POSTERIOR))
+        r = _resolve(Z2, st, phase)
+        sets = 2 if phase == "deload" else 3
+        assert _rx(_block(r, "core_anti_extension")) == ("core_hollow_hold", sets, 35)
+        assert _rx(_block(r, "core_posterior")) == ("back_extension", sets, 12)
+        for b in ("core_anti_extension", "core_posterior"):
+            assert _block(r, b)["source"]["picked_by"] == "resolver_v0.2/ladder_pin"
+        # the walk and the mobility are not ladder rows
+        assert _rx(_block(r, "zone2_main")) == ("treadmill_incline_walk", 1, 2100)
+        assert _block(r, "hip_mobility")["exercise_id"] == "hip_opener_flow"
+
+    def test_the_other_lunches_levels_never_reach_the_z2(self):
+        """Rollout, L-sit and Copenhagen belong to the HIIT / arms / push
+        lunches: the Z2 day after never repeats them."""
+        r = _resolve(Z2, _state(), "performance")  # Daniele's D4 levels: no posterior entry
+        assert _rx(_block(r, "core_anti_extension")) == ("core_hollow_hold", 3, 30)
+        assert _rx(_block(r, "core_posterior")) == ("arch_hold", 3, 15)
+        assert _block(r, "core_posterior")["source"]["picked_by"] == "resolver_v0.2/explicit_exercise_id"
+        ids = {i["exercise_id"] for i in _insts(r)}
+        assert not ids & {"ab_wheel_rollout", "core_l_sit", "copenhagen_dynamic", "copenhagen_plank", "side_plank"}
+
+    def test_families_are_pinned_by_no_other_lunch(self):
+        mine = {f for k, v in PINS.items() if k[0] == Z2 for f in v["families"]}
+        others = {f for k, v in PINS.items() if k[0] != Z2 for f in v["families"]}
+        assert mine == {"hollow_plank", "posterior_chain"} and not mine & others
+
+    def test_without_a_bench_the_back_extension_walks_down_to_the_floor(self):
+        st = _state("2026-11-10", _levels(hollow_plank=Z2_HOLLOW, posterior_chain=Z2_POSTERIOR),
+                    equipment=["treadmill"])
+        r = _resolve(Z2, st, "performance")
+        inst = _block(r, "core_posterior")
+        assert inst["exercise_id"] == "arch_hold"
+        assert inst["source"]["picked_by"] == "resolver_v0.2/ladder_pin"
+        assert _rx(_block(r, "core_anti_extension")) == ("core_hollow_hold", 3, 35)
+        assert len(_insts(r)) == 4
+
+    def test_never_a_hanging_row(self, catalog):
+        top = _levels(hollow_plank={"level_idx": 4, "sets": 3, "target": 30, "source": "feedback"},
+                      posterior_chain={"level_idx": 2, "sets": 3, "target": 10, "source": "feedback"})
+        for date, phase in lg.DANIELE_SLOTS:
+            for inst in _insts(_resolve(Z2, _state(date, top), phase)):
+                e = catalog[inst["exercise_id"]]
+                assert "pullup_bar" not in (e.get("equipment_required") or []), inst["exercise_id"]
+                assert (e.get("stress_tags") or {}).get("fingers") in ("none", None), inst["exercise_id"]
+
+    def test_within_the_lunch_slot(self, catalog):
+        """~55': 52' untested, 54' with Daniele's levels; at the top of both
+        bands a few minutes more, inside the 60' of B413-LUNCH-55."""
+        for phase in PHASES:
+            assert 45 <= _minutes(_resolve(Z2, _untested("2026-11-10"), phase), catalog) <= 55, phase
+        mine = _levels(hollow_plank=Z2_HOLLOW, posterior_chain=Z2_POSTERIOR)
+        top = _levels(hollow_plank={"level_idx": 2, "sets": 3, "target": 45, "source": "feedback"},
+                      posterior_chain={"level_idx": 2, "sets": 3, "target": 10, "source": "feedback"})
+        for date, phase in lg.DANIELE_SLOTS:
+            assert 45 <= _minutes(_resolve(Z2, _state(date, mine), phase), catalog) <= 55, (date, phase)
+            assert _minutes(_resolve(Z2, _state(date, top), phase), catalog) <= 60, (date, phase)
+
+    def test_no_stimulus_and_not_hard(self):
+        st = _state("2026-11-10", _levels(hollow_plank=Z2_HOLLOW, posterior_chain=Z2_POSTERIOR))
+        r = _resolve(Z2, st, "performance")
+        slot = {"session_id": Z2, "tags": {"hard": False, "finger": False}, "resolved": r}
+        assert session_stimuli(slot) == []
+        assert not is_pulling_hard_session(slot) and not is_finger_hard_session(slot)
+
+    def test_same_input_same_output(self):
+        st = _state("2026-11-10", _levels(hollow_plank=Z2_HOLLOW, posterior_chain=Z2_POSTERIOR))
+        first = _resolve(Z2, st, "performance")
+        for _ in range(5):
+            assert _resolve(Z2, st, "performance") == first
 
 
 # ---------------------------------------------------------------------------

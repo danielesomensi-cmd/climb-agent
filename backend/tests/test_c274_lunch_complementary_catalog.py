@@ -5,7 +5,8 @@ treadmill — 45' gross (about 35 useful) when written, ~55' since C279
 (Daniele, 2026-10-30: «35 inaccettabile»):
 
 - ``treadmill_hiit_4x4``     — VO2max 4x4 on the treadmill, ``tags.hiit`` true;
-- ``treadmill_zone2_cardio`` — Zone 2 incline walk + optional hip mobility;
+- ``treadmill_zone2_cardio`` — Zone 2 incline walk, floor core (D287) and
+  optional hip mobility;
 - ``upper_push_arms_lunch``  — chest press, triceps, biceps;
 - ``legs_maintenance_lunch`` — goblet squat, RDL and a short foot-strength block.
 
@@ -51,7 +52,12 @@ EXPECTED = {
     # treadmill exercise (a gym without one must not get a locomotion stand-in).
     "treadmill_hiit_4x4": ["general_pulse_raise", "treadmill_hiit_4x4", "core_hollow_hold", "side_plank",
                            "hip_opener_flow"],
-    "treadmill_zone2_cardio": ["treadmill_incline_walk", "hip_opener_flow"],
+    # D287 (Daniele, 2026-10-13 and 2026-10-28: core on the Z2 day too): the
+    # walk is 35' and two floor-core blocks follow it — hollow hold and arch
+    # hold, no equipment, so a treadmill-only gym gets the same rows. The walk
+    # is main work, the core is an accessory: the generic sort puts it after
+    # (ties broken by exercise_id).
+    "treadmill_zone2_cardio": ["treadmill_incline_walk", "arch_hold", "core_hollow_hold", "hip_opener_flow"],
     # C275: the strength lunches got a rotating core block; this gym has no
     # rings, so the optional ring push-up block falls back to a dumbbell fly
     # (the block's equipment filter is a preference, not a gate).
@@ -61,8 +67,10 @@ EXPECTED = {
     # C279: dumbbell_fly is now a block of its own, so the ring block of this
     # ringless gym falls back to the next push accessory (wall handstand
     # push-up); a second core block (hollow hold).
-    "upper_push_arms_lunch": ["general_pulse_raise", "core_hollow_hold", "side_plank", "bicep_curl",
-                              "dumbbell_bench_press", "dumbbell_fly", "handstand_pushup_wall",
+    # C286 (Daniele, 2026-11-13): the chest press is the barbell bench again
+    # (dumbbell bench as the fallback chain); by id it now sorts before the curl.
+    "upper_push_arms_lunch": ["general_pulse_raise", "core_hollow_hold", "side_plank", "bench_press",
+                              "bicep_curl", "dumbbell_fly", "handstand_pushup_wall",
                               "triceps_cable_pushdown"],
     # NOTE: this order is the engine's generic phase sort
     # (exercise_ordering.sort_exercises_by_phase: strength_general ties broken
@@ -205,6 +213,50 @@ class TestResolution:
             rows.append(rx)
         minutes = estimate_custom_session_duration(rows)
         assert 15 <= minutes <= _session(sid)["time_budget"]["target_duration_min"], (sid, phase, minutes)
+
+    @pytest.mark.parametrize("phase", PHASES)
+    def test_zone2_core_needs_nothing_but_the_treadmill(self, phase, catalog):
+        """D287: the core blocks must not make the session unavailable where
+        it is available today — ``required_equipment`` stays the treadmill and
+        a gym with only a treadmill resolves the same four rows."""
+        sid = "treadmill_zone2_cardio"
+        assert _session(sid)["required_equipment"] == ["treadmill"]
+        assert _SESSION_META[sid]["required_equipment"] == ["treadmill"]
+        r = _resolve(sid, ["treadmill"], phase)
+        assert r["resolution_status"] == "success"
+        assert _ids(r) == EXPECTED[sid]
+        for eid in _ids(r):
+            assert set(catalog[eid].get("equipment_required") or []) <= {"treadmill"}, eid
+        for eid in ("arch_hold", "core_hollow_hold"):
+            assert catalog[eid]["equipment_required"] == [], eid
+
+    def test_zone2_walk_is_shorter_and_the_core_fills_the_slot(self, catalog):
+        """D287: 35' of Zone 2 (it was 45') + hollow 3x30 s (the dose of the
+        other lunches) + arch hold 3x15 s (the exercise's own catalog dose)
+        + the optional hip mobility = the same ~55' lunch."""
+        sid = "treadmill_zone2_cardio"
+        by_block = {i["source"]["block_id"]: i
+                    for i in _resolve(sid)["resolved_session"]["exercise_instances"]}
+        assert list(by_block) == ["zone2_main", "core_posterior", "core_anti_extension", "hip_mobility"]
+        assert by_block["zone2_main"]["prescription"]["work_seconds"] == 2100
+        hollow = by_block["core_anti_extension"]["prescription"]
+        assert (hollow["sets"], hollow["work_seconds"], hollow["rest_between_sets_seconds"]) == (3, 30, 45)
+        arch = by_block["core_posterior"]["prescription"]
+        assert (arch["sets"], arch["work_seconds"], arch["rest_between_sets_seconds"]) == (3, 15, 45)
+        own = catalog["arch_hold"]["prescription_defaults"]
+        assert (own["sets"], own["work_seconds"], own["rest_between_sets_seconds"]) == (3, 15, 45)
+        assert by_block["hip_mobility"]["prescription"]["work_seconds"] == 480
+        mods = {m["block_id"]: m for m in _session(sid)["modules"]}
+        assert mods["zone2_main"]["required"] is True
+        assert not any(mods[b]["required"] for b in ("core_anti_extension", "core_posterior", "hip_mobility"))
+        for b in ("core_anti_extension", "core_posterior"):
+            assert mods[b]["selection"]["primary"]["prescription_overrides"]["deload_sets"] == 2
+        rows = []
+        for inst in by_block.values():
+            rx = dict(inst["prescription"])
+            rx["alt_sides"] = bool(catalog[inst["exercise_id"]].get("alt_sides"))
+            rows.append(rx)
+        assert 50 <= estimate_custom_session_duration(rows) <= 55
 
     def test_foot_block_is_eight_to_twelve_minutes(self, catalog):
         """C279: 3 sets each (was 2, 5-8'): feet are Daniele's first limiter."""

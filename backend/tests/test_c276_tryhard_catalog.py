@@ -224,7 +224,16 @@ class TestResolution:
         assert found == [("arms_shoulders_handstand_lunch", "handstand_balance", "last"),
                          ("arms_shoulders_handstand_lunch", "handstand_hold", "last"),
                          ("arms_shoulders_handstand_lunch", "shoulder_press", "after_warmup"),
+                         # C286: one technique drill right after the warm-up in the
+                         # limit / PE / circuit / route evenings (Daniele, 2026-10-04 rule).
+                         ("boulder_circuit_gym", "technique_drill", "after_warmup"),
                          ("lead_tryhard_gym", "falls_block", "after_warmup"),
+                         ("limit_boulder_gym", "finger_rampup", "after_warmup"),
+                         ("limit_boulder_gym", "technique_drill", "after_warmup"),
+                         ("power_contact_gym", "finger_rampup", "after_warmup"),
+                         ("power_contact_gym", "technique_drill", "after_warmup"),
+                         ("power_endurance_gym", "technique_drill", "after_warmup"),
+                         ("route_endurance_gym", "technique_drill", "after_warmup"),
                          ("route_projecting_gym", "falls_primer", "after_warmup"),
                          ("test_max_hang_pullup", "finger_warmup", "after_warmup"),
                          ("test_max_hang_pullup", "max_hang_test", "after_warmup"),

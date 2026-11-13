@@ -176,8 +176,12 @@ def test_library_only_entries_are_never_selected(reachable_ids):
     pinned = _session_pinned_ids()
     assert not ((library & reachable_ids) - pinned), sorted((library & reachable_ids) - pinned)
     # C276: the two lead route-rule drills pinned by lead_tryhard_gym.
+    # D287: arch_hold, the floor level of the posterior-chain ladder, pinned by
+    # the core block of treadmill_zone2_cardio (the only level of that family
+    # that needs no bench).
     assert library & pinned == {"toe_flexor_isometric", "edge_calf_raise_bigtoe",
-                                "lead_precision_feet_above_bolt", "lead_technique_under_pump"}
+                                "lead_precision_feet_above_bolt", "lead_technique_under_pump",
+                                "arch_hold"}
 
 
 def test_approach_hike_is_reachable_indoors_too(reachable_ids):

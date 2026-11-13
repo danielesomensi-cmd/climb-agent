@@ -1,7 +1,7 @@
 {
   "id": "upper_push_arms_lunch",
   "name": "Upper Push + Arms (Lunch)",
-  "version": "1.4",
+  "version": "1.5",
   "supplementary": true,
   "intent": {
     "primary_goal": "strength_general",
@@ -59,10 +59,13 @@
       "required": true,
       "priority": 100,
       "module_role": "primary",
-      "notes": "Horizontal press for the chest: dumbbell bench press, the same movement every time so the load can progress from feedback (load is per dumbbell). Without dumbbells it falls back to another push movement.",
+      "notes": "Horizontal press for the chest: barbell bench press (Daniele, 2026-11-13), the same movement every time so the load can progress from feedback (the load is the whole bar). Without a barbell and a bench it falls back to the dumbbell bench press (load per dumbbell), and without free weights to another push movement.",
       "selection": {
         "primary": {
-          "exercise_id": "dumbbell_bench_press",
+          "exercise_id": "bench_press",
+          "fallback_exercise_ids": [
+            "dumbbell_bench_press"
+          ],
           "prescription_overrides": {
             "sets": 5,
             "deload_sets": 4,

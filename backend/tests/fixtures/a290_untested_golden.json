@@ -1,11 +1,13 @@
 {
  "no_tests_onboarding_baselines|2026-10-05|limit_boulder_gym": {
-  "digest": "0300f64049416d8d0fec054c7f26b810eb40d9cebe07e21bdbc67b6b50d9386d",
+  "digest": "031ea6156e8766196a8b7289553b1b6367648c5b24732c78a9ad11394f6f691c",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
    "general_pulse_raise",
    "warmup_easy_boulders",
+   "hang_rampup_progressive",
+   "no_readjust_drill",
    "system_board_limit",
    "weighted_chinup",
    "side_plank",
@@ -35,12 +37,14 @@
   ]
  },
  "no_tests_onboarding_baselines|2026-10-07|power_contact_gym": {
-  "digest": "73c8a14564fa167758a1dec5d5fb2633e694517e8f50c6a895866f7f17ea1242",
+  "digest": "d101a9d6250cbd238aff146f4de9f0704c3bda665475bce0c1a399ab557323f7",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
    "general_pulse_raise",
    "warmup_easy_boulders",
+   "hang_rampup_progressive",
+   "tech_hard_target",
    "campus_switches",
    "system_board_limit",
    "side_plank",
@@ -103,12 +107,14 @@
   ]
  },
  "no_tests_onboarding_baselines|2026-10-15|limit_boulder_gym": {
-  "digest": "bc8f5d83e848bcf1a675cb8a4d46aee44eb80bdc3368346474b28d11b2900cf5",
+  "digest": "0c302b4bc589daecb800104dad7932800baf0ed811917dac03235b2fa3615d41",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
    "general_pulse_raise",
    "warmup_easy_boulders",
+   "hang_rampup_progressive",
+   "no_readjust_drill",
    "spray_wall_limit",
    "typewriter_pullup",
    "core_l_sit",
@@ -121,12 +127,13 @@
   ]
  },
  "no_tests_onboarding_baselines|2026-10-17|boulder_circuit_gym": {
-  "digest": "aae8f62ba739e947b6d26a77e0c24bad3702d09a16ca36d5e467f9d05f4a7d09",
+  "digest": "ecd0d9f73b5e18ecc3f2272e1d041d34303bf4c3728fa92ae687aa43d7e72009",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
    "general_pulse_raise",
    "warmup_easy_boulders",
+   "sticky_feet",
    "typewriter_pullup",
    "otm_bouldering",
    "core_l_sit",
@@ -154,12 +161,13 @@
   ]
  },
  "no_tests_onboarding_baselines|2026-10-22|power_endurance_gym": {
-  "digest": "6aca40598d5586f29c2e503ee40b4e8d64a5ddfc687f6b8ad4b112ee5c0e0fa0",
+  "digest": "9397ba7a44ffecefc27975016c174257f9f38a07e842acacec9df449c6fcb0d5",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
    "general_pulse_raise",
    "warmup_easy_boulders",
+   "tap_and_place",
    "route_intervals",
    "repeater_15_15",
    "pullup",

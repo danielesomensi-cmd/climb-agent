@@ -15,12 +15,13 @@
   ]
  },
  "advanced|2026-10-07|boulder_circuit_gym": {
-  "digest": "bc6d82d16d79e6a7ee0096ef0bb2c1d8dffd94e04a2a812b377d09a88b0157ee",
+  "digest": "924edbae2390f5b67d7bc3e121dc1a7041a0f08f528a792f1663fb222fa4467b",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
    "general_pulse_raise",
    "warmup_easy_boulders",
+   "sticky_feet",
    "archer_pullup",
    "arc_training",
    "core_hollow_hold",
@@ -277,12 +278,14 @@
   ]
  },
  "advanced|2026-10-07|limit_boulder_gym": {
-  "digest": "72617a78300a287dea6f070877a4d759183d9b3feaeb8c6134aa3b45a8d07a61",
+  "digest": "53cd4c0e89c0ca86ec793c2cd33b558fab561239f1f276effef42ca53351b8c9",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
    "general_pulse_raise",
    "warmup_easy_boulders",
+   "hang_rampup_progressive",
+   "no_readjust_drill",
    "limit_bouldering",
    "archer_pullup",
    "suitcase_carry",
@@ -311,12 +314,14 @@
   ]
  },
  "advanced|2026-10-07|power_contact_gym": {
-  "digest": "15fe4cec04b3718ec0c9b9a3798fb4dd2c258300401f38cf7335cc545d0eb51d",
+  "digest": "0d53e11bca43ecc5f3c9f75e1e3ec456347640b46281786dd90bfc3817d89d7a",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
    "general_pulse_raise",
    "warmup_easy_boulders",
+   "hang_rampup_progressive",
+   "tech_hard_target",
    "campus_max_ladders",
    "system_board_limit",
    "core_l_sit",
@@ -329,12 +334,13 @@
   ]
  },
  "advanced|2026-10-07|power_endurance_gym": {
-  "digest": "0242b538ca1edbea201b9992a2671fcc76899fd9d2f7db938d48289d68c5a38d",
+  "digest": "9bad64fe39a72b3acc1c2395395ab48e09ab660505fab453c0ddadec103aea76",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
    "general_pulse_raise",
    "warmup_easy_boulders",
+   "tap_and_place",
    "power_pullups_explosive",
    "hangboard_moving_hangs",
    "route_intervals",
@@ -384,12 +390,13 @@
   ]
  },
  "advanced|2026-10-07|route_endurance_gym": {
-  "digest": "949a03de0aa51371038a557bde359b2c289bf623d53cdf1542fc1da4b4bdf4d7",
+  "digest": "f172aa9a973fc5d96a2855232eb8e39954c48499c7b4e555c9e81e56c3767545",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
    "general_pulse_raise",
    "warmup_easy_boulders",
+   "lead_precision_feet_above_bolt",
    "arc_training",
    "route_on_the_minute",
    "core_hollow_hold",
@@ -471,9 +478,11 @@
   ]
  },
  "advanced|2026-10-07|treadmill_zone2_cardio": {
-  "digest": "4362253f718beedfa696041183971e7243805867d56c55f779e5bf24708361e2",
+  "digest": "c7a6b888ab378b1ff33d2e46fde5ba16362e3c6aff07d9925d45bb16cd650390",
   "exercise_ids": [
    "treadmill_incline_walk",
+   "arch_hold",
+   "core_hollow_hold",
    "hip_opener_flow"
   ]
  },
@@ -493,7 +502,7 @@
   ]
  },
  "advanced|2026-10-07|upper_push_arms_lunch": {
-  "digest": "f4de2ed5d9f9714948009c9d53a287ee8074a7e13d598621bbb9f3653ca990b9",
+  "digest": "3692c107ce58aa983051a0564300fac3017a0bdf9f1cab99e19ea880cdc47124",
   "exercise_ids": [
    "general_pulse_raise",
    "ab_wheel_rollout",
@@ -527,12 +536,13 @@
   ]
  },
  "advanced|2026-10-21|boulder_circuit_gym": {
-  "digest": "ba11a4d9767435876582333ef23b88386a5b2534c9a616586c337450b592ab75",
+  "digest": "e8c1ff11aeb807c6d1974aa085d8923276e460443bd1dc6da92cc3d228e7b5f2",
   "exercise_ids": [
    "active_hip_mobility",
    "bear_crawl",
    "dynamic_mobility_flow",
    "general_pulse_raise",
+   "supinated_inverted_row",
    "hangboard_moving_hangs",
    "one_arm_pullup_assisted",
    "side_plank",
@@ -785,12 +795,14 @@
   ]
  },
  "advanced|2026-10-21|limit_boulder_gym": {
-  "digest": "7185adbaf37f7a65701b1fc93ead1c559a138e1b6c2472aa93ebb5ebe0b62572",
+  "digest": "eafd7105fae15d813061c66be0671b40689013665569c27c2f63f98479a74f09",
   "exercise_ids": [
    "active_hip_mobility",
    "bear_crawl",
    "dynamic_mobility_flow",
    "general_pulse_raise",
+   "hang_rampup_progressive",
+   "supinated_inverted_row",
    "archer_pullup",
    "power_pullups_explosive",
    "suitcase_carry",
@@ -819,12 +831,14 @@
   ]
  },
  "advanced|2026-10-21|power_contact_gym": {
-  "digest": "9eb1f93f7d7143041c69c08fbdb10c045408a68372f37e1bfcacb5c7c10db310",
+  "digest": "358f25763115925eda44a8f0658e6c9c22f344cc8f565e25a6a29902ae4cfaad",
   "exercise_ids": [
    "active_hip_mobility",
    "bear_crawl",
    "dynamic_mobility_flow",
    "general_pulse_raise",
+   "hang_rampup_progressive",
+   "supinated_inverted_row",
    "overcoming_isometric_pull",
    "rfd_explosive_pulls",
    "pallof_press",
@@ -837,12 +851,13 @@
   ]
  },
  "advanced|2026-10-21|power_endurance_gym": {
-  "digest": "88b468074d5a50b7b77be8a6bd246336fc659e86dfe98436068a497d4a3d6e55",
+  "digest": "a45bca8f858a2791661a4ced9d895464887810302c0237ae6d26e5f24fd2ebbf",
   "exercise_ids": [
    "active_hip_mobility",
    "bear_crawl",
    "dynamic_mobility_flow",
    "general_pulse_raise",
+   "supinated_inverted_row",
    "intermittent_dead_hangs",
    "archer_pullup",
    "one_arm_pullup_assisted",
@@ -892,7 +907,7 @@
   ]
  },
  "advanced|2026-10-21|route_endurance_gym": {
-  "digest": "a56e75a216bcac08728ae11407c601fb01b4922df763d7b5d860989f25ba1e8b",
+  "digest": "a3fba03ed8cfa0f20d922cfb9fcdb76552a14b1c23a1a70f9248397da273d268",
   "exercise_ids": [
    "active_hip_mobility",
    "bear_crawl",
@@ -974,9 +989,11 @@
   ]
  },
  "advanced|2026-10-21|treadmill_zone2_cardio": {
-  "digest": "8f7507004685e9595c047615f77015010abfa7747ace5044df98a394d301f86f",
+  "digest": "a6ee5dc60138bcfa1ff76599f1068b612ae2ede4872901e5141e39c443497c29",
   "exercise_ids": [
    "treadmill_incline_walk",
+   "arch_hold",
+   "core_hollow_hold",
    "hip_opener_flow"
   ]
  },
@@ -996,7 +1013,7 @@
   ]
  },
  "advanced|2026-10-21|upper_push_arms_lunch": {
-  "digest": "a942774e72cb3308fc7c56873d8e69202b5360cb10c2431f3fb633bd68fcb14a",
+  "digest": "8ab6b4595b81263ca4f82fcd1b28f055ea7367630b9576a99b159607616c0cd2",
   "exercise_ids": [
    "general_pulse_raise",
    "core_hollow_hold",
@@ -1053,13 +1070,13 @@
   ]
  },
  "daniele|2026-10-13|base|upper_push_arms_lunch": {
-  "digest": "7611a52143f503139b77d22c804722a28cce2a2949cf3963111e6c81ece80fab",
+  "digest": "6c4aa7d9d38531439f53f1e21d90d773e455886595f4b9225661b079266b0e1a",
   "exercise_ids": [
    "general_pulse_raise",
    "ab_wheel_rollout",
    "core_l_sit",
+   "bench_press",
    "bicep_curl",
-   "dumbbell_bench_press",
    "dumbbell_fly",
    "ring_pushup",
    "triceps_cable_pushdown"
@@ -1104,13 +1121,13 @@
   ]
  },
  "daniele|2026-10-13|strength_power|upper_push_arms_lunch": {
-  "digest": "7611a52143f503139b77d22c804722a28cce2a2949cf3963111e6c81ece80fab",
+  "digest": "6c4aa7d9d38531439f53f1e21d90d773e455886595f4b9225661b079266b0e1a",
   "exercise_ids": [
    "general_pulse_raise",
    "ab_wheel_rollout",
    "core_l_sit",
+   "bench_press",
    "bicep_curl",
-   "dumbbell_bench_press",
    "dumbbell_fly",
    "ring_pushup",
    "triceps_cable_pushdown"
@@ -1155,13 +1172,13 @@
   ]
  },
  "daniele|2026-10-27|power_endurance|upper_push_arms_lunch": {
-  "digest": "7611a52143f503139b77d22c804722a28cce2a2949cf3963111e6c81ece80fab",
+  "digest": "6c4aa7d9d38531439f53f1e21d90d773e455886595f4b9225661b079266b0e1a",
   "exercise_ids": [
    "general_pulse_raise",
    "ab_wheel_rollout",
    "core_l_sit",
+   "bench_press",
    "bicep_curl",
-   "dumbbell_bench_press",
    "dumbbell_fly",
    "ring_pushup",
    "triceps_cable_pushdown"
@@ -1206,13 +1223,13 @@
   ]
  },
  "daniele|2026-11-10|performance|upper_push_arms_lunch": {
-  "digest": "7611a52143f503139b77d22c804722a28cce2a2949cf3963111e6c81ece80fab",
+  "digest": "6c4aa7d9d38531439f53f1e21d90d773e455886595f4b9225661b079266b0e1a",
   "exercise_ids": [
    "general_pulse_raise",
    "ab_wheel_rollout",
    "core_l_sit",
+   "bench_press",
    "bicep_curl",
-   "dumbbell_bench_press",
    "dumbbell_fly",
    "ring_pushup",
    "triceps_cable_pushdown"
@@ -1257,13 +1274,13 @@
   ]
  },
  "daniele|2026-11-17|performance|upper_push_arms_lunch": {
-  "digest": "1d4976d2ccd06f16abf2f9e1fac05e9c347a014118dd2da56dbb913914002e77",
+  "digest": "93b7e28cf9376400b97a9d81d440c84997d64fffbda08464418f7e7cf281f50b",
   "exercise_ids": [
    "general_pulse_raise",
    "cable_woodchop",
    "core_l_sit",
+   "bench_press",
    "bicep_curl",
-   "dumbbell_bench_press",
    "dumbbell_fly",
    "ring_pushup",
    "triceps_cable_pushdown"
@@ -1308,13 +1325,13 @@
   ]
  },
  "daniele|2026-12-01|deload|upper_push_arms_lunch": {
-  "digest": "15271188a0c7c6c0eb30a29d7f03d957989d57311d022660944f94c3e19abc5d",
+  "digest": "1dca4205c3e83b267e5482f58ed5d092e28b24b77a364c27aee2deb8fe22ebae",
   "exercise_ids": [
    "general_pulse_raise",
    "ab_wheel_rollout",
    "core_l_sit",
+   "bench_press",
    "bicep_curl",
-   "dumbbell_bench_press",
    "dumbbell_fly",
    "ring_pushup",
    "triceps_cable_pushdown"
@@ -1336,12 +1353,13 @@
   ]
  },
  "intermediate|2026-10-07|boulder_circuit_gym": {
-  "digest": "09b3d37e1213921544ddd679ed7684d33d61c8fd44df7e7b3f4728c2b52c9be2",
+  "digest": "6b1f3ea1ee6ee68c836c97d6872ab921bafec8fca7984878a48c0fb88d6674e1",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
    "general_pulse_raise",
    "warmup_easy_boulders",
+   "sticky_feet",
    "archer_pullup",
    "arc_training",
    "core_hollow_hold",
@@ -1598,12 +1616,14 @@
   ]
  },
  "intermediate|2026-10-07|limit_boulder_gym": {
-  "digest": "2d7130919f6ce431d3b0c9c1d894995af0f9add6e4b0450070c2b3b23b31aa42",
+  "digest": "3b0d390df58939ea33cf251024caf6aaa44e0254723a16dea2da2871843a4af9",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
    "general_pulse_raise",
    "warmup_easy_boulders",
+   "hang_rampup_progressive",
+   "no_readjust_drill",
    "limit_bouldering",
    "archer_pullup",
    "suitcase_carry",
@@ -1632,12 +1652,14 @@
   ]
  },
  "intermediate|2026-10-07|power_contact_gym": {
-  "digest": "f1c3b0b4d549c034a74a44a065ff183d0d629e26f280299fbdc088697cb2ca56",
+  "digest": "d4734296c1f9fd402ed4cba8a5f29aab75ad381969a501ef397b47875e4f35f5",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
    "general_pulse_raise",
    "warmup_easy_boulders",
+   "hang_rampup_progressive",
+   "tech_hard_target",
    "campus_laddering_feet_on",
    "spray_wall_limit",
    "core_l_sit",
@@ -1650,12 +1672,13 @@
   ]
  },
  "intermediate|2026-10-07|power_endurance_gym": {
-  "digest": "c6d7e92c55298639769a64c55bfb2751bd068cf95d41f641b2015fdbb6d00de3",
+  "digest": "e5171de0a6648168f680d750b3f4be1b7215c49954692b9ab94b6ec4bc528006",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
    "general_pulse_raise",
    "warmup_easy_boulders",
+   "tap_and_place",
    "power_pullups_explosive",
    "hangboard_moving_hangs",
    "route_intervals",
@@ -1705,12 +1728,13 @@
   ]
  },
  "intermediate|2026-10-07|route_endurance_gym": {
-  "digest": "1bf83ee31d4d1219f17820bcb0d890f2d06bf06650ed575088b7ecbcbe353294",
+  "digest": "399ea43df5bdb4de6c892594adaa6d9009c6ebe0bdbc32cb91b33fef21bc4870",
   "exercise_ids": [
    "active_hip_mobility",
    "dynamic_mobility_flow",
    "general_pulse_raise",
    "warmup_easy_boulders",
+   "lead_precision_feet_above_bolt",
    "arc_training",
    "route_on_the_minute",
    "plank",
@@ -1792,9 +1816,11 @@
   ]
  },
  "intermediate|2026-10-07|treadmill_zone2_cardio": {
-  "digest": "4362253f718beedfa696041183971e7243805867d56c55f779e5bf24708361e2",
+  "digest": "c7a6b888ab378b1ff33d2e46fde5ba16362e3c6aff07d9925d45bb16cd650390",
   "exercise_ids": [
    "treadmill_incline_walk",
+   "arch_hold",
+   "core_hollow_hold",
    "hip_opener_flow"
   ]
  },
@@ -1814,7 +1840,7 @@
   ]
  },
  "intermediate|2026-10-07|upper_push_arms_lunch": {
-  "digest": "a8f7c3760b03fc0907b50863636d26b9f44cf36f46ec3b901807e01fc0df0aa3",
+  "digest": "a9f7d53b1ee013233c7fbd4c3beebf796900ca374ce6c72a6fccb8bca7d41e96",
   "exercise_ids": [
    "general_pulse_raise",
    "ab_wheel_rollout",
@@ -1848,12 +1874,13 @@
   ]
  },
  "intermediate|2026-10-21|boulder_circuit_gym": {
-  "digest": "746433de26999f86de3b5c7f939ed75823f050578b8970a8f3af1ba4e8366114",
+  "digest": "89b89af19956940c1b5812dcdb5da793959d70f695e9cfa9a6b98f7cefc7ad69",
   "exercise_ids": [
    "active_hip_mobility",
    "bear_crawl",
    "dynamic_mobility_flow",
    "general_pulse_raise",
+   "supinated_inverted_row",
    "hangboard_moving_hangs",
    "one_arm_pullup_assisted",
    "side_plank",
@@ -2106,12 +2133,14 @@
   ]
  },
  "intermediate|2026-10-21|limit_boulder_gym": {
-  "digest": "7185adbaf37f7a65701b1fc93ead1c559a138e1b6c2472aa93ebb5ebe0b62572",
+  "digest": "eafd7105fae15d813061c66be0671b40689013665569c27c2f63f98479a74f09",
   "exercise_ids": [
    "active_hip_mobility",
    "bear_crawl",
    "dynamic_mobility_flow",
    "general_pulse_raise",
+   "hang_rampup_progressive",
+   "supinated_inverted_row",
    "archer_pullup",
    "power_pullups_explosive",
    "suitcase_carry",
@@ -2140,12 +2169,14 @@
   ]
  },
  "intermediate|2026-10-21|power_contact_gym": {
-  "digest": "9eb1f93f7d7143041c69c08fbdb10c045408a68372f37e1bfcacb5c7c10db310",
+  "digest": "358f25763115925eda44a8f0658e6c9c22f344cc8f565e25a6a29902ae4cfaad",
   "exercise_ids": [
    "active_hip_mobility",
    "bear_crawl",
    "dynamic_mobility_flow",
    "general_pulse_raise",
+   "hang_rampup_progressive",
+   "supinated_inverted_row",
    "overcoming_isometric_pull",
    "rfd_explosive_pulls",
    "pallof_press",
@@ -2158,12 +2189,13 @@
   ]
  },
  "intermediate|2026-10-21|power_endurance_gym": {
-  "digest": "bc5cf21907db757d99a18f62be83d4b3532945a4ef6bbd1ff259d34431456300",
+  "digest": "4deb828ea8c9ac1e5fc5fb70842f9bc3e55cbe267deba50d72680e6dbe17cf05",
   "exercise_ids": [
    "active_hip_mobility",
    "bear_crawl",
    "dynamic_mobility_flow",
    "general_pulse_raise",
+   "supinated_inverted_row",
    "intermittent_dead_hangs",
    "archer_pullup",
    "one_arm_pullup_assisted",
@@ -2213,7 +2245,7 @@
   ]
  },
  "intermediate|2026-10-21|route_endurance_gym": {
-  "digest": "6ca827afab7438b7e2555eb117150c7d6c58e52afb7d14bcbdff13fc246a7741",
+  "digest": "5c3bc5e51217ea40b239d09e05a717718d918ef21901418ba475c0774864b802",
   "exercise_ids": [
    "active_hip_mobility",
    "bear_crawl",
@@ -2295,9 +2327,11 @@
   ]
  },
  "intermediate|2026-10-21|treadmill_zone2_cardio": {
-  "digest": "8f7507004685e9595c047615f77015010abfa7747ace5044df98a394d301f86f",
+  "digest": "a6ee5dc60138bcfa1ff76599f1068b612ae2ede4872901e5141e39c443497c29",
   "exercise_ids": [
    "treadmill_incline_walk",
+   "arch_hold",
+   "core_hollow_hold",
    "hip_opener_flow"
   ]
  },
@@ -2317,7 +2351,7 @@
   ]
  },
  "intermediate|2026-10-21|upper_push_arms_lunch": {
-  "digest": "42a0640c6526bd903c0ae45b300702508afb030e54dfbab672061b8ed0a50273",
+  "digest": "f8784e2afd10d96038b64f1660261fec583e8241ac9d72498a03a3ceab515b41",
   "exercise_ids": [
    "general_pulse_raise",
    "core_hollow_hold",

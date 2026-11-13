@@ -111,6 +111,9 @@ with routes the second PE drill (``linked_boulders``) is gone, only
 diff against the step-15 session file: no other block moved.
 
 Pure data + one function, importable by the generator without pytest.
+
+C286 (one technique drill + finger ramp-up on the evening sessions) changed
+only the keys of the sessions it touches; every other key identical.
 """
 
 from __future__ import annotations
